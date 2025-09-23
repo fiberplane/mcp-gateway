@@ -1,0 +1,39 @@
+{
+  "name": "@fiberplane/mcp-gateway",
+  "type": "module",
+  "version": "0.1.0",
+  "homepage": "https://github.com/fiberplane/mcp-gateway",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fiberplane/mcp-gateway.git"
+  },
+  "files": [
+    "src",
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "bun run scripts/build.ts",
+    "build:types": "tsc --project tsconfig.build.json --outDir dist/types --rootDir src",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo 'No linter configured'",
+    "prepublishOnly": "bun run build && bun run build:types"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/types/index.d.ts",
+        "import": "./dist/index.js"
+      }
+    }
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5"
+  }
+}
