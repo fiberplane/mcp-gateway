@@ -18,6 +18,7 @@
     "build:types": "tsc --project tsconfig.build.json --outDir dist/types --rootDir src",
     "typecheck": "tsc --noEmit",
     "lint": "echo 'No linter configured'",
+    "changeset": "changeset",
     "prepublishOnly": "bun run build && bun run build:types"
   },
   "exports": {
@@ -33,6 +34,7 @@
     }
   },
   "devDependencies": {
+    "@changesets/cli": "^2.29.7",
     "@types/bun": "latest",
     "typescript": "^5"
   }
