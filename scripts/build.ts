@@ -10,4 +10,13 @@ await Bun.build({
   sourcemap: "linked",
 });
 
+await Bun.build({
+  format: "esm",
+  outdir: "dist",
+  root: "bin",
+  entrypoints: ["./bin/cli.ts"],
+  sourcemap: "linked",
+  target: "node",
+});
+
 await $`bun run build:types`;

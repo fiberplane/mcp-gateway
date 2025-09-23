@@ -1,0 +1,27 @@
+{
+  "$schema": "node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": {
+    "defaultBranch": "main",
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "json": {
+    "formatter": {
+      "enabled": true,
+      "indentStyle": "space"
+    }
+  },
+  "formatter": {
+    "indentStyle": "space"
+  },
+  "linter": {
+    "rules": {
+      "recommended": true,
+      "performance": {
+        "noAccumulatingSpread": "on",
+        "recommended": true
+      }
+    }
+  },
+  "files": { "includes": ["**", "!**/dist"] }
+}
