@@ -1,5 +1,11 @@
 # @fiberplane/mcp-gateway
 
+## 0.2.3
+
+### Patch Changes
+
+- 5c64a14: VERY GOOD UI
+
 ## 0.2.2
 
 ### Patch Changes
