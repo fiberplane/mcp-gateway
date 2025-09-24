@@ -1,0 +1,10 @@
+/* App-specific utilities (keep reset.css pristine) */
+
+.width-min { width: 1%; white-space: nowrap; }
+.width-auto { width: auto; }
+
+/* Optional simple inline section nav */
+.section-nav a { text-decoration: underline; }
+.section-nav span { opacity: 0.6; }
+
+

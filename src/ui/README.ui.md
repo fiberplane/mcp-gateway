@@ -51,6 +51,10 @@ You can also use the Hono `html` and `raw` helpers.
 import { html, raw } from "hono/html";
 ```
 
+## Tips for writing HTML and CSS
+
+- Adhere to the grid we can use with the example html below
+
 ## Example HTML Page with The Monospace Web
 
 ```html
