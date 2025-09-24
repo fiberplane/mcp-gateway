@@ -156,7 +156,7 @@ describe("Proxy Integration Tests", () => {
     await saveRegistry(storageDir, registry);
 
     // Create and start gateway app
-    const app = await createApp(storageDir);
+    const { app } = await createApp(registry, storageDir);
     const server = Bun.serve({
       port: 8000,
       fetch: app.fetch,
