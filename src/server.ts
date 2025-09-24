@@ -1,8 +1,8 @@
+import { rename } from "node:fs/promises";
+import { join } from "node:path";
 import { sValidator } from "@hono/standard-validator";
 import { Hono } from "hono";
 import { proxy } from "hono/proxy";
-import { rename } from "node:fs/promises";
-import { join } from "node:path";
 import {
   appendCapture,
   captureError,
@@ -19,6 +19,8 @@ import {
   sessionHeaderSchema,
 } from "./schemas.js";
 import { getStorageRoot, loadRegistry } from "./storage.js";
+import { serveEmojiFavicon } from "./ui/serve-emoji-favicon.js";
+import { uiHandler } from "./ui/ui.js";
 
 // Create main application
 export async function createApp(storageDir?: string): Promise<Hono> {
@@ -29,6 +31,8 @@ export async function createApp(storageDir?: string): Promise<Hono> {
 
   // Load registry
   const registry = await loadRegistry(storage);
+
+  app.use(serveEmojiFavicon("🌉"));
 
   // Health check endpoint
   app.get("/", (c) => {
@@ -55,6 +59,8 @@ export async function createApp(storageDir?: string): Promise<Hono> {
       storage: storage,
     });
   });
+
+  app.route("/ui", uiHandler);
 
   // Single dynamic proxy route with proper validation
   app.post(
