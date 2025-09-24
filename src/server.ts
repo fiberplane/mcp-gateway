@@ -19,6 +19,7 @@ import {
   sessionHeaderSchema,
 } from "./schemas.js";
 import { getStorageRoot, loadRegistry } from "./storage.js";
+import { serveEmojiFavicon } from "./ui/serve-emoji-favicon.js";
 import { uiHandler } from "./ui/ui.js";
 
 // Create main application
@@ -30,6 +31,8 @@ export async function createApp(storageDir?: string): Promise<Hono> {
 
   // Load registry
   const registry = await loadRegistry(storage);
+
+  app.use(serveEmojiFavicon("🌉"));
 
   // Health check endpoint
   app.get("/", (c) => {
