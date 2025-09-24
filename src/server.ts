@@ -32,9 +32,6 @@ export async function createApp(
   // Determine storage directory
   const storage = getStorageRoot(storageDir);
 
-  // Load registry
-  const registry = await loadRegistry(storage);
-
   app.use(serveEmojiFavicon("🌉"));
 
   // Health check endpoint
@@ -251,7 +248,7 @@ export async function createApp(
 
 // Create app instance for development
 const devRegistry = await loadRegistry(getStorageRoot());
-const { app } = await createApp(devRegistry);
+const { app } = await createApp(devRegistry, getStorageRoot());
 const port = 3333;
 
 export default {
