@@ -1,5 +1,7 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { access, readFile, writeFile, mkdir } from "node:fs/promises";
+import { constants } from "node:fs";
 import type { Registry } from "./registry.js";
 import { fromMcpJson, toMcpJson } from "./registry.js";
 
@@ -17,24 +19,27 @@ export function getStorageRoot(customDir?: string): string {
 // Ensure storage directory exists
 export async function ensureStorageDir(storageDir: string): Promise<void> {
   try {
-    // Use Bun's shell command template for mkdir -p
-    await Bun.$`mkdir -p ${storageDir}`;
+    // Use Node.js fs.mkdir with recursive option
+    await mkdir(storageDir, { recursive: true });
   } catch (error) {
     throw new Error(`Failed to create storage directory: ${error}`);
   }
 }
 
-// Load registry from mcp.json using Bun.file
+// Load registry from mcp.json using Node.js fs
 export async function loadRegistry(storageDir: string): Promise<Registry> {
   const mcpPath = join(storageDir, "mcp.json");
-  const file = Bun.file(mcpPath);
 
-  if (!(await file.exists())) {
+  try {
+    await access(mcpPath, constants.F_OK);
+  } catch {
+    // File doesn't exist
     return { servers: [] };
   }
 
   try {
-    const data = await file.json();
+    const content = await readFile(mcpPath, "utf8");
+    const data = JSON.parse(content);
     return fromMcpJson(data);
   } catch (_error) {
     console.warn(
@@ -44,7 +49,7 @@ export async function loadRegistry(storageDir: string): Promise<Registry> {
   }
 }
 
-// Save registry to mcp.json using Bun.write
+// Save registry to mcp.json using Node.js fs
 export async function saveRegistry(
   storageDir: string,
   registry: Registry,
@@ -55,7 +60,7 @@ export async function saveRegistry(
   const data = toMcpJson(registry);
 
   try {
-    await Bun.write(mcpPath, JSON.stringify(data, null, 2));
+    await writeFile(mcpPath, JSON.stringify(data, null, 2), "utf8");
   } catch (error) {
     throw new Error(`Failed to save registry: ${error}`);
   }

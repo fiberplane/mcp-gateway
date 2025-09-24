@@ -14,11 +14,10 @@
     "CHANGELOG.md"
   ],
   "bin": {
-    "mcp-gateway": "dist/cli.js"
+    "mcp-gateway": "dist/run.js"
   },
   "sideEffects": false,
   "scripts": {
-    "cli": "bun run bin/cli.ts",
     "dev": "bun --watch run src/server.ts",
     "build": "bun run scripts/build.ts",
     "build:types": "tsc --project tsconfig.build.json --outDir dist/types --rootDir src",
