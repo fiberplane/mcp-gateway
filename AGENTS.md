@@ -1,8 +1,3 @@
----
-description: Use Bun instead of Node.js, npm, pnpm, or vite.
-globs: "*.ts, *.tsx, *.html, *.css, *.js, *.jsx, package.json"
-alwaysApply: false
----
 
 Default to using Bun instead of Node.js.
 
@@ -151,3 +146,7 @@ For more information, read the Bun API docs in `node_modules/bun-types/docs/**.m
 
 
 - Use the current tmux session, spinning up a new window to test the interactive CLI
+
+# Writing UI
+
+- See instructions for writing UI in src/ui/README.ui.md`
