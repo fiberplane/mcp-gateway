@@ -2,7 +2,7 @@
 node_modules
 
 # vscode
-.vscode
+.vscode/settings.json
 
 # playwright mcp
 .playwright-mcp
