@@ -1,6 +1,7 @@
 import type { FC } from "hono/jsx";
 import type { McpServer } from "../../registry.js";
 import { Navigation } from "../components/Navigation.js";
+import { ServerEventsTable } from "../components/RecentEventsTable.js";
 import { Layout } from "../Layout.js";
 
 interface ServerDetailsPageProps {
@@ -11,9 +12,16 @@ export const ServerDetailsPage: FC<ServerDetailsPageProps> = ({ server }) => {
   return (
     <Layout>
       <h1>Server: {server.name}</h1>
-      <p>Detailed information about the MCP server.</p>
 
-      <div>
+      {/* Section anchors (no JS) */}
+      <nav style="margin-bottom: 1rem;">
+        <a href="#details">Details</a>
+        <span> | </span>
+        <a href="#events">Events</a>
+      </nav>
+      <hr />
+
+      <div id="details">
         <h2>Basic Information</h2>
         <table>
           <tbody>
@@ -49,9 +57,7 @@ export const ServerDetailsPage: FC<ServerDetailsPageProps> = ({ server }) => {
             </tr>
           </tbody>
         </table>
-      </div>
 
-      <div>
         <h2>Headers</h2>
         {Object.keys(server.headers).length === 0 ? (
           <p>No custom headers configured.</p>
@@ -77,9 +83,7 @@ export const ServerDetailsPage: FC<ServerDetailsPageProps> = ({ server }) => {
             </tbody>
           </table>
         )}
-      </div>
 
-      <div>
         <h2>Actions</h2>
         <div class="grid">
           <button type="button" onclick="window.location.href='/ui/servers'">
@@ -91,6 +95,15 @@ export const ServerDetailsPage: FC<ServerDetailsPageProps> = ({ server }) => {
           >
             Open Server URL
           </button>
+        </div>
+      </div>
+
+      <div id="events">
+        <h2>Recent Events</h2>
+        <p>Latest MCP protocol exchanges for this server</p>
+        <ServerEventsTable serverName={server.name} showEmpty={false} />
+        <div style="margin-top: 1rem;">
+          <a href="/ui/events">View All Events</a>
         </div>
       </div>
 

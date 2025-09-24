@@ -1,4 +1,5 @@
 import type { FC } from "hono/jsx";
+import { METHODS } from "../../schemas.js";
 
 export type EventKind = "request" | "response" | "notification" | "ping";
 export type EventDirection = "outbound" | "inbound";
@@ -53,17 +54,24 @@ type EventDetail =
       content: McpContent[];
     }
   | {
-    type: "prompts-list";
-    prompts: {
-      name: string;
-      description?: string;
-      arguments?: { name: string; description?: string; required?: boolean }[];
-    }[];
-  }
+      type: "prompts-list";
+      prompts: {
+        name: string;
+        description?: string;
+        arguments?: {
+          name: string;
+          description?: string;
+          required?: boolean;
+        }[];
+      }[];
+    }
   | {
       type: "prompts-get";
       prompt: { name: string; arguments: Record<string, unknown> };
-      messages: { role: "system" | "user" | "assistant"; content: McpContent[] }[];
+      messages: {
+        role: "system" | "user" | "assistant";
+        content: McpContent[];
+      }[];
     }
   | {
       type: "notification";
@@ -72,57 +80,150 @@ type EventDetail =
     }
   | { type: "ping" };
 
-function formatTime(timestamp: number): string {
-  return new Date(timestamp).toLocaleString();
+function formatTime(timestamp: number, compact = false): string {
+  const date = new Date(timestamp);
+  if (compact) {
+    // Show just time for today's events, or date for older ones
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    if (isToday) {
+      return date.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } else {
+      return date.toLocaleDateString([], { month: "short", day: "numeric" });
+    }
+  }
+  return date.toLocaleString();
 }
 
-function directionGlyph(direction: EventDirection, kind: EventKind): string {
-  if (kind === "notification") return "•";
-  return direction === "outbound" ? "⇢" : "⇠";
-}
+export const RecentEventsTable: FC<{
+  events: MockEvent[];
+  compact?: boolean;
+}> = ({ events, compact = false }) => {
+  if (events.length === 0) {
+    return (
+      <div
+        style={{
+          textAlign: "center",
+          padding: "2rem",
+          color: "#6b7280",
+          border: "2px dashed #e5e7eb",
+          borderRadius: "8px",
+          backgroundColor: "#f9fafb",
+        }}
+      >
+        <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>📭</div>
+        <p style={{ margin: "0 0 0.5rem 0", fontWeight: "500" }}>
+          No events yet
+        </p>
+        <p style={{ margin: "0", fontSize: "0.875rem" }}>
+          Events will appear here when the server starts processing requests
+        </p>
+      </div>
+    );
+  }
 
-export const RecentEventsTable: FC<{ events: MockEvent[] }> = ({ events }) => {
   return (
-    <div>
+    <div style={compact ? {} : { overflowX: "auto" }}>
       <table>
         <thead>
           <tr>
             <th class="width-min">Time</th>
-            <th class="width-min">Dir</th>
-            <th class="width-min">Type</th>
             <th class="width-auto">Method / Summary</th>
             <th class="width-min">ID</th>
-            <th class="width-min">Server</th>
+            {!compact && <th class="width-min">Server</th>}
             <th class="width-min">Status</th>
-            <th class="width-min">Details</th>
           </tr>
         </thead>
         <tbody>
-          {events.map((e) => (
-            <tr
-              key={`${e.timestamp}-${e.kind}-${e.direction}-${e.id ?? "noid"}-${e.method ?? e.summary ?? ""}-${e.serverName ?? "anon"}`}
-            >
-              <td>{formatTime(e.timestamp)}</td>
-              <td>{directionGlyph(e.direction, e.kind)}</td>
-              <td>{e.kind}</td>
-              <td>{e.method ? e.method : e.summary}</td>
-              <td>{e.id ?? "—"}</td>
-              <td>{e.serverName ?? "—"}</td>
-              <td>{e.status ?? "info"}</td>
-              <td>
-                {e.detail ? (
-                  <details>
-                    <summary>Expand</summary>
-                    {renderDetail(e.detail)}
-                  </details>
-                ) : (
-                  "—"
+          {events.map((e) => {
+            const eventKey = `${e.timestamp}-${e.kind}-${e.direction}-${e.id ?? "noid"}-${e.method ?? e.summary ?? ""}-${e.serverName ?? "anon"}`;
+            return (
+              <>
+                <tr key={eventKey}>
+                  <td
+                    style={{ opacity: 0.7 }}
+                    title={new Date(e.timestamp).toLocaleString()}
+                  >
+                    {formatTime(e.timestamp, compact)}
+                  </td>
+                  <td>
+                    {e.detail ? (
+                      <details>
+                        <summary>{e.method ? e.method : e.summary}</summary>
+                      </details>
+                    ) : e.method ? (
+                      e.method
+                    ) : (
+                      e.summary
+                    )}
+                  </td>
+                  <td>{e.id ?? "—"}</td>
+                  {!compact && <td>{e.serverName ?? "—"}</td>}
+                  <td>
+                    <span
+                      style={{
+                        display: "inline-block",
+                        padding: "2px 6px",
+                        borderRadius: "3px",
+                        fontSize: "0.75em",
+                        fontWeight: "bold",
+                        color: "white",
+                        backgroundColor:
+                          e.status === "error"
+                            ? "#dc2626"
+                            : e.status === "ok"
+                              ? "#059669"
+                              : "#6b7280",
+                      }}
+                    >
+                      {e.status ?? "info"}
+                    </span>
+                  </td>
+                </tr>
+                {e.detail && (
+                  <tr
+                    key={`${eventKey}-detail`}
+                    style={{ display: "none" }}
+                    class="event-detail"
+                  >
+                    <td></td>
+                    <td colSpan={compact ? 3 : 4}>
+                      <div
+                        style={{
+                          marginLeft: "1ch",
+                          paddingLeft: "1ch",
+                          borderLeft: "2px solid",
+                        }}
+                      >
+                        {renderDetail(e.detail)}
+                      </div>
+                    </td>
+                  </tr>
                 )}
-              </td>
-            </tr>
-          ))}
+              </>
+            );
+          })}
         </tbody>
       </table>
+      <script>
+        {`
+          document.addEventListener('DOMContentLoaded', function() {
+            // Handle details toggle for event expansion
+            document.querySelectorAll('details').forEach(details => {
+              details.addEventListener('toggle', function() {
+                const row = this.closest('tr');
+                const detailRow = row.nextElementSibling;
+                if (detailRow && detailRow.classList.contains('event-detail')) {
+                  detailRow.style.display = this.open ? 'table-row' : 'none';
+                }
+              });
+            });
+          });
+        `}
+      </script>
     </div>
   );
 };
@@ -188,19 +289,21 @@ function renderDetail(detail: EventDetail) {
         <div>
           <strong>Prompts</strong>
           <ul>
-            {detail.prompts.map((p) => (
-              <li>
+            {detail.prompts.map((p, idx) => (
+              <li key={`prompt-${idx}-${p.name}`}>
                 <code>{p.name}</code>
                 {p.description ? <span> — {p.description}</span> : null}
                 {p.arguments && p.arguments.length > 0 ? (
                   <div>
                     <em>Arguments:</em>
                     <ul>
-                      {p.arguments.map((a) => (
-                        <li>
+                      {p.arguments.map((a, argIdx) => (
+                        <li key={`arg-${idx}-${argIdx}-${a.name}`}>
                           <code>{a.name}</code>
                           {a.required ? <strong> *</strong> : null}
-                          {a.description ? <span> — {a.description}</span> : null}
+                          {a.description ? (
+                            <span> — {a.description}</span>
+                          ) : null}
                         </li>
                       ))}
                     </ul>
@@ -223,7 +326,8 @@ function renderDetail(detail: EventDetail) {
             <strong>Messages</strong>
             <ul>
               {detail.messages.map((m, idx) => (
-                <li>
+                // biome-ignore lint/suspicious/noArrayIndexKey: it is fine
+                <li key={`message-${idx}`}>
                   <em>{m.role}</em>
                   {renderContent(m.content)}
                 </li>
@@ -250,14 +354,15 @@ function renderContent(content: McpContent[] | McpContent) {
   const items = Array.isArray(content) ? content : [content];
   return (
     <div>
-      {items.map((c) => {
+      {items.map((c, idx) => {
+        const contentKey = `content-${idx}-${c.type}`;
         if (c.type === "text") {
-          return <pre>{(c as McpTextContent).text}</pre>;
+          return <pre key={contentKey}>{(c as McpTextContent).text}</pre>;
         }
         if (c.type === "resource") {
           const r = c as McpResourceContent;
           return (
-            <div>
+            <div key={contentKey}>
               <div>
                 <strong>Resource</strong> <code>{r.uri}</code>
                 {r.mimeType ? (
@@ -274,12 +379,12 @@ function renderContent(content: McpContent[] | McpContent) {
         if (c.type === "image") {
           const i = c as McpImageContent;
           return (
-            <div>
+            <div key={contentKey}>
               <strong>Image</strong> <code>{i.uri}</code>
             </div>
           );
         }
-        return <pre>{JSON.stringify(c, null, 2)}</pre>;
+        return <pre key={contentKey}>{JSON.stringify(c, null, 2)}</pre>;
       })}
     </div>
   );
@@ -294,24 +399,45 @@ function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+// Server-specific events table component
+export const ServerEventsTable: FC<{
+  serverName: string;
+  showEmpty?: boolean;
+}> = ({ serverName, showEmpty = false }) => {
+  if (showEmpty) {
+    // Show empty state for demonstration
+    return <RecentEventsTable events={[]} compact={true} />;
+  }
+
+  // Generate mock events for this specific server
+  const events = generateMockEvents(15, [serverName]);
+  // Ensure all events have the correct server name
+  const serverEvents = events.map((e) => ({ ...e, serverName }));
+
+  return <RecentEventsTable events={serverEvents} compact={true} />;
+};
+
 export function generateMockEvents(
   count: number,
   serverNames: string[] = [],
 ): MockEvent[] {
   const now = Date.now();
   const methodsRequest = [
-    "tools/list",
-    "tools/call",
-    "resources/list",
-    "resources/read",
-    "prompts/list",
-    "prompts/get",
-    "sampling/createMessage",
+    METHODS.TOOLS.LIST,
+    METHODS.TOOLS.CALL,
+    METHODS.RESOURCES.LIST,
+    METHODS.RESOURCES.READ,
+    METHODS.PROMPTS.LIST,
+    METHODS.PROMPTS.GET,
+    METHODS.ELICITATION.CREATE,
+    METHODS.INITIALIZE,
+    METHODS.COMPLETION.COMPLETE,
   ];
   const notifications = [
-    "notifications/message",
-    "notifications/progress",
-    "notifications/log",
+    METHODS.NOTIFICATIONS.PROGRESS,
+    METHODS.NOTIFICATIONS.TOOLS.LIST_CHANGED,
+    METHODS.NOTIFICATIONS.RESOURCES.LIST_CHANGED,
+    METHODS.NOTIFICATIONS.PROMPTS.LIST_CHANGED,
   ];
 
   const events: MockEvent[] = [];
@@ -344,18 +470,31 @@ export function generateMockEvents(
     }
 
     if (kind === "response") {
-      const ok = Math.random() < 0.9;
       const method = randomChoice(methodsRequest);
+      const errorChance = method === METHODS.TOOLS.CALL ? 0.2 : 0.1; // Higher error rate for tool calls
+      const ok = Math.random() > errorChance;
+      const errorType = randomChoice([
+        "Tool not found",
+        "Invalid parameters",
+        "Execution timeout",
+        "Permission denied",
+      ]);
       events.push({
         timestamp: ts,
         kind,
         direction,
         id: randomInt(1000, 9999),
         method,
-        summary: ok ? "200 OK" : "RPC Error",
+        summary: ok ? "200 OK" : errorType,
         serverName,
         status: ok ? "ok" : "error",
-        detail: ok ? generateDetailForResponse(method) : undefined,
+        detail: ok
+          ? generateDetailForResponse(method)
+          : {
+              type: "notification",
+              level: "error",
+              message: `${errorType}: ${method} failed to execute properly`,
+            },
       });
       continue;
     }
@@ -393,10 +532,22 @@ export function generateMockEvents(
 
 function generateDetailForRequest(method: string): EventDetail | undefined {
   if (method === "tools/call") {
-    const tool = randomChoice(["search", "read_file", "write_file", "list_dir", "http_get"]);
+    const tool = randomChoice([
+      "search",
+      "read_file",
+      "write_file",
+      "list_dir",
+      "http_get",
+    ]);
     const args: Record<string, unknown> =
       tool === "search"
-        ? { query: randomChoice(["mcp spec", "typescript examples", "server health"]) }
+        ? {
+            query: randomChoice([
+              "mcp spec",
+              "typescript examples",
+              "server health",
+            ]),
+          }
         : tool === "read_file"
           ? { path: randomChoice(["/etc/hosts", "/workspace/README.md"]) }
           : tool === "write_file"
@@ -427,7 +578,10 @@ function generateDetailForRequest(method: string): EventDetail | undefined {
   if (method === "resources/read") {
     return {
       type: "resources-read",
-      resource: { uri: "file:///workspace/README.md", mimeType: "text/markdown" },
+      resource: {
+        uri: "file:///workspace/README.md",
+        mimeType: "text/markdown",
+      },
       content: [{ type: "text", text: "# Project\nThis is a demo." }],
     };
   }
@@ -438,7 +592,9 @@ function generateDetailForRequest(method: string): EventDetail | undefined {
         {
           name: "summarize",
           description: "Summarize provided text",
-          arguments: [{ name: "text", description: "Text to summarize", required: true }],
+          arguments: [
+            { name: "text", description: "Text to summarize", required: true },
+          ],
         },
         { name: "fix_code", description: "Suggest code fixes" },
       ],
@@ -449,8 +605,14 @@ function generateDetailForRequest(method: string): EventDetail | undefined {
       type: "prompts-get",
       prompt: { name: "summarize", arguments: { text: "Long passage..." } },
       messages: [
-        { role: "system", content: [{ type: "text", text: "You are a helpful assistant." }] },
-        { role: "user", content: [{ type: "text", text: "Summarize the following text." }] },
+        {
+          role: "system",
+          content: [{ type: "text", text: "You are a helpful assistant." }],
+        },
+        {
+          role: "user",
+          content: [{ type: "text", text: "Summarize the following text." }],
+        },
       ],
     };
   }
@@ -459,12 +621,25 @@ function generateDetailForRequest(method: string): EventDetail | undefined {
 
 function generateDetailForResponse(method: string): EventDetail | undefined {
   if (method === "tools/call") {
-    const tool = randomChoice(["search", "read_file", "write_file", "list_dir", "http_get"]);
+    const tool = randomChoice([
+      "search",
+      "read_file",
+      "write_file",
+      "list_dir",
+      "http_get",
+    ]);
     const content: McpContent[] =
       tool === "search"
         ? [{ type: "text", text: "Found 3 results for your query." }]
         : tool === "read_file"
-          ? [{ type: "resource", uri: "file:///etc/hosts", mimeType: "text/plain", text: "127.0.0.1 localhost" }]
+          ? [
+              {
+                type: "resource",
+                uri: "file:///etc/hosts",
+                mimeType: "text/plain",
+                text: "127.0.0.1 localhost",
+              },
+            ]
           : tool === "write_file"
             ? [{ type: "text", text: "Wrote 12 bytes to /tmp/note.txt" }]
             : tool === "list_dir"
@@ -475,7 +650,10 @@ function generateDetailForResponse(method: string): EventDetail | undefined {
   if (method === "resources/read") {
     return {
       type: "resources-read",
-      resource: { uri: "file:///workspace/README.md", mimeType: "text/markdown" },
+      resource: {
+        uri: "file:///workspace/README.md",
+        mimeType: "text/markdown",
+      },
       content: [{ type: "text", text: "# Project\nThis is a demo." }],
     };
   }
@@ -487,8 +665,14 @@ function generateDetailForResponse(method: string): EventDetail | undefined {
       type: "prompts-get",
       prompt: { name: "summarize", arguments: { text: "Long passage..." } },
       messages: [
-        { role: "system", content: [{ type: "text", text: "You are a helpful assistant." }] },
-        { role: "assistant", content: [{ type: "text", text: "Here is the summary..." }] },
+        {
+          role: "system",
+          content: [{ type: "text", text: "You are a helpful assistant." }],
+        },
+        {
+          role: "assistant",
+          content: [{ type: "text", text: "Here is the summary..." }],
+        },
       ],
     };
   }

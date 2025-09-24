@@ -8,23 +8,25 @@ export const AddServerForm: FC<AddServerFormProps> = ({ showTitle = true }) => {
   return (
     <div>
       {showTitle && <h2>Add Server</h2>}
-      <form action="/ui/add-server" method="post" class="grid">
-        <label>
-          Server Name
-          <input type="text" name="name" placeholder="my-server" required />
-        </label>
+      <form action="/ui/add-server" method="post">
+        <div class="grid">
+          <label>
+            Server Name
+            <input type="text" name="name" placeholder="my-server" required />
+          </label>
 
-        <label>
-          Server URL
-          <input
-            type="url"
-            name="url"
-            placeholder="http://localhost:3001/mcp"
-            required
-          />
-        </label>
+          <label>
+            Server URL
+            <input
+              type="url"
+              name="url"
+              placeholder="http://localhost:3001/mcp"
+              required
+            />
+          </label>
+        </div>
 
-        <div>
+        <div class="grid" style="margin-top: var(--line-height);">
           <button type="submit">Add Server</button>
           <button type="reset">Reset</button>
         </div>
