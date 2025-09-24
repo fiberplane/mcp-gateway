@@ -1,9 +1,10 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
+import { serve } from "@hono/node-server";
 import { runInteractiveCli } from "./cli.js";
 import { createApp } from "./server.js";
 import { getStorageRoot, loadRegistry } from "./storage.js";
@@ -41,7 +42,7 @@ function showVersion(): void {
 export async function runCli(): Promise<void> {
   try {
     const { values } = parseArgs({
-      args: Bun.argv.slice(2),
+      args: process.argv.slice(2),
       options: {
         help: {
           type: "boolean",
@@ -81,18 +82,18 @@ export async function runCli(): Promise<void> {
     const { app } = await createApp(registry, storageDir);
     const port = 3333;
 
-    const server = Bun.serve({
-      port,
+    const server = serve({
       fetch: app.fetch,
+      port,
     });
 
     console.log(`MCP Gateway server started at http://localhost:${port}`);
 
     // Start interactive CLI
-    runInteractiveCli(storageDir, registry, () => server.stop()).catch(
+    runInteractiveCli(storageDir, registry, () => server.close()).catch(
       (error) => {
         console.error("CLI error:", error);
-        server.stop();
+        server.close();
         process.exit(1);
       },
     );
@@ -106,6 +107,6 @@ export async function runCli(): Promise<void> {
 }
 
 // Auto-run if this is the main module
-if (import.meta.main) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   await runCli();
 }
