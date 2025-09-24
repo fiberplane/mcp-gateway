@@ -1,6 +1,9 @@
 # dependencies (bun install)
 node_modules
 
+# playwright mcp
+.playwright-mcp
+
 # output
 out
 dist

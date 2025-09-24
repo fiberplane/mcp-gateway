@@ -60,7 +60,7 @@ export async function createApp(
     });
   });
 
-  app.route("/ui", createUIHandler(registry));
+  app.route("/ui", createUIHandler(registry, storage));
 
   // Single dynamic proxy route with proper validation
   app.post(
