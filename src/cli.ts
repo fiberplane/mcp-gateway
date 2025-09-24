@@ -12,7 +12,7 @@ const GREEN = "\x1b[92m";
 const YELLOW = "\x1b[93m";
 
 // Truncate URL for display
-function truncateUrl(url: string, maxLength: number = 30): string {
+function _truncateUrl(url: string, maxLength: number = 30): string {
   if (url.length <= maxLength) return url;
   return `${url.slice(0, maxLength - 3)}...`;
 }
@@ -320,13 +320,17 @@ function readKey(): Promise<string> {
 }
 
 // Main interactive CLI loop
-export async function runInteractiveCli(storageDir: string): Promise<void> {
+export async function runInteractiveCli(
+  storageDir: string,
+  onExit?: () => void,
+): Promise<void> {
   let registry = await loadRegistry(storageDir);
   let running = true;
 
   // Handle Ctrl+C gracefully
   process.on("SIGINT", () => {
     console.log("\n\nClosing the MCP Gateway...");
+    onExit?.();
     process.exit(0);
   });
 
@@ -359,5 +363,6 @@ export async function runInteractiveCli(storageDir: string): Promise<void> {
   }
 
   console.log("\nClosing the MCP Gateway...");
+  onExit?.();
   process.exit(0);
 }

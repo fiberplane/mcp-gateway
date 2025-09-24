@@ -2,4 +2,4 @@
 
 import { runCli } from "../src/run.js";
 
-runCli();
+await runCli();

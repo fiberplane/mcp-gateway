@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { runInteractiveCli } from "./cli.js";
+import { createApp } from "./server.js";
 import { getStorageRoot } from "./storage.js";
 
 function showHelp(): void {
@@ -35,7 +36,7 @@ function showVersion(): void {
   console.log(`mcp-gateway v${packageJson.version}`);
 }
 
-export function runCli(): void {
+export async function runCli(): Promise<void> {
   try {
     const { values } = parseArgs({
       args: Bun.argv.slice(2),
@@ -71,9 +72,21 @@ export function runCli(): void {
     // Get storage directory
     const storageDir = getStorageRoot(values["storage-dir"]);
 
+    // Start HTTP server
+    const app = await createApp(storageDir);
+    const port = 3333;
+
+    const server = Bun.serve({
+      port,
+      fetch: app.fetch,
+    });
+
+    console.log(`MCP Gateway server started at http://localhost:${port}`);
+
     // Start interactive CLI
-    runInteractiveCli(storageDir).catch((error) => {
+    runInteractiveCli(storageDir, () => server.stop()).catch((error) => {
       console.error("CLI error:", error);
+      server.stop();
       process.exit(1);
     });
   } catch (error) {
@@ -87,5 +100,5 @@ export function runCli(): void {
 
 // Auto-run if this is the main module
 if (import.meta.main) {
-  runCli();
+  await runCli();
 }
