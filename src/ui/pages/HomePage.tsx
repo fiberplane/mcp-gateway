@@ -18,8 +18,7 @@ export const HomePage: FC<HomePageProps> = ({ registry }) => {
         <div>
           <p>Welcome! Get started by adding your first MCP server.</p>
           <p>
-            <a href="/ui/add">Add Server</a> or{" "}
-            <a href="/status">view API status</a>
+            <a href="/ui/add">Add Server</a>
           </p>
         </div>
       ) : (

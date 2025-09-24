@@ -31,9 +31,6 @@ export const Navigation: FC<NavigationProps> = ({ currentPage }) => {
           <span> | </span>
         </>
       )}
-      <a href="/status">API Status</a>
-      <span> | </span>
-      <a href="/">Gateway Info</a>
     </nav>
   );
 };
