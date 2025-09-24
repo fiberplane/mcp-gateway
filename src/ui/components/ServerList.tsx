@@ -36,83 +36,34 @@ export const ServerList: FC<ServerListProps> = ({
           <tr>
             <th class="width-min">Name</th>
             <th class="width-auto">URL</th>
-            <th class="width-min">Type</th>
-            {!compact && (
-              <>
-                <th class="width-min">Exchanges</th>
-                <th class="width-min">Last Activity</th>
-              </>
-            )}
+            <th class="width-min">Last Seen</th>
+            {!compact && <th class="width-min">Exchanges</th>}
+            <th class="width-min">Actions</th>
           </tr>
         </thead>
         <tbody>
           {servers.map((server) => (
             <tr key={server.name}>
               <td>{server.name}</td>
+              <td>{server.url}</td>
               <td>
-                <a href={server.url} target="_blank" rel="noopener noreferrer">
-                  {server.url}
-                </a>
+                {server.lastActivity
+                  ? new Date(server.lastActivity).toLocaleString()
+                  : "Never"}
               </td>
-              <td>{server.type}</td>
-              {!compact && (
-                <>
-                  <td>{server.exchangeCount}</td>
-                  <td>
-                    {server.lastActivity
-                      ? new Date(server.lastActivity).toLocaleString()
-                      : "Never"}
-                  </td>
-                </>
-              )}
+              {!compact && <td>{server.exchangeCount}</td>}
+              <td>
+                <button
+                  type="button"
+                  onclick={`window.location.href='/ui/server/${server.name}'`}
+                >
+                  Details
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
-
-      {!compact && (
-        <details>
-          <summary>Server Details</summary>
-          <div>
-            {servers.map((server) => (
-              <div key={`details-${server.name}`}>
-                <h3>{server.name}</h3>
-                <ul>
-                  <li>
-                    <strong>URL:</strong> {server.url}
-                  </li>
-                  <li>
-                    <strong>Type:</strong> {server.type}
-                  </li>
-                  <li>
-                    <strong>Exchange Count:</strong> {server.exchangeCount}
-                  </li>
-                  <li>
-                    <strong>Last Activity:</strong>{" "}
-                    {server.lastActivity || "Never"}
-                  </li>
-                  <li>
-                    <strong>Headers:</strong>
-                    {Object.keys(server.headers).length === 0 ? (
-                      " None"
-                    ) : (
-                      <ul>
-                        {Object.entries(server.headers).map(([key, value]) => (
-                          <li key={key}>
-                            <code>
-                              {key}: {value}
-                            </code>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </li>
-                </ul>
-              </div>
-            ))}
-          </div>
-        </details>
-      )}
     </div>
   );
 };

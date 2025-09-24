@@ -1,9 +1,11 @@
 import { Hono } from "hono";
-import { addServer, type Registry } from "../registry.js";
+import { addServer, getServer, type Registry } from "../registry.js";
 import { saveRegistry } from "../storage.js";
 import { Layout } from "./Layout.js";
 import { AddServerPage } from "./pages/AddServerPage.js";
+import { EventsPage } from "./pages/EventsPage.js";
 import { HomePage } from "./pages/HomePage.js";
+import { ServerDetailsPage } from "./pages/ServerDetailsPage.js";
 import { ServersPage } from "./pages/ServersPage.js";
 
 export function createUIHandler(registry: Registry, storageDir: string) {
@@ -17,8 +19,32 @@ export function createUIHandler(registry: Registry, storageDir: string) {
     return c.html(<ServersPage registry={registry} />);
   });
 
+  uiHandler.get("/events", (c) => {
+    return c.html(<EventsPage registry={registry} />);
+  });
+
   uiHandler.get("/add", (c) => {
     return c.html(<AddServerPage />);
+  });
+
+  uiHandler.get("/server/:name", (c) => {
+    const serverName = c.req.param("name");
+    const server = getServer(registry, serverName);
+
+    if (!server) {
+      return c.html(
+        <Layout>
+          <h1>Server Not Found</h1>
+          <p>The server "{serverName}" was not found.</p>
+          <nav>
+            <a href="/ui/servers">← Back to Servers</a>
+          </nav>
+        </Layout>,
+        404,
+      );
+    }
+
+    return c.html(<ServerDetailsPage server={server} />);
   });
 
   uiHandler.post("/add-server", async (c) => {

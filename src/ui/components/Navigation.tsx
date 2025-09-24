@@ -1,7 +1,7 @@
 import type { FC } from "hono/jsx";
 
 interface NavigationProps {
-  currentPage?: "home" | "servers" | "add";
+  currentPage?: "home" | "servers" | "add" | "events";
 }
 
 export const Navigation: FC<NavigationProps> = ({ currentPage }) => {
@@ -16,6 +16,12 @@ export const Navigation: FC<NavigationProps> = ({ currentPage }) => {
       {currentPage !== "servers" && (
         <>
           <a href="/ui/servers">Servers</a>
+          <span> | </span>
+        </>
+      )}
+      {currentPage !== "events" && (
+        <>
+          <a href="/ui/events">Events</a>
           <span> | </span>
         </>
       )}
