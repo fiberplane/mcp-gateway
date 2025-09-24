@@ -1,5 +1,11 @@
 # @fiberplane/mcp-gateway
 
+## 0.2.1
+
+### Patch Changes
+
+- 5dd5193: Replace Bun-APIs with Node ones for now.
+
 ## 0.2.0
 
 ### Minor Changes
