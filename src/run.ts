@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { runInteractiveCli } from "./cli.js";
 import { createApp } from "./server.js";
-import { getStorageRoot } from "./storage.js";
+import { getStorageRoot, loadRegistry } from "./storage.js";
 
 function showHelp(): void {
   console.log(`
@@ -72,8 +72,11 @@ export async function runCli(): Promise<void> {
     // Get storage directory
     const storageDir = getStorageRoot(values["storage-dir"]);
 
+    // Load registry once and share it between server and CLI
+    const registry = await loadRegistry(storageDir);
+
     // Start HTTP server
-    const app = await createApp(storageDir);
+    const { app } = await createApp(registry, storageDir);
     const port = 3333;
 
     const server = Bun.serve({
@@ -84,11 +87,13 @@ export async function runCli(): Promise<void> {
     console.log(`MCP Gateway server started at http://localhost:${port}`);
 
     // Start interactive CLI
-    runInteractiveCli(storageDir, () => server.stop()).catch((error) => {
-      console.error("CLI error:", error);
-      server.stop();
-      process.exit(1);
-    });
+    runInteractiveCli(storageDir, registry, () => server.stop()).catch(
+      (error) => {
+        console.error("CLI error:", error);
+        server.stop();
+        process.exit(1);
+      },
+    );
   } catch (error) {
     if (error instanceof Error) {
       console.error(`Error: ${error.message}`);

@@ -1,6 +1,7 @@
+import { getActiveSessions } from "./capture.js";
 import type { Registry } from "./registry.js";
-import { addServer, isValidUrl, removeServer } from "./registry.js";
-import { loadRegistry, saveRegistry } from "./storage.js";
+import { isValidUrl } from "./registry.js";
+import { saveRegistry } from "./storage.js";
 
 // ANSI escape codes for terminal control
 const CLEAR_SCREEN = "\x1Bc";
@@ -28,27 +29,53 @@ function formatTimestamp(timestamp: string | null): string {
   }
 }
 
+// Format relative time (e.g., "2 min ago", "1 hour ago")
+function formatRelativeTime(timestamp: string | null): string {
+  if (!timestamp) return "—";
+  try {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffSecs = Math.floor(diffMs / 1000);
+    const diffMins = Math.floor(diffSecs / 60);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffSecs < 60) return "just now";
+    if (diffMins < 60) return `${diffMins} min ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return formatTimestamp(timestamp);
+  } catch {
+    return "—";
+  }
+}
+
 // Render the main menu
 function renderMenu(registry: Registry): void {
   process.stdout.write(CLEAR_SCREEN);
 
+  const activeSessions = getActiveSessions();
   console.log(`${CYAN}MCP Gateway v0.1.0${RESET_COLOR}`);
-  console.log(`${DIM}Gateway: http://localhost:3333${RESET_COLOR}\n`);
+  console.log(`${DIM}Gateway: http://localhost:3333${RESET_COLOR}`);
+  if (activeSessions.length > 0) {
+    console.log(
+      `${DIM}Active sessions: ${activeSessions.length}${RESET_COLOR}`,
+    );
+  }
+  console.log();
 
   if (registry.servers.length === 0) {
     console.log(`${DIM}No servers registered${RESET_COLOR}`);
   } else {
     console.log(`${CYAN}Servers:${RESET_COLOR}`);
     for (const server of registry.servers) {
-      const activity = server.lastActivity
-        ? formatTimestamp(server.lastActivity)
-        : "—";
+      const activity = formatRelativeTime(server.lastActivity);
       const encodedName = encodeURIComponent(server.name);
       const proxyUrl = `http://localhost:3333/${encodedName}/mcp`;
-      console.log(
-        `  ${GREEN}${server.name}${RESET_COLOR} ${DIM}→ ${server.url}${RESET_COLOR}`,
-      );
-      console.log(`    ${DIM}Proxy: ${proxyUrl}${RESET_COLOR}`);
+      console.log(`  ${GREEN}${server.name}${RESET_COLOR}`);
+      console.log(`    ${CYAN}${proxyUrl}${RESET_COLOR}`);
+      console.log(`    ${DIM}→ ${server.url}${RESET_COLOR}`);
       console.log(
         `    ${DIM}Last active: ${activity} • ${server.exchangeCount} exchanges${RESET_COLOR}`,
       );
@@ -65,6 +92,7 @@ function renderMenu(registry: Registry): void {
   }
 
   console.log(`${YELLOW}[q]${RESET_COLOR} Quit`);
+  console.log();
 }
 
 // Prompt for user input
@@ -144,7 +172,7 @@ function prompt(message: string): Promise<string | null> {
 async function handleAddServer(
   registry: Registry,
   storageDir: string,
-): Promise<Registry> {
+): Promise<void> {
   console.log(`\n${CYAN}Add New Server${RESET_COLOR}`);
 
   try {
@@ -152,54 +180,63 @@ async function handleAddServer(
 
     if (url === null) {
       // ESC pressed - return to main menu
-      return registry;
+      return;
     }
 
     if (!url) {
       console.log("Error: URL cannot be empty");
       await new Promise((resolve) => setTimeout(resolve, 1500));
-      return registry;
+      return;
     }
 
     if (!isValidUrl(url)) {
       console.log("Error: Invalid URL format (must be HTTP or HTTPS)");
       await new Promise((resolve) => setTimeout(resolve, 1500));
-      return registry;
+      return;
     }
 
     const name = await prompt("Display name (ESC to cancel): ");
 
     if (name === null) {
       // ESC pressed - return to main menu
-      return registry;
+      return;
     }
 
     if (!name) {
       console.log("Error: Display name cannot be empty");
       await new Promise((resolve) => setTimeout(resolve, 1500));
-      return registry;
+      return;
     }
 
-    const newRegistry = addServer(registry, {
-      name,
-      url,
+    // Direct mutation approach - no new objects created
+    const normalizedUrl = new URL(url).toString().replace(/\/$/, "");
+    const normalizedName = name.toLowerCase().trim();
+
+    // Check if server already exists
+    if (registry.servers.some((s) => s.name === normalizedName)) {
+      throw new Error(`Server '${name}' already exists`);
+    }
+
+    // Create and push new server directly to existing array
+    registry.servers.push({
+      name: normalizedName,
+      url: normalizedUrl,
       type: "http",
       headers: {},
+      lastActivity: null,
+      exchangeCount: 0,
     });
 
-    await saveRegistry(storageDir, newRegistry);
+    await saveRegistry(storageDir, registry);
     console.log(
       `\n${BOLD}✓${RESET_COLOR} Server '${name}' added successfully!`,
     );
     await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    return newRegistry;
   } catch (error) {
     console.log(
       `\nError: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
     await new Promise((resolve) => setTimeout(resolve, 1500));
-    return registry;
   }
 }
 
@@ -207,11 +244,11 @@ async function handleAddServer(
 async function handleRemoveServer(
   registry: Registry,
   storageDir: string,
-): Promise<Registry> {
+): Promise<void> {
   if (registry.servers.length === 0) {
     console.log(`\n${DIM}No servers to remove${RESET_COLOR}`);
     await new Promise((resolve) => setTimeout(resolve, 1500));
-    return registry;
+    return;
   }
 
   console.log(`\n${CYAN}Remove Server${RESET_COLOR}`);
@@ -225,7 +262,7 @@ async function handleRemoveServer(
 
   if (selection === null || !selection) {
     // ESC pressed or empty input - return to main menu
-    return registry;
+    return;
   }
 
   const serverIndex = parseInt(selection, 10) - 1;
@@ -237,14 +274,14 @@ async function handleRemoveServer(
   ) {
     console.log("Error: Invalid selection");
     await new Promise((resolve) => setTimeout(resolve, 1500));
-    return registry;
+    return;
   }
 
   const server = registry.servers[serverIndex];
   if (!server) {
     console.log("Error: Server not found");
     await new Promise((resolve) => setTimeout(resolve, 1500));
-    return registry;
+    return;
   }
 
   const confirm = await prompt(`\nReally remove '${server.name}'? (y/N): `);
@@ -253,24 +290,33 @@ async function handleRemoveServer(
     // ESC pressed or not confirmed - return to main menu
     console.log("Cancelled");
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    return registry;
+    return;
   }
 
   try {
-    const newRegistry = removeServer(registry, server.name);
-    await saveRegistry(storageDir, newRegistry);
+    // Direct mutation approach - find and remove server
+    const serverIndex = registry.servers.findIndex(
+      (s) => s.name === server.name,
+    );
+
+    if (serverIndex === -1) {
+      throw new Error(`Server '${server.name}' not found`);
+    }
+
+    // Remove directly from existing array
+    registry.servers.splice(serverIndex, 1);
+
+    await saveRegistry(storageDir, registry);
     console.log(
       `\n${BOLD}✓${RESET_COLOR} Server '${server.name}' removed successfully!`,
     );
     console.log(`${DIM}Note: Capture history preserved on disk${RESET_COLOR}`);
     await new Promise((resolve) => setTimeout(resolve, 1500));
-    return newRegistry;
   } catch (error) {
     console.log(
       `\nError: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
     await new Promise((resolve) => setTimeout(resolve, 1500));
-    return registry;
   }
 }
 
@@ -322,9 +368,9 @@ function readKey(): Promise<string> {
 // Main interactive CLI loop
 export async function runInteractiveCli(
   storageDir: string,
+  registry: Registry,
   onExit?: () => void,
 ): Promise<void> {
-  let registry = await loadRegistry(storageDir);
   let running = true;
 
   // Handle Ctrl+C gracefully
@@ -339,16 +385,16 @@ export async function runInteractiveCli(
 
     const key = await readKey();
 
-    // Skip empty keys (like Enter)
+    // Skip empty keys (like Enter) - but still re-render to show updates
     if (!key) continue;
 
     switch (key.toLowerCase()) {
       case "a":
-        registry = await handleAddServer(registry, storageDir);
+        await handleAddServer(registry, storageDir);
         break;
 
       case "r":
-        registry = await handleRemoveServer(registry, storageDir);
+        await handleRemoveServer(registry, storageDir);
         break;
 
       case "q":

@@ -29,6 +29,13 @@ export function clearClientInfo(sessionId: string): void {
   sessionClientInfo.delete(sessionId);
 }
 
+// Get all active session IDs
+export function getActiveSessions(): string[] {
+  return Array.from(sessionClientInfo.keys()).filter(
+    (id) => id !== "stateless",
+  );
+}
+
 // Create capture record
 export function createCaptureRecord(
   serverName: string,
