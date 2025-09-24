@@ -19,6 +19,8 @@ import {
   sessionHeaderSchema,
 } from "./schemas.js";
 import { getStorageRoot, loadRegistry, saveRegistry } from "./storage.js";
+import { serveEmojiFavicon } from "./ui/serve-emoji-favicon.js";
+import { uiHandler } from "./ui/ui.js";
 
 // Create main application
 export async function createApp(
@@ -29,6 +31,11 @@ export async function createApp(
 
   // Determine storage directory
   const storage = getStorageRoot(storageDir);
+
+  // Load registry
+  const registry = await loadRegistry(storage);
+
+  app.use(serveEmojiFavicon("🌉"));
 
   // Health check endpoint
   app.get("/", (c) => {
@@ -55,6 +62,8 @@ export async function createApp(
       storage: storage,
     });
   });
+
+  app.route("/ui", uiHandler);
 
   // Single dynamic proxy route with proper validation
   app.post(
