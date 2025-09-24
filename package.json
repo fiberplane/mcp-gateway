@@ -17,6 +17,8 @@
   },
   "sideEffects": false,
   "scripts": {
+    "cli": "bun run bin/cli.ts",
+    "dev": "bun --watch run src/server.ts",
     "build": "bun run scripts/build.ts",
     "build:types": "tsc --project tsconfig.build.json --outDir dist/types --rootDir src",
     "typecheck": "tsc --noEmit",
@@ -42,5 +44,9 @@
     "@changesets/cli": "^2.29.7",
     "@types/bun": "latest",
     "typescript": "^5"
+  },
+  "dependencies": {
+    "hono": "^4.9.8",
+    "mcp-lite": "^0.3.0"
   }
 }
