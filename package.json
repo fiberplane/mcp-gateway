@@ -8,8 +8,10 @@
     "url": "git+https://github.com/fiberplane/mcp-gateway.git"
   },
   "files": [
+    "bin",
     "dist",
-    "README.md"
+    "README.md",
+    "CHANGELOG.md"
   ],
   "bin": {
     "mcp-gateway": "dist/cli.js"

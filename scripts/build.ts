@@ -10,7 +10,7 @@ await Bun.build({
   root: "src",
   entrypoints,
   sourcemap: "inline",
-  target: "node"
+  target: "node",
 });
 
 await $`bun run build:types`;
