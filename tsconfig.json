@@ -26,14 +26,6 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
   },
-  "include": [
-    "src/**/*",
-    "bin/**/*",
-    "tests/**/*",
-    "scripts/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist"
-  ]
+  "include": ["src/**/*", "bin/**/*", "tests/**/*", "scripts/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

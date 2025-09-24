@@ -2,7 +2,7 @@ import { $ } from "bun";
 
 await $`rm -rf dist`;
 
-const entrypoints = ["./src/index.ts", "./bin/cli.ts"];
+const entrypoints = ["./src/run.ts"];
 
 await Bun.build({
   format: "esm",
@@ -10,7 +10,5 @@ await Bun.build({
   root: "src",
   entrypoints,
   sourcemap: "inline",
-  target: "node"
+  target: "node",
 });
-
-await $`bun run build:types`;

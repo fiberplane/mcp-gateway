@@ -1,4 +1,6 @@
 import { join } from "node:path";
+import { access, readFile, writeFile } from "node:fs/promises";
+import { constants } from "node:fs";
 import type {
   CaptureRecord,
   ClientInfo,
@@ -92,13 +94,16 @@ export async function appendCapture(
     // Append JSONL record to file
     const jsonLine = `${JSON.stringify(record)}\n`;
 
-    // Use Bun.write in append mode
-    const existingFile = Bun.file(filePath);
-    const existingContent = (await existingFile.exists())
-      ? await existingFile.text()
-      : "";
+    // Use Node.js fs to append content
+    let existingContent = "";
+    try {
+      await access(filePath, constants.F_OK);
+      existingContent = await readFile(filePath, "utf8");
+    } catch {
+      // File doesn't exist, start with empty content
+    }
 
-    await Bun.write(filePath, existingContent + jsonLine);
+    await writeFile(filePath, existingContent + jsonLine, "utf8");
     return filename;
   } catch (error) {
     console.error("Failed to append capture record:", error);
