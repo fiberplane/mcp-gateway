@@ -43,7 +43,7 @@ export function createCaptureRecord(
   const record: CaptureRecord = {
     timestamp: new Date().toISOString(),
     method: request.method,
-    id: request.id,
+    id: request.id ?? null, // Handle missing id for notifications
     metadata: {
       serverName,
       sessionId,
@@ -111,7 +111,7 @@ export async function captureError(
 ): Promise<void> {
   const errorResponse: JsonRpcResponse = {
     jsonrpc: "2.0",
-    id: request.id,
+    id: request.id ?? null,
     error,
   };
 

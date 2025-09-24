@@ -3,7 +3,7 @@ import { z } from "zod";
 // JSON-RPC schemas
 export const jsonRpcRequestSchema = z.object({
   jsonrpc: z.literal("2.0"),
-  id: z.union([z.string(), z.number(), z.null()]),
+  id: z.union([z.string(), z.number(), z.null()]).optional(), // Optional for notifications
   method: z.string(),
   params: z.unknown().optional(),
 });
@@ -41,7 +41,7 @@ export const captureMetadataSchema = z.object({
 export const captureRecordSchema = z.object({
   timestamp: z.string(), // ISO 8601 UTC
   method: z.string(), // JSON-RPC method
-  id: z.union([z.string(), z.number(), z.null()]), // JSON-RPC request id
+  id: z.union([z.string(), z.number(), z.null()]), // JSON-RPC request id (null for notifications)
   metadata: captureMetadataSchema,
   request: jsonRpcRequestSchema,
   response: jsonRpcResponseSchema,

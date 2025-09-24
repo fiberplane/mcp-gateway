@@ -202,7 +202,7 @@ export async function createApp(storageDir?: string): Promise<Hono> {
         // Return JSON-RPC error response
         const errorResponse: JsonRpcResponse = {
           jsonrpc: "2.0",
-          id: jsonRpcRequest.id,
+          id: jsonRpcRequest.id ?? null,
           error: {
             code: -32603,
             message: String(error),
