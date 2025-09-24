@@ -1,5 +1,11 @@
 # @fiberplane/mcp-gateway
 
+## 0.2.2
+
+### Patch Changes
+
+- 4131a5a: Fix the binary releases.
+
 ## 0.2.1
 
 ### Patch Changes
