@@ -14,7 +14,7 @@
     "CHANGELOG.md"
   ],
   "bin": {
-    "mcp-gateway": "dist/run.js"
+    "mcp-gateway": "bin/cli.js"
   },
   "sideEffects": false,
   "scripts": {
