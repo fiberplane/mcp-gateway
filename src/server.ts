@@ -9,7 +9,7 @@ import {
   createCaptureRecord,
   storeClientInfo,
 } from "./capture.js";
-import { getServer } from "./registry.js";
+import { getServer, type Registry } from "./registry.js";
 import {
   clientInfoSchema,
   generateCaptureFilename,
@@ -18,12 +18,15 @@ import {
   serverParamSchema,
   sessionHeaderSchema,
 } from "./schemas.js";
-import { getStorageRoot, loadRegistry } from "./storage.js";
+import { getStorageRoot, loadRegistry, saveRegistry } from "./storage.js";
 import { serveEmojiFavicon } from "./ui/serve-emoji-favicon.js";
 import { uiHandler } from "./ui/ui.js";
 
 // Create main application
-export async function createApp(storageDir?: string): Promise<Hono> {
+export async function createApp(
+  registry: Registry,
+  storageDir?: string,
+): Promise<{ app: Hono; registry: Registry }> {
   const app = new Hono();
 
   // Determine storage directory
@@ -162,18 +165,38 @@ export async function createApp(storageDir?: string): Promise<Hono> {
 
             try {
               await rename(oldPath, newPath);
-              console.log(
-                `Moved initialize capture from stateless to session: ${responseSessionId}`,
-              );
+              console.log(`New session created: ${responseSessionId}`);
             } catch (error) {
               console.warn(`Failed to rename capture file: ${error}`);
             }
           }
         }
 
+        // Color code based on status
+        const statusColor =
+          httpStatus >= 200 && httpStatus < 300
+            ? "\x1b[92m" // green for success
+            : httpStatus >= 400 && httpStatus < 500
+              ? "\x1b[93m" // yellow for client errors
+              : "\x1b[91m"; // red for server errors
+        const reset = "\x1b[0m";
+
+        const statusText =
+          httpStatus >= 200 && httpStatus < 300
+            ? "OK"
+            : httpStatus >= 400 && httpStatus < 500
+              ? "Client Error"
+              : "Server Error";
+
         console.log(
-          `Server ${server.name} exchange recorded, duration: ${duration}ms, status: ${httpStatus}`,
+          `${server.name} → ${jsonRpcRequest.method} ${statusColor}(${httpStatus} ${statusText}, ${duration}ms)${reset}`,
         );
+
+        // Update the server object in place
+        server.lastActivity = new Date().toISOString();
+        server.exchangeCount = server.exchangeCount + 1;
+
+        await saveRegistry(storage, registry);
 
         // Create new response with the same data and headers
         const responseHeaders = new Headers(targetResponse.headers);
@@ -223,11 +246,12 @@ export async function createApp(storageDir?: string): Promise<Hono> {
     },
   );
 
-  return app;
+  return { app, registry };
 }
 
 // Create app instance for development
-const app = await createApp();
+const devRegistry = await loadRegistry(getStorageRoot());
+const { app } = await createApp(devRegistry);
 const port = 3333;
 
 export default {
