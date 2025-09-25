@@ -1,3 +1,4 @@
+import { raw } from "hono/html";
 import type { FC } from "hono/jsx";
 import { METHODS } from "../../schemas.js";
 
@@ -104,29 +105,15 @@ export const RecentEventsTable: FC<{
 }> = ({ events, compact = false }) => {
   if (events.length === 0) {
     return (
-      <div
-        style={{
-          textAlign: "center",
-          padding: "2rem",
-          color: "#6b7280",
-          border: "2px dashed #e5e7eb",
-          borderRadius: "8px",
-          backgroundColor: "#f9fafb",
-        }}
-      >
-        <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>📭</div>
-        <p style={{ margin: "0 0 0.5rem 0", fontWeight: "500" }}>
-          No events yet
-        </p>
-        <p style={{ margin: "0", fontSize: "0.875rem" }}>
-          Events will appear here when the server starts processing requests
-        </p>
-      </div>
+      <p>
+        📭 No events yet. Events will appear here when the server starts
+        processing requests.
+      </p>
     );
   }
 
   return (
-    <div style={compact ? {} : { overflowX: "auto" }}>
+    <>
       <table>
         <thead>
           <tr>
@@ -143,10 +130,7 @@ export const RecentEventsTable: FC<{
             return (
               <>
                 <tr key={eventKey}>
-                  <td
-                    style={{ opacity: 0.7 }}
-                    title={new Date(e.timestamp).toLocaleString()}
-                  >
+                  <td title={new Date(e.timestamp).toLocaleString()}>
                     {formatTime(e.timestamp, compact)}
                   </td>
                   <td>
@@ -162,26 +146,7 @@ export const RecentEventsTable: FC<{
                   </td>
                   <td>{e.id ?? "—"}</td>
                   {!compact && <td>{e.serverName ?? "—"}</td>}
-                  <td>
-                    <span
-                      style={{
-                        display: "inline-block",
-                        padding: "2px 6px",
-                        borderRadius: "3px",
-                        fontSize: "0.75em",
-                        fontWeight: "bold",
-                        color: "white",
-                        backgroundColor:
-                          e.status === "error"
-                            ? "#dc2626"
-                            : e.status === "ok"
-                              ? "#059669"
-                              : "#6b7280",
-                      }}
-                    >
-                      {e.status ?? "info"}
-                    </span>
-                  </td>
+                  <td>{e.status ?? "info"}</td>
                 </tr>
                 {e.detail && (
                   <tr
@@ -190,17 +155,7 @@ export const RecentEventsTable: FC<{
                     class="event-detail"
                   >
                     <td></td>
-                    <td colSpan={compact ? 3 : 4}>
-                      <div
-                        style={{
-                          marginLeft: "1ch",
-                          paddingLeft: "1ch",
-                          borderLeft: "2px solid",
-                        }}
-                      >
-                        {renderDetail(e.detail)}
-                      </div>
-                    </td>
+                    <td colSpan={compact ? 3 : 4}>{renderDetail(e.detail)}</td>
                   </tr>
                 )}
               </>
@@ -208,8 +163,8 @@ export const RecentEventsTable: FC<{
           })}
         </tbody>
       </table>
-      <script>
-        {`
+      {raw(`
+        <script>
           document.addEventListener('DOMContentLoaded', function() {
             // Handle details toggle for event expansion
             document.querySelectorAll('details').forEach(details => {
@@ -222,9 +177,9 @@ export const RecentEventsTable: FC<{
               });
             });
           });
-        `}
-      </script>
-    </div>
+        </script>
+      `)}
+    </>
   );
 };
 

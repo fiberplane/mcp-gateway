@@ -4,6 +4,9 @@ The UI is server-side rendered using hono/jsx.
 
 It uses a layout that injects style defaults and minimal javascript from "The Monospace Web" https://github.com/owickstrom/the-monospace-web
 
+The css reset is at: ./reset.css
+The Monospace Web styles are at: ./monospace-web.css
+
 ## Using JSX with Hono
 
 You can import from 'hono/jsx'

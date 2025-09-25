@@ -1,8 +1,9 @@
 import type { FC } from "hono/jsx";
 import type { McpServer } from "../../registry.js";
 import { Navigation } from "../components/Navigation.js";
-import { ServerEventsTable } from "../components/RecentEventsTable.js";
+import { UIEventsTable } from "../components/UIEventsTable.js";
 import { Layout } from "../Layout.js";
+import { generateFakeUIEventsForServer } from "../utils/fakeData.js";
 
 interface ServerDetailsPageProps {
   server: McpServer;
@@ -101,10 +102,13 @@ export const ServerDetailsPage: FC<ServerDetailsPageProps> = ({ server }) => {
       <div id="events">
         <h2>Recent Events</h2>
         <p>Latest MCP protocol exchanges for this server</p>
-        <ServerEventsTable serverName={server.name} showEmpty={false} />
-        <div style="margin-top: 1rem;">
+        <UIEventsTable
+          events={generateFakeUIEventsForServer(server.name, 15)}
+          compact={true}
+        />
+        <p>
           <a href="/ui/events">View All Events</a>
-        </div>
+        </p>
       </div>
 
       <hr />
