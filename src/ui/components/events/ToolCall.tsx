@@ -3,6 +3,7 @@ import type { FC } from "hono/jsx";
 // Type definitions for the ToolCall component
 export interface ToolCallData {
   toolName: string;
+  durationMs?: number;
   sessionId?: string;
   requestId: string;
   requestParams: Record<string, unknown>;
@@ -51,14 +52,27 @@ export const ToolCall: FC<ToolCallProps> = ({ data, expanded = false }) => {
   return (
     <details open={expanded}>
       <summary>
-        <span class="width-min">{formatTimestamp(data.timestamp)}</span>
-        <span class="width-auto">{data.toolName}</span>
+        <span class="width-min" style="opacity: 0.72">
+          &nbsp;[{formatTimestamp(data.timestamp)}]&nbsp;
+        </span>
+        <span class="width-auto">
+          <span style="opacity:0.72">[tools/call]&nbsp;</span>
+          {data.toolName}&nbsp;
+        </span>
         <span class="width-min">{getResponseIcon()}</span>
       </summary>
 
       <div style="margin-left: 1ch; margin-top: 0.5em;">
         <table>
           <tbody>
+            <tr>
+              <th class="width-min">Status</th>
+              <td class="width-auto">{getResponseStatus()}</td>
+            </tr>
+            <tr>
+              <th class="width-min">Duration</th>
+              <td class="width-auto">{data.durationMs || "N/A "} (ms)</td>
+            </tr>
             {data.sessionId && (
               <tr>
                 <th class="width-min">Session</th>
@@ -68,14 +82,10 @@ export const ToolCall: FC<ToolCallProps> = ({ data, expanded = false }) => {
             <tr>
               <th class="width-min">Request ID</th>
               <td class="width-auto">
-                <code style="font-size: 0.8em; color: #666;">
+                <code style="font-size: 0.8em; opacity: 0.72;">
                   {data.requestId}
                 </code>
               </td>
-            </tr>
-            <tr>
-              <th class="width-min">Status</th>
-              <td class="width-auto">{getResponseStatus()}</td>
             </tr>
           </tbody>
         </table>
@@ -139,6 +149,7 @@ export const ToolCall: FC<ToolCallProps> = ({ data, expanded = false }) => {
 export const ToolCallStories = {
   successful: {
     toolName: "read_file",
+    durationMs: 100,
     sessionId: "sess-abc123",
     requestId: "req-456def",
     requestParams: {
@@ -158,6 +169,7 @@ export const ToolCallStories = {
 
   error: {
     toolName: "write_file",
+    durationMs: 100,
     sessionId: "sess-xyz789",
     requestId: "req-789ghi",
     requestParams: {

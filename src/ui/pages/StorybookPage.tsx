@@ -1,4 +1,9 @@
 import type { FC } from "hono/jsx";
+import { PromptGet, PromptGetStories } from "../components/events/PromptGet.js";
+import {
+  ResourceRead,
+  ResourceReadStories,
+} from "../components/events/ResourceRead.js";
 import { ToolCall, ToolCallStories } from "../components/events/ToolCall.js";
 import { Layout } from "../Layout.js";
 
@@ -38,6 +43,16 @@ export const StorybookPage: FC = () => {
               Tool Call
             </a>
           </li>
+          <li>
+            <a href="#resource-read" id="toc-resource-read">
+              Resource Read
+            </a>
+          </li>
+          <li>
+            <a href="#prompt-get" id="toc-prompt-get">
+              Prompt Get
+            </a>
+          </li>
         </ul>
       </nav>
 
@@ -59,6 +74,54 @@ export const StorybookPage: FC = () => {
 
         <h3>Tool Call Without Session</h3>
         <ToolCall data={ToolCallStories.noSession} expanded={false} />
+      </div>
+
+      <h2 id="resource-read">Resource Read</h2>
+      <p>
+        Displays MCP resource read requests and responses based on the protocol
+        specification. Shows URI, content type, size, and actual resource
+        contents.
+      </p>
+
+      <div id="resource-read-examples">
+        <h3>Text File Resource</h3>
+        <ResourceRead data={ResourceReadStories.textFile} expanded={true} />
+
+        <h3>Binary File Resource</h3>
+        <ResourceRead data={ResourceReadStories.binaryFile} expanded={true} />
+
+        <h3>Error Resource Read</h3>
+        <ResourceRead data={ResourceReadStories.error} expanded={true} />
+
+        <h3>Pending Resource Read</h3>
+        <ResourceRead data={ResourceReadStories.pending} expanded={true} />
+
+        <h3>Git Resource Without Session</h3>
+        <ResourceRead
+          data={ResourceReadStories.withoutSession}
+          expanded={false}
+        />
+      </div>
+
+      <h2 id="prompt-get">Prompt Get</h2>
+      <p>
+        Displays MCP prompt get requests and responses based on the protocol
+        specification. Shows prompt names, arguments, and resulting prompt
+        messages with various content types.
+      </p>
+
+      <div id="prompt-get-examples">
+        <h3>Successful Prompt Get</h3>
+        <PromptGet data={PromptGetStories.successful} expanded={true} />
+
+        <h3>Prompt with Resource Content</h3>
+        <PromptGet data={PromptGetStories.withResource} expanded={true} />
+
+        <h3>Error Prompt Get</h3>
+        <PromptGet data={PromptGetStories.error} expanded={true} />
+
+        <h3>Pending Prompt Get</h3>
+        <PromptGet data={PromptGetStories.pending} expanded={false} />
       </div>
 
       <nav>
