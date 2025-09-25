@@ -43,8 +43,8 @@ export const captureRecordSchema = z.object({
   method: z.string(), // JSON-RPC method
   id: z.union([z.string(), z.number(), z.null()]), // JSON-RPC request id (null for notifications)
   metadata: captureMetadataSchema,
-  request: jsonRpcRequestSchema,
-  response: jsonRpcResponseSchema,
+  request: jsonRpcRequestSchema.optional(),
+  response: jsonRpcResponseSchema.optional(),
 });
 
 // Sanitize string for filesystem use
@@ -63,13 +63,7 @@ export function generateCaptureFilename(
   const sanitizedServerName = sanitizeForFilename(serverName);
   const sanitizedSessionId = sanitizeForFilename(sessionId);
 
-  // For stateless requests, always use current timestamp (new file each time)
-  if (sessionId === "stateless") {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    return `${timestamp}-${sanitizedServerName}-${sanitizedSessionId}.jsonl`;
-  }
-
-  // For sessions, use cached start time or create new one
+  // Use cached start time for both regular sessions and stateless requests
   const sessionKey = `${serverName}-${sessionId}`;
   if (!sessionStartTimes.has(sessionKey)) {
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");

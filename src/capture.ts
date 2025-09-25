@@ -1,6 +1,6 @@
-import { join } from "node:path";
-import { access, readFile, writeFile } from "node:fs/promises";
 import { constants } from "node:fs";
+import { access, readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import type {
   CaptureRecord,
   ClientInfo,
@@ -12,6 +12,9 @@ import { ensureServerCaptureDir } from "./storage.js";
 
 // In-memory storage for client info by session
 const sessionClientInfo = new Map<string, ClientInfo>();
+
+// Store request start times for duration calculation
+const requestStartTimes = new Map<string | number, number>();
 
 // Store client info from initialize handshake
 export function storeClientInfo(
@@ -38,21 +41,67 @@ export function getActiveSessions(): string[] {
   );
 }
 
-// Create capture record
-export function createCaptureRecord(
+// Create capture record for request only
+export function createRequestCaptureRecord(
   serverName: string,
   sessionId: string,
   request: JsonRpcRequest,
-  response: JsonRpcResponse,
-  durationMs: number,
-  httpStatus: number,
 ): CaptureRecord {
   const clientInfo = getClientInfo(sessionId);
+
+  // Store start time if request expects response (has id)
+  if (request.id != null) {
+    requestStartTimes.set(request.id, Date.now());
+  }
 
   const record: CaptureRecord = {
     timestamp: new Date().toISOString(),
     method: request.method,
-    id: request.id ?? null, // Handle missing id for notifications
+    id: request.id ?? null,
+    metadata: {
+      serverName,
+      sessionId,
+      durationMs: 0, // Unknown at request time
+      httpStatus: 0, // Unknown at request time
+      client: clientInfo,
+    },
+    request,
+  };
+
+  // Validate the record
+  const result = captureRecordSchema.safeParse(record);
+  if (!result.success) {
+    console.warn("Invalid capture record:", result.error);
+    throw new Error("Failed to create valid capture record");
+  }
+
+  return record;
+}
+
+// Create capture record for response only
+export function createResponseCaptureRecord(
+  serverName: string,
+  sessionId: string,
+  response: JsonRpcResponse,
+  httpStatus: number,
+  method: string,
+): CaptureRecord {
+  const clientInfo = getClientInfo(sessionId);
+
+  // Calculate duration if we tracked the request
+  let durationMs = 0;
+  if (response.id != null && requestStartTimes.has(response.id)) {
+    const startTime = requestStartTimes.get(response.id);
+    if (startTime !== undefined) {
+      durationMs = Date.now() - startTime;
+      requestStartTimes.delete(response.id);
+    }
+  }
+
+  const record: CaptureRecord = {
+    timestamp: new Date().toISOString(),
+    method,
+    id: response.id,
     metadata: {
       serverName,
       sessionId,
@@ -60,7 +109,6 @@ export function createCaptureRecord(
       httpStatus,
       client: clientInfo,
     },
-    request,
     response,
   };
 
@@ -74,7 +122,6 @@ export function createCaptureRecord(
   return record;
 }
 
-// Append capture record to JSONL file
 export async function appendCapture(
   storageDir: string,
   record: CaptureRecord,
@@ -121,20 +168,27 @@ export async function captureError(
   httpStatus: number,
   durationMs: number,
 ): Promise<void> {
+  // Only capture error response if request expected a response
+  if (request.id == null) {
+    return; // Notification errors aren't sent back
+  }
+
   const errorResponse: JsonRpcResponse = {
     jsonrpc: "2.0",
-    id: request.id ?? null,
+    id: request.id,
     error,
   };
 
-  const record = createCaptureRecord(
+  const record = createResponseCaptureRecord(
     serverName,
     sessionId,
-    request,
     errorResponse,
-    durationMs,
     httpStatus,
+    request.method,
   );
+
+  // Override the calculated duration with the provided one
+  record.metadata.durationMs = durationMs;
 
   await appendCapture(storageDir, record);
 }

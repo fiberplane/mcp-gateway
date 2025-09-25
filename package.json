@@ -18,7 +18,7 @@
   },
   "sideEffects": false,
   "scripts": {
-    "dev": "bun --watch run src/server.ts",
+    "dev": "bun run build --watch && bun run bin/cli.js",
     "build": "bun run scripts/build.ts",
     "build:types": "tsc --project tsconfig.build.json --outDir dist/types --rootDir src",
     "test": "bun test",
