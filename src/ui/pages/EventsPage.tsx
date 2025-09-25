@@ -1,10 +1,13 @@
 import { raw } from "hono/html";
 import type { FC } from "hono/jsx";
 import type { Registry } from "../../registry.js";
+import { PromptGetStories } from "../components/events/PromptGet.js";
+import { ResourceReadStories } from "../components/events/ResourceRead.js";
+import { ToolCallStories } from "../components/events/ToolCall.js";
 import { Navigation } from "../components/Navigation.js";
 import { UIEventsTable } from "../components/UIEventsTable.js";
 import { Layout } from "../Layout.js";
-import { generateFakeUIEvents } from "../utils/fakeData.js";
+import type { UIEvent } from "../types/events.js";
 
 interface EventsPageProps {
   registry: Registry;
@@ -14,9 +17,108 @@ interface EventsPageProps {
 export const EventsPage: FC<EventsPageProps> = ({ registry }) => {
   const serverNames = registry.servers.map((s) => s.name);
 
-  // For now, use fake data but in a real implementation we'd read from storage
-  // const realEvents = await readRecentEvents(storageDir || "", serverNames, 100);
-  const allEvents = generateFakeUIEvents(100, serverNames);
+  // Create mock events based on our event component stories
+  const mockEvents: UIEvent[] = [
+    {
+      id: "tool-1",
+      timestamp: ToolCallStories.successful.timestamp,
+      type: "tool_call",
+      method: "tools/call",
+      requestId: ToolCallStories.successful.requestId,
+      status: "success",
+      metadata: {
+        serverName: serverNames[0] || "demo-server",
+        sessionId: ToolCallStories.successful.sessionId || "session-1",
+        durationMs: ToolCallStories.successful.durationMs || 100,
+        httpStatus: 200,
+      },
+      summary: `Tool call: ${ToolCallStories.successful.toolName}`,
+      details: {
+        type: "tool_call",
+        toolName: ToolCallStories.successful.toolName,
+        arguments: ToolCallStories.successful.requestParams,
+        result: {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(ToolCallStories.successful.response?.result),
+            },
+          ],
+          isError: false,
+        },
+      },
+    },
+    {
+      id: "prompt-1",
+      timestamp: PromptGetStories.successful.timestamp,
+      type: "prompt_get",
+      method: "prompts/get",
+      requestId: PromptGetStories.successful.requestId,
+      status: "success",
+      metadata: {
+        serverName: serverNames[1] || "demo-server",
+        sessionId: PromptGetStories.successful.sessionId || "session-2",
+        durationMs: PromptGetStories.successful.durationMs || 150,
+        httpStatus: 200,
+      },
+      summary: `Prompt: ${PromptGetStories.successful.promptName}`,
+      details: {
+        type: "prompt_get",
+        prompt: {
+          name: PromptGetStories.successful.promptName,
+          arguments: PromptGetStories.successful.requestParams.arguments || {},
+        },
+        messages:
+          PromptGetStories.successful.response?.result?.messages.map((msg) => ({
+            role: msg.role,
+            content: [
+              {
+                type: msg.content.type === "audio" ? "text" : msg.content.type, // Map audio to text for UI compatibility
+                text: msg.content.text,
+                uri: msg.content.resource?.uri,
+                mimeType: msg.content.mimeType,
+              },
+            ],
+          })) || [],
+      },
+    },
+    {
+      id: "resource-1",
+      timestamp: ResourceReadStories.textFile.timestamp,
+      type: "resource_read",
+      method: "resources/read",
+      requestId: ResourceReadStories.textFile.requestId,
+      status: "success",
+      metadata: {
+        serverName: serverNames[0] || "demo-server",
+        sessionId: ResourceReadStories.textFile.sessionId || "session-3",
+        durationMs: ResourceReadStories.textFile.durationMs || 45,
+        httpStatus: 200,
+      },
+      summary: `Resource: ${ResourceReadStories.textFile.uri}`,
+      details: {
+        type: "resource_read",
+        resource: {
+          uri: ResourceReadStories.textFile.uri,
+          name: ResourceReadStories.textFile.response?.result?.contents[0]
+            ?.name,
+          mimeType:
+            ResourceReadStories.textFile.response?.result?.contents[0]
+              ?.mimeType,
+        },
+        content: [
+          {
+            type: "text",
+            text:
+              ResourceReadStories.textFile.response?.result?.contents[0]
+                ?.text || "",
+          },
+        ],
+      },
+    },
+  ];
+
+  const allEvents = mockEvents;
   const allEventsJson = JSON.stringify(allEvents);
 
   // Calculate some stats
@@ -55,6 +157,8 @@ export const EventsPage: FC<EventsPageProps> = ({ registry }) => {
         </tbody>
       </table>
 
+      <hr />
+
       <form class="grid">
         <label for="search">
           Search by method/tool/resource name:
@@ -88,7 +192,7 @@ export const EventsPage: FC<EventsPageProps> = ({ registry }) => {
         </label>
       </form>
 
-      <nav>
+      <nav style="display: flex; justify-content: space-between;">
         <button type="button" onclick="clearFilters()">
           Clear Filters
         </button>

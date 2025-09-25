@@ -171,7 +171,7 @@ export const ResourceRead: FC<ResourceReadProps> = ({
                     {content.text && (
                       <>
                         <h6>Text Content</h6>
-                        <pre style="font-size: 0.8em; padding: 0.5em; overflow-x: auto; max-height: 200px; background: #f8f8f8;">
+                        <pre style="font-size: 0.8em; padding: 0.5em; overflow-x: auto; max-height: 200px;">
                           {content.text.length > 500
                             ? // biome-ignore lint/style/useTemplate: ssr
                               content.text.substring(0, 500) + "..."
@@ -183,7 +183,7 @@ export const ResourceRead: FC<ResourceReadProps> = ({
                     {content.blob && (
                       <>
                         <h6>Binary Content</h6>
-                        <pre style="font-size: 0.8em; padding: 0.5em; overflow-x: auto; background: #f0f0f0;">
+                        <pre style="font-size: 0.8em; padding: 0.5em; overflow-x: auto;">
                           [Base64 encoded data - {content.blob.length}{" "}
                           characters]
                         </pre>

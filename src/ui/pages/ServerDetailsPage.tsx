@@ -1,9 +1,10 @@
 import type { FC } from "hono/jsx";
 import type { McpServer } from "../../registry.js";
+import { ToolCallStories } from "../components/events/ToolCall.js";
 import { Navigation } from "../components/Navigation.js";
 import { UIEventsTable } from "../components/UIEventsTable.js";
 import { Layout } from "../Layout.js";
-import { generateFakeUIEventsForServer } from "../utils/fakeData.js";
+import type { UIEvent } from "../types/events.js";
 
 interface ServerDetailsPageProps {
   server: McpServer;
@@ -84,7 +85,56 @@ export const ServerDetailsPage: FC<ServerDetailsPageProps> = ({ server }) => {
             </tbody>
           </table>
         )}
+      </div>
 
+      <hr />
+
+      <div id="events">
+        <h2>Recent Events</h2>
+        <p>Latest MCP protocol exchanges for this server</p>
+        <UIEventsTable
+          events={[
+            {
+              id: "tool-server-1",
+              timestamp: ToolCallStories.successful.timestamp,
+              type: "tool_call",
+              method: "tools/call",
+              requestId: ToolCallStories.successful.requestId,
+              status: "success",
+              metadata: {
+                serverName: server.name,
+                sessionId: ToolCallStories.successful.sessionId || "session-1",
+                durationMs: ToolCallStories.successful.durationMs || 100,
+                httpStatus: 200,
+              },
+              summary: `Tool call: ${ToolCallStories.successful.toolName}`,
+              details: {
+                type: "tool_call",
+                toolName: ToolCallStories.successful.toolName,
+                arguments: ToolCallStories.successful.requestParams,
+                result: {
+                  content: [
+                    {
+                      type: "text",
+                      text: JSON.stringify(
+                        ToolCallStories.successful.response?.result,
+                      ),
+                    },
+                  ],
+                  isError: false,
+                },
+              },
+            } as UIEvent,
+          ]}
+        />
+        <p>
+          <a href="/ui/events">View All Events</a>
+        </p>
+      </div>
+
+      <hr />
+
+      <div id="actions">
         <h2>Actions</h2>
         <div class="grid">
           <button type="button" onclick="window.location.href='/ui/servers'">
@@ -97,18 +147,6 @@ export const ServerDetailsPage: FC<ServerDetailsPageProps> = ({ server }) => {
             Open Server URL
           </button>
         </div>
-      </div>
-
-      <div id="events">
-        <h2>Recent Events</h2>
-        <p>Latest MCP protocol exchanges for this server</p>
-        <UIEventsTable
-          events={generateFakeUIEventsForServer(server.name, 15)}
-          compact={true}
-        />
-        <p>
-          <a href="/ui/events">View All Events</a>
-        </p>
       </div>
 
       <hr />
