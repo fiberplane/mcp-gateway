@@ -105,6 +105,9 @@ export async function runCli(): Promise<void> {
 }
 
 // Auto-run if this is the main module
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
   await runCli();
 }
