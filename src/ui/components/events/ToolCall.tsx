@@ -81,7 +81,7 @@ export const ToolCall: FC<ToolCallProps> = ({ data, expanded = false }) => {
         </table>
 
         <h4>Request Parameters</h4>
-        <pre style="font-size: 0.9em; background: #f8f8f8; padding: 0.5em; overflow-x: auto;">
+        <pre style="font-size: 0.9em; padding: 0.5em; overflow-x: auto;">
           {formatJson(data.requestParams)}
         </pre>
 
@@ -108,7 +108,7 @@ export const ToolCall: FC<ToolCallProps> = ({ data, expanded = false }) => {
             {data.response.success && data.response.result && (
               <>
                 <h5>Result</h5>
-                <pre style="font-size: 0.9em; background: #f0f8f0; padding: 0.5em; overflow-x: auto;">
+                <pre style="font-size: 0.9em; padding: 0.5em; overflow-x: auto;">
                   {formatJson(data.response.result)}
                 </pre>
               </>
@@ -117,7 +117,7 @@ export const ToolCall: FC<ToolCallProps> = ({ data, expanded = false }) => {
             {!data.response.success && data.response.error && (
               <>
                 <h5>Error</h5>
-                <pre style="font-size: 0.9em; background: #f8f0f0; padding: 0.5em; overflow-x: auto; color: #d00;">
+                <pre style="font-size: 0.9em; padding: 0.5em; overflow-x: auto; color: #d00;">
                   {data.response.error}
                 </pre>
               </>
@@ -126,7 +126,7 @@ export const ToolCall: FC<ToolCallProps> = ({ data, expanded = false }) => {
         )}
 
         {!data.response && (
-          <div style="margin-top: 1em; padding: 0.5em; background: #f0f0f0; text-align: center;">
+          <div style="margin-top: 1em; padding: 0.5em; text-align: center;">
             <em>Response pending...</em>
           </div>
         )}
