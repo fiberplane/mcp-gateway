@@ -12,7 +12,7 @@ export const StorybookPage: FC = () => {
     <Layout>
       <table class="header">
         <tr>
-          <td colspan="2" rowspan="2" class="width-auto">
+          <td colspan={2} rowspan={2} class="width-auto">
             <h1 class="title">Component Storybook</h1>
             <span class="subtitle">MCP Gateway UI Components</span>
           </td>

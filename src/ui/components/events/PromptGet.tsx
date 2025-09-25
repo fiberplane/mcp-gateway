@@ -71,7 +71,9 @@ export const PromptGet: FC<PromptGetProps> = ({ data, expanded = false }) => {
   };
 
   const renderContent = (
-    content: PromptGetData["response"]["result"]["messages"][0]["content"],
+    content: NonNullable<
+      NonNullable<PromptGetData["response"]>["result"]
+    >["messages"][0]["content"],
   ) => {
     switch (content.type) {
       case "text":
