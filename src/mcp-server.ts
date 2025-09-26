@@ -15,7 +15,10 @@ import { createServerTools } from "./mcp-tools/server-tools.js";
  * @param storageDir - Directory where captures are stored
  * @returns MCP server instance with configured tools
  */
-export function createMcpServer(registry: Registry, storageDir: string): McpServer {
+export function createMcpServer(
+  registry: Registry,
+  storageDir: string,
+): McpServer {
   // Create MCP server with Zod schema adapter for validation
   const mcp = new McpServer({
     name: "mcp-gateway-tools",
@@ -52,7 +55,10 @@ export function createMcpServer(registry: Registry, storageDir: string): McpServ
 
   // Set up custom error handler
   mcp.onError((error, ctx) => {
-    console.error(`[MCP] Error handler called for ${ctx.request.method}:`, error);
+    console.error(
+      `[MCP] Error handler called for ${ctx.request.method}:`,
+      error,
+    );
 
     // Handle RpcError instances from mcp-lite (e.g., validation errors)
     if (error instanceof RpcError) {
@@ -68,9 +74,9 @@ export function createMcpServer(registry: Registry, storageDir: string): McpServ
         code: -32602, // Invalid params
         message: "Input validation failed",
         data: {
-          issues: error.issues.map(issue => ({
+          issues: error.issues.map((issue) => ({
             path: issue.path,
-            message: issue.message
+            message: issue.message,
           })),
           requestId: ctx.requestId,
         },
@@ -114,11 +120,13 @@ export function createMcpApp(registry: Registry, storageDir: string): Hono {
   const app = new Hono();
 
   // Enable CORS for MCP client access
-  app.use(cors({
-    origin: "*",
-    allowHeaders: ["Content-Type", "MCP-Protocol-Version", "Authorization"],
-    allowMethods: ["GET", "POST", "OPTIONS"],
-  }));
+  app.use(
+    cors({
+      origin: "*",
+      allowHeaders: ["Content-Type", "MCP-Protocol-Version", "Authorization"],
+      allowMethods: ["GET", "POST", "OPTIONS"],
+    }),
+  );
 
   // Mount MCP server at /mcp endpoint
   app.all("/mcp", async (c) => {
