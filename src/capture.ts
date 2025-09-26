@@ -7,6 +7,7 @@ import type {
   JsonRpcRequest,
   JsonRpcResponse,
 } from "./schemas.js";
+import type { SSEEvent } from "./sse-parser.js";
 import { captureRecordSchema, generateCaptureFilename } from "./schemas.js";
 import { ensureServerCaptureDir } from "./storage.js";
 
@@ -191,4 +192,142 @@ export async function captureError(
   record.metadata.durationMs = durationMs;
 
   await appendCapture(storageDir, record);
+}
+
+// Create capture record for SSE event
+export function createSSEEventCaptureRecord(
+  serverName: string,
+  sessionId: string,
+  sseEvent: SSEEvent,
+  method?: string,
+  requestId?: string | number | null,
+): CaptureRecord {
+  const clientInfo = getClientInfo(sessionId);
+
+  const record: CaptureRecord = {
+    timestamp: new Date().toISOString(),
+    method: method || "sse-event",
+    id: requestId ?? null,
+    metadata: {
+      serverName,
+      sessionId,
+      durationMs: 0, // SSE events don't have request/response timing
+      httpStatus: 200, // SSE events are part of successful streaming response
+      client: clientInfo,
+      sseEventId: sseEvent.id,
+      sseEventType: sseEvent.event,
+    },
+    sseEvent: {
+      id: sseEvent.id,
+      event: sseEvent.event,
+      data: sseEvent.data,
+      retry: sseEvent.retry,
+    },
+  };
+
+  // Validate the record
+  const result = captureRecordSchema.safeParse(record);
+  if (!result.success) {
+    console.warn("Invalid SSE capture record:", result.error);
+    throw new Error("Failed to create valid SSE capture record");
+  }
+
+  return record;
+}
+
+// Create capture record for JSON-RPC message from SSE
+export function createSSEJsonRpcCaptureRecord(
+  serverName: string,
+  sessionId: string,
+  jsonRpcMessage: JsonRpcRequest | JsonRpcResponse,
+  sseEvent: SSEEvent,
+  isResponse: boolean = false,
+): CaptureRecord {
+  const clientInfo = getClientInfo(sessionId);
+
+  const method = "method" in jsonRpcMessage ? jsonRpcMessage.method : "unknown";
+
+  const record: CaptureRecord = {
+    timestamp: new Date().toISOString(),
+    method,
+    id: jsonRpcMessage.id ?? null,
+    metadata: {
+      serverName,
+      sessionId,
+      durationMs: 0, // SSE events don't have traditional timing
+      httpStatus: 200,
+      client: clientInfo,
+      sseEventId: sseEvent.id,
+      sseEventType: sseEvent.event,
+    },
+    sseEvent: {
+      id: sseEvent.id,
+      event: sseEvent.event,
+      data: sseEvent.data,
+      retry: sseEvent.retry,
+    },
+  };
+
+  if (isResponse) {
+    record.response = jsonRpcMessage as JsonRpcResponse;
+  } else {
+    record.request = jsonRpcMessage as JsonRpcRequest;
+  }
+
+  // Validate the record
+  const result = captureRecordSchema.safeParse(record);
+  if (!result.success) {
+    console.warn("Invalid SSE JSON-RPC capture record:", result.error);
+    throw new Error("Failed to create valid SSE JSON-RPC capture record");
+  }
+
+  return record;
+}
+
+// Capture SSE event (wrapper for appendCapture)
+export async function captureSSEEvent(
+  storageDir: string,
+  serverName: string,
+  sessionId: string,
+  sseEvent: SSEEvent,
+  method?: string,
+  requestId?: string | number | null,
+): Promise<void> {
+  try {
+    const record = createSSEEventCaptureRecord(
+      serverName,
+      sessionId,
+      sseEvent,
+      method,
+      requestId,
+    );
+    await appendCapture(storageDir, record);
+  } catch (error) {
+    console.error("Failed to capture SSE event:", error);
+    // Don't throw - SSE capture failures shouldn't break streaming
+  }
+}
+
+// Capture JSON-RPC message from SSE
+export async function captureSSEJsonRpc(
+  storageDir: string,
+  serverName: string,
+  sessionId: string,
+  jsonRpcMessage: JsonRpcRequest | JsonRpcResponse,
+  sseEvent: SSEEvent,
+  isResponse: boolean = false,
+): Promise<void> {
+  try {
+    const record = createSSEJsonRpcCaptureRecord(
+      serverName,
+      sessionId,
+      jsonRpcMessage,
+      sseEvent,
+      isResponse,
+    );
+    await appendCapture(storageDir, record);
+  } catch (error) {
+    console.error("Failed to capture SSE JSON-RPC:", error);
+    // Don't throw - SSE capture failures shouldn't break streaming
+  }
 }

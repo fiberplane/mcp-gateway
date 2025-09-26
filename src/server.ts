@@ -6,10 +6,18 @@ import { proxy } from "hono/proxy";
 import {
   appendCapture,
   captureError,
+  captureSSEEvent,
+  captureSSEJsonRpc,
   createRequestCaptureRecord,
   createResponseCaptureRecord,
   storeClientInfo,
 } from "./capture.js";
+import {
+  createSSEEventStream,
+  isJsonRpcNotification,
+  isJsonRpcResponse,
+  parseJsonRpcFromSSE,
+} from "./sse-parser.js";
 import { getServer, type Registry } from "./registry.js";
 import {
   clientInfoSchema,
@@ -120,22 +128,67 @@ export async function createApp(
         }
 
         // Forward request to target MCP server using Hono proxy helper
+        const proxyHeaders: Record<string, string> = {
+          "Content-Type": "application/json",
+          "MCP-Protocol-Version":
+            c.req.raw.headers.get("MCP-Protocol-Version") || "2025-06-18",
+          "Mcp-Session-Id": c.req.raw.headers.get("Mcp-Session-Id") || "",
+          "mcp-session-id": c.req.raw.headers.get("mcp-session-id") || "",
+          ...server.headers,
+        };
+
+        // Forward Accept header to enable SSE negotiation
+        const acceptHeader = c.req.raw.headers.get("Accept");
+        if (acceptHeader) {
+          proxyHeaders.Accept = acceptHeader;
+        }
+
         const targetResponse = await proxy(server.url, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "MCP-Protocol-Version":
-              c.req.raw.headers.get("MCP-Protocol-Version") || "2025-06-18",
-            "Mcp-Session-Id": c.req.raw.headers.get("Mcp-Session-Id") || "",
-            "mcp-session-id": c.req.raw.headers.get("mcp-session-id") || "",
-            ...server.headers,
-          },
+          headers: proxyHeaders,
           body: JSON.stringify(jsonRpcRequest),
         });
 
         httpStatus = targetResponse.status;
 
-        // Get response body for capture and create new response
+        // Check if response is SSE stream
+        const contentType = targetResponse.headers.get("content-type")?.toLowerCase() || "";
+        const isSSE = contentType.startsWith("text/event-stream");
+
+        if (isSSE) {
+          // Handle SSE streaming response
+          console.log(`${server.name} → ${jsonRpcRequest.method} (SSE stream started)`);
+
+          // Update server activity immediately for SSE
+          server.lastActivity = new Date().toISOString();
+          server.exchangeCount = server.exchangeCount + 1;
+          await saveRegistry(storage, registry);
+
+          if (!targetResponse.body) {
+            throw new Error("SSE response has no body");
+          }
+
+          // Create two streams from the response body
+          const [streamForClient, streamForCapture] = targetResponse.body.tee();
+
+          // Start background capture processing
+          processSSECapture(
+            streamForCapture,
+            storage,
+            server.name,
+            sessionId,
+            jsonRpcRequest.method,
+            jsonRpcRequest.id,
+          );
+
+          // Return streaming response to client
+          return new Response(streamForClient, {
+            status: httpStatus,
+            headers: targetResponse.headers,
+          });
+        }
+
+        // Handle regular JSON response (existing logic)
         let responseBody: unknown;
         try {
           responseBody = await targetResponse.json();
@@ -261,6 +314,83 @@ export async function createApp(
   );
 
   return { app, registry };
+}
+
+// Background processing of SSE stream for capture
+async function processSSECapture(
+  stream: ReadableStream<Uint8Array>,
+  storageDir: string,
+  serverName: string,
+  sessionId: string,
+  method: string,
+  requestId?: string | number | null,
+): Promise<void> {
+  try {
+    const reader = stream.getReader();
+    const eventStream = createSSEEventStream(reader);
+    const eventReader = eventStream.getReader();
+
+    let eventCount = 0;
+
+    while (true) {
+      const { done, value: sseEvent } = await eventReader.read();
+
+      if (done) {
+        console.log(`${serverName} → ${method} (SSE stream ended, ${eventCount} events captured)`);
+        break;
+      }
+
+      eventCount++;
+
+      // Try to parse SSE data as JSON-RPC
+      if (sseEvent.data) {
+        const jsonRpcMessage = parseJsonRpcFromSSE(sseEvent.data);
+
+        if (jsonRpcMessage) {
+          // Capture as JSON-RPC message
+          const isResponse = isJsonRpcResponse(jsonRpcMessage);
+          await captureSSEJsonRpc(
+            storageDir,
+            serverName,
+            sessionId,
+            jsonRpcMessage,
+            sseEvent,
+            isResponse,
+          );
+
+          const messageType = isResponse ? "response" :
+            isJsonRpcNotification(jsonRpcMessage) ? "notification" : "request";
+          const messageMethod = "method" in jsonRpcMessage ? jsonRpcMessage.method : "unknown";
+          console.log(`${serverName} → ${method} (SSE ${messageType}: ${messageMethod})`);
+        } else {
+          // Capture as raw SSE event
+          await captureSSEEvent(
+            storageDir,
+            serverName,
+            sessionId,
+            sseEvent,
+            method,
+            requestId,
+          );
+
+          console.log(`${serverName} → ${method} (SSE event: ${sseEvent.event || "message"})`);
+        }
+      } else {
+        // Capture events without data
+        await captureSSEEvent(
+          storageDir,
+          serverName,
+          sessionId,
+          sseEvent,
+          method,
+          requestId,
+        );
+      }
+    }
+  } catch (error) {
+    console.error(`${serverName} → ${method} (SSE capture error):`, error);
+    // Don't throw - capture failures shouldn't affect the client stream
+  }
 }
 
 // Create app instance for development
