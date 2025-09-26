@@ -22,6 +22,7 @@ import {
 import { getStorageRoot, loadRegistry, saveRegistry } from "./storage.js";
 import { serveEmojiFavicon } from "./ui/serve-emoji-favicon.js";
 import { createUIHandler } from "./ui/ui.js";
+import { createMcpApp } from "./mcp-server.js";
 
 // Create main application
 export async function createApp(
@@ -62,6 +63,9 @@ export async function createApp(
   });
 
   app.route("/ui", createUIHandler(registry, storage));
+
+  // Mount MCP server for gateway management tools
+  app.route("/", createMcpApp(registry, storage));
 
   // Single dynamic proxy route with proper validation
   app.post(

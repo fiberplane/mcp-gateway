@@ -59,6 +59,7 @@ function renderMenu(registry: Registry): void {
   const activeSessions = getActiveSessions();
   console.log(`${CYAN}MCP Gateway v0.1.0${RESET_COLOR}`);
   console.log(`${DIM}Gateway: http://localhost:3333${RESET_COLOR}`);
+  console.log(`${DIM}MCP: http://localhost:3333/mcp${RESET_COLOR}`);
   if (activeSessions.length > 0) {
     console.log(
       `${DIM}Active sessions: ${activeSessions.length}${RESET_COLOR}`,
