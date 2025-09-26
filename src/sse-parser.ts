@@ -1,5 +1,24 @@
 import type { JsonRpcRequest, JsonRpcResponse } from "./schemas.js";
 
+interface SSEReadableStreamReadValue<T> {
+  done: false;
+  value: T;
+}
+
+interface SSEReadableStreamReadDone<T> {
+  done: true;
+  value?: T;
+}
+
+type SSEReadableStreamReadResult<T> =
+  | SSEReadableStreamReadValue<T>
+  | SSEReadableStreamReadDone<T>;
+
+interface SSEReadableStreamReader<T> {
+  read(): Promise<SSEReadableStreamReadResult<T>>;
+  cancel(reason?: unknown): Promise<void>;
+}
+
 export interface SSEEvent {
   id?: string;
   event?: string;
@@ -131,7 +150,7 @@ export function isJsonRpcNotification(
  * @returns ReadableStream of SSE events
  */
 export function createSSEEventStream(
-  reader: ReadableStreamDefaultReader<Uint8Array>,
+  reader: SSEReadableStreamReader<Uint8Array>,
 ): ReadableStream<SSEEvent> {
   let buffer = "";
   const decoder = new TextDecoder();
