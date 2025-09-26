@@ -1,7 +1,7 @@
+import { constants } from "node:fs";
+import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { access, readFile, writeFile, mkdir } from "node:fs/promises";
-import { constants } from "node:fs";
 import type { Registry } from "./registry.js";
 import { fromMcpJson, toMcpJson } from "./registry.js";
 
