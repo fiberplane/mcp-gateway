@@ -330,8 +330,8 @@ describe("Proxy Integration Tests", () => {
       // Should have two lines: request and response
       expect(lines).toHaveLength(2);
 
-      const requestRecord = JSON.parse(lines[0]);
-      const responseRecord = JSON.parse(lines[1]);
+      const requestRecord = JSON.parse(lines[0] ?? "");
+      const responseRecord = JSON.parse(lines[1] ?? "");
 
       // Validate request record
       expect(requestRecord.timestamp).toBeDefined();
