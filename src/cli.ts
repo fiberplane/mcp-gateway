@@ -1,3 +1,4 @@
+import open from "open";
 import { getActiveSessions } from "./capture.js";
 import type { Registry } from "./registry.js";
 import { isValidUrl } from "./registry.js";
@@ -91,6 +92,7 @@ function renderMenu(registry: Registry): void {
     console.log(`${DIM}[r] Remove server${RESET_COLOR}`);
   }
 
+  console.log(`${YELLOW}[o]${RESET_COLOR} Open UI in browser`);
   console.log(`${YELLOW}[q]${RESET_COLOR} Quit`);
   console.log();
 }
@@ -320,6 +322,26 @@ async function handleRemoveServer(
   }
 }
 
+// Open UI in browser
+async function handleOpenUI(): Promise<void> {
+  const url = "http://localhost:3333/ui";
+
+  try {
+    console.log(`\n${CYAN}Opening UI in browser...${RESET_COLOR}`);
+    console.log(`${DIM}${url}${RESET_COLOR}`);
+
+    await open(url);
+
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  } catch (error) {
+    console.log(
+      `\nError opening browser: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+    console.log(`${DIM}Please manually open: ${url}${RESET_COLOR}`);
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
+}
+
 // Read single keypress
 function readKey(): Promise<string> {
   return new Promise((resolve) => {
@@ -395,6 +417,10 @@ export async function runInteractiveCli(
 
       case "r":
         await handleRemoveServer(registry, storageDir);
+        break;
+
+      case "o":
+        await handleOpenUI();
         break;
 
       case "q":

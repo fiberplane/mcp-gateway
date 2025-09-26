@@ -325,16 +325,31 @@ describe("Proxy Integration Tests", () => {
       }
 
       const content = await Bun.file(captureFile).text();
-      const captureRecord = JSON.parse(content.trim());
+      const lines = content.trim().split("\n");
 
-      // Validate capture structure
-      expect(captureRecord.timestamp).toBeDefined();
-      expect(captureRecord.method).toBe("tools/call");
-      expect(captureRecord.id).toBeDefined();
-      expect(captureRecord.metadata.serverName).toBe("server2");
-      expect(captureRecord.metadata.sessionId).toBe(sessionId);
-      expect(captureRecord.request.method).toBe("tools/call");
-      expect(captureRecord.response.result.content[0].text).toBe("30");
+      // Should have two lines: request and response
+      expect(lines).toHaveLength(2);
+
+      const requestRecord = JSON.parse(lines[0] ?? "");
+      const responseRecord = JSON.parse(lines[1] ?? "");
+
+      // Validate request record
+      expect(requestRecord.timestamp).toBeDefined();
+      expect(requestRecord.method).toBe("tools/call");
+      expect(requestRecord.id).toBeDefined();
+      expect(requestRecord.metadata.serverName).toBe("server2");
+      expect(requestRecord.metadata.sessionId).toBe(sessionId);
+      expect(requestRecord.request.method).toBe("tools/call");
+      expect(requestRecord.response).toBeUndefined();
+
+      // Validate response record
+      expect(responseRecord.timestamp).toBeDefined();
+      expect(responseRecord.method).toBe("tools/call");
+      expect(responseRecord.id).toBe(requestRecord.id);
+      expect(responseRecord.metadata.serverName).toBe("server2");
+      expect(responseRecord.metadata.sessionId).toBe(sessionId);
+      expect(responseRecord.request).toBeUndefined();
+      expect(responseRecord.response.result.content[0].text).toBe("30");
     });
   });
 });

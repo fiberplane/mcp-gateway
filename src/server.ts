@@ -6,7 +6,8 @@ import { proxy } from "hono/proxy";
 import {
   appendCapture,
   captureError,
-  createCaptureRecord,
+  createRequestCaptureRecord,
+  createResponseCaptureRecord,
   storeClientInfo,
 } from "./capture.js";
 import { getServer, type Registry } from "./registry.js";
@@ -87,6 +88,18 @@ export async function createApp(
         validatedHeaders["Mcp-Session-Id"] ||
         validatedHeaders["mcp-session-id"] ||
         "stateless";
+
+      // Capture request immediately (before forwarding)
+      const requestRecord = createRequestCaptureRecord(
+        server.name,
+        sessionId,
+        jsonRpcRequest,
+      );
+      const requestCaptureFilename = await appendCapture(
+        storage,
+        requestRecord,
+      );
+
       let response: JsonRpcResponse;
       let httpStatus = 200;
 
@@ -129,17 +142,17 @@ export async function createApp(
         response = responseBody as JsonRpcResponse;
         const duration = Date.now() - startTime;
 
-        // Capture exchange (success or error based on HTTP status)
-        const record = createCaptureRecord(
-          server.name,
-          sessionId,
-          jsonRpcRequest,
-          response,
-          duration,
-          httpStatus,
-        );
-
-        const captureFilename = await appendCapture(storage, record);
+        // Capture response (only if request expected one - has id)
+        if (jsonRpcRequest.id != null) {
+          const responseRecord = createResponseCaptureRecord(
+            server.name,
+            sessionId,
+            response,
+            httpStatus,
+            jsonRpcRequest.method,
+          );
+          await appendCapture(storage, responseRecord);
+        }
 
         // Handle initialize → session transition: check if response provides session ID
         if (
@@ -157,7 +170,7 @@ export async function createApp(
               responseSessionId,
             );
 
-            const oldPath = join(storage, server.name, captureFilename);
+            const oldPath = join(storage, server.name, requestCaptureFilename);
             const newPath = join(storage, server.name, newFilename);
 
             try {
