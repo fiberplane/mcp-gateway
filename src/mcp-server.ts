@@ -1,10 +1,10 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { McpServer, StreamableHttpTransport, RpcError } from "mcp-lite";
+import { McpServer, RpcError, StreamableHttpTransport } from "mcp-lite";
 import { z } from "zod";
-import type { Registry } from "./registry.js";
 import { createCaptureTools } from "./mcp-tools/capture-tools.js";
 import { createServerTools } from "./mcp-tools/server-tools.js";
+import type { Registry } from "./registry.js";
 
 /**
  * Creates an MCP server instance for the gateway with tools for server management
