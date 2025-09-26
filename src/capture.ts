@@ -7,8 +7,8 @@ import type {
   JsonRpcRequest,
   JsonRpcResponse,
 } from "./schemas.js";
-import type { SSEEvent } from "./sse-parser.js";
 import { captureRecordSchema, generateCaptureFilename } from "./schemas.js";
+import type { SSEEvent } from "./sse-parser.js";
 import { ensureServerCaptureDir } from "./storage.js";
 
 // In-memory storage for client info by session

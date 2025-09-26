@@ -12,12 +12,7 @@ import {
   createResponseCaptureRecord,
   storeClientInfo,
 } from "./capture.js";
-import {
-  createSSEEventStream,
-  isJsonRpcNotification,
-  isJsonRpcResponse,
-  parseJsonRpcFromSSE,
-} from "./sse-parser.js";
+import { createMcpApp } from "./mcp-server.js";
 import { getServer, type Registry } from "./registry.js";
 import {
   clientInfoSchema,
@@ -27,10 +22,15 @@ import {
   serverParamSchema,
   sessionHeaderSchema,
 } from "./schemas.js";
+import {
+  createSSEEventStream,
+  isJsonRpcNotification,
+  isJsonRpcResponse,
+  parseJsonRpcFromSSE,
+} from "./sse-parser.js";
 import { getStorageRoot, loadRegistry, saveRegistry } from "./storage.js";
 import { serveEmojiFavicon } from "./ui/serve-emoji-favicon.js";
 import { createUIHandler } from "./ui/ui.js";
-import { createMcpApp } from "./mcp-server.js";
 
 // Create main application
 export async function createApp(
@@ -152,12 +152,15 @@ export async function createApp(
         httpStatus = targetResponse.status;
 
         // Check if response is SSE stream
-        const contentType = targetResponse.headers.get("content-type")?.toLowerCase() || "";
+        const contentType =
+          targetResponse.headers.get("content-type")?.toLowerCase() || "";
         const isSSE = contentType.startsWith("text/event-stream");
 
         if (isSSE) {
           // Handle SSE streaming response
-          console.log(`${server.name} → ${jsonRpcRequest.method} (SSE stream started)`);
+          console.log(
+            `${server.name} → ${jsonRpcRequest.method} (SSE stream started)`,
+          );
 
           // Update server activity immediately for SSE
           server.lastActivity = new Date().toISOString();
@@ -336,7 +339,9 @@ async function processSSECapture(
       const { done, value: sseEvent } = await eventReader.read();
 
       if (done) {
-        console.log(`${serverName} → ${method} (SSE stream ended, ${eventCount} events captured)`);
+        console.log(
+          `${serverName} → ${method} (SSE stream ended, ${eventCount} events captured)`,
+        );
         break;
       }
 
@@ -358,10 +363,16 @@ async function processSSECapture(
             isResponse,
           );
 
-          const messageType = isResponse ? "response" :
-            isJsonRpcNotification(jsonRpcMessage) ? "notification" : "request";
-          const messageMethod = "method" in jsonRpcMessage ? jsonRpcMessage.method : "unknown";
-          console.log(`${serverName} → ${method} (SSE ${messageType}: ${messageMethod})`);
+          const messageType = isResponse
+            ? "response"
+            : isJsonRpcNotification(jsonRpcMessage)
+              ? "notification"
+              : "request";
+          const messageMethod =
+            "method" in jsonRpcMessage ? jsonRpcMessage.method : "unknown";
+          console.log(
+            `${serverName} → ${method} (SSE ${messageType}: ${messageMethod})`,
+          );
         } else {
           // Capture as raw SSE event
           await captureSSEEvent(
@@ -373,7 +384,9 @@ async function processSSECapture(
             requestId,
           );
 
-          console.log(`${serverName} → ${method} (SSE event: ${sseEvent.event || "message"})`);
+          console.log(
+            `${serverName} → ${method} (SSE event: ${sseEvent.event || "message"})`,
+          );
         }
       } else {
         // Capture events without data

@@ -3,8 +3,8 @@ import { z } from "zod";
 import type { Registry } from "../registry.js";
 import {
   addServer as addServerToRegistry,
-  removeServer as removeServerFromRegistry,
   getServer,
+  removeServer as removeServerFromRegistry,
 } from "../registry.js";
 import { saveRegistry } from "../storage.js";
 

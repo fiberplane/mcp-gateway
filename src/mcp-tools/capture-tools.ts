@@ -1,4 +1,4 @@
-import { readFile, readdir } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { McpServer } from "mcp-lite";
 import { z } from "zod";
@@ -48,27 +48,6 @@ interface SessionMetrics {
   duration: number;
   startTime: string;
   endTime: string;
-}
-
-interface ServerStats {
-  totalRequests: number;
-  totalResponses: number;
-  totalErrors: number;
-  averageResponseTime: number;
-  errorRate: number;
-  methodDistribution: Record<string, number>;
-  performancePercentiles: {
-    p50: number;
-    p90: number;
-    p95: number;
-    p99: number;
-  };
-  timeSeriesData: Array<{
-    timestamp: string;
-    requests: number;
-    errors: number;
-    avgResponseTime: number;
-  }>;
 }
 
 // Schema for searching captures with comprehensive filtering
@@ -841,7 +820,7 @@ The tool provides actionable insights and recommendations based on the session a
         }
 
         // Load all records for the session
-        let sessionRecords: CaptureRecord[] = [];
+        const sessionRecords: CaptureRecord[] = [];
         for (const file of sessionFiles) {
           const records = await parseJsonlFile(file.path);
           sessionRecords.push(
@@ -877,7 +856,7 @@ The tool provides actionable insights and recommendations based on the session a
             .map(([method, count]) => `${method} (${count})`)
             .join(", ");
 
-          let insights = [];
+          const insights = [];
           if (metrics.errorRate > 10)
             insights.push(
               `🔴 High error rate: ${metrics.errorRate.toFixed(1)}%`,
@@ -1139,7 +1118,7 @@ Try expanding the time range or check if the server has been active recently.`,
             { requests: number; errors: number; responseTimes: number[] }
           >();
 
-          allRecords.forEach((record) => {
+          for (const record of allRecords) {
             const time = new Date(record.timestamp).getTime();
             const bucketTime = Math.floor(time / bucketSize) * bucketSize;
             const bucketKey = new Date(bucketTime).toISOString();
@@ -1152,6 +1131,7 @@ Try expanding the time range or check if the server has been active recently.`,
               });
             }
 
+            // biome-ignore lint/style/noNonNullAssertion: we check above
             const bucket = buckets.get(bucketKey)!;
 
             if (record.request) bucket.requests++;
@@ -1163,7 +1143,7 @@ Try expanding the time range or check if the server has been active recently.`,
             ) {
               bucket.responseTimes.push(record.metadata.durationMs);
             }
-          });
+          }
 
           for (const [timestamp, data] of buckets) {
             timeSeriesData.push({

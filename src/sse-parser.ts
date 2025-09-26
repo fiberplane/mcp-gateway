@@ -42,7 +42,7 @@ export function parseSSEChunk(chunk: string): SSEEvent[] {
       // Treat line without colon as field with empty value
       const field = trimmedLine;
       if (field === "data") {
-        currentEvent.data = (currentEvent.data || "") + "\n";
+        currentEvent.data = `${currentEvent.data || ""}\n`;
         hasData = true;
       }
       continue;
@@ -59,15 +59,17 @@ export function parseSSEChunk(chunk: string): SSEEvent[] {
         currentEvent.event = value;
         break;
       case "data":
-        currentEvent.data = (currentEvent.data || "") + (currentEvent.data ? "\n" : "") + value;
+        currentEvent.data =
+          (currentEvent.data || "") + (currentEvent.data ? "\n" : "") + value;
         hasData = true;
         break;
-      case "retry":
+      case "retry": {
         const retryValue = parseInt(value, 10);
-        if (!isNaN(retryValue)) {
+        if (!Number.isNaN(retryValue)) {
           currentEvent.retry = retryValue;
         }
         break;
+      }
     }
   }
 
@@ -84,7 +86,9 @@ export function parseSSEChunk(chunk: string): SSEEvent[] {
  * @param data - SSE data field content
  * @returns Parsed JSON-RPC message or null if not valid JSON-RPC
  */
-export function parseJsonRpcFromSSE(data: string): JsonRpcRequest | JsonRpcResponse | null {
+export function parseJsonRpcFromSSE(
+  data: string,
+): JsonRpcRequest | JsonRpcResponse | null {
   try {
     const parsed = JSON.parse(data);
 
@@ -104,7 +108,9 @@ export function parseJsonRpcFromSSE(data: string): JsonRpcRequest | JsonRpcRespo
  * @param message - JSON-RPC message
  * @returns True if message is a response
  */
-export function isJsonRpcResponse(message: JsonRpcRequest | JsonRpcResponse): message is JsonRpcResponse {
+export function isJsonRpcResponse(
+  message: JsonRpcRequest | JsonRpcResponse,
+): message is JsonRpcResponse {
   return "result" in message || "error" in message;
 }
 
@@ -113,7 +119,9 @@ export function isJsonRpcResponse(message: JsonRpcRequest | JsonRpcResponse): me
  * @param message - JSON-RPC message
  * @returns True if message is a notification
  */
-export function isJsonRpcNotification(message: JsonRpcRequest | JsonRpcResponse): boolean {
+export function isJsonRpcNotification(
+  message: JsonRpcRequest | JsonRpcResponse,
+): boolean {
   return message.id === null || message.id === undefined;
 }
 
@@ -122,7 +130,9 @@ export function isJsonRpcNotification(message: JsonRpcRequest | JsonRpcResponse)
  * @param reader - ReadableStreamDefaultReader from the response body
  * @returns ReadableStream of SSE events
  */
-export function createSSEEventStream(reader: any): ReadableStream<SSEEvent> {
+export function createSSEEventStream(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+): ReadableStream<SSEEvent> {
   let buffer = "";
   const decoder = new TextDecoder();
 
@@ -144,7 +154,9 @@ export function createSSEEventStream(reader: any): ReadableStream<SSEEvent> {
         }
 
         // Add new chunk to buffer
-        buffer += decoder.decode(value, { stream: true });
+        if (!done && value) {
+          buffer += decoder.decode(value, { stream: true });
+        }
 
         // Process complete events (those ending with double newline)
         const parts = buffer.split("\n\n");
@@ -152,7 +164,7 @@ export function createSSEEventStream(reader: any): ReadableStream<SSEEvent> {
 
         for (const part of parts) {
           if (part.trim()) {
-            const events = parseSSEChunk(part + "\n\n");
+            const events = parseSSEChunk(`${part}\n\n`);
             for (const event of events) {
               controller.enqueue(event);
             }
@@ -165,6 +177,6 @@ export function createSSEEventStream(reader: any): ReadableStream<SSEEvent> {
 
     cancel() {
       reader.cancel();
-    }
+    },
   });
 }

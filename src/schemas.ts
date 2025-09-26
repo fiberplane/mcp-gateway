@@ -47,12 +47,14 @@ export const captureRecordSchema = z.object({
   metadata: captureMetadataSchema,
   request: jsonRpcRequestSchema.optional(),
   response: jsonRpcResponseSchema.optional(),
-  sseEvent: z.object({
-    id: z.string().optional(),
-    event: z.string().optional(),
-    data: z.string().optional(),
-    retry: z.number().optional(),
-  }).optional(), // For SSE events
+  sseEvent: z
+    .object({
+      id: z.string().optional(),
+      event: z.string().optional(),
+      data: z.string().optional(),
+      retry: z.number().optional(),
+    })
+    .optional(), // For SSE events
 });
 
 // Sanitize string for filesystem use
