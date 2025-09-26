@@ -37,6 +37,8 @@ test("hello world", () => {
 
 ## Frontend
 
+> IMPORTANT! When writing UI read `src/ui/README.ui.md` for instructions
+
 Use HTML imports with `Bun.serve()`. Don't use `vite`. HTML imports fully support React, CSS, Tailwind.
 
 Server:

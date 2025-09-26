@@ -7,6 +7,7 @@ import { EventsPage } from "./pages/EventsPage.js";
 import { HomePage } from "./pages/HomePage.js";
 import { ServerDetailsPage } from "./pages/ServerDetailsPage.js";
 import { ServersPage } from "./pages/ServersPage.js";
+import { StorybookPage } from "./pages/StorybookPage.js";
 
 export function createUIHandler(registry: Registry, storageDir: string) {
   const uiHandler = new Hono();
@@ -20,11 +21,15 @@ export function createUIHandler(registry: Registry, storageDir: string) {
   });
 
   uiHandler.get("/events", (c) => {
-    return c.html(<EventsPage registry={registry} />);
+    return c.html(<EventsPage registry={registry} storageDir={storageDir} />);
   });
 
   uiHandler.get("/add", (c) => {
     return c.html(<AddServerPage />);
+  });
+
+  uiHandler.get("/stories", (c) => {
+    return c.html(<StorybookPage />);
   });
 
   uiHandler.get("/server/:name", (c) => {

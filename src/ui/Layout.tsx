@@ -1,4 +1,5 @@
 import { html, raw } from "hono/html";
+import appCSS from "./app.css" with { type: "text" };
 import css from "./monospace-web.css" with { type: "text" };
 // this css *should* be bundled in as a string
 //
@@ -16,9 +17,11 @@ export const Layout = (props: SiteData) =>
           <title>Fibeprlane MCP Gateway</title>
           <style>${raw(resetCSS)}</style>
           <style>${raw(css)}</style>
+          <style>${raw(appCSS)}</style>
         </head>
-        <body>
+        <body class="debug">
           ${props.children}
+          <div class="debug-grid"></div>
         </body>
         <script>
 // https://github.com/owickstrom/the-monospace-web/blob/main/src/index.js
@@ -137,11 +140,16 @@ function checkOffsets() {
   }
 }
 
+// Permanently enable debug grid; guard toggle if present
 const debugToggle = document.querySelector(".debug-toggle");
-function onDebugToggle() {
-  document.body.classList.toggle("debug", debugToggle.checked);
+if (debugToggle) {
+  function onDebugToggle() {
+    // @ts-ignore
+    document.body.classList.toggle("debug", debugToggle.checked);
+  }
+  debugToggle.addEventListener("change", onDebugToggle);
+  // @ts-ignore
+  onDebugToggle();
 }
-debugToggle.addEventListener("change", onDebugToggle);
-onDebugToggle();
         </script>
       </html>`;

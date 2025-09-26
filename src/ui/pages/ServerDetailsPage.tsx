@@ -1,7 +1,10 @@
 import type { FC } from "hono/jsx";
 import type { McpServer } from "../../registry.js";
+import { ToolCallStories } from "../components/events/ToolCall.js";
 import { Navigation } from "../components/Navigation.js";
+import { UIEventsTable } from "../components/UIEventsTable.js";
 import { Layout } from "../Layout.js";
+import type { UIEvent } from "../types/events.js";
 
 interface ServerDetailsPageProps {
   server: McpServer;
@@ -11,9 +14,16 @@ export const ServerDetailsPage: FC<ServerDetailsPageProps> = ({ server }) => {
   return (
     <Layout>
       <h1>Server: {server.name}</h1>
-      <p>Detailed information about the MCP server.</p>
 
-      <div>
+      {/* Section anchors (no JS) */}
+      <nav style="margin-bottom: 1rem;">
+        <a href="#details">Details</a>
+        <span> | </span>
+        <a href="#events">Events</a>
+      </nav>
+      <hr />
+
+      <div id="details">
         <h2>Basic Information</h2>
         <table>
           <tbody>
@@ -49,9 +59,7 @@ export const ServerDetailsPage: FC<ServerDetailsPageProps> = ({ server }) => {
             </tr>
           </tbody>
         </table>
-      </div>
 
-      <div>
         <h2>Headers</h2>
         {Object.keys(server.headers).length === 0 ? (
           <p>No custom headers configured.</p>
@@ -79,7 +87,54 @@ export const ServerDetailsPage: FC<ServerDetailsPageProps> = ({ server }) => {
         )}
       </div>
 
-      <div>
+      <hr />
+
+      <div id="events">
+        <h2>Recent Events</h2>
+        <p>Latest MCP protocol exchanges for this server</p>
+        <UIEventsTable
+          events={[
+            {
+              id: "tool-server-1",
+              timestamp: ToolCallStories.successful.timestamp,
+              type: "tool_call",
+              method: "tools/call",
+              requestId: ToolCallStories.successful.requestId,
+              status: "success",
+              metadata: {
+                serverName: server.name,
+                sessionId: ToolCallStories.successful.sessionId || "session-1",
+                durationMs: ToolCallStories.successful.durationMs || 100,
+                httpStatus: 200,
+              },
+              summary: `Tool call: ${ToolCallStories.successful.toolName}`,
+              details: {
+                type: "tool_call",
+                toolName: ToolCallStories.successful.toolName,
+                arguments: ToolCallStories.successful.requestParams,
+                result: {
+                  content: [
+                    {
+                      type: "text",
+                      text: JSON.stringify(
+                        ToolCallStories.successful.response?.result,
+                      ),
+                    },
+                  ],
+                  isError: false,
+                },
+              },
+            } as UIEvent,
+          ]}
+        />
+        <p>
+          <a href="/ui/events">View All Events</a>
+        </p>
+      </div>
+
+      <hr />
+
+      <div id="actions">
         <h2>Actions</h2>
         <div class="grid">
           <button type="button" onclick="window.location.href='/ui/servers'">
