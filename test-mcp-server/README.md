@@ -1,6 +1,6 @@
 # Test MCP Server
 
-A collection of test Model Context Protocol (MCP) servers designed to validate the proxy functionality of the MCP Gateway.
+A server designed to validate the proxy functionality of the MCP Gateway.
 
 ## Purpose
 
