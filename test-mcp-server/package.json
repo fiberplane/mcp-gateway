@@ -1,9 +1,12 @@
 {
-  "name": "playground",
+  "name": "test-mcp-server",
   "private": true,
   "type": "module",
+  "description": "Test MCP server for validating proxy functionality",
   "scripts": {
     "dev": "bun run minimal-server.ts",
+    "start": "bun run minimal-server.ts",
+    "start:comprehensive": "bun run everything.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

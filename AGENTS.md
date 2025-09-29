@@ -14,9 +14,9 @@ This is a Bun workspace monorepo containing the MCP Gateway project. The reposit
 │       ├── bin/                  # CLI entry point  
 │       ├── tests/               # Package tests
 │       └── package.json         # Package configuration
-├── playground/                   # Development playground
-│   ├── *.ts                     # Test servers and examples
-│   └── package.json             # Playground dependencies
+├── test-mcp-server/             # Test MCP server for proxy validation
+│   ├── *.ts                     # Various test server configurations
+│   └── package.json             # Test server dependencies
 ├── .github/workflows/           # CI/CD workflows
 ├── package.json                 # Root workspace configuration
 ├── MIGRATION.md                 # Migration documentation
@@ -36,7 +36,7 @@ This is a Bun workspace monorepo containing the MCP Gateway project. The reposit
 ### Package-Specific Commands
 - `bun run --filter @fiberplane/mcp-gateway build` - Build only main package
 - `bun run --filter @fiberplane/mcp-gateway dev` - Dev mode for main package
-- `bun run --filter playground dev` - Run playground development server
+- `bun run --filter test-mcp-server dev` - Run test MCP server
 
 ### Testing Commands
 - `bun test` - Run all tests
@@ -48,7 +48,7 @@ This is a Bun workspace monorepo containing the MCP Gateway project. The reposit
 - This is a **Bun workspace** - always use `bun` commands, not npm/yarn
 - The main package is in `packages/mcp-gateway/`
 - Use `--filter` flags for package-specific operations
-- Playground is a separate workspace for testing
+- Test MCP server is a separate workspace for testing proxy functionality
 
 ### 2. Build System
 - Each package has its own build script in `packages/*/scripts/build.ts`
@@ -64,13 +64,13 @@ This is a Bun workspace monorepo containing the MCP Gateway project. The reposit
 ### 4. Package Management
 - Root `package.json` defines workspace structure
 - Main package maintains original name: `@fiberplane/mcp-gateway`
-- Playground uses `workspace:*` dependency for main package
+- Test MCP server uses `workspace:*` dependency for main package
 - All devDependencies consolidated at root level
 
 ### 5. CI/CD Integration
 - GitHub Actions updated for monorepo structure
 - CI builds with: `bun run --filter @fiberplane/mcp-gateway build`
-- Changesets configured to ignore playground, track `packages/*`
+- Changesets configured to ignore test-mcp-server, track `packages/*`
 
 ### 6. Backward Compatibility
 - ✅ Main package name unchanged: `@fiberplane/mcp-gateway`
@@ -88,9 +88,9 @@ cd packages/mcp-gateway
 bun add <package-name>
 ```
 
-**To playground:**
+**To test-mcp-server:**
 ```bash
-cd playground  
+cd test-mcp-server  
 bun add <package-name>
 ```
 
@@ -118,8 +118,8 @@ bun run --filter @fiberplane/mcp-gateway build
 # Development mode
 bun run dev
 
-# Playground development
-bun run --filter playground dev
+# Test MCP server
+bun run --filter test-mcp-server dev
 ```
 
 ### Release Process
@@ -153,7 +153,7 @@ bun changeset publish
    - Check that the target package exists and is properly configured
 
 4. **Workspace dependency issues**
-   - Playground should use `"@fiberplane/mcp-gateway": "workspace:*"`
+   - Test MCP server should use `"@fiberplane/mcp-gateway": "workspace:*"`
    - Run `bun install` after making workspace changes
 
 ### Migration Notes
@@ -168,7 +168,7 @@ This repository was migrated from a single-package structure to a monorepo. See 
 ## Development Workflow
 
 1. **Making changes**: Work in `packages/mcp-gateway/src/`
-2. **Testing**: Use playground in `playground/` directory
+2. **Testing**: Use test MCP server in `test-mcp-server/` directory
 3. **Building**: Always use filtered commands for production builds
 4. **Committing**: Use conventional commit messages
 5. **Releasing**: Use changesets workflow

@@ -2,7 +2,7 @@
   "name": "@fiberplane/mcp-gateway-workspace",
   "private": true,
   "type": "module",
-  "workspaces": ["packages/*", "playground"],
+  "workspaces": ["packages/*", "test-mcp-server"],
   "scripts": {
     "dev": "bun run --filter @fiberplane/mcp-gateway dev",
     "build": "bun run --filter @fiberplane/mcp-gateway build",

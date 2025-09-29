@@ -5,7 +5,7 @@ A Bun workspace monorepo containing the MCP Gateway project and development tool
 ## 📦 Packages
 
 - **[@fiberplane/mcp-gateway](./packages/mcp-gateway/)** - Main MCP Gateway package
-- **[playground](./playground/)** - Development playground and testing environment
+- **[test-mcp-server](./test-mcp-server/)** - Test MCP server for validating proxy functionality
 
 ## 🚀 Quick Start
 
@@ -19,8 +19,8 @@ bun run build
 # Start development mode
 bun run dev
 
-# Run playground server
-bun run --filter playground dev
+# Run test MCP server
+bun run --filter test-mcp-server dev
 ```
 
 ## 📋 Available Commands
@@ -34,7 +34,7 @@ bun run --filter playground dev
 
 ### Package-specific
 - `bun run --filter @fiberplane/mcp-gateway build` - Build main package only
-- `bun run --filter playground dev` - Run playground only
+- `bun run --filter test-mcp-server dev` - Run test MCP server
 
 ### Testing & Quality
 - `bun test` - Run all tests
@@ -49,7 +49,7 @@ bun run --filter playground dev
 │       ├── bin/            # CLI entry point
 │       ├── tests/          # Tests
 │       └── package.json    # Package configuration
-├── playground/             # Development playground
+├── test-mcp-server/       # Test MCP server for proxy validation
 ├── .github/workflows/     # CI/CD workflows
 └── package.json          # Workspace configuration
 ```
@@ -76,9 +76,9 @@ cd packages/mcp-gateway
 bun add <package-name>
 ```
 
-**To playground:**
+**To test-mcp-server:**
 ```bash
-cd playground
+cd test-mcp-server
 bun add <package-name>
 ```
 
