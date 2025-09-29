@@ -5,6 +5,6 @@
     "outDir": "dist",
     "rootDir": "."
   },
-  "include": ["src/**/*", "tests/**/*"],
+  "include": ["src/**/*", "tests/**/*", "package.json"],
   "exclude": ["bin/**/*", "dist"]
 }
