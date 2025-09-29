@@ -21,7 +21,13 @@
     "noPropertyAccessFromIndexSignature": false
   },
   "references": [
+    // Published packages
     { "path": "./packages/mcp-gateway" },
+    
+    // Development packages  
     { "path": "./test-mcp-server" }
+    
+    // Add new packages here:
+    // { "path": "./packages/new-package" }
   ]
 }

@@ -99,6 +99,27 @@ bun add <package-name>
 bun add -D <package-name>
 ```
 
+### Adding New Packages
+
+When adding new packages to the monorepo, follow this structured approach:
+
+#### Package Structure Requirements
+- All publishable packages go in `packages/` directory
+- Use `@fiberplane/` namespace for published packages
+- Follow consistent structure: `src/`, `dist/`, `package.json`, `tsconfig.json`
+- Reference shared build script: `"build": "bun run ../../scripts/build.ts"`
+
+#### Configuration Updates Required
+1. **Root tsconfig.json** - Add project reference
+2. **Changesets config** - Automatically includes `packages/*`
+3. **GitHub workflows** - Automatically pick up workspace packages
+
+#### Key Conventions
+- Use `workspace:*` for internal dependencies
+- Set `"type": "module"` for ESM compatibility
+- Include proper exports configuration for dual module support
+- Use consistent TypeScript configuration extending root config
+
 ### Running Tests
 ```bash
 # All tests
