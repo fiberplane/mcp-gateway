@@ -1,15 +1,119 @@
-# @fiberplane/mcp-gateway
+# MCP Gateway Monorepo
 
-To install dependencies:
+A Bun workspace monorepo containing the MCP Gateway project and development tools.
+
+## 📦 Packages
+
+- **[@fiberplane/mcp-gateway](./packages/mcp-gateway/)** - Main MCP Gateway package
+- **[playground](./playground/)** - Development playground and testing environment
+
+## 🚀 Quick Start
 
 ```bash
+# Install all workspace dependencies
 bun install
+
+# Build the main package
+bun run build
+
+# Start development mode
+bun run dev
+
+# Run playground server
+bun run --filter playground dev
 ```
 
-To run:
+## 📋 Available Commands
+
+### Development
+- `bun run dev` - Start development mode
+- `bun run build` - Build main package  
+- `bun run typecheck` - Type check all packages
+- `bun run lint` - Lint all files
+- `bun run format` - Format all files
+
+### Package-specific
+- `bun run --filter @fiberplane/mcp-gateway build` - Build main package only
+- `bun run --filter playground dev` - Run playground only
+
+### Testing & Quality
+- `bun test` - Run all tests
+- `bun run --filter @fiberplane/mcp-gateway test` - Test main package only
+
+## 🏗️ Project Structure
+
+```
+├── packages/
+│   └── mcp-gateway/         # Main @fiberplane/mcp-gateway package
+│       ├── src/            # Source code
+│       ├── bin/            # CLI entry point
+│       ├── tests/          # Tests
+│       └── package.json    # Package configuration
+├── playground/             # Development playground
+├── .github/workflows/     # CI/CD workflows
+└── package.json          # Workspace configuration
+```
+
+## 📚 Documentation
+
+- **[MIGRATION.md](./MIGRATION.md)** - Detailed migration guide and rationale
+- **[CLAUDE.md](./CLAUDE.md)** - Enhanced instructions for Claude Code
+- **[Changelog](./packages/mcp-gateway/CHANGELOG.md)** - Package release history
+
+## 🔧 Development
+
+This project uses:
+- **[Bun](https://bun.com)** - Fast JavaScript runtime and package manager
+- **[TypeScript](https://www.typescriptlang.org/)** - Type safety
+- **[Biome](https://biomejs.dev/)** - Linting and formatting
+- **[Changesets](https://github.com/changesets/changesets)** - Version management
+
+### Adding Dependencies
+
+**To main package:**
+```bash
+cd packages/mcp-gateway
+bun add <package-name>
+```
+
+**To playground:**
+```bash
+cd playground
+bun add <package-name>
+```
+
+**Dev dependencies (add to root):**
+```bash
+bun add -D <package-name>
+```
+
+## 🚢 Release Process
+
+This project uses [Changesets](https://github.com/changesets/changesets) for version management:
 
 ```bash
-bun run src/index.ts
+# Create a changeset
+bun changeset
+
+# Version packages (done by CI)
+bun changeset version
+
+# Publish packages (done by CI)
+bun changeset publish
 ```
 
-This project was created using `bun init` in bun v1.2.22. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
+## 🤝 Contributing
+
+1. Create a feature branch
+2. Make your changes
+3. Add a changeset: `bun changeset`
+4. Commit and push
+5. Create a pull request
+
+## 📄 License
+
+[MIT](./LICENSE)
+
+---
+
+**Note**: This is a Bun workspace monorepo. Always use `bun` commands and leverage `--filter` for package-specific operations.

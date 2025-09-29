@@ -1,15 +1,17 @@
 {
   "name": "playground",
   "private": true,
-  "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
+  "type": "module",
+  "scripts": {
+    "dev": "bun run minimal-server.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "hono": "^4.9.5",
-    "mcp-lite": "workspace:*",
-    "zod": "^4.1.5"
+    "@fiberplane/mcp-gateway": "workspace:*",
+    "hono": "^4.9.8",
+    "zod": "^4.1.11"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
   }
 }

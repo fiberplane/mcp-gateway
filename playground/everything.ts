@@ -11,7 +11,7 @@ import { z } from "zod";
 const mcp = new McpServer({
   name: "comprehensive-mcp-demo",
   version: "2.0.0",
-  schemaAdapter: (s) => z.toJSONSchema(s as z.ZodType),
+  schemaAdapter: (s) => (s as z.ZodType)._def,
 });
 
 // ===== MIDDLEWARE =====

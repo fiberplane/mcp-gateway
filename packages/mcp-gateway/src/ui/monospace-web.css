@@ -496,8 +496,10 @@ label input {
   right: 0;
   bottom: 0;
   z-index: -1;
-  background-image:
-    repeating-linear-gradient(var(--color) 0 1px, transparent 1px 100%),
+  background-image: repeating-linear-gradient(
+      var(--color) 0 1px,
+      transparent 1px 100%
+    ),
     repeating-linear-gradient(90deg, var(--color) 0 1px, transparent 1px 100%);
   background-size: 1ch var(--line-height);
   margin: 0;

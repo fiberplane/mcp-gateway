@@ -154,8 +154,9 @@ test("loadRegistry handles invalid JSON gracefully", async () => {
 
 // Simple integration tests using command line flags only
 test("CLI shows help when --help flag is used", async () => {
-  const proc = Bun.spawn(["bun", "run", "src/run.ts", "--help"], {
+  const proc = Bun.spawn(["bun", "run", "./src/run.ts", "--help"], {
     stdout: "pipe",
+    cwd: import.meta.dir + "/.."
   });
 
   const output = await new Response(proc.stdout).text();
@@ -168,8 +169,9 @@ test("CLI shows help when --help flag is used", async () => {
 });
 
 test("CLI shows version when --version flag is used", async () => {
-  const proc = Bun.spawn(["bun", "run", "src/run.ts", "--version"], {
+  const proc = Bun.spawn(["bun", "run", "./src/run.ts", "--version"], {
     stdout: "pipe",
+    cwd: import.meta.dir + "/.."
   });
 
   const output = await new Response(proc.stdout).text();
@@ -181,10 +183,11 @@ test("CLI shows version when --version flag is used", async () => {
 
 test("CLI exits gracefully when given 'q' input", async () => {
   const proc = Bun.spawn(
-    ["bun", "run", "src/run.ts", "--storage-dir", tempDir],
+    ["bun", "run", "./src/run.ts", "--storage-dir", tempDir],
     {
       stdin: "pipe",
       stdout: "pipe",
+      cwd: import.meta.dir + "/.."
     },
   );
 
@@ -198,10 +201,11 @@ test("CLI exits gracefully when given 'q' input", async () => {
 
 test("CLI menu renders without errors in non-interactive mode", async () => {
   const proc = Bun.spawn(
-    ["bun", "run", "src/run.ts", "--storage-dir", tempDir],
+    ["bun", "run", "./src/run.ts", "--storage-dir", tempDir],
     {
       stdin: "pipe",
       stdout: "pipe",
+      cwd: import.meta.dir + "/.."
     },
   );
 

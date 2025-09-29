@@ -19,10 +19,10 @@
       "recommended": true,
       "suspicious": { "noExplicitAny": "error" },
       "performance": {
-        "noAccumulatingSpread": "on",
+        "noAccumulatingSpread": "error",
         "recommended": true
       }
     }
   },
-  "files": { "includes": ["**", "!**/dist"] }
+  "files": { "include": ["**"], "ignore": ["**/dist", "**/node_modules"] }
 }
