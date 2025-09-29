@@ -1,57 +1,25 @@
 {
-  "name": "@fiberplane/mcp-gateway",
+  "name": "@fiberplane/mcp-gateway-workspace",
+  "private": true,
   "type": "module",
-  "version": "0.2.3",
-  "homepage": "https://github.com/fiberplane/mcp-gateway",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/fiberplane/mcp-gateway.git"
-  },
-  "files": [
-    "bin",
-    "dist",
-    "README.md",
-    "CHANGELOG.md"
+  "workspaces": [
+    "packages/*",
+    "test-mcp-server"
   ],
-  "bin": {
-    "mcp-gateway": "bin/cli.js"
-  },
-  "sideEffects": false,
   "scripts": {
-    "dev": "bun run build --watch && bun run bin/cli.js",
-    "build": "bun run scripts/build.ts",
-    "build:types": "tsc --project tsconfig.build.json --outDir dist/types --rootDir src",
+    "dev": "bun run --filter @fiberplane/mcp-gateway dev",
+    "build": "bun run --filter @fiberplane/mcp-gateway build",
+    "build:types": "bun run --filter @fiberplane/mcp-gateway build:types",
     "test": "bun test",
-    "typecheck": "tsc --noEmit",
-    "lint": "biome check --write .",
+    "typecheck": "bun run --filter '*' typecheck",
+    "lint": "biome check .",
     "format": "biome format --write .",
     "changeset": "changeset",
-    "prepublishOnly": "bun run build && bun run build:types"
-  },
-  "exports": {
-    ".": "./src/index.ts"
-  },
-  "publishConfig": {
-    "access": "public",
-    "exports": {
-      ".": {
-        "types": "./dist/types/index.d.ts",
-        "import": "./dist/index.js"
-      }
-    }
+    "release": "changeset publish"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.2.4",
-    "@changesets/cli": "^2.29.7",
-    "@types/bun": "latest",
-    "typescript": "^5"
-  },
-  "dependencies": {
-    "@hono/node-server": "^1.19.4",
-    "@hono/standard-validator": "^0.1.5",
-    "hono": "^4.9.8",
-    "mcp-lite": "^0.3.0",
-    "open": "^10.2.0",
-    "zod": "^4.1.11"
+    "@changesets/cli": "^2.27.9",
+    "typescript": "^5.7.2"
   }
 }

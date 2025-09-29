@@ -19,10 +19,24 @@
       "recommended": true,
       "suspicious": { "noExplicitAny": "error" },
       "performance": {
-        "noAccumulatingSpread": "on",
+        "noAccumulatingSpread": "error",
         "recommended": true
       }
     }
   },
-  "files": { "includes": ["**", "!**/dist"] }
+  "files": {
+    "ignoreUnknown": false,
+    "includes": [
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.js",
+      "**/*.jsx",
+      "**/*.json",
+      "**/*.jsonc",
+      "**/*.md",
+      "!**/dist",
+      "!**/build",
+      "!**/node_modules"
+    ]
+  }
 }

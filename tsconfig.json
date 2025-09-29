@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    // Environment setup & latest features
     "lib": ["ESNext"],
     "target": "ESNext",
     "module": "Preserve",
@@ -8,24 +7,27 @@
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx",
     "allowJs": true,
-
-    // Bundler mode
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "noEmit": true,
-
-    // Best practices
+    "composite": true,
     "strict": true,
     "skipLibCheck": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
-
-    // Some stricter flags (disabled by default)
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
   },
-  "include": ["src/**/*", "bin/**/*", "tests/**/*", "scripts/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "references": [
+    // Published packages
+    { "path": "./packages/mcp-gateway" },
+
+    // Development packages
+    { "path": "./test-mcp-server" }
+
+    // Add new packages here:
+    // { "path": "./packages/new-package" }
+  ]
 }

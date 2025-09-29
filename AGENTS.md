@@ -1,111 +1,207 @@
+# MCP Gateway Monorepo - Claude Code Instructions
+
+## Project Overview
+
+This is a Bun workspace monorepo containing the MCP Gateway project. The repository structure follows monorepo best practices while maintaining backward compatibility for the main `@fiberplane/mcp-gateway` package.
+
+## Repository Structure
+
+```
+/Users/jaccoflenter/dev/fiberplane/mcp-gateway/
+├── packages/
+│   └── mcp-gateway/              # Main @fiberplane/mcp-gateway package
+│       ├── src/                  # All source code
+│       ├── bin/                  # CLI entry point  
+│       ├── tests/               # Package tests
+│       └── package.json         # Package configuration
+├── test-mcp-server/             # Test MCP server for proxy validation
+│   ├── *.ts                     # Various test server configurations
+│   └── package.json             # Test server dependencies
+├── .github/workflows/           # CI/CD workflows
+├── package.json                 # Root workspace configuration
+├── MIGRATION.md                 # Migration documentation
+└── [config files]              # Root-level configurations
+```
+
+## Important Commands
+
+### Development Commands
+- `bun install` - Install all workspace dependencies
+- `bun run dev` - Start development mode (filters to main package)
+- `bun run build` - Build main package (filters to main package)
+- `bun run typecheck` - Type check all packages
+- `bun run lint` - Lint all files
+- `bun run format` - Format all files
+
+### Package-Specific Commands
+- `bun run --filter @fiberplane/mcp-gateway build` - Build only main package
+- `bun run --filter @fiberplane/mcp-gateway dev` - Dev mode for main package
+- `bun run --filter test-mcp-server dev` - Run test MCP server
+
+### Testing Commands
+- `bun test` - Run all tests
+- `bun run --filter @fiberplane/mcp-gateway test` - Test main package only
+
+## Key Points for Claude Code
+
+### 1. Workspace Structure
+- This is a **Bun workspace** - always use `bun` commands, not npm/yarn
+- The main package is in `packages/mcp-gateway/`
+- Use `--filter` flags for package-specific operations
+- Test MCP server is a separate workspace for testing proxy functionality
+
+### 2. Build System
+- Each package has its own build script in `packages/*/scripts/build.ts`
+- Package-specific build logic co-located with the package
+- Always build with: `bun run --filter @fiberplane/mcp-gateway build`
+
+### 3. TypeScript Configuration
+- Root `tsconfig.json` uses project references
+- Each package has its own `tsconfig.json` that extends the root
+- Configuration preserves Hono JSX compatibility (`"module": "Preserve"`)
+- Use `bun run typecheck` to check all packages
+
+### 4. Package Management
+- Root `package.json` defines workspace structure
+- Main package maintains original name: `@fiberplane/mcp-gateway`
+- Test MCP server uses `workspace:*` dependency for main package
+- All devDependencies consolidated at root level
+
+### 5. CI/CD Integration
+- GitHub Actions updated for monorepo structure
+- CI builds with: `bun run --filter @fiberplane/mcp-gateway build`
+- Changesets configured to ignore test-mcp-server, track `packages/*`
+
+### 6. Backward Compatibility
+- ✅ Main package name unchanged: `@fiberplane/mcp-gateway`
+- ✅ CLI command unchanged: `mcp-gateway`
+- ✅ API surface identical
+- ✅ Installation: `npm install -g @fiberplane/mcp-gateway`
+
+## Common Tasks
+
+### Adding New Dependencies
+
+**To main package:**
+```bash
+cd packages/mcp-gateway
+bun add <package-name>
+```
+
+**To test-mcp-server:**
+```bash
+cd test-mcp-server  
+bun add <package-name>
+```
+
+**Dev dependencies (add to root):**
+```bash
+bun add -D <package-name>
+```
+
+### Adding New Packages
+
+When adding new packages to the monorepo, follow this structured approach:
+
+#### Package Structure Requirements
+- All publishable packages go in `packages/` directory
+- Use `@fiberplane/` namespace for published packages
+- Follow consistent structure: `src/`, `dist/`, `package.json`, `tsconfig.json`
+- Reference shared build script: `"build": "bun run ../../scripts/build.ts"`
+
+#### Configuration Updates Required
+1. **Root tsconfig.json** - Add project reference
+2. **Changesets config** - Automatically includes `packages/*`
+3. **GitHub workflows** - Automatically pick up workspace packages
+
+#### Key Conventions
+- Use `workspace:*` for internal dependencies
+- Set `"type": "module"` for ESM compatibility
+- Include proper exports configuration for dual module support
+- Use consistent TypeScript configuration extending root config
+
+### Running Tests
+```bash
+# All tests
+bun test
+
+# Main package only
+bun run --filter @fiberplane/mcp-gateway test
+```
+
+### Building and Development
+```bash
+# Build main package
+bun run build
+# or explicitly:
+bun run --filter @fiberplane/mcp-gateway build
+
+# Development mode
+bun run dev
+
+# Test MCP server
+bun run --filter test-mcp-server dev
+```
+
+### Release Process
+```bash
+# Create changeset
+bun changeset
+
+# Version packages
+bun changeset version
+
+# Publish (done by CI)
+bun changeset publish
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **"Package not found" errors**
+   - Ensure you're using `--filter` for package-specific commands
+   - Check that workspace dependencies are installed with `bun install`
+
+2. **TypeScript errors**
+   - Run `bun run typecheck` to see all package errors
+   - Ensure all tsconfig.json files are properly configured
+   - Check that project references are correct in root tsconfig.json
+
+3. **Build failures**
+   - Verify build script path in package.json: `../../scripts/build.ts`
+   - Ensure all dependencies are installed
+   - Check that the target package exists and is properly configured
+
+4. **Workspace dependency issues**
+   - Test MCP server should use `"@fiberplane/mcp-gateway": "workspace:*"`
+   - Run `bun install` after making workspace changes
+
+### Migration Notes
+
+This repository was migrated from a single-package structure to a monorepo. See `MIGRATION.md` for detailed migration steps and rationale. The migration:
+
+- Maintains 100% backward compatibility
+- Improves development workflow
+- Enables future package splitting
+- Follows Fiberplane repository patterns
+
+## Development Workflow
+
+1. **Making changes**: Work in `packages/mcp-gateway/src/`
+2. **Testing**: Use test MCP server in `test-mcp-server/` directory
+3. **Building**: Always use filtered commands for production builds
+4. **Committing**: Use conventional commit messages
+5. **Releasing**: Use changesets workflow
+
+## Future Enhancements
+
+The monorepo structure enables:
+- Package splitting (core, cli, ui components)
+- Shared utilities packages
+- Multiple distribution formats
+- Enhanced testing strategies
+
 ---
-description: Use Bun instead of Node.js, npm, pnpm, or vite.
-globs: "*.ts, *.tsx, *.html, *.css, *.js, *.jsx, package.json"
-alwaysApply: false
----
 
-Default to using Bun instead of Node.js.
-
-- Use `bun <file>` instead of `node <file>` or `ts-node <file>`
-- Use `bun test` instead of `jest` or `vitest`
-- Use `bun build <file.html|file.ts|file.css>` instead of `webpack` or `esbuild`
-- Use `bun install` instead of `npm install` or `yarn install` or `pnpm install`
-- Use `bun run <script>` instead of `npm run <script>` or `yarn run <script>` or `pnpm run <script>`
-- Bun automatically loads .env, so don't use dotenv.
-
-## APIs
-
-- `Bun.serve()` supports WebSockets, HTTPS, and routes. Don't use `express`.
-- `bun:sqlite` for SQLite. Don't use `better-sqlite3`.
-- `Bun.redis` for Redis. Don't use `ioredis`.
-- `Bun.sql` for Postgres. Don't use `pg` or `postgres.js`.
-- `WebSocket` is built-in. Don't use `ws`.
-- Prefer `Bun.file` over `node:fs`'s readFile/writeFile
-- Bun.$`ls` instead of execa.
-
-## Testing
-
-Use `bun test` to run tests.
-
-```ts#index.test.ts
-import { test, expect } from "bun:test";
-
-test("hello world", () => {
-  expect(1).toBe(1);
-});
-```
-
-## Frontend
-
-Use HTML imports with `Bun.serve()`. Don't use `vite`. HTML imports fully support React, CSS, Tailwind.
-
-Server:
-
-```ts#index.ts
-import index from "./index.html"
-
-Bun.serve({
-  routes: {
-    "/": index,
-    "/api/users/:id": {
-      GET: (req) => {
-        return new Response(JSON.stringify({ id: req.params.id }));
-      },
-    },
-  },
-  // optional websocket support
-  websocket: {
-    open: (ws) => {
-      ws.send("Hello, world!");
-    },
-    message: (ws, message) => {
-      ws.send(message);
-    },
-    close: (ws) => {
-      // handle close
-    }
-  },
-  development: {
-    hmr: true,
-    console: true,
-  }
-})
-```
-
-HTML files can import .tsx, .jsx or .js files directly and Bun's bundler will transpile & bundle automatically. `<link>` tags can point to stylesheets and Bun's CSS bundler will bundle.
-
-```html#index.html
-<html>
-  <body>
-    <h1>Hello, world!</h1>
-    <script type="module" src="./frontend.tsx"></script>
-  </body>
-</html>
-```
-
-With the following `frontend.tsx`:
-
-```tsx#frontend.tsx
-import React from "react";
-
-// import .css files directly and it works
-import './index.css';
-
-import { createRoot } from "react-dom/client";
-
-const root = createRoot(document.body);
-
-export default function Frontend() {
-  return <h1>Hello, world!</h1>;
-}
-
-root.render(<Frontend />);
-```
-
-Then, run index.ts
-
-```sh
-bun --hot ./index.ts
-```
-
-For more information, read the Bun API docs in `node_modules/bun-types/docs/**.md`.
+**Remember**: This is a Bun workspace. Always use `bun` commands and leverage the `--filter` flag for package-specific operations.
