@@ -29,8 +29,7 @@ import {
   parseJsonRpcFromSSE,
 } from "./sse-parser.js";
 import { getStorageRoot, loadRegistry, saveRegistry } from "./storage.js";
-import { serveEmojiFavicon } from "./ui/serve-emoji-favicon.js";
-import { createUIHandler } from "./ui/ui.js";
+import { store, touchServerAtom } from "./tui/atoms.js";
 
 // Create main application
 export async function createApp(
@@ -41,8 +40,6 @@ export async function createApp(
 
   // Determine storage directory
   const storage = getStorageRoot(storageDir);
-
-  app.use(serveEmojiFavicon("🌉"));
 
   // Health check endpoint
   app.get("/", (c) => {
@@ -70,8 +67,6 @@ export async function createApp(
     });
   });
 
-  app.route("/ui", createUIHandler(registry, storage));
-
   // Mount MCP server for gateway management tools
   app.route("/", createMcpApp(registry, storage));
 
@@ -89,6 +84,9 @@ export async function createApp(
       const jsonRpcRequest = c.req.valid("json");
 
       // Find server in registry
+
+      console.log(registry);
+      console.log(serverName);
       const server = getServer(registry, serverName);
       if (!server) {
         return c.notFound();
