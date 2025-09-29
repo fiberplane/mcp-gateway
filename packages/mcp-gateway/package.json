@@ -7,7 +7,12 @@
     "type": "git",
     "url": "git+https://github.com/fiberplane/mcp-gateway.git"
   },
-  "files": ["bin", "dist", "README.md", "CHANGELOG.md"],
+  "files": [
+    "bin",
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
+  ],
   "bin": {
     "mcp-gateway": "bin/cli.js"
   },

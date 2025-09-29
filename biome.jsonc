@@ -24,5 +24,19 @@
       }
     }
   },
-  "files": { "include": ["**"], "ignore": ["**/dist", "**/node_modules"] }
+  "files": {
+    "ignoreUnknown": false,
+    "includes": [
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.js",
+      "**/*.jsx",
+      "**/*.json",
+      "**/*.jsonc",
+      "**/*.md",
+      "!**/dist",
+      "!**/build",
+      "!**/node_modules"
+    ]
+  }
 }
