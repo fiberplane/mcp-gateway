@@ -3,9 +3,11 @@ import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { serve } from "@hono/node-server";
-import { runInteractiveCli } from "./cli.js";
+import { startHealthChecks } from "./health.js";
 import { createApp } from "./server.js";
 import { getStorageRoot, loadRegistry } from "./storage.js";
+import { runTUI } from "./tui/loop.js";
+import type { Context } from "./tui/state.js";
 
 function showHelp(): void {
   console.log(`
@@ -87,14 +89,42 @@ export async function runCli(): Promise<void> {
 
     console.log(`MCP Gateway server started at http://localhost:${port}`);
 
-    // Start interactive CLI
-    runInteractiveCli(storageDir, registry, () => server.close()).catch(
-      (error) => {
-        console.error("CLI error:", error);
+    // Start health checks
+    const stopHealthChecks = await startHealthChecks(registry);
+
+    // Create context for TUI
+    const context: Context = {
+      storageDir,
+      onExit: () => {
+        stopHealthChecks();
+        server.close();
+      },
+    };
+
+    // Start TUI only if running in a TTY
+    if (process.stdin.isTTY) {
+      runTUI(context, registry).catch((error) => {
+        console.error("TUI error:", error);
+        stopHealthChecks();
         server.close();
         process.exit(1);
-      },
-    );
+      });
+    } else {
+      console.log(
+        "Running in headless mode (no TTY detected). Server will run until terminated.",
+      );
+      // Keep process alive and handle signals
+      process.on("SIGTERM", () => {
+        console.log("\nReceived SIGTERM, shutting down...");
+        context.onExit?.();
+        process.exit(0);
+      });
+      process.on("SIGINT", () => {
+        console.log("\nReceived SIGINT, shutting down...");
+        context.onExit?.();
+        process.exit(0);
+      });
+    }
   } catch (error) {
     if (error instanceof Error) {
       console.error(`Error: ${error.message}`);

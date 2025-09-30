@@ -11,7 +11,7 @@ import { z } from "zod";
 const mcp = new McpServer({
   name: "comprehensive-mcp-demo",
   version: "2.0.0",
-  schemaAdapter: (s) => (s as z.ZodType)._def,
+  schemaAdapter: (s) => z.toJSONSchema(s as z.ZodType),
 });
 
 // ===== MIDDLEWARE =====
@@ -1194,7 +1194,10 @@ app.get("/info", (c) => {
 
 const port = 3002;
 
-export default app;
+export default {
+  fetch: app.fetch,
+  port,
+};
 
 if (import.meta.main) {
   console.log("🚀 Starting Comprehensive MCP Demo Server...");
@@ -1234,9 +1237,4 @@ if (import.meta.main) {
   console.log("  • generateDocumentation - Documentation generation");
   console.log("  • summarizeContent - Content summarization");
   console.log("");
-
-  Bun.serve({
-    port,
-    fetch: app.fetch,
-  });
 }

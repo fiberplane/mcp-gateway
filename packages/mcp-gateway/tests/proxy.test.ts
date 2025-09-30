@@ -195,8 +195,8 @@ describe("Proxy Integration Tests", () => {
   });
 
   describe("Proxy Routing", () => {
-    it("should route requests to server1", async () => {
-      const gatewayUrl = `http://localhost:${gateway.port}/server1/mcp`;
+    it("should route requests to server1 (canonical)", async () => {
+      const gatewayUrl = `http://localhost:${gateway.port}/servers/server1/mcp`;
 
       const response = await makeJsonRpcRequest(gatewayUrl, "tools/call", {
         name: "echo",
@@ -209,8 +209,8 @@ describe("Proxy Integration Tests", () => {
       });
     });
 
-    it("should route requests to server2", async () => {
-      const gatewayUrl = `http://localhost:${gateway.port}/server2/mcp`;
+    it("should route requests to server2 (canonical)", async () => {
+      const gatewayUrl = `http://localhost:${gateway.port}/servers/server2/mcp`;
 
       const response = await makeJsonRpcRequest(gatewayUrl, "tools/call", {
         name: "add",
@@ -223,8 +223,22 @@ describe("Proxy Integration Tests", () => {
       });
     });
 
+    it("should route requests via short alias", async () => {
+      const gatewayUrl = `http://localhost:${gateway.port}/s/server1/mcp`;
+
+      const response = await makeJsonRpcRequest(gatewayUrl, "tools/call", {
+        name: "echo",
+        arguments: { message: "hello via alias" },
+      });
+
+      expect(response.error).toBeUndefined();
+      expect(response.result).toEqual({
+        content: [{ type: "text", text: "hello via alias" }],
+      });
+    });
+
     it("should return 404 for unknown server", async () => {
-      const gatewayUrl = `http://localhost:${gateway.port}/unknown-server/mcp`;
+      const gatewayUrl = `http://localhost:${gateway.port}/servers/unknown-server/mcp`;
 
       try {
         await makeJsonRpcRequest(gatewayUrl, "tools/call", {
@@ -240,7 +254,7 @@ describe("Proxy Integration Tests", () => {
 
   describe("Session Handling", () => {
     it("should handle requests with session ID", async () => {
-      const gatewayUrl = `http://localhost:${gateway.port}/server1/mcp`;
+      const gatewayUrl = `http://localhost:${gateway.port}/servers/server1/mcp`;
       const sessionId = "test-session-123";
 
       const response = await makeJsonRpcRequest(
@@ -260,7 +274,7 @@ describe("Proxy Integration Tests", () => {
     });
 
     it("should handle stateless requests", async () => {
-      const gatewayUrl = `http://localhost:${gateway.port}/server1/mcp`;
+      const gatewayUrl = `http://localhost:${gateway.port}/servers/server1/mcp`;
 
       const response = await makeJsonRpcRequest(gatewayUrl, "tools/call", {
         name: "echo",
@@ -276,7 +290,7 @@ describe("Proxy Integration Tests", () => {
 
   describe("Capture Storage", () => {
     it("should create capture files", async () => {
-      const gatewayUrl = `http://localhost:${gateway.port}/server1/mcp`;
+      const gatewayUrl = `http://localhost:${gateway.port}/servers/server1/mcp`;
       const sessionId = "capture-test-session";
 
       await makeJsonRpcRequest(
@@ -298,7 +312,7 @@ describe("Proxy Integration Tests", () => {
     });
 
     it("should capture request and response data", async () => {
-      const gatewayUrl = `http://localhost:${gateway.port}/server2/mcp`;
+      const gatewayUrl = `http://localhost:${gateway.port}/servers/server2/mcp`;
       const sessionId = "data-capture-test";
 
       await makeJsonRpcRequest(

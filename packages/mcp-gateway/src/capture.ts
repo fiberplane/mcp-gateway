@@ -17,6 +17,9 @@ const sessionClientInfo = new Map<string, ClientInfo>();
 // Store request start times for duration calculation
 const requestStartTimes = new Map<string | number, number>();
 
+// Store request method by request ID (for matching responses to requests)
+const requestMethods = new Map<string | number, string>();
+
 // Store client info from initialize handshake
 export function storeClientInfo(
   sessionId: string,
@@ -50,9 +53,10 @@ export function createRequestCaptureRecord(
 ): CaptureRecord {
   const clientInfo = getClientInfo(sessionId);
 
-  // Store start time if request expects response (has id)
+  // Store start time and method if request expects response (has id)
   if (request.id != null) {
     requestStartTimes.set(request.id, Date.now());
+    requestMethods.set(request.id, request.method);
   }
 
   const record: CaptureRecord = {
@@ -89,13 +93,14 @@ export function createResponseCaptureRecord(
 ): CaptureRecord {
   const clientInfo = getClientInfo(sessionId);
 
-  // Calculate duration if we tracked the request
+  // Calculate duration and cleanup if we tracked the request
   let durationMs = 0;
   if (response.id != null && requestStartTimes.has(response.id)) {
     const startTime = requestStartTimes.get(response.id);
     if (startTime !== undefined) {
       durationMs = Date.now() - startTime;
       requestStartTimes.delete(response.id);
+      requestMethods.delete(response.id);
     }
   }
 
@@ -235,6 +240,18 @@ export function createSSEEventCaptureRecord(
   return record;
 }
 
+function resolveJsonRpcMethod(
+  jsonRpcMessage: JsonRpcRequest | JsonRpcResponse,
+): string {
+  if ("method" in jsonRpcMessage) {
+    return jsonRpcMessage.method;
+  }
+  if (jsonRpcMessage.id != null) {
+    return requestMethods.get(jsonRpcMessage.id) ?? "unknown";
+  }
+  return "unknown";
+}
+
 // Create capture record for JSON-RPC message from SSE
 export function createSSEJsonRpcCaptureRecord(
   serverName: string,
@@ -245,7 +262,28 @@ export function createSSEJsonRpcCaptureRecord(
 ): CaptureRecord {
   const clientInfo = getClientInfo(sessionId);
 
-  const method = "method" in jsonRpcMessage ? jsonRpcMessage.method : "unknown";
+  const method = resolveJsonRpcMethod(jsonRpcMessage);
+
+  // Store start time and method for requests
+  if (!isResponse && jsonRpcMessage.id != null) {
+    requestStartTimes.set(jsonRpcMessage.id, Date.now());
+    if ("method" in jsonRpcMessage) {
+      requestMethods.set(jsonRpcMessage.id, jsonRpcMessage.method);
+    }
+  }
+
+  // Calculate duration and cleanup for responses
+  let durationMs = 0;
+  if (isResponse && jsonRpcMessage.id != null) {
+    if (requestStartTimes.has(jsonRpcMessage.id)) {
+      const startTime = requestStartTimes.get(jsonRpcMessage.id);
+      if (startTime !== undefined) {
+        durationMs = Date.now() - startTime;
+        requestStartTimes.delete(jsonRpcMessage.id);
+        requestMethods.delete(jsonRpcMessage.id);
+      }
+    }
+  }
 
   const record: CaptureRecord = {
     timestamp: new Date().toISOString(),
@@ -254,7 +292,7 @@ export function createSSEJsonRpcCaptureRecord(
     metadata: {
       serverName,
       sessionId,
-      durationMs: 0, // SSE events don't have traditional timing
+      durationMs,
       httpStatus: 200,
       client: clientInfo,
       sseEventId: sseEvent.id,
@@ -316,7 +354,7 @@ export async function captureSSEJsonRpc(
   jsonRpcMessage: JsonRpcRequest | JsonRpcResponse,
   sseEvent: SSEEvent,
   isResponse: boolean = false,
-): Promise<void> {
+): Promise<CaptureRecord | null> {
   try {
     const record = createSSEJsonRpcCaptureRecord(
       serverName,
@@ -326,8 +364,10 @@ export async function captureSSEJsonRpc(
       isResponse,
     );
     await appendCapture(storageDir, record);
+    return record;
   } catch (error) {
     console.error("Failed to capture SSE JSON-RPC:", error);
     // Don't throw - SSE capture failures shouldn't break streaming
+    return null;
   }
 }
