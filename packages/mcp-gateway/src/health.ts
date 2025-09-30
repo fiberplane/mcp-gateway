@@ -22,10 +22,10 @@ export async function checkServerHealth(url: string): Promise<ServerHealth> {
   }
 }
 
-export function startHealthChecks(
+export async function startHealthChecks(
   registry: Registry,
   intervalMs_ms: number = 30000,
-): () => void {
+): Promise<() => void> {
   const checkAll = async () => {
     const checks = registry.servers.map(async (server) => {
       server.health = await checkServerHealth(server.url);
@@ -36,8 +36,8 @@ export function startHealthChecks(
     emitRegistryUpdate();
   };
 
-  // Initial check
-  checkAll();
+  // Initial check (await to ensure it completes before returning)
+  await checkAll();
 
   // Periodic checks
   const timer = setInterval(checkAll, intervalMs_ms);

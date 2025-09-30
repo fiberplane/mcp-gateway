@@ -268,9 +268,15 @@ function handleStdinData(state: State, data: string): void {
       return;
     }
 
-    // Enter - submit form
+    // Enter - move to next field, or submit if on last field
     if (char === 13 || char === 10) {
-      dispatch({ type: "form_submit" });
+      const isLastField =
+        state.formState.focusedFieldIndex === state.formState.fields.length - 1;
+      if (isLastField) {
+        dispatch({ type: "form_submit" });
+      } else {
+        dispatch({ type: "form_next_field" });
+      }
       return;
     }
 
@@ -334,6 +340,19 @@ export async function runTUI(
 
   let state: State = { registry, running: true, mode: "menu", logs: [] };
 
+  // Enter alternate screen buffer for clean TUI isolation
+  process.stdout.write("\x1b[?1049h");
+
+  // Cleanup function to restore terminal state
+  const cleanup = () => {
+    if (process.stdin.setRawMode) {
+      process.stdin.setRawMode(false);
+    }
+    process.stdin.pause();
+    // Exit alternate screen buffer (restores previous terminal content)
+    process.stdout.write("\x1b[?1049l");
+  };
+
   // Set up stdin as event source (non-blocking)
   process.stdin.setRawMode(true);
   process.stdin.resume();
@@ -349,7 +368,10 @@ export async function runTUI(
 
   process.stdin.on("data", stdinHandler);
 
-  // Handle Ctrl+C
+  // Handle unexpected exits to ensure cleanup
+  process.on("exit", cleanup);
+
+  // Handle Ctrl+C (dispatch quit action for graceful shutdown)
   process.on("SIGINT", () => {
     dispatch({ type: "quit" });
   });
@@ -387,11 +409,8 @@ export async function runTUI(
     // Exit if we're done
     if (!state.running) {
       process.stdin.removeListener("data", stdinHandler);
-      if (process.stdin.setRawMode) {
-        process.stdin.setRawMode(false);
-      }
-      process.stdin.pause();
-      console.log("\nClosing the MCP Gateway...");
+      cleanup();
+      console.log("Closing the MCP Gateway...");
       context.onExit?.();
       process.exit(0);
     }

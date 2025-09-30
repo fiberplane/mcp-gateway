@@ -90,7 +90,7 @@ export async function runCli(): Promise<void> {
     console.log(`MCP Gateway server started at http://localhost:${port}`);
 
     // Start health checks
-    const stopHealthChecks = startHealthChecks(registry);
+    const stopHealthChecks = await startHealthChecks(registry);
 
     // Create context for TUI
     const context: Context = {

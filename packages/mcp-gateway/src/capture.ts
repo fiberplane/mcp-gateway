@@ -264,6 +264,14 @@ export function createSSEJsonRpcCaptureRecord(
 
   const method = resolveJsonRpcMethod(jsonRpcMessage);
 
+  // Store start time and method for requests
+  if (!isResponse && jsonRpcMessage.id != null) {
+    requestStartTimes.set(jsonRpcMessage.id, Date.now());
+    if ("method" in jsonRpcMessage) {
+      requestMethods.set(jsonRpcMessage.id, jsonRpcMessage.method);
+    }
+  }
+
   // Calculate duration and cleanup for responses
   let durationMs = 0;
   if (isResponse && jsonRpcMessage.id != null) {

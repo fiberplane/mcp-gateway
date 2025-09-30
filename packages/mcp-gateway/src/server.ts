@@ -460,15 +460,19 @@ async function processSSECapture(
             isResponse,
           );
 
-          // Log response to TUI if it's a response
-          if (record && isResponse && record.response) {
+          // Log response to TUI if it's a response (even if capture failed)
+          if (isResponse && "result" in jsonRpcMessage) {
+            const method = record?.method ?? "unknown";
+            const durationMs = record?.metadata.durationMs ?? 0;
+            const httpStatus = record?.metadata.httpStatus ?? 200;
+
             logResponse(
               server,
               sessionId,
-              record.method,
-              record.metadata.httpStatus,
-              record.metadata.durationMs,
-              record.response,
+              method,
+              httpStatus,
+              durationMs,
+              jsonRpcMessage,
             );
           }
         } else {

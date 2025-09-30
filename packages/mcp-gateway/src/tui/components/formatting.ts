@@ -1,5 +1,6 @@
 // ANSI escape codes for terminal control
-export const CLEAR_SCREEN = "\x1Bc";
+// Use alternate screen buffer + clear screen for better isolation
+export const CLEAR_SCREEN = "\x1b[2J\x1b[H";
 export const RESET_COLOR = "\x1b[0m";
 export const BOLD = "\x1b[1m";
 export const DIM = "\x1b[2m";
