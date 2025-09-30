@@ -1,6 +1,8 @@
 # MCP Gateway
 
-HTTP proxy for managing multiple Model Context Protocol (MCP) servers through a unified interface.
+A local HTTP proxy for managing and debugging multiple Model Context Protocol (MCP) servers through a unified interface.
+
+![MCP Gateway](./assets/mcp-gateway.png)
 
 ## Quick Start
 
