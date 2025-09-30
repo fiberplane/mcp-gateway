@@ -16,7 +16,6 @@ interface CaptureFile {
   timestamp: string;
 }
 
-
 // Schema for searching captures with comprehensive filtering
 const SearchRecordsSchema = z.object({
   server: z
@@ -101,7 +100,6 @@ const SearchRecordsSchema = z.object({
       "Response format. 'concise' returns essential information for quick scanning, 'detailed' includes full request/response bodies and metadata.",
     ),
 });
-
 
 // =============================================================================
 // Utility Functions
@@ -198,7 +196,6 @@ async function parseJsonlFile(filePath: string): Promise<CaptureRecord[]> {
   }
 }
 
-
 /**
  * Filter records by time range
  */
@@ -254,7 +251,6 @@ function filterByMessageType(
   }
 }
 
-
 /**
  * Format large payload with truncation
  */
@@ -308,7 +304,7 @@ function formatConciseRecord(
  */
 export function createCaptureTools(
   mcp: McpServer,
-  registry: Registry,
+  _registry: Registry,
   storageDir: string,
 ): void {
   mcp.tool("search_records", {
@@ -453,5 +449,4 @@ Results are sorted by timestamp (newest first) and include context like duration
       }
     },
   });
-
 }
