@@ -70,8 +70,6 @@ function renderMcpInstructions(): string {
   output += `  ${CYAN}•${RESET_COLOR} remove_server   - Remove registered servers\n`;
   output += `  ${CYAN}•${RESET_COLOR} list_servers    - List all servers\n`;
   output += `  ${CYAN}•${RESET_COLOR} search_records  - Search captured traffic\n`;
-  output += `  ${CYAN}•${RESET_COLOR} analyze_session - Analyze session flows\n`;
-  output += `  ${CYAN}•${RESET_COLOR} get_server_stats - Server statistics\n`;
   output += "\n";
 
   // Example Config

@@ -50,7 +50,7 @@ export function createMcpServer(
   // Register server management tools
   createServerTools(mcp, registry, storageDir);
 
-  // Register capture analysis tools
+  // Register capture analysis tools (only search_records)
   createCaptureTools(mcp, registry, storageDir);
 
   // Set up custom error handler
@@ -132,22 +132,6 @@ export function createMcpApp(registry: Registry, storageDir: string): Hono {
   app.all("/mcp", async (c) => {
     const response = await httpHandler(c.req.raw);
     return response;
-  });
-
-  // Health check endpoint for MCP server
-  app.get("/health", (c) => {
-    return c.json({
-      status: "healthy",
-      server: "mcp-gateway-tools",
-      version: "1.0.0",
-      timestamp: new Date().toISOString(),
-      capabilities: {
-        serverManagement: true,
-        captureAnalysis: true,
-        sessionAnalysis: true,
-        statistics: true,
-      },
-    });
   });
 
   return app;
