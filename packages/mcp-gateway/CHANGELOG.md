@@ -1,5 +1,11 @@
 # @fiberplane/mcp-gateway
 
+## 0.3.1
+
+### Patch Changes
+
+- 6be35bc: Fix publishing flow.
+
 ## 0.3.0
 
 ### Minor Changes
