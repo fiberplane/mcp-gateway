@@ -35,15 +35,23 @@ import { getStorageRoot, loadRegistry, saveRegistry } from "./storage.js";
 import { emitLog, emitRegistryUpdate } from "./tui/events.js";
 import type { LogEntry } from "./tui/state.js";
 
-// Helper: Extract session ID from headers
+// Constant for sessionless (stateless) requests - used when no session ID is provided
+const SESSIONLESS_ID = "stateless";
+
+// Helper: Extract session ID from request headers
 function extractSessionId(
   validatedHeaders: z.infer<typeof sessionHeaderSchema>,
 ): string {
   return (
     validatedHeaders["Mcp-Session-Id"] ||
     validatedHeaders["mcp-session-id"] ||
-    "stateless"
+    SESSIONLESS_ID
   );
+}
+
+// Helper: Extract session ID from response headers
+function extractSessionIdFromResponse(headers: Headers): string | null {
+  return headers.get("Mcp-Session-Id") || headers.get("mcp-session-id");
 }
 
 // Helper: Build proxy headers
@@ -87,6 +95,11 @@ function handleInitializeClientInfo(
 }
 
 // Helper: Update server activity
+// This function is called for each successful proxy request to:
+// 1. Update the server's last activity timestamp
+// 2. Increment the exchange counter for metrics
+// 3. Persist the updated registry to disk
+// 4. Notify the TUI to re-render with updated server stats
 async function updateServerActivity(
   storage: string,
   registry: Registry,
@@ -107,13 +120,13 @@ async function handleSessionTransition(
   jsonRpcRequest: JsonRpcRequest,
   requestCaptureFilename: string,
 ): Promise<void> {
-  if (jsonRpcRequest.method !== "initialize" || sessionId !== "stateless") {
+  if (jsonRpcRequest.method !== "initialize" || sessionId !== SESSIONLESS_ID) {
     return;
   }
 
-  const responseSessionId =
-    targetResponse.headers.get("Mcp-Session-Id") ||
-    targetResponse.headers.get("mcp-session-id");
+  const responseSessionId = extractSessionIdFromResponse(
+    targetResponse.headers,
+  );
 
   if (responseSessionId) {
     // Copy client info to new session
@@ -164,13 +177,9 @@ function logResponse(
   duration: number,
   response?: JsonRpcResponse,
 ): void {
-  const errorMessage =
-    response &&
-    typeof response === "object" &&
-    "error" in response &&
-    response.error
-      ? `JSON-RPC ${response.error.code}: ${response.error.message}`
-      : undefined;
+  const errorMessage = response?.error
+    ? `JSON-RPC ${response.error.code}: ${response.error.message}`
+    : undefined;
 
   const logEntry: LogEntry = {
     timestamp: new Date().toISOString(),
@@ -238,7 +247,6 @@ export async function createApp(
       const jsonRpcRequest = c.req.valid("json");
 
       // Find server in registry
-
       const server = getServer(registry, serverName);
       if (!server) {
         return c.notFound();

@@ -31,56 +31,66 @@ function getHealthIndicator(health?: ServerHealth): string {
 
 // Render the main menu
 export function renderMenu(registry: Registry, logs: LogEntry[]): string {
-  let output = "";
+  const output: string[] = [];
 
   const activeSessions = getActiveSessions();
-  output += `${CYAN}Fiberplane MCP Gateway v${packageJson.version}${RESET_COLOR}\n`;
-  output += `${DIM}Gateway: http://localhost:3333${RESET_COLOR}\n`;
-  output += `${DIM}MCP: http://localhost:3333/mcp${RESET_COLOR}\n`;
+  output.push(
+    `${CYAN}Fiberplane MCP Gateway v${packageJson.version}${RESET_COLOR}\n`,
+  );
+  output.push(`${DIM}Gateway: http://localhost:3333${RESET_COLOR}\n`);
+  output.push(`${DIM}MCP: http://localhost:3333/mcp${RESET_COLOR}\n`);
   if (activeSessions.length > 0) {
-    output += `${DIM}Active sessions: ${activeSessions.length}${RESET_COLOR}\n`;
+    output.push(
+      `${DIM}Active sessions: ${activeSessions.length}${RESET_COLOR}\n`,
+    );
   }
-  output += "\n";
+  output.push("\n");
 
   if (registry.servers.length === 0) {
-    output += `${DIM}No servers registered${RESET_COLOR}\n`;
+    output.push(`${DIM}No servers registered${RESET_COLOR}\n`);
   } else {
-    output += `${CYAN}Servers:${RESET_COLOR}\n`;
+    output.push(`${CYAN}Servers:${RESET_COLOR}\n`);
     for (const server of registry.servers) {
       const activity = formatRelativeTime(server.lastActivity);
       const encodedName = encodeURIComponent(server.name);
       const proxyUrl = `http://localhost:3333/${encodedName}/mcp`;
       const healthIndicator = getHealthIndicator(server.health);
       const nameColor = getHealthColor(server.health);
-      output += "\n";
-      output += `${healthIndicator} ${nameColor}${server.name}${RESET_COLOR}\n`;
-      output += `${CYAN}${proxyUrl}${RESET_COLOR} ${DIM}→ ${server.url}${RESET_COLOR}\n`;
-      output += `${DIM}Last active: ${activity} • ${server.exchangeCount} exchanges${RESET_COLOR}\n`;
+      output.push("\n");
+      output.push(
+        `${healthIndicator} ${nameColor}${server.name}${RESET_COLOR}\n`,
+      );
+      output.push(
+        `${CYAN}${proxyUrl}${RESET_COLOR} ${DIM}→ ${server.url}${RESET_COLOR}\n`,
+      );
+      output.push(
+        `${DIM}Last active: ${activity} • ${server.exchangeCount} exchanges${RESET_COLOR}\n`,
+      );
     }
   }
 
-  output += "\n";
-  output += `${YELLOW}[a]${RESET_COLOR} Add server\n`;
+  output.push("\n");
+  output.push(`${YELLOW}[a]${RESET_COLOR} Add server\n`);
 
   if (registry.servers.length > 0) {
-    output += `${YELLOW}[d]${RESET_COLOR} Delete server\n`;
+    output.push(`${YELLOW}[d]${RESET_COLOR} Delete server\n`);
   } else {
-    output += `${DIM}[d] Delete server${RESET_COLOR}\n`;
+    output.push(`${DIM}[d] Delete server${RESET_COLOR}\n`);
   }
 
   if (logs.length > 0) {
-    output += `${YELLOW}[c]${RESET_COLOR} Clear activity\n`;
+    output.push(`${YELLOW}[c]${RESET_COLOR} Clear activity\n`);
   } else {
-    output += `${DIM}[c] Clear activity${RESET_COLOR}\n`;
+    output.push(`${DIM}[c] Clear activity${RESET_COLOR}\n`);
   }
 
-  output += `${YELLOW}[m]${RESET_COLOR} MCP instructions\n`;
-  output += `${YELLOW}[q]${RESET_COLOR} Quit\n`;
-  output += "\n";
+  output.push(`${YELLOW}[m]${RESET_COLOR} MCP instructions\n`);
+  output.push(`${YELLOW}[q]${RESET_COLOR} Quit\n`);
+  output.push("\n");
 
   // Display recent logs
   if (logs.length > 0) {
-    output += `${CYAN}Recent Activity:${RESET_COLOR}\n`;
+    output.push(`${CYAN}Recent Activity:${RESET_COLOR}\n`);
     for (const log of logs) {
       // Get client info for this session
       const clientInfo = getClientInfo(log.sessionId);
@@ -94,7 +104,9 @@ export function renderMenu(registry: Registry, logs: LogEntry[]): string {
       if (log.direction === "request") {
         // Client → Gateway → Server (request flow)
         const methodDetails = formatRequestDetails(log);
-        output += `${DIM}${log.timestamp.slice(11, 19)}${RESET_COLOR} ${GRAY}${sessionIdShort}${RESET_COLOR} ${CYAN}${clientLabel}${RESET_COLOR} → ${log.serverName} ${DIM}${log.method}${methodDetails}${RESET_COLOR}\n`;
+        output.push(
+          `${DIM}${log.timestamp.slice(11, 19)}${RESET_COLOR} ${GRAY}${sessionIdShort}${RESET_COLOR} ${CYAN}${clientLabel}${RESET_COLOR} → ${log.serverName} ${DIM}${log.method}${methodDetails}${RESET_COLOR}\n`,
+        );
       } else {
         // Server → Gateway → Client (response flow)
         const statusColor =
@@ -108,13 +120,15 @@ export function renderMenu(registry: Registry, logs: LogEntry[]): string {
         const errorSuffix = log.errorMessage
           ? ` ${RED}${log.errorMessage}${RESET_COLOR}`
           : "";
-        output += `${DIM}${log.timestamp.slice(11, 19)}${RESET_COLOR} ${GRAY}${sessionIdShort}${RESET_COLOR} ${log.serverName} → ${CYAN}${clientLabel}${RESET_COLOR} ${statusColor}(${log.httpStatus}, ${log.duration}ms)${RESET_COLOR}${responseDetails}${errorSuffix}\n`;
+        output.push(
+          `${DIM}${log.timestamp.slice(11, 19)}${RESET_COLOR} ${GRAY}${sessionIdShort}${RESET_COLOR} ${log.serverName} → ${CYAN}${clientLabel}${RESET_COLOR} ${statusColor}(${log.httpStatus}, ${log.duration}ms)${RESET_COLOR}${responseDetails}${errorSuffix}\n`,
+        );
       }
     }
-    output += "\n";
+    output.push("\n");
   }
 
-  return output;
+  return output.join("");
 }
 
 // Format request-specific details

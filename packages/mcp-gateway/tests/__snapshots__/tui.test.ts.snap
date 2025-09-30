@@ -45,7 +45,7 @@ exports[`TUI snapshot: menu with multiple servers and health status 1`] = `
 
 \x1B[92m●\x1B[0m \x1B[92mhealthy-server\x1B[0m
 \x1B[96mhttp://localhost:3333/healthy-server/mcp\x1B[0m \x1B[2m→ https://api1.example.com/mcp\x1B[0m
-\x1B[2mLast active: 2h ago • 42 exchanges\x1B[0m
+\x1B[2mLast active: 3h ago • 42 exchanges\x1B[0m
 
 \x1B[91m●\x1B[0m \x1B[91munhealthy-server\x1B[0m
 \x1B[96mhttp://localhost:3333/unhealthy-server/mcp\x1B[0m \x1B[2m→ https://api2.example.com/mcp\x1B[0m
@@ -53,7 +53,7 @@ exports[`TUI snapshot: menu with multiple servers and health status 1`] = `
 
 \x1B[38;5;245m●\x1B[0m \x1B[38;5;245munknown-server\x1B[0m
 \x1B[96mhttp://localhost:3333/unknown-server/mcp\x1B[0m \x1B[2m→ https://api3.example.com/mcp\x1B[0m
-\x1B[2mLast active: 2h ago • 15 exchanges\x1B[0m
+\x1B[2mLast active: 3h ago • 15 exchanges\x1B[0m
 
 \x1B[93m[a]\x1B[0m Add server
 \x1B[93m[d]\x1B[0m Delete server
@@ -157,8 +157,6 @@ exports[`TUI snapshot: MCP instructions modal 1`] = `
   \x1B[96m•\x1B[0m remove_server   - Remove registered servers
   \x1B[96m•\x1B[0m list_servers    - List all servers
   \x1B[96m•\x1B[0m search_records  - Search captured traffic
-  \x1B[96m•\x1B[0m analyze_session - Analyze session flows
-  \x1B[96m•\x1B[0m get_server_stats - Server statistics
 
 \x1B[92mExample MCP Client Config (Claude Desktop):\x1B[0m
 \x1B[2m{\x1B[0m

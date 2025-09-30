@@ -54,47 +54,67 @@ export function renderModal(
 }
 
 function renderMcpInstructions(): string {
-  let output = "";
-  output += `${CYAN}Fiberplane MCP Gateway v${packageJson.version}${RESET_COLOR}\n`;
-  output += "\n";
+  const output: string[] = [];
+  output.push(
+    `${CYAN}Fiberplane MCP Gateway v${packageJson.version}${RESET_COLOR}\n`,
+  );
+  output.push("\n");
 
-  output += `${GREEN}This MCP Gateway is also an MCP server.${RESET_COLOR}\n`;
-  output += `${YELLOW}Endpoint:${RESET_COLOR} http://localhost:3333/mcp\n`;
-  output += `${DIM}Connect it to your agent (MCP Client) and use it to manage${RESET_COLOR}\n`;
-  output += `${DIM}other MCP server connections, or inspect and analyze captured traffic${RESET_COLOR}\n`;
-  output += "\n";
+  output.push(
+    `${GREEN}This MCP Gateway is also an MCP server.${RESET_COLOR}\n`,
+  );
+  output.push(`${YELLOW}Endpoint:${RESET_COLOR} http://localhost:3333/mcp\n`);
+  output.push(
+    `${DIM}Connect it to your agent (MCP Client) and use it to manage${RESET_COLOR}\n`,
+  );
+  output.push(
+    `${DIM}other MCP server connections, or inspect and analyze captured traffic${RESET_COLOR}\n`,
+  );
+  output.push("\n");
 
   // Available Tools
-  output += `${GREEN}Available Tools:${RESET_COLOR}\n`;
-  output += `  ${CYAN}•${RESET_COLOR} add_server      - Register new MCP servers\n`;
-  output += `  ${CYAN}•${RESET_COLOR} remove_server   - Remove registered servers\n`;
-  output += `  ${CYAN}•${RESET_COLOR} list_servers    - List all servers\n`;
-  output += `  ${CYAN}•${RESET_COLOR} search_records  - Search captured traffic\n`;
-  output += "\n";
+  output.push(`${GREEN}Available Tools:${RESET_COLOR}\n`);
+  output.push(
+    `  ${CYAN}•${RESET_COLOR} add_server      - Register new MCP servers\n`,
+  );
+  output.push(
+    `  ${CYAN}•${RESET_COLOR} remove_server   - Remove registered servers\n`,
+  );
+  output.push(`  ${CYAN}•${RESET_COLOR} list_servers    - List all servers\n`);
+  output.push(
+    `  ${CYAN}•${RESET_COLOR} search_records  - Search captured traffic\n`,
+  );
+  output.push("\n");
 
   // Example Config
-  output += `${GREEN}Example MCP Client Config (Claude Desktop):${RESET_COLOR}\n`;
-  output += `${DIM}{${RESET_COLOR}\n`;
-  output += `${DIM}  "mcpServers": {${RESET_COLOR}\n`;
-  output += `${DIM}    "mcp-gateway": {${RESET_COLOR}\n`;
-  output += `${DIM}      "url": ${RESET_COLOR}${YELLOW}"http://localhost:3333/mcp"${RESET_COLOR}\n`;
-  output += `${DIM}    }${RESET_COLOR}\n`;
-  output += `${DIM}  }${RESET_COLOR}\n`;
-  output += `${DIM}}${RESET_COLOR}\n`;
-  output += "\n";
+  output.push(
+    `${GREEN}Example MCP Client Config (Claude Desktop):${RESET_COLOR}\n`,
+  );
+  output.push(`${DIM}{${RESET_COLOR}\n`);
+  output.push(`${DIM}  "mcpServers": {${RESET_COLOR}\n`);
+  output.push(`${DIM}    "mcp-gateway": {${RESET_COLOR}\n`);
+  output.push(
+    `${DIM}      "url": ${RESET_COLOR}${YELLOW}"http://localhost:3333/mcp"${RESET_COLOR}\n`,
+  );
+  output.push(`${DIM}    }${RESET_COLOR}\n`);
+  output.push(`${DIM}  }${RESET_COLOR}\n`);
+  output.push(`${DIM}}${RESET_COLOR}\n`);
+  output.push("\n");
 
   // Storage
-  output += `${GREEN}Storage:${RESET_COLOR}\n`;
-  output += `${DIM}All captured traffic is stored in: ~/.mcp-gateway${RESET_COLOR}\n`;
+  output.push(`${GREEN}Storage:${RESET_COLOR}\n`);
+  output.push(
+    `${DIM}All captured traffic is stored in: ~/.mcp-gateway${RESET_COLOR}\n`,
+  );
 
-  return output;
+  return output.join("");
 }
 
 function renderAddServerForm(formState: FormState): string {
-  let output = "";
-  output += `${CYAN}Add New Server${RESET_COLOR}\n`;
-  output += `${GRAY}${"─".repeat(60)}${RESET_COLOR}\n`;
-  output += "\n";
+  const output: string[] = [];
+  output.push(`${CYAN}Add New Server${RESET_COLOR}\n`);
+  output.push(`${GRAY}${"─".repeat(60)}${RESET_COLOR}\n`);
+  output.push("\n");
 
   // Render each field
   for (let i = 0; i < formState.fields.length; i++) {
@@ -107,66 +127,74 @@ function renderAddServerForm(formState: FormState): string {
     const hint = field.placeholder
       ? ` ${DIM}(${field.placeholder})${RESET_COLOR}`
       : "";
-    output += `${isFocused ? BOLD : DIM}${field.label}${hint}:${RESET_COLOR}\n`;
+    output.push(
+      `${isFocused ? BOLD : DIM}${field.label}${hint}:${RESET_COLOR}\n`,
+    );
 
     // Input box with value and cursor
     const displayValue = field.value;
     const cursor = isFocused ? "_" : "";
     const prefix = isFocused ? `${YELLOW}>${RESET_COLOR} ` : "  ";
-    output += `${prefix}${displayValue}${cursor}\n`;
+    output.push(`${prefix}${displayValue}${cursor}\n`);
 
     // Error message
     if (field.error) {
-      output += `${RED}  ${field.error}${RESET_COLOR}\n`;
+      output.push(`${RED}  ${field.error}${RESET_COLOR}\n`);
     }
 
-    output += "\n";
+    output.push("\n");
   }
 
-  output += `${GRAY}${"─".repeat(60)}${RESET_COLOR}\n`;
-  output += `${DIM}[Tab] Next • [Enter] Submit • [ESC] Cancel${RESET_COLOR}\n`;
+  output.push(`${GRAY}${"─".repeat(60)}${RESET_COLOR}\n`);
+  output.push(
+    `${DIM}[Tab] Next • [Enter] Submit • [ESC] Cancel${RESET_COLOR}\n`,
+  );
 
-  return output;
+  return output.join("");
 }
 
 function renderDeleteServerForm(
   deleteServerState: DeleteServerState,
   registry: Registry,
 ): string {
-  let output = "";
+  const output: string[] = [];
 
   if (deleteServerState.showConfirm) {
     const server = registry.servers[deleteServerState.selectedIndex];
-    if (!server) return output;
+    if (!server) return "";
 
     const healthIndicator = getHealthIndicator(server.health);
     const nameColor = getHealthColor(server.health);
 
-    output += `${CYAN}Confirm Deletion${RESET_COLOR}\n`;
-    output += `${GRAY}${"─".repeat(60)}${RESET_COLOR}\n`;
-    output += "\n";
-    output += `${YELLOW}Really remove ${healthIndicator} ${nameColor}${server.name}${RESET_COLOR}?${RESET_COLOR}\n`;
-    output += `${DIM}${server.url}${RESET_COLOR}\n`;
-    output += "\n";
-    output += `${DIM}Note: Capture history will be preserved on disk${RESET_COLOR}\n`;
-    output += "\n";
-    output += `${GRAY}${"─".repeat(60)}${RESET_COLOR}\n`;
-    output += `${DIM}[Enter] Confirm • [ESC] Cancel${RESET_COLOR}\n`;
+    output.push(`${CYAN}Confirm Deletion${RESET_COLOR}\n`);
+    output.push(`${GRAY}${"─".repeat(60)}${RESET_COLOR}\n`);
+    output.push("\n");
+    output.push(
+      `${YELLOW}Really remove ${healthIndicator} ${nameColor}${server.name}${RESET_COLOR}?${RESET_COLOR}\n`,
+    );
+    output.push(`${DIM}${server.url}${RESET_COLOR}\n`);
+    output.push("\n");
+    output.push(
+      `${DIM}Note: Capture history will be preserved on disk${RESET_COLOR}\n`,
+    );
+    output.push("\n");
+    output.push(`${GRAY}${"─".repeat(60)}${RESET_COLOR}\n`);
+    output.push(`${DIM}[Enter] Confirm • [ESC] Cancel${RESET_COLOR}\n`);
   } else {
-    output += `${CYAN}Remove Server${RESET_COLOR}\n`;
-    output += `${GRAY}${"─".repeat(60)}${RESET_COLOR}\n`;
-    output += "\n";
+    output.push(`${CYAN}Remove Server${RESET_COLOR}\n`);
+    output.push(`${GRAY}${"─".repeat(60)}${RESET_COLOR}\n`);
+    output.push("\n");
 
     if (registry.servers.length === 0) {
-      output += `${DIM}No servers to remove${RESET_COLOR}\n`;
-      output += "\n";
-      output += `${GRAY}${"─".repeat(60)}${RESET_COLOR}\n`;
-      output += `${DIM}Press any key to go back${RESET_COLOR}\n`;
-      return output;
+      output.push(`${DIM}No servers to remove${RESET_COLOR}\n`);
+      output.push("\n");
+      output.push(`${GRAY}${"─".repeat(60)}${RESET_COLOR}\n`);
+      output.push(`${DIM}Press any key to go back${RESET_COLOR}\n`);
+      return output.join("");
     }
 
-    output += `${DIM}Select a server to remove:${RESET_COLOR}\n`;
-    output += "\n";
+    output.push(`${DIM}Select a server to remove:${RESET_COLOR}\n`);
+    output.push("\n");
 
     for (let i = 0; i < registry.servers.length; i++) {
       const server = registry.servers[i];
@@ -177,13 +205,17 @@ function renderDeleteServerForm(
       const healthIndicator = getHealthIndicator(server.health);
       const nameColor = isSelected ? YELLOW : getHealthColor(server.health);
 
-      output += `${marker} ${healthIndicator} ${nameColor}${server.name}${RESET_COLOR} ${DIM}(${server.url})${RESET_COLOR}\n`;
+      output.push(
+        `${marker} ${healthIndicator} ${nameColor}${server.name}${RESET_COLOR} ${DIM}(${server.url})${RESET_COLOR}\n`,
+      );
     }
 
-    output += "\n";
-    output += `${GRAY}${"─".repeat(60)}${RESET_COLOR}\n`;
-    output += `${DIM}[↑/↓] Navigate • [Enter] Select • [ESC] Cancel${RESET_COLOR}\n`;
+    output.push("\n");
+    output.push(`${GRAY}${"─".repeat(60)}${RESET_COLOR}\n`);
+    output.push(
+      `${DIM}[↑/↓] Navigate • [Enter] Select • [ESC] Cancel${RESET_COLOR}\n`,
+    );
   }
 
-  return output;
+  return output.join("");
 }
