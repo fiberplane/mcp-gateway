@@ -1,5 +1,5 @@
 import packageJson from "../../../package.json" with { type: "json" };
-import type { Registry } from "../../registry.js";
+import type { Registry, ServerHealth } from "../../registry.js";
 import type { DeleteServerState, FormState, ModalContent } from "../state.js";
 import {
   BOLD,
@@ -11,6 +11,22 @@ import {
   RESET_COLOR,
   YELLOW,
 } from "./formatting.js";
+
+function getHealthColor(health?: ServerHealth): string {
+  switch (health) {
+    case "up":
+      return GREEN;
+    case "down":
+      return RED;
+    default:
+      return GRAY;
+  }
+}
+
+function getHealthIndicator(health?: ServerHealth): string {
+  const color = getHealthColor(health);
+  return `${color}●${RESET_COLOR}`;
+}
 
 export function renderModal(
   content: ModalContent,
@@ -125,10 +141,13 @@ function renderDeleteServerForm(
     const server = registry.servers[deleteServerState.selectedIndex];
     if (!server) return output;
 
+    const healthIndicator = getHealthIndicator(server.health);
+    const nameColor = getHealthColor(server.health);
+
     output += `${CYAN}Confirm Deletion${RESET_COLOR}\n`;
     output += `${GRAY}${"─".repeat(60)}${RESET_COLOR}\n`;
     output += "\n";
-    output += `${YELLOW}Really remove '${server.name}'?${RESET_COLOR}\n`;
+    output += `${YELLOW}Really remove ${healthIndicator} ${nameColor}${server.name}${RESET_COLOR}?${RESET_COLOR}\n`;
     output += `${DIM}${server.url}${RESET_COLOR}\n`;
     output += "\n";
     output += `${DIM}Note: Capture history will be preserved on disk${RESET_COLOR}\n`;
@@ -157,9 +176,10 @@ function renderDeleteServerForm(
 
       const isSelected = i === deleteServerState.selectedIndex;
       const marker = isSelected ? `${YELLOW}►${RESET_COLOR}` : " ";
-      const color = isSelected ? YELLOW : DIM;
+      const healthIndicator = getHealthIndicator(server.health);
+      const nameColor = isSelected ? YELLOW : getHealthColor(server.health);
 
-      output += `${marker} ${color}${server.name}${RESET_COLOR} ${DIM}(${server.url})${RESET_COLOR}\n`;
+      output += `${marker} ${healthIndicator} ${nameColor}${server.name}${RESET_COLOR} ${DIM}(${server.url})${RESET_COLOR}\n`;
     }
 
     output += "\n";

@@ -13,15 +13,20 @@ import {
   YELLOW,
 } from "./formatting.js";
 
-function getHealthIndicator(health?: ServerHealth): string {
+function getHealthColor(health?: ServerHealth): string {
   switch (health) {
     case "up":
-      return `${GREEN}●${RESET_COLOR}`;
+      return GREEN;
     case "down":
-      return `${RED}●${RESET_COLOR}`;
+      return RED;
     default:
-      return `${GRAY}●${RESET_COLOR}`;
+      return GRAY;
   }
+}
+
+function getHealthIndicator(health?: ServerHealth): string {
+  const color = getHealthColor(health);
+  return `${color}●${RESET_COLOR}`;
 }
 
 // Render the main menu
@@ -46,8 +51,9 @@ export function renderMenu(registry: Registry, logs: LogEntry[]): string {
       const encodedName = encodeURIComponent(server.name);
       const proxyUrl = `http://localhost:3333/${encodedName}/mcp`;
       const healthIndicator = getHealthIndicator(server.health);
+      const nameColor = getHealthColor(server.health);
       output += "\n";
-      output += `${healthIndicator} ${GREEN}${server.name}${RESET_COLOR}\n`;
+      output += `${healthIndicator} ${nameColor}${server.name}${RESET_COLOR}\n`;
       output += `${CYAN}${proxyUrl}${RESET_COLOR} ${DIM}→ ${server.url}${RESET_COLOR}\n`;
       output += `${DIM}Last active: ${activity} • ${server.exchangeCount} exchanges${RESET_COLOR}\n`;
     }

@@ -1,0 +1,177 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`TUI snapshot: empty menu with no servers 1`] = `
+"\x1B[96mFiberplane MCP Gateway v0.2.3\x1B[0m
+\x1B[2mGateway: http://localhost:3333\x1B[0m
+\x1B[2mMCP: http://localhost:3333/mcp\x1B[0m
+
+\x1B[2mNo servers registered\x1B[0m
+
+\x1B[93m[a]\x1B[0m Add server
+\x1B[2m[d] Delete server\x1B[0m
+\x1B[2m[c] Clear activity\x1B[0m
+\x1B[93m[m]\x1B[0m MCP instructions
+\x1B[93m[q]\x1B[0m Quit
+
+"
+`;
+
+exports[`TUI snapshot: menu with single HTTP server 1`] = `
+"\x1B[96mFiberplane MCP Gateway v0.2.3\x1B[0m
+\x1B[2mGateway: http://localhost:3333\x1B[0m
+\x1B[2mMCP: http://localhost:3333/mcp\x1B[0m
+
+\x1B[96mServers:\x1B[0m
+
+\x1B[38;5;245m●\x1B[0m \x1B[38;5;245mtest-server\x1B[0m
+\x1B[96mhttp://localhost:3333/test-server/mcp\x1B[0m \x1B[2m→ https://api.example.com/mcp\x1B[0m
+\x1B[2mLast active: — • 0 exchanges\x1B[0m
+
+\x1B[93m[a]\x1B[0m Add server
+\x1B[93m[d]\x1B[0m Delete server
+\x1B[2m[c] Clear activity\x1B[0m
+\x1B[93m[m]\x1B[0m MCP instructions
+\x1B[93m[q]\x1B[0m Quit
+
+"
+`;
+
+exports[`TUI snapshot: menu with multiple servers and health status 1`] = `
+"\x1B[96mFiberplane MCP Gateway v0.2.3\x1B[0m
+\x1B[2mGateway: http://localhost:3333\x1B[0m
+\x1B[2mMCP: http://localhost:3333/mcp\x1B[0m
+
+\x1B[96mServers:\x1B[0m
+
+\x1B[92m●\x1B[0m \x1B[92mhealthy-server\x1B[0m
+\x1B[96mhttp://localhost:3333/healthy-server/mcp\x1B[0m \x1B[2m→ https://api1.example.com/mcp\x1B[0m
+\x1B[2mLast active: 1h ago • 42 exchanges\x1B[0m
+
+\x1B[91m●\x1B[0m \x1B[91munhealthy-server\x1B[0m
+\x1B[96mhttp://localhost:3333/unhealthy-server/mcp\x1B[0m \x1B[2m→ https://api2.example.com/mcp\x1B[0m
+\x1B[2mLast active: — • 0 exchanges\x1B[0m
+
+\x1B[38;5;245m●\x1B[0m \x1B[38;5;245munknown-server\x1B[0m
+\x1B[96mhttp://localhost:3333/unknown-server/mcp\x1B[0m \x1B[2m→ https://api3.example.com/mcp\x1B[0m
+\x1B[2mLast active: 2h ago • 15 exchanges\x1B[0m
+
+\x1B[93m[a]\x1B[0m Add server
+\x1B[93m[d]\x1B[0m Delete server
+\x1B[2m[c] Clear activity\x1B[0m
+\x1B[93m[m]\x1B[0m MCP instructions
+\x1B[93m[q]\x1B[0m Quit
+
+"
+`;
+
+exports[`TUI snapshot: menu with logs 1`] = `
+"\x1B[96mFiberplane MCP Gateway v0.2.3\x1B[0m
+\x1B[2mGateway: http://localhost:3333\x1B[0m
+\x1B[2mMCP: http://localhost:3333/mcp\x1B[0m
+
+\x1B[2mNo servers registered\x1B[0m
+
+\x1B[93m[a]\x1B[0m Add server
+\x1B[2m[d] Delete server\x1B[0m
+\x1B[93m[c]\x1B[0m Clear activity
+\x1B[93m[m]\x1B[0m MCP instructions
+\x1B[93m[q]\x1B[0m Quit
+
+\x1B[96mRecent Activity:\x1B[0m
+\x1B[2m12:00:00\x1B[0m \x1B[38;5;245m[abc12345]\x1B[0m \x1B[96mclient\x1B[0m → test-server \x1B[2mtools/list\x1B[0m
+\x1B[2m12:00:00\x1B[0m \x1B[38;5;245m[abc12345]\x1B[0m test-server → \x1B[96mclient\x1B[0m \x1B[92m(200, 50ms)\x1B[0m
+\x1B[2m12:00:01\x1B[0m \x1B[38;5;245m[def98765]\x1B[0m test-server → \x1B[96mclient\x1B[0m \x1B[91m(500, 100ms)\x1B[0m \x1B[91mInternal server error\x1B[0m
+
+"
+`;
+
+exports[`TUI snapshot: add server form with empty fields 1`] = `
+"\x1B[96mAdd New Server\x1B[0m
+\x1B[38;5;245m────────────────────────────────────────────────────────────\x1B[0m
+
+\x1B[1mServer Name \x1B[2m(my-server)\x1B[0m:\x1B[0m
+\x1B[93m>\x1B[0m _
+
+\x1B[2mURL \x1B[2m(https://api.example.com/mcp)\x1B[0m:\x1B[0m
+  
+
+\x1B[38;5;245m────────────────────────────────────────────────────────────\x1B[0m
+\x1B[2m[Tab] Next • [Enter] Submit • [ESC] Cancel\x1B[0m
+"
+`;
+
+exports[`TUI snapshot: add server form with partial input 1`] = `
+"\x1B[96mAdd New Server\x1B[0m
+\x1B[38;5;245m────────────────────────────────────────────────────────────\x1B[0m
+
+\x1B[2mServer Name:\x1B[0m
+  my-api
+
+\x1B[1mURL:\x1B[0m
+\x1B[93m>\x1B[0m https://api.example.com_
+\x1B[91m  Invalid URL format\x1B[0m
+
+\x1B[38;5;245m────────────────────────────────────────────────────────────\x1B[0m
+\x1B[2m[Tab] Next • [Enter] Submit • [ESC] Cancel\x1B[0m
+"
+`;
+
+exports[`TUI snapshot: delete server selection list 1`] = `
+"\x1B[96mRemove Server\x1B[0m
+\x1B[38;5;245m────────────────────────────────────────────────────────────\x1B[0m
+
+\x1B[2mSelect a server to remove:\x1B[0m
+
+  \x1B[92m●\x1B[0m \x1B[92mserver1\x1B[0m \x1B[2m(https://api1.example.com/mcp)\x1B[0m
+\x1B[93m►\x1B[0m \x1B[91m●\x1B[0m \x1B[93mserver2\x1B[0m \x1B[2m(https://api2.example.com/mcp)\x1B[0m
+
+\x1B[38;5;245m────────────────────────────────────────────────────────────\x1B[0m
+\x1B[2m[↑/↓] Navigate • [Enter] Select • [ESC] Cancel\x1B[0m
+"
+`;
+
+exports[`TUI snapshot: delete server confirmation 1`] = `
+"\x1B[96mConfirm Deletion\x1B[0m
+\x1B[38;5;245m────────────────────────────────────────────────────────────\x1B[0m
+
+\x1B[93mReally remove \x1B[91m●\x1B[0m \x1B[91mproduction-api\x1B[0m?\x1B[0m
+\x1B[2mhttps://prod.example.com/mcp\x1B[0m
+
+\x1B[2mNote: Capture history will be preserved on disk\x1B[0m
+
+\x1B[38;5;245m────────────────────────────────────────────────────────────\x1B[0m
+\x1B[2m[Enter] Confirm • [ESC] Cancel\x1B[0m
+"
+`;
+
+exports[`TUI snapshot: MCP instructions modal 1`] = `
+"\x1B[96mFiberplane MCP Gateway v0.2.3\x1B[0m
+
+\x1B[92mThis MCP Gateway is also an MCP server.\x1B[0m
+\x1B[93mEndpoint:\x1B[0m http://localhost:3333/mcp
+\x1B[2mConnect it to your agent (MCP Client) and use it to manage\x1B[0m
+\x1B[2mother MCP server connections, or inspect and analyze captured traffic\x1B[0m
+
+\x1B[92mAvailable Tools:\x1B[0m
+  \x1B[96m•\x1B[0m add_server      - Register new MCP servers
+  \x1B[96m•\x1B[0m remove_server   - Remove registered servers
+  \x1B[96m•\x1B[0m list_servers    - List all servers
+  \x1B[96m•\x1B[0m search_records  - Search captured traffic
+  \x1B[96m•\x1B[0m analyze_session - Analyze session flows
+  \x1B[96m•\x1B[0m get_server_stats - Server statistics
+
+\x1B[92mExample MCP Client Config (Claude Desktop):\x1B[0m
+\x1B[2m{\x1B[0m
+\x1B[2m  "mcpServers": {\x1B[0m
+\x1B[2m    "mcp-gateway": {\x1B[0m
+\x1B[2m      "url": \x1B[0m\x1B[93m"http://localhost:3333/mcp"\x1B[0m
+\x1B[2m    }\x1B[0m
+\x1B[2m  }\x1B[0m
+\x1B[2m}\x1B[0m
+
+\x1B[92mStorage:\x1B[0m
+\x1B[2mAll captured traffic is stored in: ~/.mcp-gateway\x1B[0m
+
+\x1B[2mPress any key to go back\x1B[0m
+"
+`;
