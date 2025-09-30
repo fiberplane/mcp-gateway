@@ -224,7 +224,9 @@ test("Headless mode: CLI runs without TUI when stdin is not a TTY", async () => 
     proc.kill();
   });
 
-  expect(output).toContain("MCP Gateway server started at http://localhost:3333");
+  expect(output).toContain(
+    "MCP Gateway server started at http://localhost:3333",
+  );
   expect(output).toContain("Running in headless mode (no TTY detected)");
 
   await proc.exited;
