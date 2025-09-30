@@ -2,7 +2,7 @@
 
 A local HTTP proxy for managing and debugging multiple Model Context Protocol (MCP) servers through a unified interface.
 
-![MCP Gateway](https://raw.githubusercontent.com/fiberplane/mcp-gateway/main/assets/mcp-gateway.png)
+![MCP Gateway](https://github.com/fiberplane/mcp-gateway/blob/main/packages/mcp-gateway/assets/mcp-gateway.png?raw=true)
 
 ## Quick Start
 
