@@ -38,7 +38,7 @@ export function renderMenu(registry: Registry, logs: LogEntry[]): string {
     `${CYAN}Fiberplane MCP Gateway v${packageJson.version}${RESET_COLOR}\n`,
   );
   output.push(`${DIM}Gateway: http://localhost:3333${RESET_COLOR}\n`);
-  output.push(`${DIM}MCP: http://localhost:3333/mcp${RESET_COLOR}\n`);
+  output.push(`${DIM}MCP: http://localhost:3333/gateway/mcp${RESET_COLOR}\n`);
   if (activeSessions.length > 0) {
     output.push(
       `${DIM}Active sessions: ${activeSessions.length}${RESET_COLOR}\n`,
@@ -53,7 +53,7 @@ export function renderMenu(registry: Registry, logs: LogEntry[]): string {
     for (const server of registry.servers) {
       const activity = formatRelativeTime(server.lastActivity);
       const encodedName = encodeURIComponent(server.name);
-      const proxyUrl = `http://localhost:3333/${encodedName}/mcp`;
+      const proxyUrl = `http://localhost:3333/servers/${encodedName}/mcp`;
       const healthIndicator = getHealthIndicator(server.health);
       const nameColor = getHealthColor(server.health);
       output.push("\n");

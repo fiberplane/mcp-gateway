@@ -120,7 +120,7 @@ describe("SSE Integration Tests", () => {
   });
 
   test("should stream SSE events through gateway", async () => {
-    const gatewayUrl = `http://localhost:${gateway.port}/sse-server/mcp`;
+    const gatewayUrl = `http://localhost:${gateway.port}/servers/sse-server/mcp`;
 
     const response = await fetch(gatewayUrl, {
       method: "POST",
@@ -162,7 +162,7 @@ describe("SSE Integration Tests", () => {
   });
 
   test("should capture SSE events with JSON-RPC content", async () => {
-    const gatewayUrl = `http://localhost:${gateway.port}/sse-server/mcp`;
+    const gatewayUrl = `http://localhost:${gateway.port}/servers/sse-server/mcp`;
     const sessionId = "sse-capture-test";
 
     const response = await fetch(gatewayUrl, {

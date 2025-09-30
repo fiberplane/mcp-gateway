@@ -103,7 +103,8 @@ export function createMcpServer(
 
 /**
  * Creates a Hono app that serves the MCP server over HTTP with SSE support.
- * The server is mounted at the /mcp endpoint and includes CORS support.
+ * The server is mounted at /mcp endpoint. This app is meant to be mounted at
+ * /gateway (canonical) or /g (short alias) in the main server.
  *
  * @param registry - The gateway's server registry
  * @param storageDir - Directory where captures are stored

@@ -63,7 +63,10 @@ function renderMcpInstructions(): string {
   output.push(
     `${GREEN}This MCP Gateway is also an MCP server.${RESET_COLOR}\n`,
   );
-  output.push(`${YELLOW}Endpoint:${RESET_COLOR} http://localhost:3333/mcp\n`);
+  output.push(
+    `${YELLOW}Endpoint:${RESET_COLOR} http://localhost:3333/gateway/mcp\n`,
+  );
+  output.push(`${DIM}Short alias: http://localhost:3333/g/mcp${RESET_COLOR}\n`);
   output.push(
     `${DIM}Connect it to your agent (MCP Client) and use it to manage${RESET_COLOR}\n`,
   );
@@ -94,7 +97,7 @@ function renderMcpInstructions(): string {
   output.push(`${DIM}  "mcpServers": {${RESET_COLOR}\n`);
   output.push(`${DIM}    "mcp-gateway": {${RESET_COLOR}\n`);
   output.push(
-    `${DIM}      "url": ${RESET_COLOR}${YELLOW}"http://localhost:3333/mcp"${RESET_COLOR}\n`,
+    `${DIM}      "url": ${RESET_COLOR}${YELLOW}"http://localhost:3333/gateway/mcp"${RESET_COLOR}\n`,
   );
   output.push(`${DIM}    }${RESET_COLOR}\n`);
   output.push(`${DIM}  }${RESET_COLOR}\n`);

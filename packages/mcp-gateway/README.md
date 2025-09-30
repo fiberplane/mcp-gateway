@@ -16,7 +16,7 @@ Runs on port 3333 with an interactive TUI for server management. Configuration p
 
 **Interactive (press `a` in TUI):**
 - Enter server name, URL, and optional headers
-- Server immediately available at `http://localhost:3333/:serverName/mcp`
+- Server immediately available at `http://localhost:3333/servers/:serverName/mcp`
 
 **Configuration file (`~/.mcp-gateway/mcp.json`):**
 
@@ -44,13 +44,15 @@ Runs on port 3333 with an interactive TUI for server management. Configuration p
 
 ## Features
 
-**Request routing**: Route requests to different MCP servers by name (e.g., `/weather/mcp`, `/database/mcp`)
+**Request routing**: Route requests to different MCP servers by name (e.g., `/servers/weather/mcp`, `/servers/database/mcp`)
 
 **Traffic capture**: All requests/responses logged to `~/.mcp-gateway/captures/:serverName/:sessionId.jsonl` with timing metrics and error states
 
 **Health monitoring**: Periodic health checks with status indicators in TUI
 
-**MCP tools**: Gateway exposes its own MCP server at `/mcp` with tools for server management (`add_server`, `remove_server`, `list_servers`) and traffic analysis (`search_records`)
+**MCP tools**: Gateway exposes its own MCP server at `/gateway/mcp` with tools for server management (`add_server`, `remove_server`, `list_servers`) and traffic analysis (`search_records`)
+
+**Short aliases**: For convenience, use `/s/:server/mcp` for servers and `/g/mcp` for gateway tools
 
 ## CLI Options
 
