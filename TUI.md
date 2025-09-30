@@ -4,35 +4,40 @@ The MCP Gateway CLI ships with a Phoenix-inspired terminal UI in `packages/mcp-g
 
 ## Architecture at a Glance
 ```mermaid
-flowchart LR
-  subgraph CLI
-    Stdin[Raw stdin]
-    Menu[Menu renderer]
-    Prompts[Prompts]
+flowchart TB
+  subgraph Input["Event Sources"]
+    Stdin["stdin (keys)"]
+    Server["HTTP server"]
   end
-  subgraph Loop["TUI loop"]
-    Queue[[Action queue]]
-    Reducer[update() reducer]
-    View[view()]
-    Effects[performEffect()]
-  end
-  subgraph Server[HTTP server]
-    Proxy[createApp() proxy]
-  end
-  Storage[(Registry storage)]
 
-  Stdin -->|key presses| Queue
-  Proxy -->|emitLog / emitRegistryUpdate| Queue
-  Queue --> Reducer
-  Reducer -->|new state| View
-  Reducer -->|effect| Effects
+  subgraph EventLoop["Event Loop"]
+    Queue[["Action Queue"]]
+    Update["update()"]
+    View["view()"]
+    Effect["performEffect()"]
+  end
+
+  subgraph Render["Rendering"]
+    Menu["Menu"]
+    Modal["Modal"]
+  end
+
+  Storage[("Storage")]
+  Registry{{"Registry (shared)"}}
+
+  Stdin -->|dispatch| Queue
+  Server -->|emitLog/emitRegistryUpdate| Queue
+  Queue --> Update
+  Update -->|"[State, Effect]"| View
+  Update -->|effect| Effect
   View --> Menu
-  Effects -->|prompt_started / prompt_ended| Prompts
-  Prompts -->|user input| Effects
-  Effects -->|mutate + persist| Storage
-  Storage -->|saveRegistry/loadRegistry| Proxy
-  Effects -->|registry mutations| Queue
-  Proxy -->|shared registry reference| Reducer
+  View --> Modal
+  Effect -->|mutate| Registry
+  Effect -->|saveRegistry| Storage
+  Effect -->|emitRegistryUpdate| Queue
+  Registry -.shared ref.-> Update
+  Registry -.shared ref.-> Server
+  Storage -.loadRegistry.-> Registry
 ```
 
 ## Boot Sequence (`packages/mcp-gateway/src/run.ts`)
