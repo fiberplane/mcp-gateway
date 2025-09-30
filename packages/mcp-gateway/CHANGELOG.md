@@ -1,5 +1,11 @@
 # @fiberplane/mcp-gateway
 
+## 0.3.0
+
+### Minor Changes
+
+- d4fc826: TUI has been reworked, supports adding/removing server connections, shows live activity (and health status). MCP features of the gateway itself are more optimized. The README has been improved.
+
 ## 0.2.3
 
 ### Patch Changes
