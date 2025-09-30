@@ -28,14 +28,12 @@ import {
 } from "./schemas.js";
 import {
   createSSEEventStream,
-  isJsonRpcNotification,
   isJsonRpcResponse,
   parseJsonRpcFromSSE,
 } from "./sse-parser.js";
 import { getStorageRoot, loadRegistry, saveRegistry } from "./storage.js";
 import { emitLog, emitRegistryUpdate } from "./tui/events.js";
 import type { LogEntry } from "./tui/state.js";
-import { appendFileSync } from "node:fs";
 
 // Helper: Extract session ID from headers
 function extractSessionId(
@@ -435,7 +433,7 @@ async function processSSECapture(
     const eventStream = createSSEEventStream(reader);
     const eventReader = eventStream.getReader();
 
-    let eventCount = 0;
+    let _eventCount = 0;
 
     while (true) {
       const { done, value: sseEvent } = await eventReader.read();
@@ -444,7 +442,7 @@ async function processSSECapture(
         break;
       }
 
-      eventCount++;
+      _eventCount++;
 
       // Try to parse SSE data as JSON-RPC
       if (sseEvent.data) {

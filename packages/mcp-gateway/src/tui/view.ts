@@ -1,12 +1,18 @@
+import { CLEAR_SCREEN } from "./components/formatting.js";
 import { renderMenu } from "./components/menu.js";
 import { renderModal } from "./components/modal.js";
-import { CLEAR_SCREEN } from "./components/formatting.js";
 import type { State } from "./state.js";
 
 function applyPadding(content: string): string {
   const leftPad = "  ";
   const topPad = "\n";
-  return topPad + content.split("\n").map((line) => leftPad + line).join("\n");
+  return (
+    topPad +
+    content
+      .split("\n")
+      .map((line) => leftPad + line)
+      .join("\n")
+  );
 }
 
 // Pure rendering function - State → Display
@@ -17,7 +23,7 @@ export function view(state: State): void {
       state.modalContent,
       state.formState,
       state.deleteServerState,
-      state.registry
+      state.registry,
     );
     process.stdout.write(CLEAR_SCREEN + applyPadding(content));
     return;

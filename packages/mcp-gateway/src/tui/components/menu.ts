@@ -1,9 +1,8 @@
+import packageJson from "../../../package.json" with { type: "json" };
 import { getActiveSessions, getClientInfo } from "../../capture.js";
 import type { Registry } from "../../registry.js";
 import type { LogEntry } from "../state.js";
-import packageJson from "../../../package.json" with { type: "json" };
 import {
-  CLEAR_SCREEN,
   CYAN,
   DIM,
   formatRelativeTime,

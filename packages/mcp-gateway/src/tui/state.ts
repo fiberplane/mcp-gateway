@@ -11,7 +11,10 @@ export type Context = {
 export type UiMode = "menu" | "modal";
 
 // Modal content types
-export type ModalContent = "mcp_instructions" | "add_server_form" | "delete_server_form";
+export type ModalContent =
+  | "mcp_instructions"
+  | "add_server_form"
+  | "delete_server_form";
 
 // Form field definition
 export type FormField = {

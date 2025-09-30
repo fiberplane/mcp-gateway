@@ -12,7 +12,10 @@ function update(state: State, action: Action): [State, Effect] {
     case "key_pressed":
       // If in modal mode (but not form), any key closes the modal
       if (state.mode === "modal" && state.modalContent === "mcp_instructions") {
-        return [{ ...state, mode: "menu", modalContent: undefined }, { type: "none" }];
+        return [
+          { ...state, mode: "menu", modalContent: undefined },
+          { type: "none" },
+        ];
       }
 
       switch (action.key) {
@@ -23,7 +26,10 @@ function update(state: State, action: Action): [State, Effect] {
         case "c":
           return [{ ...state, logs: [] }, { type: "none" }];
         case "m":
-          return [{ ...state, mode: "modal", modalContent: "mcp_instructions" }, { type: "none" }];
+          return [
+            { ...state, mode: "modal", modalContent: "mcp_instructions" },
+            { type: "none" },
+          ];
         case "q":
           return [{ ...state, running: false }, { type: "none" }];
         default:
@@ -50,7 +56,10 @@ function update(state: State, action: Action): [State, Effect] {
       field.value += action.char;
       field.error = validateField(field);
 
-      return [{ ...state, formState: { ...state.formState, fields } }, { type: "none" }];
+      return [
+        { ...state, formState: { ...state.formState, fields } },
+        { type: "none" },
+      ];
     }
 
     case "form_backspace": {
@@ -63,48 +72,73 @@ function update(state: State, action: Action): [State, Effect] {
       field.value = field.value.slice(0, -1);
       field.error = validateField(field);
 
-      return [{ ...state, formState: { ...state.formState, fields } }, { type: "none" }];
+      return [
+        { ...state, formState: { ...state.formState, fields } },
+        { type: "none" },
+      ];
     }
 
     case "form_next_field": {
       if (!state.formState) return [state, { type: "none" }];
 
-      const nextIndex = (state.formState.focusedFieldIndex + 1) % state.formState.fields.length;
-      return [{ ...state, formState: { ...state.formState, focusedFieldIndex: nextIndex } }, { type: "none" }];
+      const nextIndex =
+        (state.formState.focusedFieldIndex + 1) % state.formState.fields.length;
+      return [
+        {
+          ...state,
+          formState: { ...state.formState, focusedFieldIndex: nextIndex },
+        },
+        { type: "none" },
+      ];
     }
 
     case "form_prev_field": {
       if (!state.formState) return [state, { type: "none" }];
 
-      const prevIndex = state.formState.focusedFieldIndex === 0
-        ? state.formState.fields.length - 1
-        : state.formState.focusedFieldIndex - 1;
-      return [{ ...state, formState: { ...state.formState, focusedFieldIndex: prevIndex } }, { type: "none" }];
+      const prevIndex =
+        state.formState.focusedFieldIndex === 0
+          ? state.formState.fields.length - 1
+          : state.formState.focusedFieldIndex - 1;
+      return [
+        {
+          ...state,
+          formState: { ...state.formState, focusedFieldIndex: prevIndex },
+        },
+        { type: "none" },
+      ];
     }
 
     case "form_submit": {
       if (!state.formState) return [state, { type: "none" }];
 
       // Validate all fields
-      const fields = state.formState.fields.map(f => ({
+      const fields = state.formState.fields.map((f) => ({
         ...f,
-        error: validateField(f)
+        error: validateField(f),
       }));
 
-      const hasErrors = fields.some(f => f.error);
+      const hasErrors = fields.some((f) => f.error);
       if (hasErrors) {
-        return [{ ...state, formState: { ...state.formState, fields } }, { type: "none" }];
+        return [
+          { ...state, formState: { ...state.formState, fields } },
+          { type: "none" },
+        ];
       }
 
       // Extract values
-      const url = fields.find(f => f.name === "url")?.value;
-      const name = fields.find(f => f.name === "name")?.value;
+      const url = fields.find((f) => f.name === "url")?.value;
+      const name = fields.find((f) => f.name === "name")?.value;
 
       if (!url || !name) return [state, { type: "none" }];
 
       return [
-        { ...state, mode: "menu", modalContent: undefined, formState: undefined },
-        { type: "save_server", name, url }
+        {
+          ...state,
+          mode: "menu",
+          modalContent: undefined,
+          formState: undefined,
+        },
+        { type: "save_server", name, url },
       ];
     }
 
@@ -113,10 +147,18 @@ function update(state: State, action: Action): [State, Effect] {
         return [state, { type: "none" }];
       }
 
-      const nextIndex = (state.deleteServerState.selectedIndex + 1) % state.registry.servers.length;
+      const nextIndex =
+        (state.deleteServerState.selectedIndex + 1) %
+        state.registry.servers.length;
       return [
-        { ...state, deleteServerState: { ...state.deleteServerState, selectedIndex: nextIndex } },
-        { type: "none" }
+        {
+          ...state,
+          deleteServerState: {
+            ...state.deleteServerState,
+            selectedIndex: nextIndex,
+          },
+        },
+        { type: "none" },
       ];
     }
 
@@ -125,12 +167,19 @@ function update(state: State, action: Action): [State, Effect] {
         return [state, { type: "none" }];
       }
 
-      const prevIndex = state.deleteServerState.selectedIndex === 0
-        ? state.registry.servers.length - 1
-        : state.deleteServerState.selectedIndex - 1;
+      const prevIndex =
+        state.deleteServerState.selectedIndex === 0
+          ? state.registry.servers.length - 1
+          : state.deleteServerState.selectedIndex - 1;
       return [
-        { ...state, deleteServerState: { ...state.deleteServerState, selectedIndex: prevIndex } },
-        { type: "none" }
+        {
+          ...state,
+          deleteServerState: {
+            ...state.deleteServerState,
+            selectedIndex: prevIndex,
+          },
+        },
+        { type: "none" },
       ];
     }
 
@@ -140,25 +189,43 @@ function update(state: State, action: Action): [State, Effect] {
       if (!state.deleteServerState.showConfirm) {
         // First Enter: show confirmation
         return [
-          { ...state, deleteServerState: { ...state.deleteServerState, showConfirm: true } },
-          { type: "none" }
+          {
+            ...state,
+            deleteServerState: {
+              ...state.deleteServerState,
+              showConfirm: true,
+            },
+          },
+          { type: "none" },
         ];
       }
 
       // Second Enter: actually delete
-      const server = state.registry.servers[state.deleteServerState.selectedIndex];
+      const server =
+        state.registry.servers[state.deleteServerState.selectedIndex];
       if (!server) return [state, { type: "none" }];
 
       return [
-        { ...state, mode: "menu", modalContent: undefined, deleteServerState: undefined },
-        { type: "remove_server", serverName: server.name }
+        {
+          ...state,
+          mode: "menu",
+          modalContent: undefined,
+          deleteServerState: undefined,
+        },
+        { type: "remove_server", serverName: server.name },
       ];
     }
 
     case "modal_close": {
       return [
-        { ...state, mode: "menu", modalContent: undefined, formState: undefined, deleteServerState: undefined },
-        { type: "none" }
+        {
+          ...state,
+          mode: "menu",
+          modalContent: undefined,
+          formState: undefined,
+          deleteServerState: undefined,
+        },
+        { type: "none" },
       ];
     }
 
@@ -168,7 +235,11 @@ function update(state: State, action: Action): [State, Effect] {
 }
 
 // Validate a form field
-function validateField(field: { name: string; value: string; label: string }): string | undefined {
+function validateField(field: {
+  name: string;
+  value: string;
+  label: string;
+}): string | undefined {
   if (!field.value.trim()) {
     return `${field.label} cannot be empty`;
   }

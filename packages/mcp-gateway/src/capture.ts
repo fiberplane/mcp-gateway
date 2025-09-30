@@ -240,6 +240,18 @@ export function createSSEEventCaptureRecord(
   return record;
 }
 
+function resolveJsonRpcMethod(
+  jsonRpcMessage: JsonRpcRequest | JsonRpcResponse,
+): string {
+  if ("method" in jsonRpcMessage) {
+    return jsonRpcMessage.method;
+  }
+  if (jsonRpcMessage.id != null) {
+    return requestMethods.get(jsonRpcMessage.id) ?? "unknown";
+  }
+  return "unknown";
+}
+
 // Create capture record for JSON-RPC message from SSE
 export function createSSEJsonRpcCaptureRecord(
   serverName: string,
@@ -250,15 +262,7 @@ export function createSSEJsonRpcCaptureRecord(
 ): CaptureRecord {
   const clientInfo = getClientInfo(sessionId);
 
-  // For requests, method is in the message. For responses, look it up by ID
-  let method: string;
-  if ("method" in jsonRpcMessage) {
-    method = jsonRpcMessage.method;
-  } else if (jsonRpcMessage.id != null && requestMethods.has(jsonRpcMessage.id)) {
-    method = requestMethods.get(jsonRpcMessage.id)!;
-  } else {
-    method = "unknown";
-  }
+  const method = resolveJsonRpcMethod(jsonRpcMessage);
 
   // Calculate duration and cleanup for responses
   let durationMs = 0;

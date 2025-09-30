@@ -23,10 +23,20 @@ export async function performEffect(
       state.modalContent = "add_server_form";
       state.formState = {
         fields: [
-          { name: "url", label: "Server URL", value: "", placeholder: "e.g. http://localhost:3000/mcp" },
-          { name: "name", label: "Display Name", value: "", placeholder: "e.g. my-server" }
+          {
+            name: "url",
+            label: "Server URL",
+            value: "",
+            placeholder: "e.g. http://localhost:3000/mcp",
+          },
+          {
+            name: "name",
+            label: "Display Name",
+            value: "",
+            placeholder: "e.g. my-server",
+          },
         ],
-        focusedFieldIndex: 0
+        focusedFieldIndex: 0,
       };
       break;
     }
@@ -38,7 +48,7 @@ export async function performEffect(
         state.modalContent = "delete_server_form";
         state.deleteServerState = {
           selectedIndex: 0,
-          showConfirm: false
+          showConfirm: false,
         };
       } else {
         // Show delete server selection modal
@@ -46,7 +56,7 @@ export async function performEffect(
         state.modalContent = "delete_server_form";
         state.deleteServerState = {
           selectedIndex: 0,
-          showConfirm: false
+          showConfirm: false,
         };
       }
       break;

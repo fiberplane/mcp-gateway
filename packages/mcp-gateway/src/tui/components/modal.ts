@@ -1,8 +1,8 @@
+import packageJson from "../../../package.json" with { type: "json" };
 import type { Registry } from "../../registry.js";
 import type { DeleteServerState, FormState, ModalContent } from "../state.js";
 import {
   BOLD,
-  CLEAR_SCREEN,
   CYAN,
   DIM,
   GRAY,
@@ -11,7 +11,6 @@ import {
   RESET_COLOR,
   YELLOW,
 } from "./formatting.js";
-import packageJson from "../../../package.json" with { type: "json" };
 
 export function renderModal(
   content: ModalContent,
