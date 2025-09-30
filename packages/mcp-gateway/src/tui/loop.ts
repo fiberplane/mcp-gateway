@@ -328,9 +328,8 @@ export async function runTUI(
 ): Promise<void> {
   // Guard against non-TTY environments
   if (!process.stdin.isTTY || !process.stdin.setRawMode) {
-    throw new Error(
-      "TUI requires a TTY environment. Run in headless mode or attach a terminal.",
-    );
+    console.log("TUI requires a TTY environment. Run in headless mode.");
+    return;
   }
 
   let state: State = { registry, running: true, mode: "menu", logs: [] };
@@ -396,12 +395,19 @@ export async function runTUI(
       context.onExit?.();
       process.exit(0);
     }
+
+    // Process any actions that were queued during processing
+    if (actionQueue.length > 0) {
+      processActions();
+    }
   };
 
   // Listen to action events
   tuiEvents.on("action", (action: Action) => {
     actionQueue.push(action);
-    processActions();
+    if (!isProcessing) {
+      processActions();
+    }
   });
 
   // Initial render
