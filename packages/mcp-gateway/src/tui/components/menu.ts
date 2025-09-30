@@ -1,6 +1,6 @@
 import packageJson from "../../../package.json" with { type: "json" };
 import { getActiveSessions, getClientInfo } from "../../capture.js";
-import type { Registry } from "../../registry.js";
+import type { Registry, ServerHealth } from "../../registry.js";
 import type { LogEntry } from "../state.js";
 import {
   CYAN,
@@ -12,6 +12,17 @@ import {
   RESET_COLOR,
   YELLOW,
 } from "./formatting.js";
+
+function getHealthIndicator(health?: ServerHealth): string {
+  switch (health) {
+    case "up":
+      return `${GREEN}●${RESET_COLOR}`;
+    case "down":
+      return `${RED}●${RESET_COLOR}`;
+    default:
+      return `${GRAY}●${RESET_COLOR}`;
+  }
+}
 
 // Render the main menu
 export function renderMenu(registry: Registry, logs: LogEntry[]): string {
@@ -34,8 +45,9 @@ export function renderMenu(registry: Registry, logs: LogEntry[]): string {
       const activity = formatRelativeTime(server.lastActivity);
       const encodedName = encodeURIComponent(server.name);
       const proxyUrl = `http://localhost:3333/${encodedName}/mcp`;
+      const healthIndicator = getHealthIndicator(server.health);
       output += "\n";
-      output += `${GREEN}${server.name}${RESET_COLOR}\n`;
+      output += `${healthIndicator} ${GREEN}${server.name}${RESET_COLOR}\n`;
       output += `${CYAN}${proxyUrl}${RESET_COLOR} ${DIM}→ ${server.url}${RESET_COLOR}\n`;
       output += `${DIM}Last active: ${activity} • ${server.exchangeCount} exchanges${RESET_COLOR}\n`;
     }

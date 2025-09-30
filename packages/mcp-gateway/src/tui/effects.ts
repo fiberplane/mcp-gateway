@@ -87,11 +87,17 @@ export async function performEffect(
 
         await saveRegistry(context.storageDir, state.registry);
 
+        // Close modal and return to menu with updated registry
+        state.mode = "menu";
+        state.modalContent = undefined;
+        state.formState = undefined;
+
+        // Emit update so UI refreshes with new server
+        emitRegistryUpdate();
+
         // Show success message briefly
         console.log(`\n✓ Server '${effect.name}' added successfully!`);
         await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        emitRegistryUpdate();
       } catch (error) {
         console.log(
           `\nError: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -118,12 +124,18 @@ export async function performEffect(
 
         await saveRegistry(context.storageDir, state.registry);
 
+        // Close modal and return to menu with updated registry
+        state.mode = "menu";
+        state.modalContent = undefined;
+        state.deleteServerState = undefined;
+
+        // Emit update so UI refreshes with removed server
+        emitRegistryUpdate();
+
         // Show success message briefly
         console.log(`\n✓ Server '${effect.serverName}' removed successfully!`);
         console.log(`Note: Capture history preserved on disk`);
         await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        emitRegistryUpdate();
       } catch (error) {
         console.log(
           `\nError: ${error instanceof Error ? error.message : "Unknown error"}`,

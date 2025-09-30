@@ -131,15 +131,7 @@ function update(state: State, action: Action): [State, Effect] {
 
       if (!url || !name) return [state, { type: "none" }];
 
-      return [
-        {
-          ...state,
-          mode: "menu",
-          modalContent: undefined,
-          formState: undefined,
-        },
-        { type: "save_server", name, url },
-      ];
+      return [state, { type: "save_server", name, url }];
     }
 
     case "delete_server_next": {
@@ -205,15 +197,7 @@ function update(state: State, action: Action): [State, Effect] {
         state.registry.servers[state.deleteServerState.selectedIndex];
       if (!server) return [state, { type: "none" }];
 
-      return [
-        {
-          ...state,
-          mode: "menu",
-          modalContent: undefined,
-          deleteServerState: undefined,
-        },
-        { type: "remove_server", serverName: server.name },
-      ];
+      return [state, { type: "remove_server", serverName: server.name }];
     }
 
     case "modal_close": {
@@ -268,8 +252,8 @@ function handleStdinData(state: State, data: string): void {
     return;
   }
 
-  // ESC key (closes modal)
-  if (char === 27) {
+  // ESC key (closes modal) - but only if it's a standalone ESC, not an escape sequence
+  if (char === 27 && data.length === 1) {
     if (state.mode === "modal") {
       dispatch({ type: "modal_close" });
     }

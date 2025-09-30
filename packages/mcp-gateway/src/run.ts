@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { serve } from "@hono/node-server";
+import { startHealthChecks } from "./health.js";
 import { createApp } from "./server.js";
 import { getStorageRoot, loadRegistry } from "./storage.js";
 import { runTUI } from "./tui/loop.js";
@@ -88,15 +89,22 @@ export async function runCli(): Promise<void> {
 
     console.log(`MCP Gateway server started at http://localhost:${port}`);
 
+    // Start health checks
+    const stopHealthChecks = startHealthChecks(registry);
+
     // Create context for TUI
     const context: Context = {
       storageDir,
-      onExit: () => server.close(),
+      onExit: () => {
+        stopHealthChecks();
+        server.close();
+      },
     };
 
     // Start TUI
     runTUI(context, registry).catch((error) => {
       console.error("TUI error:", error);
+      stopHealthChecks();
       server.close();
       process.exit(1);
     });
