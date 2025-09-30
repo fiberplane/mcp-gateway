@@ -101,13 +101,30 @@ export async function runCli(): Promise<void> {
       },
     };
 
-    // Start TUI
-    runTUI(context, registry).catch((error) => {
-      console.error("TUI error:", error);
-      stopHealthChecks();
-      server.close();
-      process.exit(1);
-    });
+    // Start TUI only if running in a TTY
+    if (process.stdin.isTTY) {
+      runTUI(context, registry).catch((error) => {
+        console.error("TUI error:", error);
+        stopHealthChecks();
+        server.close();
+        process.exit(1);
+      });
+    } else {
+      console.log(
+        "Running in headless mode (no TTY detected). Server will run until terminated.",
+      );
+      // Keep process alive and handle signals
+      process.on("SIGTERM", () => {
+        console.log("\nReceived SIGTERM, shutting down...");
+        context.onExit?.();
+        process.exit(0);
+      });
+      process.on("SIGINT", () => {
+        console.log("\nReceived SIGINT, shutting down...");
+        context.onExit?.();
+        process.exit(0);
+      });
+    }
   } catch (error) {
     if (error instanceof Error) {
       console.error(`Error: ${error.message}`);

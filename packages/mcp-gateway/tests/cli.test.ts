@@ -152,7 +152,7 @@ test("loadRegistry handles invalid JSON gracefully", async () => {
   expect(registry.servers).toHaveLength(0);
 });
 
-// Simple integration tests using command line flags only
+// CLI integration tests
 test("CLI shows help when --help flag is used", async () => {
   const proc = Bun.spawn(["bun", "run", "./src/run.ts", "--help"], {
     stdout: "pipe",
@@ -181,46 +181,76 @@ test("CLI shows version when --version flag is used", async () => {
   expect(proc.exitCode).toBe(0);
 });
 
-test("CLI exits gracefully when given 'q' input", async () => {
+// Headless mode tests (non-TTY environment)
+test("Headless mode: CLI runs without TUI when stdin is not a TTY", async () => {
   const proc = Bun.spawn(
     ["bun", "run", "./src/run.ts", "--storage-dir", tempDir],
     {
       stdin: "pipe",
       stdout: "pipe",
+      stderr: "pipe",
       cwd: `${import.meta.dir}/..`,
     },
   );
 
-  // Send quit command
-  await proc.stdin.write("q");
-  proc.stdin.end();
+  // Collect output as it comes in
+  let output = "";
+  const reader = proc.stdout.getReader();
+  const decoder = new TextDecoder();
+
+  // Read output until we see both expected messages
+  const checkOutput = async () => {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      output += decoder.decode(value, { stream: true });
+
+      if (
+        output.includes("MCP Gateway server started") &&
+        output.includes("Running in headless mode")
+      ) {
+        break;
+      }
+    }
+  };
+
+  // Wait for expected output with timeout
+  await Promise.race([
+    checkOutput(),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Timeout waiting for output")), 3000),
+    ),
+  ]).finally(() => {
+    proc.kill();
+  });
+
+  expect(output).toContain("MCP Gateway server started at http://localhost:3333");
+  expect(output).toContain("Running in headless mode (no TTY detected)");
 
   await proc.exited;
-  expect(proc.exitCode).toBe(0);
 });
 
-test("CLI menu renders without errors in non-interactive mode", async () => {
+test("Headless mode: CLI server responds to SIGTERM gracefully", async () => {
   const proc = Bun.spawn(
     ["bun", "run", "./src/run.ts", "--storage-dir", tempDir],
     {
       stdin: "pipe",
       stdout: "pipe",
+      stderr: "pipe",
       cwd: `${import.meta.dir}/..`,
     },
   );
 
-  // Send quit command immediately
-  setTimeout(() => {
-    proc.stdin.write("q");
-    proc.stdin.end();
-  }, 100);
+  // Wait for server to start
+  await new Promise((resolve) => setTimeout(resolve, 500));
+
+  // Send SIGTERM
+  proc.kill("SIGTERM");
 
   const output = await new Response(proc.stdout).text();
   await proc.exited;
 
-  expect(output).toContain("MCP Gateway v0.1.0");
-  expect(output).toContain("No servers registered");
-  expect(output).toContain("Add server");
-  expect(output).toContain("Quit");
+  expect(output).toContain("Running in headless mode (no TTY detected)");
+  expect(output).toContain("Received SIGTERM, shutting down...");
   expect(proc.exitCode).toBe(0);
-}, 5000);
+});

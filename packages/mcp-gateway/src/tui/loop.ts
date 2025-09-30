@@ -326,6 +326,13 @@ export async function runTUI(
   context: Context,
   registry: Registry,
 ): Promise<void> {
+  // Guard against non-TTY environments
+  if (!process.stdin.isTTY || !process.stdin.setRawMode) {
+    throw new Error(
+      "TUI requires a TTY environment. Run in headless mode or attach a terminal.",
+    );
+  }
+
   let state: State = { registry, running: true, mode: "menu", logs: [] };
 
   // Set up stdin as event source (non-blocking)
@@ -381,6 +388,9 @@ export async function runTUI(
     // Exit if we're done
     if (!state.running) {
       process.stdin.removeListener("data", stdinHandler);
+      if (process.stdin.setRawMode) {
+        process.stdin.setRawMode(false);
+      }
       process.stdin.pause();
       console.log("\nClosing the MCP Gateway...");
       context.onExit?.();
