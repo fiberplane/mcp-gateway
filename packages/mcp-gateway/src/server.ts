@@ -316,11 +316,17 @@ export async function createApp(
         // 1. Actually list all tools
         const response = await proxy(server.url, {
           method: "POST",
-          headers: buildProxyHeaders(c, server),
+          headers: {
+            ...buildProxyHeaders(c, server),
+            // HACK - need to handle stream
+            Accept: "application/json",
+          },
           body: JSON.stringify(jsonRpcRequest),
         });
+        console.log("proxied tools/list", response);
         // biome-ignore lint/suspicious/noExplicitAny: prototyping
         const responseBody: any = await response.json();
+        console.log("tools/list response body", JSON.stringify(responseBody, null, 2));
         // 2. Update the server tools stashed on the record in memory (registry)
         server.tools = responseBody.result.tools;
         // 3. Return the goat instead of all tools (with code mode descriptions)
@@ -367,9 +373,14 @@ export async function createApp(
         const toolCallResponse: JsonRpcResponse = {
           jsonrpc: "2.0",
           id: jsonRpcRequest.id ?? null, // hack coaelescing, shoudl be string
-          result: [codeToolSchema],
+          result: {
+            tools: [codeToolSchema],
+          },
         };
-        return c.json(toolCallResponse);
+        return new Response(JSON.stringify(toolCallResponse), {
+          status: response.status,
+          headers: response.headers,
+        });
       }
 
       // Capture request immediately (before forwarding)
