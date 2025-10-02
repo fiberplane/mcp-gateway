@@ -39,6 +39,9 @@ import type { LogEntry } from "./tui/state.js";
 // Constant for sessionless (stateless) requests - used when no session ID is provided
 const SESSIONLESS_ID = "stateless";
 
+// Headers that are automatically managed by fetch/proxy and should not be manually set
+const AUTO_HEADERS = ["content-length", "transfer-encoding", "connection"];
+
 // Helper: Extract session ID from request headers
 function extractSessionId(
   validatedHeaders: z.infer<typeof sessionHeaderSchema>,
@@ -68,7 +71,11 @@ function buildProxyHeaders(
       c.req.raw.headers.get("Mcp-Session-Id") ||
       c.req.raw.headers.get("mcp-session-id") ||
       "",
-    ...server.headers,
+    ...Object.fromEntries(
+      Object.entries(server.headers).filter(
+        ([key]) => !AUTO_HEADERS.includes(key.toLowerCase()),
+      ),
+    ),
   };
 
   const acceptHeader = c.req.raw.headers.get("Accept");
@@ -498,7 +505,11 @@ export async function createApp(
         await updateServerActivity(storage, registry, server);
 
         // Create new response with the same data and headers
+        // Remove auto-generated headers to avoid duplicates when Response constructor adds them
         const responseHeaders = new Headers(targetResponse.headers);
+        for (const header of AUTO_HEADERS) {
+          responseHeaders.delete(header);
+        }
         return new Response(responseText, {
           status: httpStatus,
           headers: responseHeaders,
@@ -687,7 +698,11 @@ export async function createApp(
         await updateServerActivity(storage, registry, server);
 
         // Create new response with the same data and headers
+        // Remove auto-generated headers to avoid duplicates when Response constructor adds them
         const responseHeaders = new Headers(targetResponse.headers);
+        for (const header of AUTO_HEADERS) {
+          responseHeaders.delete(header);
+        }
         return new Response(responseText, {
           status: httpStatus,
           headers: responseHeaders,

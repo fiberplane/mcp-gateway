@@ -1,7 +1,7 @@
 // Bun Snapshot v1, https://bun.sh/docs/test/snapshots
 
 exports[`TUI snapshot: empty menu with no servers 1`] = `
-"\x1B[96mFiberplane MCP Gateway v0.2.3\x1B[0m
+"\x1B[96mFiberplane MCP Gateway v0.3.1\x1B[0m
 \x1B[2mGateway: http://localhost:3333\x1B[0m
 \x1B[2mMCP: http://localhost:3333/gateway/mcp\x1B[0m
 
@@ -17,7 +17,7 @@ exports[`TUI snapshot: empty menu with no servers 1`] = `
 `;
 
 exports[`TUI snapshot: menu with single HTTP server 1`] = `
-"\x1B[96mFiberplane MCP Gateway v0.2.3\x1B[0m
+"\x1B[96mFiberplane MCP Gateway v0.3.1\x1B[0m
 \x1B[2mGateway: http://localhost:3333\x1B[0m
 \x1B[2mMCP: http://localhost:3333/gateway/mcp\x1B[0m
 
@@ -37,7 +37,7 @@ exports[`TUI snapshot: menu with single HTTP server 1`] = `
 `;
 
 exports[`TUI snapshot: menu with multiple servers and health status 1`] = `
-"\x1B[96mFiberplane MCP Gateway v0.2.3\x1B[0m
+"\x1B[96mFiberplane MCP Gateway v0.3.1\x1B[0m
 \x1B[2mGateway: http://localhost:3333\x1B[0m
 \x1B[2mMCP: http://localhost:3333/gateway/mcp\x1B[0m
 
@@ -45,7 +45,7 @@ exports[`TUI snapshot: menu with multiple servers and health status 1`] = `
 
 \x1B[92m●\x1B[0m \x1B[92mhealthy-server\x1B[0m
 \x1B[96mhttp://localhost:3333/servers/healthy-server/mcp\x1B[0m \x1B[2m→ https://api1.example.com/mcp\x1B[0m
-\x1B[2mLast active: 3h ago • 42 exchanges\x1B[0m
+\x1B[2mLast active: 1d ago • 42 exchanges\x1B[0m
 
 \x1B[91m●\x1B[0m \x1B[91munhealthy-server\x1B[0m
 \x1B[96mhttp://localhost:3333/servers/unhealthy-server/mcp\x1B[0m \x1B[2m→ https://api2.example.com/mcp\x1B[0m
@@ -53,7 +53,7 @@ exports[`TUI snapshot: menu with multiple servers and health status 1`] = `
 
 \x1B[38;5;245m●\x1B[0m \x1B[38;5;245munknown-server\x1B[0m
 \x1B[96mhttp://localhost:3333/servers/unknown-server/mcp\x1B[0m \x1B[2m→ https://api3.example.com/mcp\x1B[0m
-\x1B[2mLast active: 4h ago • 15 exchanges\x1B[0m
+\x1B[2mLast active: 1d ago • 15 exchanges\x1B[0m
 
 \x1B[93m[a]\x1B[0m Add server
 \x1B[93m[d]\x1B[0m Delete server
@@ -65,7 +65,7 @@ exports[`TUI snapshot: menu with multiple servers and health status 1`] = `
 `;
 
 exports[`TUI snapshot: menu with logs 1`] = `
-"\x1B[96mFiberplane MCP Gateway v0.2.3\x1B[0m
+"\x1B[96mFiberplane MCP Gateway v0.3.1\x1B[0m
 \x1B[2mGateway: http://localhost:3333\x1B[0m
 \x1B[2mMCP: http://localhost:3333/gateway/mcp\x1B[0m
 
@@ -145,7 +145,7 @@ exports[`TUI snapshot: delete server confirmation 1`] = `
 `;
 
 exports[`TUI snapshot: MCP instructions modal 1`] = `
-"\x1B[96mFiberplane MCP Gateway v0.2.3\x1B[0m
+"\x1B[96mFiberplane MCP Gateway v0.3.1\x1B[0m
 
 \x1B[92mThis MCP Gateway is also an MCP server.\x1B[0m
 \x1B[93mEndpoint:\x1B[0m http://localhost:3333/gateway/mcp
