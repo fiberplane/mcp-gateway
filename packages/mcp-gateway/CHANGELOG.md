@@ -1,5 +1,11 @@
 # @fiberplane/mcp-gateway
 
+## 0.3.2
+
+### Patch Changes
+
+- c386ee7: Fix a duplicate content-length header issue.
+
 ## 0.3.1
 
 ### Patch Changes
