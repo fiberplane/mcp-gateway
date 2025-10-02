@@ -1,3 +1,5 @@
+import type { MCPTool } from "./code-goat";
+
 // Health status for servers
 export type ServerHealth = "up" | "down" | "unknown";
 
@@ -7,6 +9,7 @@ export interface McpServer {
   url: string;
   type: "http";
   headers: Record<string, string>;
+  tools?: MCPTool[];
   lastActivity: string | null;
   exchangeCount: number;
   health?: ServerHealth;

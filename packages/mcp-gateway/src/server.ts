@@ -15,6 +15,7 @@ import {
   getClientInfo,
   storeClientInfo,
 } from "./capture.js";
+import { createCodeMode } from "./code-goat";
 import { createMcpApp } from "./mcp-server.js";
 import { getServer, type McpServer, type Registry } from "./registry.js";
 import {
@@ -256,6 +257,121 @@ export async function createApp(
       const validatedHeaders = c.req.valid("header");
       const sessionId = extractSessionId(validatedHeaders);
 
+      // TODO - proxy to code goat, create rpc handler
+
+      if (jsonRpcRequest.method === "tools/call") {
+        // @ts-expect-error - do not feel like using type guard
+        if (jsonRpcRequest.params.name === "execute_code") {
+          const codeMode = await createCodeMode({
+            rpcHandler: async (_serverName, toolName, args) => {
+              const serverUrl = server.url;
+              const createToolCallRequest = {
+                jsonrpc: "2.0",
+                id: jsonRpcRequest.id,
+                method: "tools/call",
+                params: {
+                  name: toolName,
+                  arguments: args,
+                },
+              };
+              const toolCallResponse = await fetch(serverUrl, {
+                method: "POST",
+                headers: {
+                  // FIXME - I do not want a stream rn so yeah
+                  "Mcp-Session-Id": sessionId,
+                  Accept: "application/json",
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(createToolCallRequest),
+              });
+              // TODO - Parse the response
+              // biome-ignore lint/suspicious/noExplicitAny: prototyping
+              const responseMessage: any = await toolCallResponse.json();
+              return (
+                responseMessage.result.structuredContent ||
+                responseMessage.content
+              );
+            },
+            servers: [
+              {
+                ...server,
+                tools: server.tools ?? [],
+              },
+            ],
+          });
+          // @ts-expect-error - do not feel like using type guard
+          const userCode = jsonRpcRequest.params.arguments.code;
+          const result = await codeMode.executeCode(userCode);
+          // TODO - return the result as a tool call response
+          const toolCallResponse: JsonRpcResponse = {
+            jsonrpc: "2.0",
+            id: jsonRpcRequest.id ?? null, // hack coaelescing, shoudl be string
+            result: result,
+          };
+          return c.json(toolCallResponse);
+        }
+      }
+
+      if (jsonRpcRequest.method === "tools/list") {
+        // 1. Actually list all tools
+        const response = await proxy(server.url, {
+          method: "POST",
+          headers: buildProxyHeaders(c, server),
+          body: JSON.stringify(jsonRpcRequest),
+        });
+        // biome-ignore lint/suspicious/noExplicitAny: prototyping
+        const responseBody: any = await response.json();
+        // 2. Update the server tools stashed on the record in memory (registry)
+        server.tools = responseBody.result.tools;
+        // 3. Return the goat instead of all tools (with code mode descriptions)
+        const codeMode = await createCodeMode({
+          rpcHandler: async (_serverName, toolName, args) => {
+            const serverUrl = server.url;
+            const createToolCallRequest = {
+              jsonrpc: "2.0",
+              id: jsonRpcRequest.id,
+              method: "tools/call",
+              params: {
+                name: toolName,
+                arguments: args,
+              },
+            };
+            const toolCallResponse = await fetch(serverUrl, {
+              method: "POST",
+              headers: {
+                // FIXME - I do not want a stream rn so yeah
+                "Mcp-Session-Id": sessionId,
+                Accept: "application/json",
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(createToolCallRequest),
+            });
+            // TODO - Parse the response
+            // biome-ignore lint/suspicious/noExplicitAny: prototyping
+            const responseMessage: any = await toolCallResponse.json();
+            return (
+              responseMessage.result.structuredContent ||
+              responseMessage.content
+            );
+          },
+          servers: [
+            {
+              ...server,
+              tools: server.tools ?? [],
+            },
+          ],
+        });
+
+        const codeToolSchema = codeMode.getExecuteCodeToolSchema();
+
+        const toolCallResponse: JsonRpcResponse = {
+          jsonrpc: "2.0",
+          id: jsonRpcRequest.id ?? null, // hack coaelescing, shoudl be string
+          result: [codeToolSchema],
+        };
+        return c.json(toolCallResponse);
+      }
+
       // Capture request immediately (before forwarding)
       const requestRecord = createRequestCaptureRecord(
         server.name,
@@ -357,7 +473,6 @@ export async function createApp(
           jsonRpcRequest,
           requestCaptureFilename,
         );
-
         // Log response
         logResponse(
           server,
