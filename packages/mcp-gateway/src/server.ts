@@ -379,7 +379,11 @@ export async function createApp(
         await updateServerActivity(storage, registry, server);
 
         // Create new response with the same data and headers
+        // Remove auto-generated headers to avoid duplicates when Response constructor adds them
         const responseHeaders = new Headers(targetResponse.headers);
+        for (const header of AUTO_HEADERS) {
+          responseHeaders.delete(header);
+        }
         return new Response(responseText, {
           status: httpStatus,
           headers: responseHeaders,
@@ -568,7 +572,11 @@ export async function createApp(
         await updateServerActivity(storage, registry, server);
 
         // Create new response with the same data and headers
+        // Remove auto-generated headers to avoid duplicates when Response constructor adds them
         const responseHeaders = new Headers(targetResponse.headers);
+        for (const header of AUTO_HEADERS) {
+          responseHeaders.delete(header);
+        }
         return new Response(responseText, {
           status: httpStatus,
           headers: responseHeaders,
