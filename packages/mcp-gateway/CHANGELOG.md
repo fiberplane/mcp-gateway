@@ -1,5 +1,11 @@
 # @fiberplane/mcp-gateway
 
+## 0.3.3
+
+### Patch Changes
+
+- 14eed22: Fix the same content-length issue in response headers.
+
 ## 0.3.2
 
 ### Patch Changes
