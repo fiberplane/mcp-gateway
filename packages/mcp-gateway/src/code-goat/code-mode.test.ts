@@ -130,15 +130,15 @@ describe("Code Mode Integration", () => {
     expect(result.output).toContain("File: File contents here");
     expect(result.output).toContain("Weather: 72 Sunny");
     expect(calls.length).toBeGreaterThanOrEqual(2);
-    expect(calls.some((c) => c.tool === "readFile")).toBe(true);
-    expect(calls.some((c) => c.tool === "getWeather")).toBe(true);
+    expect(calls.some((c) => c.tool === "read_file")).toBe(true);
+    expect(calls.some((c) => c.tool === "get_weather")).toBe(true);
   });
 
   test("handles errors from RPC handler", async () => {
     const codeMode = await createCodeMode({
       servers: mockServers,
       rpcHandler: async (_server, tool) => {
-        if (tool === "readFile") {
+        if (tool === "read_file") {
           throw new Error("File not found");
         }
         return { result: "ok" };
