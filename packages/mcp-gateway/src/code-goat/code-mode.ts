@@ -67,12 +67,12 @@ export interface CodeMode {
   /** Execute user code with access to MCP tools */
   executeCode: (userCode: string) => Promise<ExecutionResult>;
 
-  /** Get the tool schema for the execute_code tool */
+  /** Get the tool schema for the code execution tool */
   getExecuteCodeToolSchema: (serverName?: string) => ExecuteCodeToolSchema;
 }
 
 /**
- * Schema for the execute_code tool
+ * Schema for the code execution tool
  */
 export interface ExecuteCodeToolSchema {
   name: string;

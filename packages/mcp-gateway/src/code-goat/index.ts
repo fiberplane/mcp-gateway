@@ -18,4 +18,5 @@ export type { ExecutionContext, ExecutionResult };
 export { generateApiClient } from "./api-generation/generate-client";
 export { generateTypes } from "./api-generation/generate-types";
 export { createCodeMode } from "./code-mode";
+export { CODE_GOAT_TOOL_NAME } from "./code-tool-description";
 export { executeCode } from "./executor";

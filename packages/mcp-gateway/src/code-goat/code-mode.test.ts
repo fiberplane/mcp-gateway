@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { McpServer } from "../registry";
-import { createCodeMode } from "./index";
+import { createCodeMode } from "./code-mode";
+import { CODE_GOAT_TOOL_NAME } from "./code-tool-description";
 
 describe("Code Mode Integration", () => {
   const mockServers: McpServer[] = [
@@ -82,7 +83,7 @@ describe("Code Mode Integration", () => {
     expect(codeMode.runtimeApi).toContain("mcpTools");
   });
 
-  test("returns execute_code tool schema", async () => {
+  test("returns code execution tool schema", async () => {
     const codeMode = await createCodeMode({
       servers: mockServers,
       rpcHandler: async () => ({ result: "test" }),
@@ -90,7 +91,7 @@ describe("Code Mode Integration", () => {
 
     const schema = codeMode.getExecuteCodeToolSchema();
 
-    expect(schema.name).toBe("execute_code");
+    expect(schema.name).toBe(CODE_GOAT_TOOL_NAME);
     expect(schema.description).toContain("JavaScript");
     expect(schema.description).toContain("mcpTools");
     expect(schema.inputSchema.properties.code).toBeDefined();

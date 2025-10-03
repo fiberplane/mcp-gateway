@@ -2,12 +2,14 @@ import type { McpServer } from "../registry";
 import { generateTypes } from "./api-generation/generate-types";
 import { toCodeModeServer } from "./types";
 
+export const CODE_GOAT_TOOL_NAME = "execute_code";
+
 /**
  * Helper for creating the code mode tool description, given the type definitions for the mcpTools module
  */
 export function createCodeToolDescriptionFromTypes(typeDefinitions: string) {
   return {
-    name: "execute_code",
+    name: CODE_GOAT_TOOL_NAME,
     description: `Execute JavaScript code with access to MCP tools via the mcpTools object.
 
 Available API:

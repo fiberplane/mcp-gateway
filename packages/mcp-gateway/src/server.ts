@@ -15,7 +15,7 @@ import {
   getClientInfo,
   storeClientInfo,
 } from "./capture.js";
-import { createCodeMode } from "./code-goat";
+import { CODE_GOAT_TOOL_NAME, createCodeMode } from "./code-goat";
 import { buildToolCallRequest } from "./code-goat/mcp-utils.js";
 import { createMcpApp } from "./mcp-server.js";
 import { getServer, type McpServer, type Registry } from "./registry.js";
@@ -471,11 +471,9 @@ export async function createApp(
       // Log incoming request from client
       logRequest(server, sessionId, jsonRpcRequest);
 
-      // TODO - proxy to code goat, create rpc handler
-
       if (jsonRpcRequest.method === "tools/call") {
         // @ts-expect-error - do not feel like using type guard
-        if (jsonRpcRequest.params.name === "execute_code") {
+        if (jsonRpcRequest.params.name === CODE_GOAT_TOOL_NAME) {
           const codeMode = await createCodeMode({
             rpcHandler: async (_serverName, toolName, args) => {
               const serverUrl = server.url;

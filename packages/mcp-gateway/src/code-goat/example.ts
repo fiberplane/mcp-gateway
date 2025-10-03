@@ -110,8 +110,8 @@ async function runExample() {
   console.log(codeMode.typeDefinitions);
   console.log("\n");
 
-  // Show the execute_code tool schema
-  console.log("🔧 Execute Code Tool Schema:");
+  // Show the code execution tool schema
+  console.log("🔧 Code Execution Tool Schema:");
   console.log(JSON.stringify(codeMode.getExecuteCodeToolSchema(), null, 2));
   console.log("\n");
 
