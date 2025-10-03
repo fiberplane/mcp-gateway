@@ -5,10 +5,11 @@
  * of the gateway, and shows what integration would look like.
  */
 
-import { createCodeMode, type MCPServer } from "./index";
+import type { McpServer } from "../registry";
+import { createCodeMode } from "./code-mode";
 
 // Example: Mock MCP servers with their tools
-const mockServers: MCPServer[] = [
+const mockServers: McpServer[] = [
   {
     name: "filesystem",
     tools: [
@@ -45,7 +46,7 @@ const mockServers: MCPServer[] = [
         },
       },
     ],
-  },
+  } as unknown as McpServer,
   {
     name: "weather-api",
     tools: [
@@ -64,7 +65,7 @@ const mockServers: MCPServer[] = [
         },
       },
     ],
-  },
+  } as unknown as McpServer,
 ];
 
 // Example: Mock RPC handler that simulates calling actual MCP servers
@@ -76,11 +77,11 @@ async function mockRpcHandler(
   console.log(`[RPC] ${serverName}.${toolName}`, args);
 
   // Simulate different responses based on tool
-  if (serverName === "Filesystem" && toolName === "readFile") {
+  if (serverName === "filesystem" && toolName === "read_file") {
     return { content: "Hello from file!" };
   }
 
-  if (serverName === "WeatherApi" && toolName === "getWeather") {
+  if (serverName === "weather-api" && toolName === "get_weather") {
     return {
       location: (args as { location: string }).location,
       temperature: 72,
