@@ -18,7 +18,12 @@ import {
 import { CODE_GOAT_TOOL_NAME, createCodeMode } from "./code-goat";
 import { buildToolCallRequest } from "./code-goat/mcp-utils.js";
 import { createMcpApp } from "./mcp-server.js";
-import { getServer, type McpServer, type Registry } from "./registry.js";
+import {
+  getServer,
+  type McpServer,
+  type McpServerTool,
+  type Registry,
+} from "./registry.js";
 import {
   clientInfoSchema,
   generateCaptureFilename,
@@ -118,6 +123,25 @@ async function updateServerActivity(
   server.exchangeCount = server.exchangeCount + 1;
   await saveRegistry(storage, registry);
   emitRegistryUpdate();
+}
+
+/**
+ * Update the server tools in place and persist to storage
+ *
+ * Helpful for caching server tool lists (which are used in code mode)
+ *
+ * @note - Mutates the registry
+ */
+async function updateServerTools(
+  storageDir: string,
+  registry: Registry,
+  server: McpServer,
+  tools: McpServerTool[],
+) {
+  // Update the server tools in place
+  server.tools = tools;
+  // Persist to storage
+  await saveRegistry(storageDir, registry);
 }
 
 // Helper: Handle session transition for initialize
@@ -471,6 +495,7 @@ export async function createApp(
       // Log incoming request from client
       logRequest(server, sessionId, jsonRpcRequest);
 
+      // Intercept tool call for code mode
       if (jsonRpcRequest.method === "tools/call") {
         // @ts-expect-error - do not feel like using type guard
         if (jsonRpcRequest.params.name === CODE_GOAT_TOOL_NAME) {
@@ -544,6 +569,7 @@ export async function createApp(
         }
       }
 
+      // Intercept tool list for code mode
       if (jsonRpcRequest.method === "tools/list") {
         // 1. Actually list all tools
         const response = await proxy(server.url, {
@@ -558,12 +584,17 @@ export async function createApp(
 
         // biome-ignore lint/suspicious/noExplicitAny: prototyping
         const responseBody: any = await response.json();
-        console.log(
-          "tools/list response body",
-          JSON.stringify(responseBody, null, 2),
-        );
+
         // 2. Update the server tools stashed on the record in memory (registry)
-        server.tools = responseBody.result.tools;
+        //    and persist to storage to survive restarts
+        await updateServerTools(
+          storage,
+          registry,
+          server,
+          responseBody?.result?.tools,
+        );
+        console.log("updated cached server tools for:", server.name);
+
         // 3. Return the goat instead of all tools (with code mode descriptions)
         const codeMode = await createCodeMode({
           rpcHandler: async (_serverName, toolName, args) => {

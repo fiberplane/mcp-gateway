@@ -36,9 +36,6 @@ export function generateApiClient(servers: CodeModeServer[]): string {
   // Generate an object for each server namespace
   const serverImplementations: string[] = [];
 
-  // FIXME
-  // Bun.write("servers.json", JSON.stringify(servers, null, 2));
-
   for (const server of servers) {
     const toolImplementations: string[] = [];
     for (const tool of server.tools) {
