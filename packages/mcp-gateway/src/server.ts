@@ -309,6 +309,9 @@ export async function createApp(
           // @ts-expect-error - do not feel like using type guard
           const userCode = jsonRpcRequest.params.arguments.code;
           const result = await codeMode.executeCode(userCode);
+          const isoTimestamp = new Date().toISOString().replace(/[:.]/g, "-");
+          const random = crypto.randomUUID().slice(0, 8);
+          Bun.write(`${isoTimestamp}-codemode-result-${random}.json`, JSON.stringify(result, null, 2));
           // TODO - return the result as a tool call response
           const toolCallResponse: JsonRpcResponse = {
             jsonrpc: "2.0",
@@ -359,6 +362,7 @@ export async function createApp(
               },
               body: JSON.stringify(createToolCallRequest),
             });
+
             // TODO - Parse the response
             // biome-ignore lint/suspicious/noExplicitAny: prototyping
             const responseMessage: any = await toolCallResponse.json();
@@ -375,7 +379,7 @@ export async function createApp(
           ],
         });
 
-        const codeToolSchema = codeMode.getExecuteCodeToolSchema();
+        const codeToolSchema = codeMode.getExecuteCodeToolSchema(server.name);
 
         const toolCallResponse: JsonRpcResponse = {
           jsonrpc: "2.0",

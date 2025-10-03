@@ -1,5 +1,5 @@
 import { compile as compileJsonSchemaToTs } from "json-schema-to-typescript";
-import { toCamelCase } from "./utils";
+import { toCamelCase, toPascalCase } from "./utils";
 
 // biome-ignore lint/suspicious/noExplicitAny: add json schema type later
 type TempJsonSchemaType = Record<string, any>;
@@ -46,12 +46,18 @@ export async function generateTypes(tools: Array<Tool>) {
 
     availableTypes += `\n${InputType}`;
     availableTypes += `\n${OutputType}`;
-    availableTools += `\n\t/*\n\t${tool.description?.trim()}\n\t*/`;
-    availableTools += `\n\t${toCamelCase(tool.name)}: (input: ${toCamelCase(tool.name)}Input) => Promise<${toCamelCase(tool.name)}Output>;`;
+    availableTools += `\n/*\n\t${tool.description?.trim()}\n\t*/`;
+    availableTools += `\nfunction ${toCamelCase(tool.name)}(input: ${toCamelCase(tool.name)}Input): Promise<${toCamelCase(tool.name)}Output>;`;
     availableTools += "\n";
   }
 
-  availableTools = `\ndeclare const codemode: {${availableTools}}`;
+  availableTools = `\n${availableTools}`;
+
+  // IF WE EVER WANNA NAMESPACE BY SERVER
+  //
+  // if (serverName) {
+  //   availableTools = `\ndeclare const ${toPascalCase(serverName)}: {${availableTools}}`;
+  // }
 
   return `
 ${availableTypes}

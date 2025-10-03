@@ -1,0 +1,323 @@
+[
+  {
+    "name": "everything-mcp-lite",
+    "type": "http",
+    "url": "http://localhost:3000/mcp",
+    "headers": {},
+    "lastActivity": "2025-10-02T14:38:55.015Z",
+    "exchangeCount": 4,
+    "tools": [
+      {
+        "name": "echo",
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "message": {
+              "type": "string",
+              "minLength": 1
+            },
+            "repeat": {
+              "default": 1,
+              "type": "number",
+              "minimum": 1,
+              "maximum": 10
+            }
+          },
+          "required": [
+            "message",
+            "repeat"
+          ],
+          "additionalProperties": false
+        },
+        "description": "Echoes a message with optional repetition"
+      },
+      {
+        "name": "add",
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "a": {
+              "type": "number"
+            },
+            "b": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "a",
+            "b"
+          ],
+          "additionalProperties": false
+        },
+        "description": "Adds two numbers together"
+      },
+      {
+        "name": "multiply",
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "numbers": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "precision": {
+              "default": 2,
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10
+            }
+          },
+          "required": [
+            "numbers",
+            "precision"
+          ],
+          "additionalProperties": false
+        },
+        "description": "Multiplies multiple numbers with optional precision"
+      },
+      {
+        "name": "getWeather",
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "location": {
+              "type": "string",
+              "minLength": 1
+            },
+            "unit": {
+              "default": "celsius",
+              "type": "string",
+              "enum": [
+                "celsius",
+                "fahrenheit",
+                "kelvin"
+              ]
+            },
+            "includeHumidity": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "location",
+            "unit",
+            "includeHumidity"
+          ],
+          "additionalProperties": false
+        },
+        "description": "Gets weather information for a location"
+      },
+      {
+        "name": "getTinyImage",
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "color": {
+              "default": "blue",
+              "type": "string",
+              "enum": [
+                "red",
+                "green",
+                "blue",
+                "yellow"
+              ]
+            },
+            "size": {
+              "default": "small",
+              "type": "string",
+              "enum": [
+                "small",
+                "medium",
+                "large"
+              ]
+            }
+          },
+          "required": [
+            "color",
+            "size"
+          ],
+          "additionalProperties": false
+        },
+        "description": "Returns a tiny base64 encoded image"
+      },
+      {
+        "name": "longRunningOperation",
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "duration": {
+              "description": "Duration of the operation in seconds",
+              "default": 10,
+              "type": "number"
+            },
+            "steps": {
+              "description": "Number of steps in the operation",
+              "default": 5,
+              "type": "number"
+            }
+          },
+          "required": [
+            "duration",
+            "steps"
+          ],
+          "additionalProperties": false
+        },
+        "description": "Demonstrates a long running operation with progress updates"
+      },
+      {
+        "name": "annotatedMessage",
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string"
+            },
+            "includeImage": {
+              "default": true,
+              "type": "boolean"
+            },
+            "includeResource": {
+              "default": true,
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "title",
+            "includeImage",
+            "includeResource"
+          ],
+          "additionalProperties": false
+        },
+        "description": "Returns a rich message with multiple content types"
+      },
+      {
+        "name": "listFiles",
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "path": {
+              "default": "/",
+              "type": "string"
+            },
+            "includeHidden": {
+              "default": false,
+              "type": "boolean"
+            },
+            "maxResults": {
+              "default": 20,
+              "type": "number",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          "required": [
+            "path",
+            "includeHidden",
+            "maxResults"
+          ],
+          "additionalProperties": false
+        },
+        "description": "Lists files in a directory (simulated)"
+      },
+      {
+        "name": "generateId",
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "type": {
+              "default": "uuid",
+              "type": "string",
+              "enum": [
+                "uuid",
+                "short",
+                "numeric"
+              ]
+            },
+            "count": {
+              "default": 1,
+              "type": "number",
+              "minimum": 1,
+              "maximum": 10
+            }
+          },
+          "required": [
+            "type",
+            "count"
+          ],
+          "additionalProperties": false
+        },
+        "description": "Generates various types of IDs"
+      },
+      {
+        "name": "enableDynamicTool",
+        "inputSchema": {
+          "type": "object"
+        },
+        "description": "Registers a new tool named 'dynamicGreet' on demand"
+      },
+      {
+        "name": "confirmAction",
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "minLength": 1
+            },
+            "riskLevel": {
+              "default": "medium",
+              "type": "string",
+              "enum": [
+                "low",
+                "medium",
+                "high"
+              ]
+            }
+          },
+          "required": [
+            "action",
+            "riskLevel"
+          ],
+          "additionalProperties": false
+        },
+        "description": "Requests user confirmation before executing an action using elicitation"
+      },
+      {
+        "name": "collectFormData",
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "formTitle": {
+              "default": "User Information Form",
+              "type": "string"
+            },
+            "includeOptional": {
+              "default": true,
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "formTitle",
+            "includeOptional"
+          ],
+          "additionalProperties": false
+        },
+        "description": "Collects structured form data from user using elicitation"
+      }
+    ]
+  }
+]

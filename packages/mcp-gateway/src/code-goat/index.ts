@@ -12,6 +12,7 @@
 
 import { generateApiClient } from "./api-generation/generate-client";
 import { generateTypes } from "./api-generation/generate-types";
+import { toPascalCase } from "./api-generation/utils";
 import {
   type ExecutionContext,
   type ExecutionResult,
@@ -73,7 +74,7 @@ export interface CodeMode {
   executeCode: (userCode: string) => Promise<ExecutionResult>;
 
   /** Get the tool schema for the execute_code tool */
-  getExecuteCodeToolSchema: () => ExecuteCodeToolSchema;
+  getExecuteCodeToolSchema: (serverName?: string) => ExecuteCodeToolSchema;
 }
 
 /**
@@ -108,9 +109,13 @@ export async function createCodeMode(
 
   // Generate TypeScript type definitions
   const typeDefinitions = await generateTypes(allTools);
+  const isoTimestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const random = crypto.randomUUID().slice(0, 8);
+  Bun.write(`${isoTimestamp}-typeDefinitions-${random}.ts`, typeDefinitions);
 
   // Generate JavaScript runtime API
   const runtimeApi = generateApiClient(config.servers);
+  Bun.write(`${isoTimestamp}-runtimeApi-${random}.ts`, runtimeApi);
 
   // Create execution context
   const executionContext: ExecutionContext = {
@@ -138,8 +143,8 @@ ${typeDefinitions}
 
 Example usage:
 \`\`\`javascript
-// Call tools using mcpTools.<serverName>.<toolName>()
-const result = await mcpTools.weatherServer.getWeather({ location: "San Francisco" });
+// Call tools using mcpTools.<toolName>()
+const result = await mcpTools.getWeather({ location: "San Francisco" });
 console.log("Weather:", result);
 \`\`\``,
       inputSchema: {
@@ -158,6 +163,5 @@ console.log("Weather:", result);
 }
 
 export { generateApiClient } from "./api-generation/generate-client";
-// Re-export utility functions for advanced usage
 export { generateTypes } from "./api-generation/generate-types";
 export { executeCode } from "./executor";
