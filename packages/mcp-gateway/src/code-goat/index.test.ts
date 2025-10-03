@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { createCodeMode, type MCPServer } from "./index";
+import type { McpServer } from "../registry";
+import { createCodeMode } from "./index";
 
 describe("Code Mode Integration", () => {
-  const mockServers: MCPServer[] = [
+  const mockServers: McpServer[] = [
     {
       name: "filesystem",
       tools: [
@@ -33,7 +34,7 @@ describe("Code Mode Integration", () => {
           },
         },
       ],
-    },
+    } as unknown as McpServer,
     {
       name: "weather-api",
       tools: [
@@ -49,7 +50,7 @@ describe("Code Mode Integration", () => {
           },
         },
       ],
-    },
+    } as unknown as McpServer,
   ];
 
   test("creates code mode instance with type definitions", async () => {
@@ -104,13 +105,13 @@ describe("Code Mode Integration", () => {
       rpcHandler: async (server, tool, args) => {
         calls.push({ server, tool, args });
 
-        if (tool === "readFile") {
+        if (tool === "read_file") {
           return { content: "File contents here" };
         }
-        if (tool === "writeFile") {
+        if (tool === "write_file") {
           return { status: "ok" };
         }
-        if (tool === "getWeather") {
+        if (tool === "get_weather") {
           return { temperature: 72, condition: "Sunny" };
         }
         return { result: "ok" };
@@ -157,7 +158,7 @@ describe("Code Mode Integration", () => {
   });
 
   test("supports multiple servers and tools", async () => {
-    const complexServers: MCPServer[] = [
+    const complexServers: McpServer[] = [
       {
         name: "server-one",
         tools: [
@@ -172,7 +173,7 @@ describe("Code Mode Integration", () => {
             inputSchema: { type: "object" },
           },
         ],
-      },
+      } as unknown as McpServer,
       {
         name: "server-two",
         tools: [
@@ -182,7 +183,7 @@ describe("Code Mode Integration", () => {
             inputSchema: { type: "object" },
           },
         ],
-      },
+      } as unknown as McpServer,
     ];
 
     const codeMode = await createCodeMode({
@@ -198,8 +199,8 @@ describe("Code Mode Integration", () => {
 
     expect(result.success).toBe(true);
     expect(result.output).toContain("Called");
-    expect(result.output).toContain("toolA");
-    expect(result.output).toContain("toolC");
+    expect(result.output).toContain("tool_a");
+    expect(result.output).toContain("tool_c");
   });
 
   test("respects timeout configuration", async () => {
@@ -221,7 +222,7 @@ describe("Code Mode Integration", () => {
     const codeMode = await createCodeMode({
       servers: mockServers,
       rpcHandler: async (_server, tool, _args) => {
-        if (tool === "getWeather") {
+        if (tool === "get_weather") {
           return { temperature: 65, condition: "Cloudy" };
         }
         return {};

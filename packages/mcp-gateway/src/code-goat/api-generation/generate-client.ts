@@ -1,4 +1,4 @@
-import type { CodeModeServer } from "../types";
+import type { CodeModeServer, CodeModeTool } from "../types";
 
 const __SERVER_DEFINITIONS_TEMPLATE_TAG = "%server-definitions%";
 
@@ -43,14 +43,12 @@ export function generateApiClient(servers: CodeModeServer[]): string {
     const toolImplementations: string[] = [];
     for (const tool of server.tools) {
       // Each tool becomes an async function that calls __rpcCall
-      toolImplementations.push(
-        toolToObjectProperty({ serverName: server.name, toolName: tool.name }),
-      );
+      toolImplementations.push(toolToObjectProperty(server, tool));
     }
 
     // Create the server namespace object
     serverImplementations.push(
-      toServerNamespaceObject(server.name, toolImplementations),
+      toServerNamespaceObject(server, toolImplementations),
     );
   }
 
@@ -64,24 +62,18 @@ export function generateApiClient(servers: CodeModeServer[]): string {
 }
 
 function toServerNamespaceObject(
-  serverName: string,
+  server: CodeModeServer,
   toolImplementations: string[],
 ): string {
   return `
-  ${serverName}: {
+  ${server.codeName}: {
     ${toolImplementations.join(",\n")}
   }`;
 }
 
-function toolToObjectProperty({
-  serverName,
-  toolName,
-}: {
-  serverName: string;
-  toolName: string;
-}) {
+function toolToObjectProperty(server: CodeModeServer, tool: CodeModeTool) {
   return `
-    ${toolName}: async (input) => {
-      return await __rpcCall('${serverName}', '${toolName}', input);
+    ${tool.codeName}: async (input) => {
+      return await __rpcCall('${server.originalName}', '${tool.originalName}', input);
     }`;
 }

@@ -1,4 +1,4 @@
-import { toCodeModeServer } from "../types";
+import { toCodeModeServer } from "./types";
 
 export const MOCK_SERVERS = [
   toCodeModeServer({

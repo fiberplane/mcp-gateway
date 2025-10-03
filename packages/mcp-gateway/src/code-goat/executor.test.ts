@@ -96,9 +96,9 @@ describe("Code Executor", () => {
     const context: ExecutionContext = {
       runtimeApi: `
         const mcpTools = {
-          testServer: {
+          TestServer: {
             testTool: async (args) => {
-              return await __rpcCall('testServer', 'testTool', args);
+              return await __rpcCall('test-server', 'test_tool', args);
             }
           }
         };
@@ -111,7 +111,7 @@ describe("Code Executor", () => {
 
     const result = await executeCode(
       `
-      const response = await mcpTools.testServer.testTool({ input: 'test' });
+      const response = await mcpTools.TestServer.testTool({ input: 'test' });
       console.log('Response:', JSON.stringify(response));
       `,
       context,
@@ -119,9 +119,9 @@ describe("Code Executor", () => {
 
     expect(result.success).toBe(true);
     expect(calls.length).toBe(1);
-    expect(calls[0].server).toBe("testServer");
-    expect(calls[0].tool).toBe("testTool");
-    expect(calls[0].args).toEqual({ input: "test" });
+    expect(calls[0]?.server).toBe("test-server");
+    expect(calls[0]?.tool).toBe("test_tool");
+    expect(calls[0]?.args).toEqual({ input: "test" });
     expect(result.output).toContain("success");
   });
 

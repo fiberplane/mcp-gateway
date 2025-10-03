@@ -11,14 +11,16 @@ const GENERIC_OUTPUT_SCHEMA = Object.freeze({
 
 export function toCodeModeServer(server: McpServer): CodeModeServer {
   return {
-    name: toPascalCase(server.name),
+    originalName: server.name,
+    codeName: toPascalCase(server.name),
     tools: server.tools?.map(toCodeModeServerTool) ?? [],
   };
 }
 
 export function toCodeModeServerTool(tool: McpServerTool): CodeModeTool {
   return {
-    name: toCamelCase(tool.name),
+    originalName: tool.name,
+    codeName: toCamelCase(tool.name),
     description: tool.description,
     inputSchema: tool.inputSchema,
     // HACK - Translate outputSchema to be Record<string, any>

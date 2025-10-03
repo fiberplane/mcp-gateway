@@ -7,16 +7,20 @@
 export type TempJsonSchemaType = Record<string, any>;
 
 export type CodeModeTool = {
-  /** The camelCase name of the McpServer */
-  name: string;
+  /** The name of the tool itself on the actual MCP server */
+  originalName: string;
+  /** The camelCase name of the tool */
+  codeName: string;
   description: string;
   inputSchema: TempJsonSchemaType;
   outputSchema: TempJsonSchemaType;
 };
 
 export interface CodeModeServer {
+  /** The name of the server inside the gateway's registry */
+  originalName: string;
   /** The PascalCase name of the McpServer */
-  name: string;
+  codeName: string;
   /** The transformed list of of the McpServer's tools */
   tools: Array<CodeModeTool>;
 }

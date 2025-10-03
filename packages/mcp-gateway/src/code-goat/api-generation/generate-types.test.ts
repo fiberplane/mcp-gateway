@@ -1,10 +1,9 @@
-// import { generateTypes } from "./generate-types";
-// import { listToolsExample } from "./smoketest-utils";
+import { MOCK_SERVERS } from "../test-utils";
+import { generateTypes } from "./generate-types";
 
 // Smoketest for the api type generation
 // Let's us look at output in the console
-// const tools = listToolsExample().result.tools;
-// const result = await generateTypes(tools);
+const result = await generateTypes(MOCK_SERVERS);
 
-// console.log("--------------------------------");
-// console.log(result);
+console.log("--------------------------------");
+console.log(result);

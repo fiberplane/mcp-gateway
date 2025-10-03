@@ -1,7 +1,8 @@
 // import { toCodeModeServer } from "../types";
-import { generateApiClient } from "./generate-client";
+
 // import { listToolsExample } from "./smoketest-utils";
-import { MOCK_SERVERS } from "./smoketest-utils";
+import { MOCK_SERVERS } from "../test-utils";
+import { generateApiClient } from "./generate-client";
 
 const result = generateApiClient(MOCK_SERVERS);
 
