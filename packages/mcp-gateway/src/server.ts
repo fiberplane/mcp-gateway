@@ -499,9 +499,14 @@ export async function createApp(
               // TODO - Parse the response
               // biome-ignore lint/suspicious/noExplicitAny: prototyping
               const responseMessage: any = await toolCallResponse.json();
+              console.log(
+                "rpc call response",
+                toolName,
+                JSON.stringify(responseMessage, null, 2),
+              );
               return (
-                responseMessage.result.structuredContent ||
-                responseMessage.content
+                responseMessage.result?.structuredContent ||
+                responseMessage.result?.content
               );
             },
             servers: [
@@ -525,7 +530,15 @@ export async function createApp(
           const toolCallResponse: JsonRpcResponse = {
             jsonrpc: "2.0",
             id: jsonRpcRequest.id ?? null, // hack coaelescing, shoudl be string
-            result: result,
+            result: {
+              content: [
+                {
+                  type: "text",
+                  // TODO - Format the result as markdown
+                  text: JSON.stringify(result, null, 2),
+                },
+              ],
+            },
           };
           return c.json(toolCallResponse);
         }
@@ -565,9 +578,14 @@ export async function createApp(
             // TODO - Parse the response
             // biome-ignore lint/suspicious/noExplicitAny: prototyping
             const responseMessage: any = await toolCallResponse.json();
+            console.log(
+              "rpc call response",
+              toolName,
+              JSON.stringify(responseMessage, null, 2),
+            );
             return (
-              responseMessage.result.structuredContent ||
-              responseMessage.content
+              responseMessage.result?.structuredContent ||
+              responseMessage.result?.content
             );
           },
           servers: [

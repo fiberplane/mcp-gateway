@@ -73,15 +73,14 @@ export async function executeCode(
   // Build the complete code to execute
   const fullCode = `
     (async () => {
-      // Override console in this scope
-      const console = ${JSON.stringify(capturedConsole)};
-      Object.setPrototypeOf(console, {
+      // Override console in this scope - use the capturedConsole from outer scope
+      const console = {
         log: (...args) => capturedConsole.log(...args),
         error: (...args) => capturedConsole.error(...args),
         warn: (...args) => capturedConsole.warn(...args),
         info: (...args) => capturedConsole.info(...args),
         debug: (...args) => capturedConsole.debug(...args),
-      });
+      };
       
       // Inject the runtime API
       ${context.runtimeApi}
