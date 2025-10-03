@@ -48,25 +48,25 @@ export async function executeCode(
   userCode: string,
   context: ExecutionContext,
 ): Promise<ExecutionResult> {
-  const logs: string[] = [];
+  const LOGS: string[] = [];
   let returnValue: unknown;
 
   // Create a captured console for logging
   const capturedConsole = {
     log: (...args: unknown[]) => {
-      logs.push(args.map(formatLogValue).join(" "));
+      LOGS.push(args.map(formatLogValue).join(" "));
     },
     error: (...args: unknown[]) => {
-      logs.push(`[ERROR] ${args.map(formatLogValue).join(" ")}`);
+      LOGS.push(`[ERROR] ${args.map(formatLogValue).join(" ")}`);
     },
     warn: (...args: unknown[]) => {
-      logs.push(`[WARN] ${args.map(formatLogValue).join(" ")}`);
+      LOGS.push(`[WARN] ${args.map(formatLogValue).join(" ")}`);
     },
     info: (...args: unknown[]) => {
-      logs.push(`[INFO] ${args.map(formatLogValue).join(" ")}`);
+      LOGS.push(`[INFO] ${args.map(formatLogValue).join(" ")}`);
     },
     debug: (...args: unknown[]) => {
-      logs.push(`[DEBUG] ${args.map(formatLogValue).join(" ")}`);
+      LOGS.push(`[DEBUG] ${args.map(formatLogValue).join(" ")}`);
     },
   };
 
@@ -100,19 +100,19 @@ export async function executeCode(
     // biome-ignore lint/correctness/noUnusedVariables: used in eval context
     const capturedConsole = {
       log: (...args: unknown[]) => {
-        logs.push(args.map(formatLogValue).join(" "));
+        LOGS.push(args.map(formatLogValue).join(" "));
       },
       error: (...args: unknown[]) => {
-        logs.push(`[ERROR] ${args.map(formatLogValue).join(" ")}`);
+        LOGS.push(`[ERROR] ${args.map(formatLogValue).join(" ")}`);
       },
       warn: (...args: unknown[]) => {
-        logs.push(`[WARN] ${args.map(formatLogValue).join(" ")}`);
+        LOGS.push(`[WARN] ${args.map(formatLogValue).join(" ")}`);
       },
       info: (...args: unknown[]) => {
-        logs.push(`[INFO] ${args.map(formatLogValue).join(" ")}`);
+        LOGS.push(`[INFO] ${args.map(formatLogValue).join(" ")}`);
       },
       debug: (...args: unknown[]) => {
-        logs.push(`[DEBUG] ${args.map(formatLogValue).join(" ")}`);
+        LOGS.push(`[DEBUG] ${args.map(formatLogValue).join(" ")}`);
       },
     };
 
@@ -135,16 +135,16 @@ export async function executeCode(
     }
 
     return {
-      output: logs.join("\n"),
+      output: LOGS.join("\n"),
       success: true,
       returnValue,
     };
   } catch (error) {
     const err = error as Error;
-    logs.push(`[ERROR] ${err.message}`);
+    LOGS.push(`[ERROR] ${err.message}`);
 
     return {
-      output: logs.join("\n"),
+      output: LOGS.join("\n"),
       success: false,
       error: err.message,
       stack: err.stack,

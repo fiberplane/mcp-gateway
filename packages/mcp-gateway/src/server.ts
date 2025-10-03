@@ -542,7 +542,7 @@ export async function createApp(
           },
           body: JSON.stringify(jsonRpcRequest),
         });
-        console.log("proxied tools/list", response);
+
         // biome-ignore lint/suspicious/noExplicitAny: prototyping
         const responseBody: any = await response.json();
         console.log(
