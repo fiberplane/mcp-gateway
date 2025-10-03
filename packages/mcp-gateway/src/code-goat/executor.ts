@@ -52,6 +52,7 @@ export async function executeCode(
   let returnValue: unknown;
 
   // Create a captured console for logging
+  // biome-ignore lint/correctness/noUnusedVariables: used in eval context
   const capturedConsole = {
     log: (...args: unknown[]) => {
       LOGS.push(args.map(formatLogValue).join(" "));
