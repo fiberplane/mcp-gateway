@@ -16,6 +16,7 @@ import {
   storeClientInfo,
 } from "./capture.js";
 import { createCodeMode } from "./code-goat";
+import { buildToolCallRequest } from "./code-goat/mcp-utils.js";
 import { createMcpApp } from "./mcp-server.js";
 import { getServer, type McpServer, type Registry } from "./registry.js";
 import {
@@ -264,6 +265,212 @@ export async function createApp(
       const validatedHeaders = c.req.valid("header");
       const sessionId = extractSessionId(validatedHeaders);
 
+      // Capture request immediately (before forwarding)
+      const requestRecord = createRequestCaptureRecord(
+        server.name,
+        sessionId,
+        jsonRpcRequest,
+      );
+      const requestCaptureFilename = await appendCapture(
+        storage,
+        requestRecord,
+      );
+
+      // Log incoming request from client
+      logRequest(server, sessionId, jsonRpcRequest);
+
+      let response: JsonRpcResponse;
+      let httpStatus = 200;
+
+      try {
+        // Handle initialize method - store client info
+        handleInitializeClientInfo(sessionId, jsonRpcRequest);
+
+        // Forward request to target MCP server using Hono proxy helper
+        const proxyHeaders = buildProxyHeaders(c, server);
+
+        const targetResponse = await proxy(server.url, {
+          method: "POST",
+          headers: proxyHeaders,
+          body: JSON.stringify(jsonRpcRequest),
+        });
+
+        httpStatus = targetResponse.status;
+
+        // Check if response is SSE stream
+        const contentType =
+          targetResponse.headers.get("content-type")?.toLowerCase() || "";
+        const isSSE = contentType.startsWith("text/event-stream");
+
+        if (isSSE) {
+          // Handle SSE streaming response
+
+          // Update server activity immediately for SSE
+          await updateServerActivity(storage, registry, server);
+
+          if (!targetResponse.body) {
+            throw new Error("SSE response has no body");
+          }
+
+          // Create two streams from the response body
+          const [streamForClient, streamForCapture] = targetResponse.body.tee();
+
+          // Start background capture processing
+          processSSECapture(
+            streamForCapture,
+            storage,
+            server,
+            sessionId,
+            jsonRpcRequest.method,
+            jsonRpcRequest.id,
+          );
+
+          // Return streaming response to client
+          return new Response(streamForClient, {
+            status: httpStatus,
+            headers: targetResponse.headers,
+          });
+        }
+
+        // Handle regular JSON response (existing logic)
+        // Read body as text first to avoid consuming the stream twice
+        const responseText = await targetResponse.text();
+        let responseBody: unknown;
+        try {
+          responseBody = JSON.parse(responseText);
+        } catch {
+          // If not valid JSON, use as-is
+          responseBody = responseText;
+        }
+        response = responseBody as JsonRpcResponse;
+        const duration = Date.now() - startTime;
+
+        // Capture response (only if request expected one - has id)
+        if (jsonRpcRequest.id != null) {
+          const responseRecord = createResponseCaptureRecord(
+            server.name,
+            sessionId,
+            response,
+            httpStatus,
+            jsonRpcRequest.method,
+          );
+          await appendCapture(storage, responseRecord);
+        }
+
+        // Handle initialize → session transition
+        await handleSessionTransition(
+          storage,
+          server,
+          targetResponse,
+          sessionId,
+          jsonRpcRequest,
+          requestCaptureFilename,
+        );
+        // Log response
+        logResponse(
+          server,
+          sessionId,
+          jsonRpcRequest.method,
+          httpStatus,
+          duration,
+          response,
+        );
+
+        // Update server activity
+        await updateServerActivity(storage, registry, server);
+
+        // Create new response with the same data and headers
+        // Remove auto-generated headers to avoid duplicates when Response constructor adds them
+        const responseHeaders = new Headers(targetResponse.headers);
+        for (const header of AUTO_HEADERS) {
+          responseHeaders.delete(header);
+        }
+        return new Response(responseText, {
+          status: httpStatus,
+          headers: responseHeaders,
+        });
+      } catch (error) {
+        const duration = Date.now() - startTime;
+
+        // Create error response
+        const errorResponse: JsonRpcResponse = {
+          jsonrpc: "2.0",
+          id: jsonRpcRequest.id ?? null,
+          error: {
+            code: -32603,
+            message: String(error),
+          },
+        };
+
+        // Log error response
+        logResponse(
+          server,
+          sessionId,
+          jsonRpcRequest.method,
+          httpStatus,
+          duration,
+          errorResponse,
+        );
+
+        // Capture error
+        await captureError(
+          storage,
+          server.name,
+          sessionId,
+          jsonRpcRequest,
+          {
+            code: -32603,
+            message: String(error),
+          },
+          httpStatus,
+          duration,
+        );
+
+        return new Response(JSON.stringify(errorResponse), {
+          status: httpStatus,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+    },
+  );
+
+  // Canonical proxy route for codemode server connections
+  app.post(
+    "/servers/:server/mcp-codemode",
+    sValidator("param", serverParamSchema),
+    sValidator("json", jsonRpcRequestSchema),
+    sValidator("header", sessionHeaderSchema),
+    async (c) => {
+      const startTime = Date.now();
+
+      // Get validated data
+      const { server: serverName } = c.req.valid("param");
+      const jsonRpcRequest = c.req.valid("json");
+
+      // Find server in registry
+      const server = getServer(registry, serverName);
+      if (!server) {
+        return c.notFound();
+      }
+
+      // Extract session ID from headers
+      const validatedHeaders = c.req.valid("header");
+      const sessionId = extractSessionId(validatedHeaders);
+
+      // Capture request immediately (before forwarding)
+      const requestRecord = createRequestCaptureRecord(
+        server.name,
+        sessionId,
+        jsonRpcRequest,
+      );
+      const requestCaptureFilename = await appendCapture(
+        storage,
+        requestRecord,
+      );
+
+      // Log incoming request from client
+      logRequest(server, sessionId, jsonRpcRequest);
+
       // TODO - proxy to code goat, create rpc handler
 
       if (jsonRpcRequest.method === "tools/call") {
@@ -349,26 +556,13 @@ export async function createApp(
         // 3. Return the goat instead of all tools (with code mode descriptions)
         const codeMode = await createCodeMode({
           rpcHandler: async (_serverName, toolName, args) => {
-            const serverUrl = server.url;
-            const createToolCallRequest = {
-              jsonrpc: "2.0",
-              id: jsonRpcRequest.id,
-              method: "tools/call",
-              params: {
-                name: toolName,
-                arguments: args,
-              },
-            };
-            const toolCallResponse = await fetch(serverUrl, {
-              method: "POST",
-              headers: {
-                // FIXME - I do not want a stream rn so yeah
-                "Mcp-Session-Id": sessionId,
-                Accept: "application/json",
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify(createToolCallRequest),
+            const toolCallRequest = buildToolCallRequest({
+              serverUrl: server.url,
+              sessionId,
+              toolName,
+              args,
             });
+            const toolCallResponse = await fetch(toolCallRequest);
 
             // TODO - Parse the response
             // biome-ignore lint/suspicious/noExplicitAny: prototyping
@@ -400,20 +594,6 @@ export async function createApp(
           headers: response.headers,
         });
       }
-
-      // Capture request immediately (before forwarding)
-      const requestRecord = createRequestCaptureRecord(
-        server.name,
-        sessionId,
-        jsonRpcRequest,
-      );
-      const requestCaptureFilename = await appendCapture(
-        storage,
-        requestRecord,
-      );
-
-      // Log incoming request from client
-      logRequest(server, sessionId, jsonRpcRequest);
 
       let response: JsonRpcResponse;
       let httpStatus = 200;
