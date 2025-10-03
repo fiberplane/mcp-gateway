@@ -24,10 +24,7 @@
               "maximum": 10
             }
           },
-          "required": [
-            "message",
-            "repeat"
-          ],
+          "required": ["message", "repeat"],
           "additionalProperties": false
         },
         "description": "Echoes a message with optional repetition"
@@ -45,10 +42,7 @@
               "type": "number"
             }
           },
-          "required": [
-            "a",
-            "b"
-          ],
+          "required": ["a", "b"],
           "additionalProperties": false
         },
         "description": "Adds two numbers together"
@@ -73,10 +67,7 @@
               "maximum": 10
             }
           },
-          "required": [
-            "numbers",
-            "precision"
-          ],
+          "required": ["numbers", "precision"],
           "additionalProperties": false
         },
         "description": "Multiplies multiple numbers with optional precision"
@@ -94,22 +85,14 @@
             "unit": {
               "default": "celsius",
               "type": "string",
-              "enum": [
-                "celsius",
-                "fahrenheit",
-                "kelvin"
-              ]
+              "enum": ["celsius", "fahrenheit", "kelvin"]
             },
             "includeHumidity": {
               "default": false,
               "type": "boolean"
             }
           },
-          "required": [
-            "location",
-            "unit",
-            "includeHumidity"
-          ],
+          "required": ["location", "unit", "includeHumidity"],
           "additionalProperties": false
         },
         "description": "Gets weather information for a location"
@@ -123,27 +106,15 @@
             "color": {
               "default": "blue",
               "type": "string",
-              "enum": [
-                "red",
-                "green",
-                "blue",
-                "yellow"
-              ]
+              "enum": ["red", "green", "blue", "yellow"]
             },
             "size": {
               "default": "small",
               "type": "string",
-              "enum": [
-                "small",
-                "medium",
-                "large"
-              ]
+              "enum": ["small", "medium", "large"]
             }
           },
-          "required": [
-            "color",
-            "size"
-          ],
+          "required": ["color", "size"],
           "additionalProperties": false
         },
         "description": "Returns a tiny base64 encoded image"
@@ -165,10 +136,7 @@
               "type": "number"
             }
           },
-          "required": [
-            "duration",
-            "steps"
-          ],
+          "required": ["duration", "steps"],
           "additionalProperties": false
         },
         "description": "Demonstrates a long running operation with progress updates"
@@ -191,11 +159,7 @@
               "type": "boolean"
             }
           },
-          "required": [
-            "title",
-            "includeImage",
-            "includeResource"
-          ],
+          "required": ["title", "includeImage", "includeResource"],
           "additionalProperties": false
         },
         "description": "Returns a rich message with multiple content types"
@@ -221,11 +185,7 @@
               "maximum": 100
             }
           },
-          "required": [
-            "path",
-            "includeHidden",
-            "maxResults"
-          ],
+          "required": ["path", "includeHidden", "maxResults"],
           "additionalProperties": false
         },
         "description": "Lists files in a directory (simulated)"
@@ -239,11 +199,7 @@
             "type": {
               "default": "uuid",
               "type": "string",
-              "enum": [
-                "uuid",
-                "short",
-                "numeric"
-              ]
+              "enum": ["uuid", "short", "numeric"]
             },
             "count": {
               "default": 1,
@@ -252,10 +208,7 @@
               "maximum": 10
             }
           },
-          "required": [
-            "type",
-            "count"
-          ],
+          "required": ["type", "count"],
           "additionalProperties": false
         },
         "description": "Generates various types of IDs"
@@ -280,17 +233,10 @@
             "riskLevel": {
               "default": "medium",
               "type": "string",
-              "enum": [
-                "low",
-                "medium",
-                "high"
-              ]
+              "enum": ["low", "medium", "high"]
             }
           },
-          "required": [
-            "action",
-            "riskLevel"
-          ],
+          "required": ["action", "riskLevel"],
           "additionalProperties": false
         },
         "description": "Requests user confirmation before executing an action using elicitation"
@@ -310,10 +256,7 @@
               "type": "boolean"
             }
           },
-          "required": [
-            "formTitle",
-            "includeOptional"
-          ],
+          "required": ["formTitle", "includeOptional"],
           "additionalProperties": false
         },
         "description": "Collects structured form data from user using elicitation"

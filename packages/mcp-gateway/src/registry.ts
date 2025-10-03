@@ -1,7 +1,14 @@
-import type { MCPTool } from "./code-goat";
+import type { TempJsonSchemaType } from "./code-goat/types";
 
 // Health status for servers
 export type ServerHealth = "up" | "down" | "unknown";
+
+export type McpServerTool = {
+  name: string;
+  inputSchema: TempJsonSchemaType;
+  outputSchema?: TempJsonSchemaType;
+  description: string;
+};
 
 // Pure data types for MCP servers and registry
 export interface McpServer {
@@ -9,7 +16,7 @@ export interface McpServer {
   url: string;
   type: "http";
   headers: Record<string, string>;
-  tools?: MCPTool[];
+  tools?: McpServerTool[];
   lastActivity: string | null;
   exchangeCount: number;
   health?: ServerHealth;

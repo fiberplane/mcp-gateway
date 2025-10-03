@@ -311,7 +311,11 @@ export async function createApp(
           const result = await codeMode.executeCode(userCode);
           const isoTimestamp = new Date().toISOString().replace(/[:.]/g, "-");
           const random = crypto.randomUUID().slice(0, 8);
-          Bun.write(`${isoTimestamp}-codemode-result-${random}.json`, JSON.stringify(result, null, 2));
+          // FIXME
+          Bun.write(
+            `${isoTimestamp}-codemode-result-${random}.json`,
+            JSON.stringify(result, null, 2),
+          );
           // TODO - return the result as a tool call response
           const toolCallResponse: JsonRpcResponse = {
             jsonrpc: "2.0",
@@ -336,7 +340,10 @@ export async function createApp(
         console.log("proxied tools/list", response);
         // biome-ignore lint/suspicious/noExplicitAny: prototyping
         const responseBody: any = await response.json();
-        console.log("tools/list response body", JSON.stringify(responseBody, null, 2));
+        console.log(
+          "tools/list response body",
+          JSON.stringify(responseBody, null, 2),
+        );
         // 2. Update the server tools stashed on the record in memory (registry)
         server.tools = responseBody.result.tools;
         // 3. Return the goat instead of all tools (with code mode descriptions)

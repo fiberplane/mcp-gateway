@@ -1,14 +1,9 @@
+// import { toCodeModeServer } from "../types";
 import { generateApiClient } from "./generate-client";
-import { listToolsExample } from "./generate-types.test";
+// import { listToolsExample } from "./smoketest-utils";
+import { MOCK_SERVERS } from "./smoketest-utils";
 
-const tools = listToolsExample().result.tools;
-
-const result = generateApiClient([
-  {
-    name: "weather-server",
-    tools: tools,
-  },
-]);
+const result = generateApiClient(MOCK_SERVERS);
 
 console.log("--------------------------------");
 console.log(result);

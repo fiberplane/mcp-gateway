@@ -1,50 +1,87 @@
-import { toCamelCase, toPascalCase } from "./utils";
+import type { CodeModeServer } from "../types";
 
-// biome-ignore lint/suspicious/noExplicitAny: add actual type later
-type MCPServer = any;
+const __SERVER_DEFINITIONS_TEMPLATE_TAG = "%server-definitions%";
 
-export function generateApiClient(servers: MCPServer[]): string {
-  let moduleCode = `// Generated MCP Tools API - Runtime Implementation\n\n`;
+const CLIENT_CODE_TEMPLATE = `
+// Generated MCP Tools API - Runtime Implementation
+
+// Export combined API
+const mcpTools = {
+${__SERVER_DEFINITIONS_TEMPLATE_TAG}
+}
+`.trim();
+
+/**
+ * Construct modules that can make an RPC call to a server's tool
+ *
+ * Returns typescript code that an LLM can use to script against an MCP server like:
+ *   `mcpTools.<ServerName>.<toolName>(<args>)`
+ *
+ * ```ts
+ * const mcpTools = {
+ *   // `toServerNamespaceObject` constructs this object
+ *   ServerName: {
+ *     // `toolToObjectProperty` constructs this property on the object
+ *     toolName: async (input) => {
+ *       return await __rpcCall("serverName", "toolName", input);
+ *     }
+ *   }
+ * }
+ * ```
+ *
+ */
+export function generateApiClient(servers: CodeModeServer[]): string {
+  let moduleCode = CLIENT_CODE_TEMPLATE;
 
   // Generate an object for each server namespace
   const serverImplementations: string[] = [];
 
-  Bun.write("servers.json", JSON.stringify(servers, null, 2));
+  // FIXME
+  // Bun.write("servers.json", JSON.stringify(servers, null, 2));
 
   for (const server of servers) {
     const toolImplementations: string[] = [];
-    const pascalServerName = toPascalCase(server.name);
-    console.log("server.tools", server.tools);
-
     for (const tool of server.tools) {
-      const camelCaseToolName = toCamelCase(tool.name);
       // Each tool becomes an async function that calls __rpcCall
-      toolImplementations.push(`
-  ${camelCaseToolName}: async (input) => {
-    return await __rpcCall('${pascalServerName}', '${camelCaseToolName}', input);
-  }`);
+      toolImplementations.push(
+        toolToObjectProperty({ serverName: server.name, toolName: tool.name }),
+      );
     }
 
-    serverImplementations.push(`
-${toolImplementations.join(",\n")}
-`);
-
-    // Create the server namespace object - COMMENTED OUT BECAUSE WE NEED TO SYNCHRONIZE MODULE DEFINITIONS IN TYPES WITH ACTUAL CLIENT DEFINITION
-    //     serverImplementations.push(`
-    // const ${camelCaseServerName} = {${toolImplementations.join(",\n")}
-    // };`);
+    // Create the server namespace object
+    serverImplementations.push(
+      toServerNamespaceObject(server.name, toolImplementations),
+    );
   }
 
-
   // Export all server namespaces in a single mcpTools object
-  // const serverNames = servers.map((s) => toPascalCase(s.name));
-  moduleCode += `\n\n// Export combined API\nconst mcpTools = {\n`;
-
-  moduleCode += serverImplementations.join("\n\n");
-
-  // moduleCode +=
-  // moduleCode += serverNames.map((name) => `  ${name}`).join(",\n");
-  moduleCode += `\n};\n`;
+  moduleCode = moduleCode.replace(
+    __SERVER_DEFINITIONS_TEMPLATE_TAG,
+    serverImplementations.join(",\n\n"),
+  );
 
   return moduleCode;
+}
+
+function toServerNamespaceObject(
+  serverName: string,
+  toolImplementations: string[],
+): string {
+  return `
+  ${serverName}: {
+    ${toolImplementations.join(",\n")}
+  }`;
+}
+
+function toolToObjectProperty({
+  serverName,
+  toolName,
+}: {
+  serverName: string;
+  toolName: string;
+}) {
+  return `
+    ${toolName}: async (input) => {
+      return await __rpcCall('${serverName}', '${toolName}', input);
+    }`;
 }

@@ -12,7 +12,6 @@
 
 import { generateApiClient } from "./api-generation/generate-client";
 import { generateTypes } from "./api-generation/generate-types";
-import { toPascalCase } from "./api-generation/utils";
 import {
   type ExecutionContext,
   type ExecutionResult,
@@ -111,10 +110,12 @@ export async function createCodeMode(
   const typeDefinitions = await generateTypes(allTools);
   const isoTimestamp = new Date().toISOString().replace(/[:.]/g, "-");
   const random = crypto.randomUUID().slice(0, 8);
+  // FIXME
   Bun.write(`${isoTimestamp}-typeDefinitions-${random}.ts`, typeDefinitions);
 
   // Generate JavaScript runtime API
   const runtimeApi = generateApiClient(config.servers);
+  // FIXME
   Bun.write(`${isoTimestamp}-runtimeApi-${random}.ts`, runtimeApi);
 
   // Create execution context
