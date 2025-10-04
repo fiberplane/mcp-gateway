@@ -15,9 +15,12 @@ import {
   getClientInfo,
   storeClientInfo,
 } from "./capture.js";
-import { CODE_GOAT_TOOL_NAME, createCodeMode } from "./code-goat";
-import { formatExecutionResult } from "./code-goat/executor/types.js";
-import { buildToolCallRequest } from "./code-goat/mcp-utils.js";
+import {
+  buildToolCallRequest,
+  CODE_GOAT_TOOL_NAME,
+  createCodeMode,
+  formatExecutionResult,
+} from "./code-goat/index.js";
 import { createMcpApp } from "./mcp-server.js";
 import {
   getServer,

@@ -10,13 +10,11 @@
  * This is an eval-based PROTOTYPE - not suitable for production use.
  */
 
-import type { ExecutionContext, ExecutionResult } from "./executor/types";
-
-// Re-export core types
-export type { ExecutionContext, ExecutionResult };
-
 export { generateApiClient } from "./api-generation/generate-client";
 export { generateTypes } from "./api-generation/generate-types";
 export { createCodeMode } from "./code-mode";
 export { CODE_GOAT_TOOL_NAME } from "./code-tool-description";
 export { executeCode } from "./executor/evil";
+export type { ExecutionContext, ExecutionResult } from "./executor/types";
+export { formatExecutionResult } from "./executor/types";
+export { buildToolCallRequest } from "./mcp-utils";

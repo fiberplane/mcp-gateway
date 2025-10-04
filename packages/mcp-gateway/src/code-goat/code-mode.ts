@@ -18,9 +18,6 @@ import { executeCode } from "./executor/evil";
 import type { ExecutionContext, ExecutionResult } from "./executor/types";
 import { toCodeModeServer } from "./types";
 
-// Re-export core types
-export type { ExecutionContext, ExecutionResult };
-
 /**
  * Represents a single MCP tool with its schema
  */
