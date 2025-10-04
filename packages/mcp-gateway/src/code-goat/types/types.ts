@@ -17,6 +17,8 @@ export type CodeModeTool = {
 };
 
 export interface CodeModeServer {
+  /** The URL of the actual MCP server */
+  url: string;
   /** The name of the server inside the gateway's registry */
   originalName: string;
   /** The PascalCase name of the McpServer */

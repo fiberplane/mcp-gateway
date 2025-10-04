@@ -57,8 +57,9 @@ describe("Code Mode Integration", () => {
   test("creates code mode instance with type definitions", async () => {
     const codeMode = await createCodeMode({
       servers: mockServers,
-      rpcHandler: async () => ({ result: "test" }),
     });
+    // Mock the RPC handler
+    codeMode.executionContext.rpcHandler = async () => ({ result: "test" });
 
     expect(codeMode.typeDefinitions).toBeDefined();
     expect(codeMode.typeDefinitions.length).toBeGreaterThan(0);
@@ -70,8 +71,9 @@ describe("Code Mode Integration", () => {
   test("creates runtime API with correct structure", async () => {
     const codeMode = await createCodeMode({
       servers: mockServers,
-      rpcHandler: async () => ({ result: "test" }),
     });
+    // Mock the RPC handler
+    codeMode.executionContext.rpcHandler = async () => ({ result: "test" });
 
     expect(codeMode.runtimeApi).toBeDefined();
     expect(codeMode.runtimeApi).toContain("Filesystem");
@@ -86,8 +88,9 @@ describe("Code Mode Integration", () => {
   test("returns code execution tool schema", async () => {
     const codeMode = await createCodeMode({
       servers: mockServers,
-      rpcHandler: async () => ({ result: "test" }),
     });
+    // Mock the RPC handler
+    codeMode.executionContext.rpcHandler = async () => ({ result: "test" });
 
     const schema = codeMode.getExecuteCodeToolSchema();
 
@@ -103,21 +106,22 @@ describe("Code Mode Integration", () => {
 
     const codeMode = await createCodeMode({
       servers: mockServers,
-      rpcHandler: async (server, tool, args) => {
-        calls.push({ server, tool, args });
-
-        if (tool === "read_file") {
-          return { content: "File contents here" };
-        }
-        if (tool === "write_file") {
-          return { status: "ok" };
-        }
-        if (tool === "get_weather") {
-          return { temperature: 72, condition: "Sunny" };
-        }
-        return { result: "ok" };
-      },
     });
+    // Mock the RPC handler
+    codeMode.executionContext.rpcHandler = async (server, tool, args) => {
+      calls.push({ server, tool, args });
+
+      if (tool === "read_file") {
+        return { content: "File contents here" };
+      }
+      if (tool === "write_file") {
+        return { status: "ok" };
+      }
+      if (tool === "get_weather") {
+        return { temperature: 72, condition: "Sunny" };
+      }
+      return { result: "ok" };
+    };
 
     const result = await codeMode.executeCode(`
       const file = await mcpTools.Filesystem.readFile({ path: '/test.txt' });
@@ -138,13 +142,14 @@ describe("Code Mode Integration", () => {
   test("handles errors from RPC handler", async () => {
     const codeMode = await createCodeMode({
       servers: mockServers,
-      rpcHandler: async (_server, tool) => {
-        if (tool === "read_file") {
-          throw new Error("File not found");
-        }
-        return { result: "ok" };
-      },
     });
+    // Mock the RPC handler
+    codeMode.executionContext.rpcHandler = async (_server, tool) => {
+      if (tool === "read_file") {
+        throw new Error("File not found");
+      }
+      return { result: "ok" };
+    };
 
     const result = await codeMode.executeCode(`
       try {
@@ -189,7 +194,11 @@ describe("Code Mode Integration", () => {
 
     const codeMode = await createCodeMode({
       servers: complexServers,
-      rpcHandler: async (server, tool) => ({ server, tool }),
+    });
+    // Mock the RPC handler
+    codeMode.executionContext.rpcHandler = async (server, tool) => ({
+      server,
+      tool,
     });
 
     const result = await codeMode.executeCode(`
@@ -207,9 +216,10 @@ describe("Code Mode Integration", () => {
   test("respects timeout configuration", async () => {
     const codeMode = await createCodeMode({
       servers: mockServers,
-      rpcHandler: async () => ({}),
       timeout: 100,
     });
+    // Mock the RPC handler
+    codeMode.executionContext.rpcHandler = async () => ({});
 
     const result = await codeMode.executeCode(`
       await new Promise(resolve => setTimeout(resolve, 5000));
@@ -222,13 +232,14 @@ describe("Code Mode Integration", () => {
   test("captures console output from complex workflows", async () => {
     const codeMode = await createCodeMode({
       servers: mockServers,
-      rpcHandler: async (_server, tool, _args) => {
-        if (tool === "get_weather") {
-          return { temperature: 65, condition: "Cloudy" };
-        }
-        return {};
-      },
     });
+    // Mock the RPC handler
+    codeMode.executionContext.rpcHandler = async (_server, tool, _args) => {
+      if (tool === "get_weather") {
+        return { temperature: 65, condition: "Cloudy" };
+      }
+      return {};
+    };
 
     const result = await codeMode.executeCode(`
       const cities = ['SF', 'NYC', 'LA'];

@@ -16,6 +16,7 @@ import { generateTypes } from "./api-generation/generate-types";
 import { createCodeToolDescriptionFromTypes } from "./code-tool-description";
 import { executeCode } from "./executor/evil";
 import type { ExecutionContext, ExecutionResult } from "./executor/types";
+import { buildRpcHandler } from "./rpc-handler";
 import { toCodeModeServer } from "./types";
 
 /**
@@ -25,12 +26,12 @@ export interface CodeModeConfig {
   /** List of MCP servers with their tools */
   servers: McpServer[];
 
-  /** Function that routes tool calls to actual MCP servers */
-  rpcHandler: (
-    serverName: string,
-    toolName: string,
-    args: unknown,
-  ) => Promise<unknown>;
+  /**
+   * Optional session id for the current MCP session,
+   * useful for making rpc calls to actual MCP servers
+   * (to execute tools from within code mode scripts)
+   */
+  sessionId?: string;
 
   /** Optional timeout for code execution in milliseconds */
   timeout?: number;
@@ -45,6 +46,9 @@ export interface CodeMode {
 
   /** JavaScript runtime API code */
   runtimeApi: string;
+
+  /** Execution context for code mode, includes the RPC handler */
+  executionContext: ExecutionContext;
 
   /** Execute user code with access to MCP tools */
   executeCode: (userCode: string) => Promise<ExecutionResult>;
@@ -100,13 +104,14 @@ export async function createCodeMode(
   // Create execution context
   const executionContext: ExecutionContext = {
     runtimeApi,
-    rpcHandler: config.rpcHandler,
+    rpcHandler: buildRpcHandler(servers, config.sessionId),
     timeout: config.timeout,
   };
 
   return {
     typeDefinitions,
     runtimeApi,
+    executionContext,
 
     executeCode: async (userCode: string) => {
       return await executeCode(userCode, executionContext);

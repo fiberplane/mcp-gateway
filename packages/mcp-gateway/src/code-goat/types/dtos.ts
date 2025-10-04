@@ -11,6 +11,7 @@ const GENERIC_OUTPUT_SCHEMA = Object.freeze({
 
 export function toCodeModeServer(server: McpServer): CodeModeServer {
   return {
+    url: server.url,
     originalName: server.name,
     codeName: toPascalCase(server.name),
     tools: server.tools?.map(toCodeModeServerTool) ?? [],

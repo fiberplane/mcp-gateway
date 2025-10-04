@@ -70,6 +70,7 @@ export function buildToolCallRequest(options: ToolCallRequestOptions) {
   if (sessionId) {
     headers.set("Mcp-Session-Id", sessionId);
   }
+  // NOTE - Do not want the complexity of handling a streaming response, so we only accept json
   headers.set("Accept", "application/json");
   headers.set("Content-Type", "application/json");
 

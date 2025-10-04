@@ -16,7 +16,6 @@ import {
   storeClientInfo,
 } from "./capture.js";
 import {
-  buildToolCallRequest,
   CODE_GOAT_TOOL_NAME,
   createCodeMode,
   formatExecutionResult,
@@ -503,47 +502,10 @@ export async function createApp(
       if (jsonRpcRequest.method === "tools/call") {
         // @ts-expect-error - do not feel like using type guard
         if (jsonRpcRequest.params.name === CODE_GOAT_TOOL_NAME) {
+          const codeModeServers = [server];
           const codeMode = await createCodeMode({
-            rpcHandler: async (_serverName, toolName, args) => {
-              const serverUrl = server.url;
-              const createToolCallRequest = {
-                jsonrpc: "2.0",
-                id: jsonRpcRequest.id,
-                method: "tools/call",
-                params: {
-                  name: toolName,
-                  arguments: args,
-                },
-              };
-              const toolCallResponse = await fetch(serverUrl, {
-                method: "POST",
-                headers: {
-                  // FIXME - I do not want a stream rn so yeah
-                  "Mcp-Session-Id": sessionId,
-                  Accept: "application/json",
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify(createToolCallRequest),
-              });
-              // TODO - Parse the response
-              // biome-ignore lint/suspicious/noExplicitAny: prototyping
-              const responseMessage: any = await toolCallResponse.json();
-              console.log(
-                "rpc call response",
-                toolName,
-                JSON.stringify(responseMessage, null, 2),
-              );
-              return (
-                responseMessage.result?.structuredContent ||
-                responseMessage.result?.content
-              );
-            },
-            servers: [
-              {
-                ...server,
-                tools: server.tools ?? [],
-              },
-            ],
+            servers: codeModeServers,
+            sessionId,
           });
           // @ts-expect-error - do not feel like using type guard
           const userCode = jsonRpcRequest.params.arguments.code;
@@ -599,43 +561,20 @@ export async function createApp(
         );
         console.log("updated cached server tools for:", server.name);
 
-        // 3. Return the goat instead of all tools (with code mode descriptions)
-        const codeMode = await createCodeMode({
-          rpcHandler: async (_serverName, toolName, args) => {
-            const toolCallRequest = buildToolCallRequest({
-              serverUrl: server.url,
-              sessionId,
-              toolName,
-              args,
-            });
-            const toolCallResponse = await fetch(toolCallRequest);
+        // 3. Return the code mode goat instead of all tools (with code mode description)
 
-            // TODO - Parse the response
-            // biome-ignore lint/suspicious/noExplicitAny: prototyping
-            const responseMessage: any = await toolCallResponse.json();
-            console.log(
-              "rpc call response",
-              toolName,
-              JSON.stringify(responseMessage, null, 2),
-            );
-            return (
-              responseMessage.result?.structuredContent ||
-              responseMessage.result?.content
-            );
-          },
-          servers: [
-            {
-              ...server,
-              tools: server.tools ?? [],
-            },
-          ],
+        // Only include this single server in code mode
+        const codeModeServers = [server];
+        const codeMode = await createCodeMode({
+          servers: codeModeServers,
+          sessionId,
         });
 
         const codeToolSchema = codeMode.getExecuteCodeToolSchema();
 
         const toolCallResponse: JsonRpcResponse = {
           jsonrpc: "2.0",
-          id: jsonRpcRequest.id ?? null, // hack coaelescing, shoudl be string
+          id: jsonRpcRequest.id ?? null, // hack coaelescing, should be string
           result: {
             tools: [codeToolSchema],
           },

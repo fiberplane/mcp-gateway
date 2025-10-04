@@ -99,9 +99,9 @@ async function runExample() {
   // Create code mode instance
   const codeMode = await createCodeMode({
     servers: mockServers,
-    rpcHandler: mockRpcHandler,
     timeout: 5000, // 5 second timeout
   });
+  codeMode.executionContext.rpcHandler = mockRpcHandler;
 
   console.log("✅ Code mode initialized\n");
 
