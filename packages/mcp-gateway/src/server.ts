@@ -554,7 +554,7 @@ export async function createApp(
           // TODO - return the result as a tool call response
           const toolCallResponse: JsonRpcResponse = {
             jsonrpc: "2.0",
-            id: jsonRpcRequest.id ?? null, // hack coaelescing, shoudl be string
+            id: jsonRpcRequest.id ?? null, // hack coaelescing, should be string
             result: {
               content: [
                 {

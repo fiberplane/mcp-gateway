@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { type ExecutionContext, executeCode } from "./executor";
+import { type ExecutionContext, executeCode } from "./evil";
 
 describe("Code Executor", () => {
   test("executes simple code and captures console output", async () => {

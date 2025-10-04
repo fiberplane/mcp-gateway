@@ -18,7 +18,7 @@ import {
   type ExecutionContext,
   type ExecutionResult,
   executeCode,
-} from "./executor";
+} from "./executor/evil";
 import { toCodeModeServer } from "./types";
 
 // Re-export core types
