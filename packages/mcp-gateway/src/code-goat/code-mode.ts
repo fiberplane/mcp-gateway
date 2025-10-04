@@ -19,18 +19,6 @@ import type { ExecutionContext, ExecutionResult } from "./executor/types";
 import { toCodeModeServer } from "./types";
 
 /**
- * Represents a single MCP tool with its schema
- */
-export interface MCPTool {
-  name: string;
-  description: string;
-  // biome-ignore lint/suspicious/noExplicitAny: JSON schema can be any object shape
-  inputSchema: Record<string, any>;
-  // biome-ignore lint/suspicious/noExplicitAny: JSON schema can be any object shape
-  outputSchema?: Record<string, any>;
-}
-
-/**
  * Configuration for code mode
  */
 export interface CodeModeConfig {
@@ -62,7 +50,7 @@ export interface CodeMode {
   executeCode: (userCode: string) => Promise<ExecutionResult>;
 
   /** Get the tool schema for the code execution tool */
-  getExecuteCodeToolSchema: (serverName?: string) => ExecuteCodeToolSchema;
+  getExecuteCodeToolSchema: () => ExecuteCodeToolSchema;
 }
 
 /**
@@ -124,9 +112,6 @@ export async function createCodeMode(
       return await executeCode(userCode, executionContext);
     },
 
-    /**
-     * @deprecated - Use the utility function `createCodeToolDescriptionFromTypes` or `createCodeToolDescriptionFromServers`
-     */
     getExecuteCodeToolSchema: () =>
       createCodeToolDescriptionFromTypes(typeDefinitions),
   };

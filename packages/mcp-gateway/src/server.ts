@@ -631,7 +631,7 @@ export async function createApp(
           ],
         });
 
-        const codeToolSchema = codeMode.getExecuteCodeToolSchema(server.name);
+        const codeToolSchema = codeMode.getExecuteCodeToolSchema();
 
         const toolCallResponse: JsonRpcResponse = {
           jsonrpc: "2.0",
