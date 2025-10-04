@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { type ExecutionContext, executeCode } from "./evil";
+import { executeCode } from "./evil";
+import type { ExecutionContext } from "./types";
 
 describe("Code Executor", () => {
   test("executes simple code and captures console output", async () => {
@@ -103,7 +104,7 @@ describe("Code Executor", () => {
           }
         };
       `,
-      rpcHandler: async (_server, _tool, _args) => {
+      rpcHandler: async (_server: string, _tool: string, _args: unknown) => {
         calls.push({ server: _server, tool: _tool, args: _args });
         return { result: "success" };
       },
@@ -137,7 +138,7 @@ describe("Code Executor", () => {
           }
         };
       `,
-      rpcHandler: async (server, tool, _args) => {
+      rpcHandler: async (server: string, tool: string, _args: unknown) => {
         calls.push(`${server}.${tool}`);
         return { status: "ok" };
       },
@@ -220,7 +221,7 @@ describe("Code Executor", () => {
           }
         };
       `,
-      rpcHandler: async (_server, _tool, args) => {
+      rpcHandler: async (_server: string, _tool: string, args: unknown) => {
         const { a, b } = args as { a: number; b: number };
         return { result: a + b };
       },

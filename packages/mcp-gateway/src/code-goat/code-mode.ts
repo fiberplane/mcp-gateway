@@ -14,11 +14,8 @@ import type { McpServer } from "../registry";
 import { generateApiClient } from "./api-generation/generate-client";
 import { generateTypes } from "./api-generation/generate-types";
 import { createCodeToolDescriptionFromTypes } from "./code-tool-description";
-import {
-  type ExecutionContext,
-  type ExecutionResult,
-  executeCode,
-} from "./executor/evil";
+import { executeCode } from "./executor/evil";
+import type { ExecutionContext, ExecutionResult } from "./executor/types";
 import { toCodeModeServer } from "./types";
 
 // Re-export core types

@@ -10,7 +10,7 @@
  * This is an eval-based PROTOTYPE - not suitable for production use.
  */
 
-import type { ExecutionContext, ExecutionResult } from "./executor/evil";
+import type { ExecutionContext, ExecutionResult } from "./executor/types";
 
 // Re-export core types
 export type { ExecutionContext, ExecutionResult };

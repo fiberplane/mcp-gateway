@@ -5,37 +5,7 @@
  * This is a PROTOTYPE ONLY - runs code in the same process with no sandboxing.
  */
 
-export interface ExecutionContext {
-  /** The generated runtime API code (JavaScript) */
-  runtimeApi: string;
-
-  /** Function that routes tool calls to actual MCP servers */
-  rpcHandler: (
-    serverName: string,
-    toolName: string,
-    args: unknown,
-  ) => Promise<unknown>;
-
-  /** Optional timeout in milliseconds */
-  timeout?: number;
-}
-
-export interface ExecutionResult {
-  /** Console output captured during execution */
-  output: string;
-
-  /** Whether execution completed successfully */
-  success: boolean;
-
-  /** Error message if execution failed */
-  error?: string;
-
-  /** Error stack trace if available */
-  stack?: string;
-
-  /** Return value from the code (if any) */
-  returnValue?: unknown;
-}
+import type { ExecutionContext, ExecutionResult } from "./types";
 
 /**
  * Executes user code with access to MCP tools.
