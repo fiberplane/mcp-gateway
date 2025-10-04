@@ -16,6 +16,7 @@ import {
   storeClientInfo,
 } from "./capture.js";
 import { CODE_GOAT_TOOL_NAME, createCodeMode } from "./code-goat";
+import { formatExecutionResult } from "./code-goat/executor/types.js";
 import { buildToolCallRequest } from "./code-goat/mcp-utils.js";
 import { createMcpApp } from "./mcp-server.js";
 import {
@@ -560,7 +561,7 @@ export async function createApp(
                 {
                   type: "text",
                   // TODO - Format the result as markdown
-                  text: JSON.stringify(result, null, 2),
+                  text: formatExecutionResult(result),
                 },
               ],
             },
