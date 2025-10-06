@@ -1,19 +1,22 @@
-import { useAppStore } from '../store';
-import { COLORS } from '../colors';
+import { COLORS } from "../colors";
+import { useAppStore } from "../store";
 
 export function ServerList() {
-  const registry = useAppStore(state => state.registry);
+  const registry = useAppStore((state) => state.registry);
 
   if (registry.servers.length === 0) {
     return <text fg={COLORS.GRAY}>No servers registered</text>;
   }
 
   return (
-    <box style={{ flexDirection: 'column' }}>
+    <box style={{ flexDirection: "column" }}>
       <text fg={COLORS.CYAN}>Servers:</text>
-      {registry.servers.map(server => (
-        <box key={server.name} style={{ flexDirection: 'column', marginTop: 1 }}>
-          <text fg={COLORS.GREEN}>Ï {server.name}</text>
+      {registry.servers.map((server) => (
+        <box
+          key={server.name}
+          style={{ flexDirection: "column", marginTop: 1 }}
+        >
+          <text fg={COLORS.GREEN}>ï¿½ {server.name}</text>
           <text fg={COLORS.GRAY}>{server.url}</text>
         </box>
       ))}
