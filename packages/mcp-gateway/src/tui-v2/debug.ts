@@ -1,6 +1,6 @@
-import { appendFileSync, writeFileSync, mkdirSync } from "fs";
-import { dirname, join } from "path";
+import { appendFileSync, mkdirSync, writeFileSync } from "fs";
 import { homedir } from "os";
+import { dirname, join } from "path";
 
 const DEBUG_LOG = join(homedir(), ".mcp-gateway", "tui-debug.log");
 
@@ -20,6 +20,7 @@ export function initDebugLog() {
 }
 
 // Log to file
+// biome-ignore lint/suspicious/noExplicitAny: Debug function needs to accept any type
 export function debug(...args: any[]) {
   const timestamp = new Date().toISOString();
   const message = args

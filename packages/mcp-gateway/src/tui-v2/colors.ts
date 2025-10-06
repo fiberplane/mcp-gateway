@@ -5,4 +5,5 @@ export const COLORS = {
   RED: "#FF0000",
   GRAY: "#808080",
   WHITE: "#FFFFFF",
+  BLACK: "#000000",
 } as const;

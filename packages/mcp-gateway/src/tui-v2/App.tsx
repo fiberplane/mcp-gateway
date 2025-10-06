@@ -2,12 +2,15 @@ import { render, useKeyboard } from "@opentui/react";
 import type { Registry } from "../registry";
 import type { Context } from "../tui/state";
 import { ActivityLog } from "./components/ActivityLog";
+import { AddServerModal } from "./components/AddServerModal";
+import { DeleteServerModal } from "./components/DeleteServerModal";
 import { Footer } from "./components/Footer";
 import { Header } from "./components/Header";
+import { McpInstructionsModal } from "./components/McpInstructionsModal";
 import { ServerList } from "./components/ServerList";
-import { useAppStore } from "./store";
 import { debug } from "./debug";
 import { useExternalEvents } from "./hooks/useExternalEvents";
+import { useAppStore } from "./store";
 
 let exitHandler: (() => Promise<void>) | undefined;
 
@@ -19,10 +22,25 @@ function App() {
   // Wire up external events (registry updates, logs)
   useExternalEvents();
 
+  const activeModal = useAppStore((state) => state.activeModal);
   const clearLogs = useAppStore((state) => state.clearLogs);
+  const openModal = useAppStore((state) => state.openModal);
+  const closeModal = useAppStore((state) => state.closeModal);
 
   useKeyboard((key) => {
     debug("Key pressed:", key.name);
+
+    // ESC closes any modal
+    if (key.name === "escape" && activeModal) {
+      debug("Closing modal");
+      closeModal();
+      return;
+    }
+
+    // Don't process other keys if a modal is open
+    if (activeModal) {
+      return;
+    }
 
     if (key.name === "q") {
       debug("Exiting app");
@@ -34,17 +52,19 @@ function App() {
       clearLogs();
     }
 
-    // TODO: These will open modals in next steps
     if (key.name === "a") {
-      debug("TODO: Add server modal");
+      debug("Opening add server modal");
+      openModal("add-server");
     }
 
     if (key.name === "d") {
-      debug("TODO: Delete server modal");
+      debug("Opening delete server modal");
+      openModal("delete-server");
     }
 
     if (key.name === "m") {
-      debug("TODO: MCP instructions modal");
+      debug("Opening MCP instructions modal");
+      openModal("mcp-instructions");
     }
   });
 
@@ -58,6 +78,11 @@ function App() {
       </box>
 
       <Footer />
+
+      {/* Render active modal */}
+      {activeModal === "add-server" && <AddServerModal />}
+      {activeModal === "delete-server" && <DeleteServerModal />}
+      {activeModal === "mcp-instructions" && <McpInstructionsModal />}
     </box>
   );
 }

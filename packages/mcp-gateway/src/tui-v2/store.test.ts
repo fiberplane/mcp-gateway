@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { useAppStore } from "./store";
 
 describe("AppStore", () => {
@@ -36,8 +36,8 @@ describe("AppStore", () => {
         .addServer("Test-Server  ", "http://localhost:3000/mcp/");
 
       const state = useAppStore.getState();
-      expect(state.registry.servers[0].name).toBe("test-server");
-      expect(state.registry.servers[0].url).toBe("http://localhost:3000/mcp");
+      expect(state.registry.servers[0]?.name).toBe("test-server");
+      expect(state.registry.servers[0]?.url).toBe("http://localhost:3000/mcp");
     } catch (error) {
       // Expected to fail without real file system
       expect(error).toBeDefined();

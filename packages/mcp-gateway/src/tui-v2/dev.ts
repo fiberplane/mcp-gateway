@@ -11,7 +11,7 @@ import { createApp } from "../server.js";
 import { getStorageRoot, loadRegistry } from "../storage.js";
 import type { Context } from "../tui/state.js";
 import { runOpenTUI } from "./App.js";
-import { initDebugLog, getDebugLogPath } from "./debug.js";
+import { getDebugLogPath, initDebugLog } from "./debug.js";
 
 async function main() {
   // Initialize debug logging

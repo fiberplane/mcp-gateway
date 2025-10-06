@@ -1,13 +1,16 @@
 import { create } from "zustand";
-import { saveRegistry } from "../storage";
 import type { Registry } from "../registry";
+import { saveRegistry } from "../storage";
 import type { LogEntry } from "../tui/state";
+
+type ModalType = "add-server" | "delete-server" | "mcp-instructions" | null;
 
 interface AppStore {
   // State
   registry: Registry;
   logs: LogEntry[];
   storageDir: string;
+  activeModal: ModalType;
 
   // Actions
   initialize: (registry: Registry, storageDir: string) => void;
@@ -16,6 +19,8 @@ interface AppStore {
   setRegistry: (registry: Registry) => void;
   addLog: (entry: LogEntry) => void;
   clearLogs: () => void;
+  openModal: (modal: ModalType) => void;
+  closeModal: () => void;
 }
 
 export const useAppStore = create<AppStore>((set, get) => ({
@@ -23,6 +28,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   registry: { servers: [] },
   logs: [],
   storageDir: "",
+  activeModal: null,
 
   // Actions
   initialize: (registry, storageDir) => set({ registry, storageDir }),
@@ -76,4 +82,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
   setRegistry: (registry) => set({ registry }),
   addLog: (entry) => set((state) => ({ logs: [...state.logs, entry] })),
   clearLogs: () => set({ logs: [] }),
+  openModal: (modal) => set({ activeModal: modal }),
+  closeModal: () => set({ activeModal: null }),
 }));
