@@ -6,6 +6,7 @@ import { Header } from "./components/Header";
 import { ServerList } from "./components/ServerList";
 import { useAppStore } from "./store";
 import { debug } from "./debug";
+import { useExternalEvents } from "./hooks/useExternalEvents";
 
 let exitHandler: (() => Promise<void>) | undefined;
 
@@ -14,6 +15,9 @@ export function setExitHandler(handler: () => Promise<void>) {
 }
 
 function App() {
+  // Wire up external events (registry updates, logs)
+  useExternalEvents();
+
   useKeyboard((key) => {
     debug("Key pressed:", key.name);
 
