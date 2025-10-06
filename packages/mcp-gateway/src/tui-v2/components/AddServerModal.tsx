@@ -1,44 +1,106 @@
-import { COLORS } from "../colors";
+import { useKeyboard } from "@opentui/react";
+import { useCallback, useState } from "react";
+import { debug } from "../debug";
 import { useAppStore } from "../store";
+import { useTheme } from "../theme-context";
 import { Modal } from "./Modal";
 
 export function AddServerModal() {
+  const theme = useTheme();
   const closeModal = useAppStore((state) => state.closeModal);
+  const addServer = useAppStore((state) => state.addServer);
+
+  const [name, setName] = useState("");
+  const [url, setUrl] = useState("");
+  const [focusedField, setFocusedField] = useState<"name" | "url">("name");
+  const [status, setStatus] = useState<"idle" | "submitting" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState("");
+
+  // Handle Tab key to switch between fields
+  useKeyboard((key) => {
+    if (key.name === "tab") {
+      setFocusedField((prev) => (prev === "name" ? "url" : "name"));
+    }
+  });
+
+  const handleSubmit = useCallback(async () => {
+    // Validation
+    if (!name.trim()) {
+      setStatus("error");
+      setErrorMessage("Server name is required");
+      return;
+    }
+
+    if (!url.trim()) {
+      setStatus("error");
+      setErrorMessage("Server URL is required");
+      return;
+    }
+
+    // Validate URL format
+    try {
+      new URL(url);
+    } catch {
+      setStatus("error");
+      setErrorMessage("Invalid URL format");
+      return;
+    }
+
+    // Submit
+    try {
+      setStatus("submitting");
+      setErrorMessage("");
+      debug("Adding server", { name, url });
+      await addServer(name, url);
+      debug("Server added successfully");
+      closeModal();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      debug("Error adding server", message);
+      setStatus("error");
+      setErrorMessage(message);
+    }
+  }, [name, url, addServer, closeModal]);
+
+  const statusColor = status === "error" ? theme.danger : theme.foregroundMuted;
+  const statusText =
+    status === "submitting"
+      ? "Adding server..."
+      : status === "error"
+        ? `Error: ${errorMessage}`
+        : "";
 
   return (
     <Modal title="Add MCP Server" onClose={closeModal}>
-      <box style={{ flexDirection: "column" }}>
-        <text fg={COLORS.CYAN}>
-          To add a server, edit your registry configuration:
-        </text>
-
-        <text style={{ marginTop: 1 }}>1. Quit the TUI (press 'q')</text>
-        <text>2. Edit ~/.mcp-gateway/registry.json</text>
-        <text>3. Add your server configuration:</text>
-
-        <box
-          style={{
-            flexDirection: "column",
-            marginTop: 0,
-            marginLeft: 2,
-            padding: 1,
-          }}
-        >
-          <text fg={COLORS.GRAY}>{"{"}</text>
-          <text fg={COLORS.GRAY}> "servers": [</text>
-          <text fg={COLORS.YELLOW}> {"{"}</text>
-          <text fg={COLORS.GREEN}> "name": "my-server",</text>
-          <text fg={COLORS.GREEN}> "url": "http://localhost:3000/mcp",</text>
-          <text fg={COLORS.GREEN}> "type": "http"</text>
-          <text fg={COLORS.YELLOW}> {"}"}</text>
-          <text fg={COLORS.GRAY}> ]</text>
-          <text fg={COLORS.GRAY}>{"}"}</text>
+      <box style={{ flexDirection: "column", gap: 1 }}>
+        <box title="Server Name" style={{ border: true, width: 50, height: 3 }}>
+          <input
+            placeholder="my-server"
+            value={name}
+            onInput={setName}
+            onSubmit={handleSubmit}
+            focused={focusedField === "name"}
+          />
         </box>
 
-        <text style={{ marginTop: 1 }}>4. Restart the gateway</text>
+        <box title="Server URL" style={{ border: true, width: 50, height: 3 }}>
+          <input
+            placeholder="http://localhost:3000/mcp"
+            value={url}
+            onInput={setUrl}
+            onSubmit={handleSubmit}
+            focused={focusedField === "url"}
+          />
+        </box>
 
-        <text fg={COLORS.GRAY} style={{ marginTop: 2 }}>
-          Note: Interactive form input coming in a future update
+        {statusText && (
+          <text fg={statusColor} style={{ marginTop: 1 }}>
+            {statusText}
+          </text>
+        )}
+
+        <text fg={theme.foregroundMuted} style={{ marginTop: 1 }}>
+          [ENTER] Add Server • [TAB] Switch Field
         </text>
       </box>
     </Modal>
