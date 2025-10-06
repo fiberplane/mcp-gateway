@@ -1,6 +1,6 @@
-import { appendFileSync, mkdirSync, writeFileSync } from "fs";
-import { homedir } from "os";
-import { dirname, join } from "path";
+import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { dirname, join } from "node:path";
 
 const DEBUG_LOG = join(homedir(), ".mcp-gateway", "tui-debug.log");
 
@@ -14,7 +14,7 @@ export function initDebugLog() {
       DEBUG_LOG,
       `=== TUI Debug Log Started: ${new Date().toISOString()} ===\n`,
     );
-  } catch (error) {
+  } catch (_error) {
     // Silently fail if can't write
   }
 }
@@ -31,7 +31,7 @@ export function debug(...args: any[]) {
 
   try {
     appendFileSync(DEBUG_LOG, `[${timestamp}] ${message}\n`);
-  } catch (error) {
+  } catch (_error) {
     // Silently fail if can't write
   }
 }

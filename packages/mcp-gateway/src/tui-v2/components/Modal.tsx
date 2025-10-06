@@ -6,7 +6,7 @@ interface ModalProps {
   onClose: () => void;
 }
 
-export function Modal({ title, children, onClose }: ModalProps) {
+export function Modal({ title, children }: ModalProps) {
   return (
     <box
       style={{
