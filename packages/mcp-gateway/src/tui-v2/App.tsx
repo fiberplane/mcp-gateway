@@ -11,6 +11,7 @@ import { ServerList } from "./components/ServerList";
 import { debug } from "./debug";
 import { useExternalEvents } from "./hooks/useExternalEvents";
 import { useAppStore } from "./store";
+import { ThemeProvider } from "./theme-context";
 
 let exitHandler: (() => Promise<void>) | undefined;
 
@@ -69,21 +70,23 @@ function App() {
   });
 
   return (
-    <box style={{ flexDirection: "column", height: "100%", padding: 2 }}>
-      <Header />
+    <ThemeProvider>
+      <box style={{ flexDirection: "column", height: "100%", padding: 2 }}>
+        <Header />
 
-      <box style={{ flexDirection: "column", flexGrow: 1 }}>
-        <ServerList />
-        <ActivityLog />
+        <box style={{ flexDirection: "column", flexGrow: 1 }}>
+          <ServerList />
+          <ActivityLog />
+        </box>
+
+        <Footer />
+
+        {/* Render active modal */}
+        {activeModal === "add-server" && <AddServerModal />}
+        {activeModal === "delete-server" && <DeleteServerModal />}
+        {activeModal === "mcp-instructions" && <McpInstructionsModal />}
       </box>
-
-      <Footer />
-
-      {/* Render active modal */}
-      {activeModal === "add-server" && <AddServerModal />}
-      {activeModal === "delete-server" && <DeleteServerModal />}
-      {activeModal === "mcp-instructions" && <McpInstructionsModal />}
-    </box>
+    </ThemeProvider>
   );
 }
 
