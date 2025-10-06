@@ -19,12 +19,32 @@ function App() {
   // Wire up external events (registry updates, logs)
   useExternalEvents();
 
+  const clearLogs = useAppStore((state) => state.clearLogs);
+
   useKeyboard((key) => {
     debug("Key pressed:", key.name);
 
     if (key.name === "q") {
       debug("Exiting app");
       exitHandler?.();
+    }
+
+    if (key.name === "c") {
+      debug("Clearing logs");
+      clearLogs();
+    }
+
+    // TODO: These will open modals in next steps
+    if (key.name === "a") {
+      debug("TODO: Add server modal");
+    }
+
+    if (key.name === "d") {
+      debug("TODO: Delete server modal");
+    }
+
+    if (key.name === "m") {
+      debug("TODO: MCP instructions modal");
     }
   });
 
