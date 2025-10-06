@@ -11,8 +11,12 @@ import { createApp } from "../server.js";
 import { getStorageRoot, loadRegistry } from "../storage.js";
 import type { Context } from "../tui/state.js";
 import { runOpenTUI } from "./App.js";
+import { initDebugLog, getDebugLogPath } from "./debug.js";
 
 async function main() {
+  // Initialize debug logging
+  initDebugLog();
+
   // Get storage directory (same as real app)
   const storageDir = getStorageRoot();
 
@@ -29,6 +33,7 @@ async function main() {
   });
 
   console.log(`MCP Gateway server started at http://localhost:${port}`);
+  console.log(`Debug log: ${getDebugLogPath()}`);
 
   // Start health checks
   const stopHealthChecks = await startHealthChecks(registry);

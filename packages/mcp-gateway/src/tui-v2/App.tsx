@@ -5,6 +5,7 @@ import { Footer } from "./components/Footer";
 import { Header } from "./components/Header";
 import { ServerList } from "./components/ServerList";
 import { useAppStore } from "./store";
+import { debug } from "./debug";
 
 let exitHandler: (() => Promise<void>) | undefined;
 
@@ -14,7 +15,10 @@ export function setExitHandler(handler: () => Promise<void>) {
 
 function App() {
   useKeyboard((key) => {
+    debug("Key pressed:", key.name);
+
     if (key.name === "q") {
+      debug("Exiting app");
       exitHandler?.();
     }
   });
@@ -33,6 +37,11 @@ function App() {
 }
 
 export async function runOpenTUI(context: Context, registry: Registry) {
+  debug("Initializing OpenTUI app", {
+    serverCount: registry.servers.length,
+    storageDir: context.storageDir,
+  });
+
   // Initialize store
   const initialize = useAppStore.getState().initialize;
   initialize(registry, context.storageDir);
