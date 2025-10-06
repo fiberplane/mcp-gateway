@@ -1,6 +1,7 @@
 import { render, useKeyboard } from "@opentui/react";
 import type { Registry } from "../registry";
 import type { Context } from "../tui/state";
+import { ActivityLog } from "./components/ActivityLog";
 import { Footer } from "./components/Footer";
 import { Header } from "./components/Header";
 import { ServerList } from "./components/ServerList";
@@ -33,6 +34,7 @@ function App() {
 
       <box style={{ flexDirection: "column", flexGrow: 1 }}>
         <ServerList />
+        <ActivityLog />
       </box>
 
       <Footer />
