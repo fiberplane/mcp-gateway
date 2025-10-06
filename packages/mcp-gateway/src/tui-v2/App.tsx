@@ -43,7 +43,7 @@ export async function runOpenTUI(context: Context, registry: Registry) {
       // Call onExit - supports both sync and async
       const result = context.onExit?.();
       // If it returns a promise, await it
-      if (result && typeof result === 'object' && 'then' in result) {
+      if (result && typeof result === "object" && "then" in result) {
         await result;
       }
       process.exit(0);
