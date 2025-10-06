@@ -48,9 +48,12 @@
   "dependencies": {
     "@hono/node-server": "^1.19.4",
     "@hono/standard-validator": "^0.1.5",
+    "@opentui/core": "^0.1.25",
+    "@opentui/react": "^0.1.25",
     "hono": "^4.9.8",
     "mcp-lite": "^0.3.0",
     "open": "^10.2.0",
-    "zod": "^4.1.11"
+    "zod": "^4.1.11",
+    "zustand": "^5.0.8"
   }
 }
