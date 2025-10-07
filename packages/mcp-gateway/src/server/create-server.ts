@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { logger } from "hono/logger";
 import { createMcpApp } from "../mcp-server.js";
 import type { Registry } from "../registry.js";
-import { getStorageRoot, loadRegistry } from "../storage.js";
+import { getStorageRoot } from "../storage.js";
 import { createOAuthRoutes } from "./create-oauth-routes.js";
 import { createProxyRoutes } from "./create-proxy-routes.js";
 
@@ -64,13 +64,3 @@ export async function createApp(
 
   return { app, registry };
 }
-
-// Create app instance for development
-const devRegistry = await loadRegistry(getStorageRoot());
-const { app } = await createApp(devRegistry, getStorageRoot());
-const port = 3333;
-
-export default {
-  port,
-  fetch: app.fetch,
-};
