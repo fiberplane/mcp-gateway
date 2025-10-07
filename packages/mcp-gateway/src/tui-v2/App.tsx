@@ -8,6 +8,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Footer } from "./components/Footer";
 import { Header } from "./components/Header";
 import { McpInstructionsModal } from "./components/McpInstructionsModal";
+import { ServerDetailsModal } from "./components/ServerDetailsModal";
 import { debug } from "./debug";
 import { useExternalEvents } from "./hooks/useExternalEvents";
 import { useAppStore } from "./store";
@@ -65,6 +66,11 @@ function App() {
       openModal("delete-server");
     }
 
+    if (key.name === "s") {
+      debug("Opening server details modal");
+      openModal("server-details");
+    }
+
     if (key.name === "m") {
       debug("Opening MCP instructions modal");
       openModal("mcp-instructions");
@@ -99,6 +105,7 @@ function App() {
       {/* Render active modal */}
       {activeModal === "add-server" && <AddServerModal />}
       {activeModal === "delete-server" && <DeleteServerModal />}
+      {activeModal === "server-details" && <ServerDetailsModal />}
       {activeModal === "mcp-instructions" && <McpInstructionsModal />}
     </box>
   );

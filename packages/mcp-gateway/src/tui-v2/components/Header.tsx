@@ -65,12 +65,13 @@ export function Header() {
             border: ["right"],
             borderColor: theme.border,
             paddingRight: 1,
+            gap: 1,
           }}
         >
           <box style={{ flexDirection: "row", gap: 1 }}>
             <box style={{ flexDirection: "column" }}>
               <text fg={theme.foregroundMuted}>Gateway:</text>
-              <text fg={theme.foregroundMuted}>MCP:</text>
+              <text fg={theme.foregroundMuted}>Unified MCP:</text>
             </box>
             <box style={{ flexDirection: "column" }}>
               <text fg={theme.foreground}>http://localhost:3333</text>
@@ -79,40 +80,32 @@ export function Header() {
               </text>
             </box>
           </box>
+          <text fg={theme.foregroundMuted}>
+            (Routes to all servers below)
+          </text>
         </box>
 
         {/* Right column: Server list */}
-        <box style={{ flexDirection: "column", width: "50%", paddingLeft: 1 }}>
+        <box style={{ flexDirection: "column", width: "50%", paddingLeft: 1, gap: 1 }}>
           {registry.servers.length === 0 ? (
             <text fg={theme.foregroundMuted}>No servers registered</text>
           ) : (
             <>
-              <text fg={theme.accent}>Servers:</text>
-              {registry.servers.map((server) => {
-                const healthColor = getHealthColor(server.health);
-                const encodedName = encodeURIComponent(server.name);
-                const proxyUrl = `http://localhost:3333/servers/${encodedName}/mcp`;
-                const activityTime = formatRelativeTime(server.lastActivity);
-                const activityText = `Last: ${activityTime} • ${server.exchangeCount} exchanges`;
+              <text fg={theme.accent}>Servers ({registry.servers.length}):</text>
+              <box style={{ flexDirection: "column" }}>
 
-                return (
-                  <box
-                    key={server.name}
-                    style={{ flexDirection: "column", marginTop: 1 }}
-                  >
-                    {/* Line 1: Health • Name • Activity */}
-                    <box style={{ flexDirection: "row", gap: 1 }}>
-                      <text fg={healthColor}>●</text>
-                      <text fg={healthColor}>{server.name}</text>
-                      <text fg={theme.foregroundMuted}>{activityText}</text>
+                {registry.servers.map((server) => {
+                  const healthColor = getHealthColor(server.health);
+                  const statusText = server.health === "up" ? "✓ up" : server.health === "down" ? "✗ down" : "<unknown>";
+
+                  return (
+                    <box key={server.name} style={{ flexDirection: "row", justifyContent: "space-between", }}>
+                      <text fg={theme.foreground}>{server.name}</text>
+                      <text fg={healthColor}>{statusText}</text>
                     </box>
-                    {/* Line 2: Proxy URL */}
-                    <text fg={theme.foregroundMuted} style={{ paddingLeft: 2 }}>
-                      → {proxyUrl}
-                    </text>
-                  </box>
-                );
-              })}
+                  );
+                })}
+              </box>
             </>
           )}
         </box>

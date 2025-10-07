@@ -39,11 +39,11 @@ export function Modal({ title, children }: ModalProps) {
         title={title}
         titleAlignment="center"
       >
-        {/* Scrollable content area - focused by default for immediate scrolling */}
+        {/* Scrollable content area */}
         <scrollbox
           style={{ flexGrow: 1 }}
           scrollY={true}
-          focused={true}
+          focused={false}
           focusedBorderColor={theme.accent}
         >
           {children}

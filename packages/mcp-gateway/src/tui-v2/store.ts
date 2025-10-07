@@ -3,7 +3,7 @@ import type { Registry } from "../registry";
 import { saveRegistry } from "../storage";
 import type { LogEntry } from "../tui/state";
 
-type ModalType = "add-server" | "delete-server" | "mcp-instructions" | null;
+type ModalType = "add-server" | "delete-server" | "server-details" | "mcp-instructions" | null;
 
 interface AppStore {
   // State

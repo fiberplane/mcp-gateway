@@ -30,11 +30,10 @@ export function Footer() {
 
       {/* Center: Server actions */}
       <box style={{ flexDirection: "row", gap: 1 }}>
-        <text fg={theme.foreground}>Servers:</text>
         <text fg={keyColor(false)}>[a]</text>
-        <text fg={labelColor(false)}>Add</text>
-        <text fg={keyColor(!hasServers)}>[d]</text>
-        <text fg={labelColor(!hasServers)}>Delete</text>
+        <text fg={labelColor(false)}>Add server</text>
+        <text fg={keyColor(false)}>[s]</text>
+        <text fg={labelColor(false)}>Servers</text>
       </box>
 
       {/* Right: Info and Quit */}
