@@ -357,7 +357,7 @@ export async function createProxyRoutes(
           // Create two streams from the response body
           const [streamForClient, streamForCapture] = targetResponse.body.tee();
 
-          // Start background capture processing
+          // Start background capture processing (non-blocking, with error isolation)
           processSSECapture(
             streamForCapture,
             storage,
@@ -365,7 +365,15 @@ export async function createProxyRoutes(
             sessionId,
             "GET /mcp", // method for logging
             null, // no request ID for GET
-          );
+          ).catch((error) => {
+            // Log capture errors but don't let them crash the server
+            // Note: ECONNRESET errors are common when the client or server closes the SSE stream
+            const errorCode = error?.code || "UNKNOWN";
+            const errorMsg = error?.message || String(error);
+            console.error(
+              `[SSE Capture] ${server.name} (session: ${sessionId}): ${errorCode} - ${errorMsg}`,
+            );
+          });
 
           // Return streaming response to client
           return new Response(streamForClient, {
@@ -520,7 +528,7 @@ export async function createProxyRoutes(
           // Create two streams from the response body
           const [streamForClient, streamForCapture] = targetResponse.body.tee();
 
-          // Start background capture processing
+          // Start background capture processing (non-blocking, with error isolation)
           processSSECapture(
             streamForCapture,
             storage,
@@ -528,7 +536,15 @@ export async function createProxyRoutes(
             sessionId,
             jsonRpcRequest.method,
             jsonRpcRequest.id,
-          );
+          ).catch((error) => {
+            // Log capture errors but don't let them crash the server
+            // Note: ECONNRESET errors are common when the client or server closes the SSE stream
+            const errorCode = error?.code || "UNKNOWN";
+            const errorMsg = error?.message || String(error);
+            console.error(
+              `[SSE Capture] ${server.name} (session: ${sessionId}): ${errorCode} - ${errorMsg}`,
+            );
+          });
 
           // Return streaming response to client
           return new Response(streamForClient, {
@@ -723,6 +739,7 @@ async function processSSECapture(
       }
     }
   } catch (error) {
+    // Log the error with context
     console.error(`${server.name} → ${method} (SSE capture error):`, error);
     // Don't throw - capture failures shouldn't affect the client stream
   }
