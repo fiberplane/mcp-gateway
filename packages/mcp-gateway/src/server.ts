@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { sValidator } from "@hono/standard-validator";
 import type { Context } from "hono";
 import { Hono } from "hono";
+import { logger } from "hono/logger";
 import { proxy } from "hono/proxy";
 import type { z } from "zod";
 import {
@@ -274,6 +275,9 @@ export async function createApp(
   storageDir?: string,
 ): Promise<{ app: Hono; registry: Registry }> {
   const app = new Hono();
+
+  // TODO - Remove me, I added this for debugging
+  app.use(logger());
 
   // Determine storage directory
   const storage = getStorageRoot(storageDir);
