@@ -285,6 +285,47 @@ export async function createProxyRoutes(
   // Determine storage directory
   const storage = getStorageRoot(storageDir);
 
+  /**
+   * Proxy the GET /mcp route for SSE streams
+   * @todo - capture and record events
+   */
+  app.get(
+    "/:server/mcp",
+    sValidator("param", serverParamSchema),
+    sValidator("header", sessionHeaderSchema),
+    async (c) => {
+      const { server: serverName } = c.req.valid("param");
+      const server = getServer(registry, serverName);
+      if (!server) {
+        return c.notFound();
+      }
+      return proxy(server.url, {
+        headers: buildProxyHeaders(c, server),
+      });
+    },
+  );
+
+  /**
+   * Proxy the DELETE /mcp route for terminating sessions
+   * @todo - capture and record events
+   */
+  app.delete(
+    "/:server/mcp",
+    sValidator("param", serverParamSchema),
+    sValidator("header", sessionHeaderSchema),
+    async (c) => {
+      const { server: serverName } = c.req.valid("param");
+      const server = getServer(registry, serverName);
+      if (!server) {
+        return c.notFound();
+      }
+      return proxy(server.url, {
+        method: "DELETE",
+        headers: buildProxyHeaders(c, server),
+      });
+    },
+  );
+
   // Canonical proxy route for server connections
   app.post(
     "/:server/mcp",
