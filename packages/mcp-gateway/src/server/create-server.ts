@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { logger } from "hono/logger";
 import { createMcpApp } from "../mcp-server.js";
 import type { Registry } from "../registry.js";
 import { getStorageRoot } from "../storage.js";
@@ -12,9 +11,6 @@ export async function createApp(
   storageDir?: string,
 ): Promise<{ app: Hono; registry: Registry }> {
   const app = new Hono();
-
-  // TODO - Remove me, I added this for debugging
-  app.use(logger());
 
   // Determine storage directory
   const storage = getStorageRoot(storageDir);
