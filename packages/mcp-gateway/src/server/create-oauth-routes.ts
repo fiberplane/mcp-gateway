@@ -56,9 +56,10 @@ export async function createOAuthRoutes(registry: Registry): Promise<Hono> {
     return headers;
   }
 
-  // Pattern 1: /.well-known/oauth-protected-resource/servers/:server/mcp
+  // Pattern 1: /.well-known/oauth-protected-resource/{servers|s}/:server/mcp
+  // Using Hono's named parameter regex to match both /servers/:server and /s/:server
   app.get(
-    "/.well-known/oauth-protected-resource/servers/:server/mcp",
+    "/.well-known/oauth-protected-resource/:prefix{servers|s}/:server/mcp",
     sValidator("param", serverParamSchema),
     async (c) => {
       const { server: serverName } = c.req.valid("param");
@@ -77,9 +78,9 @@ export async function createOAuthRoutes(registry: Registry): Promise<Hono> {
     },
   );
 
-  // Pattern 2: /.well-known/oauth-authorization-server/servers/:server/mcp
+  // Pattern 2: /.well-known/oauth-authorization-server/{servers|s}/:server/mcp
   app.get(
-    "/.well-known/oauth-authorization-server/servers/:server/mcp",
+    "/.well-known/oauth-authorization-server/:prefix{servers|s}/:server/mcp",
     sValidator("param", serverParamSchema),
     async (c) => {
       const { server: serverName } = c.req.valid("param");
@@ -98,9 +99,9 @@ export async function createOAuthRoutes(registry: Registry): Promise<Hono> {
     },
   );
 
-  // Pattern 3: /.well-known/openid-configuration/servers/:server/mcp
+  // Pattern 3: /.well-known/openid-configuration/{servers|s}/:server/mcp
   app.get(
-    "/.well-known/openid-configuration/servers/:server/mcp",
+    "/.well-known/openid-configuration/:prefix{servers|s}/:server/mcp",
     sValidator("param", serverParamSchema),
     async (c) => {
       const { server: serverName } = c.req.valid("param");
@@ -119,10 +120,10 @@ export async function createOAuthRoutes(registry: Registry): Promise<Hono> {
     },
   );
 
-  // Pattern 4: /servers/:server/mcp/.well-known/openid-configuration
-  // This is an alternative path pattern where .well-known comes after /mcp
+  // Pattern 4: /{servers|s}/:server/mcp/.well-known/openid-configuration
+  // Alternative path pattern where .well-known comes after /mcp
   app.get(
-    "/servers/:server/mcp/.well-known/openid-configuration",
+    "/:prefix{servers|s}/:server/mcp/.well-known/openid-configuration",
     sValidator("param", serverParamSchema),
     async (c) => {
       const { server: serverName } = c.req.valid("param");
@@ -149,7 +150,7 @@ export async function createOAuthRoutes(registry: Registry): Promise<Hono> {
       {
         error: "server_not_specified",
         message:
-          "Please specify a server: /.well-known/oauth-protected-resource/servers/:server/mcp",
+          "Please specify a server: /.well-known/oauth-protected-resource/servers/:server/mcp or /s/:server/mcp",
       },
       400,
     );
@@ -160,7 +161,7 @@ export async function createOAuthRoutes(registry: Registry): Promise<Hono> {
       {
         error: "server_not_specified",
         message:
-          "Please specify a server: /.well-known/oauth-authorization-server/servers/:server/mcp",
+          "Please specify a server: /.well-known/oauth-authorization-server/servers/:server/mcp or /s/:server/mcp",
       },
       400,
     );
@@ -174,15 +175,15 @@ export async function createOAuthRoutes(registry: Registry): Promise<Hono> {
       {
         error: "server_not_specified",
         message:
-          "OAuth client registration requires a specific server. Use: /servers/:server/mcp/register",
+          "OAuth client registration requires a specific server. Use: /servers/:server/mcp/register or /s/:server/mcp/register",
       },
       400,
     );
   });
 
-  // Pattern 7: Server-specific registration endpoint
+  // Pattern 7: /{servers|s}/:server/mcp/register - Dynamic Client Registration
   app.post(
-    "/servers/:server/mcp/register",
+    "/:prefix{servers|s}/:server/mcp/register",
     sValidator("param", serverParamSchema),
     async (c) => {
       const { server: serverName } = c.req.valid("param");

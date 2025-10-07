@@ -138,7 +138,8 @@ describe("OAuth Routes Integration Tests", () => {
     );
 
     expect(response.status).toBe(200);
-    const data = await response.json();
+    // biome-ignore lint/suspicious/noExplicitAny: test
+    const data: any = await response.json();
     expect(data.resource).toBe("https://api.example.com");
     expect(data.authorization_servers).toContain("https://auth.example.com");
   });
@@ -149,7 +150,8 @@ describe("OAuth Routes Integration Tests", () => {
     );
 
     expect(response.status).toBe(200);
-    const data = await response.json();
+    // biome-ignore lint/suspicious/noExplicitAny: test
+    const data: any = await response.json();
     expect(data.issuer).toBe("https://auth.example.com");
     expect(data.authorization_endpoint).toBe(
       "https://auth.example.com/authorize",
@@ -163,7 +165,8 @@ describe("OAuth Routes Integration Tests", () => {
     );
 
     expect(response.status).toBe(200);
-    const data = await response.json();
+    // biome-ignore lint/suspicious/noExplicitAny: test
+    const data: any = await response.json();
     expect(data.issuer).toBe("https://auth.example.com");
     expect(data.jwks_uri).toBe(
       "https://auth.example.com/.well-known/jwks.json",
@@ -176,7 +179,8 @@ describe("OAuth Routes Integration Tests", () => {
     );
 
     expect(response.status).toBe(200);
-    const data = await response.json();
+    // biome-ignore lint/suspicious/noExplicitAny: test
+    const data: any = await response.json();
     expect(data.issuer).toBe("https://auth.example.com");
   });
 
@@ -196,7 +200,8 @@ describe("OAuth Routes Integration Tests", () => {
     );
 
     expect(response.status).toBe(201);
-    const data = await response.json();
+    // biome-ignore lint/suspicious/noExplicitAny: test
+    const data: any = await response.json();
     expect(data.client_id).toBe("test-client-123");
     expect(data.client_secret).toBe("test-secret-456");
   });
@@ -207,7 +212,8 @@ describe("OAuth Routes Integration Tests", () => {
     );
 
     expect(response.status).toBe(400);
-    const data = await response.json();
+    // biome-ignore lint/suspicious/noExplicitAny: test
+    const data: any = await response.json();
     expect(data.error).toBe("server_not_specified");
   });
 
@@ -219,13 +225,97 @@ describe("OAuth Routes Integration Tests", () => {
     });
 
     expect(response.status).toBe(400);
-    const data = await response.json();
+    // biome-ignore lint/suspicious/noExplicitAny: test
+    const data: any = await response.json();
     expect(data.error).toBe("server_not_specified");
   });
 
   test("should return 404 for unknown server", async () => {
     const response = await fetch(
       `http://localhost:${gateway.port}/.well-known/oauth-protected-resource/servers/unknown/mcp`,
+    );
+
+    expect(response.status).toBe(404);
+  });
+
+  // SHORT ALIAS TESTS (using /s/:server instead of /servers/:server)
+
+  test("should proxy OAuth Protected Resource discovery via short alias", async () => {
+    const response = await fetch(
+      `http://localhost:${gateway.port}/.well-known/oauth-protected-resource/s/figma/mcp`,
+    );
+
+    expect(response.status).toBe(200);
+    // biome-ignore lint/suspicious/noExplicitAny: test
+    const data: any = await response.json();
+    expect(data.resource).toBe("https://api.example.com");
+    expect(data.authorization_servers).toContain("https://auth.example.com");
+  });
+
+  test("should proxy OAuth Authorization Server discovery via short alias", async () => {
+    const response = await fetch(
+      `http://localhost:${gateway.port}/.well-known/oauth-authorization-server/s/figma/mcp`,
+    );
+
+    expect(response.status).toBe(200);
+    // biome-ignore lint/suspicious/noExplicitAny: test
+    const data: any = await response.json();
+    expect(data.issuer).toBe("https://auth.example.com");
+    expect(data.authorization_endpoint).toBe(
+      "https://auth.example.com/authorize",
+    );
+  });
+
+  test("should proxy OpenID Connect discovery via short alias", async () => {
+    const response = await fetch(
+      `http://localhost:${gateway.port}/.well-known/openid-configuration/s/figma/mcp`,
+    );
+
+    expect(response.status).toBe(200);
+    // biome-ignore lint/suspicious/noExplicitAny: test
+    const data: any = await response.json();
+    expect(data.issuer).toBe("https://auth.example.com");
+    expect(data.jwks_uri).toBe(
+      "https://auth.example.com/.well-known/jwks.json",
+    );
+  });
+
+  test("should proxy OpenID Connect discovery via short alias alternate path", async () => {
+    const response = await fetch(
+      `http://localhost:${gateway.port}/s/figma/mcp/.well-known/openid-configuration`,
+    );
+
+    expect(response.status).toBe(200);
+    // biome-ignore lint/suspicious/noExplicitAny: test
+    const data: any = await response.json();
+    expect(data.issuer).toBe("https://auth.example.com");
+  });
+
+  test("should proxy OAuth Dynamic Client Registration via short alias", async () => {
+    const response = await fetch(
+      `http://localhost:${gateway.port}/s/figma/mcp/register`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          client_name: "Test MCP Client via short alias",
+          redirect_uris: ["http://localhost:3000/callback"],
+        }),
+      },
+    );
+
+    expect(response.status).toBe(201);
+    // biome-ignore lint/suspicious/noExplicitAny: test
+    const data: any = await response.json();
+    expect(data.client_id).toBe("test-client-123");
+    expect(data.client_secret).toBe("test-secret-456");
+  });
+
+  test("should return 404 for unknown server via short alias", async () => {
+    const response = await fetch(
+      `http://localhost:${gateway.port}/.well-known/oauth-protected-resource/s/unknown/mcp`,
     );
 
     expect(response.status).toBe(404);
