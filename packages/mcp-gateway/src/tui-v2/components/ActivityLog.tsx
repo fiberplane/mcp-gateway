@@ -275,9 +275,70 @@ export function ActivityLog() {
           alignItems: "center",
           justifyContent: "center",
           flexGrow: 1,
+          padding: 4,
         }}
       >
-        <text fg={theme.foregroundMuted}>No activity</text>
+        <text fg={theme.accent} style={{ marginBottom: 2 }}>
+          Welcome to MCP Gateway!
+        </text>
+
+        <text fg={theme.foreground}>
+          This gateway routes MCP requests to one or more servers.
+        </text>
+
+        <text fg={theme.foregroundMuted} style={{ marginBottom: 1 }}>
+          Activity will appear here as requests flow through.
+        </text>
+
+        <box
+          style={{
+            flexDirection: "column",
+            border: true,
+            borderColor: theme.border,
+            width: "80%",
+            gap: 1,
+          }}
+        >
+          <box style={{ flexDirection: "row" }}>
+            <text
+              fg={theme.accent}
+              style={{ marginBottom: 1, flexBasis: "auto" }}
+            >
+              Get Started:
+            </text>
+          </box>
+          <box
+            style={{ flexDirection: "column", padding: 1, flexGrow: 1, gap: 1 }}
+          >
+            <box style={{ flexDirection: "row" }}>
+              <text fg={theme.foreground}>
+                1. Press [a] to add your first MCP server
+              </text>
+            </box>
+            <box
+              style={{
+                flexDirection: "row",
+                borderColor: theme.border,
+                gap: 1,
+              }}
+            >
+              <text fg={theme.foreground}>
+                2. Configure your MCP client to use:
+              </text>
+              <text fg={theme.foregroundMuted} style={{ paddingLeft: 3 }}>
+                http://localhost:3333/gateway/mcp
+              </text>
+            </box>
+            <text fg={theme.foreground}>
+              3. Send requests and watch them here
+            </text>
+          </box>
+          <box style={{ flexDirection: "row" }}>
+            <text fg={theme.foregroundMuted} style={{ marginTop: 2 }}>
+              Press [m] for more information • [s] to manage servers
+            </text>
+          </box>
+        </box>
       </box>
     );
   }

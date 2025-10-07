@@ -80,26 +80,43 @@ export function Header() {
               </text>
             </box>
           </box>
-          <text fg={theme.foregroundMuted}>
-            (Routes to all servers below)
-          </text>
+          <text fg={theme.foregroundMuted}>(Routes to all servers below)</text>
         </box>
 
         {/* Right column: Server list */}
-        <box style={{ flexDirection: "column", width: "50%", paddingLeft: 1, gap: 1 }}>
+        <box
+          style={{
+            flexDirection: "column",
+            width: "50%",
+            paddingLeft: 1,
+            gap: 1,
+          }}
+        >
           {registry.servers.length === 0 ? (
             <text fg={theme.foregroundMuted}>No servers registered</text>
           ) : (
             <>
-              <text fg={theme.accent}>Servers ({registry.servers.length}):</text>
+              <text fg={theme.accent}>
+                Servers ({registry.servers.length}):
+              </text>
               <box style={{ flexDirection: "column" }}>
-
                 {registry.servers.map((server) => {
                   const healthColor = getHealthColor(server.health);
-                  const statusText = server.health === "up" ? "✓ up" : server.health === "down" ? "✗ down" : "<unknown>";
+                  const statusText =
+                    server.health === "up"
+                      ? "✓ up"
+                      : server.health === "down"
+                        ? "✗ down"
+                        : "<unknown>";
 
                   return (
-                    <box key={server.name} style={{ flexDirection: "row", justifyContent: "space-between", }}>
+                    <box
+                      key={server.name}
+                      style={{
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                      }}
+                    >
                       <text fg={theme.foreground}>{server.name}</text>
                       <text fg={healthColor}>{statusText}</text>
                     </box>

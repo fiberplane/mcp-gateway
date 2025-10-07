@@ -94,9 +94,16 @@ export function AddServerModal() {
         </box>
 
         {statusText && (
-          <text fg={statusColor} style={{ marginTop: 1 }}>
-            {statusText}
-          </text>
+          <box
+            style={{
+              padding: 1,
+              marginTop: 1,
+              border: status === "error",
+              borderColor: theme.danger,
+            }}
+          >
+            <text fg={statusColor}>{statusText}</text>
+          </box>
         )}
 
         <text fg={theme.foregroundMuted} style={{ marginTop: 1 }}>

@@ -156,12 +156,35 @@ export function ServerDetailsModal() {
   if (deleteConfirm) {
     return (
       <Modal title="Delete Server" onClose={closeModal}>
-        <box style={{ flexDirection: "column" }}>
-          <text fg={theme.danger} style={{ marginBottom: 1 }}>
-            Are you sure you want to delete '{deleteConfirm}'?
-          </text>
+        <box style={{ flexDirection: "column", alignItems: "center" }}>
+          <box
+            style={{
+              padding: 2,
+              border: true,
+              borderColor: theme.danger,
+              width: "80%",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
+            <text fg={theme.danger} style={{ marginBottom: 2 }}>
+              ⚠ Warning
+            </text>
 
-          <text fg={theme.foregroundMuted} style={{ marginTop: 1 }}>
+            <text fg={theme.foreground} style={{ marginBottom: 1 }}>
+              Are you sure you want to delete:
+            </text>
+
+            <text fg={theme.accent} style={{ marginBottom: 2 }}>
+              '{deleteConfirm}'
+            </text>
+
+            <text fg={theme.foregroundMuted}>
+              This action cannot be undone.
+            </text>
+          </box>
+
+          <text fg={theme.foregroundMuted} style={{ marginTop: 2 }}>
             Press [y] to confirm, [n] or [ESC] to cancel
           </text>
         </box>
@@ -177,9 +200,7 @@ export function ServerDetailsModal() {
             <text fg={theme.foregroundMuted} style={{ marginBottom: 2 }}>
               No servers registered yet.
             </text>
-            <text fg={theme.accent}>
-              Press [a] to add your first server
-            </text>
+            <text fg={theme.accent}>Press [a] to add your first server</text>
           </>
         ) : (
           <>
@@ -223,19 +244,21 @@ export function ServerDetailsModal() {
                   </text>
 
                   {/* Gateway URL */}
-                  <text
-                    fg={theme.foregroundMuted}
-                    style={{ paddingLeft: 2 }}
-                  >
+                  <text fg={theme.foregroundMuted} style={{ paddingLeft: 2 }}>
                     Gateway: {gatewayUrl}
                   </text>
 
+                  {/* Health check info for down servers */}
+                  {server.health === "down" && server.lastHealthCheck && (
+                    <text fg={theme.danger} style={{ paddingLeft: 2 }}>
+                      Server unreachable (checked{" "}
+                      {formatRelativeTime(server.lastHealthCheck)})
+                    </text>
+                  )}
+
                   {/* Activity info */}
                   {server.lastActivity && (
-                    <text
-                      fg={theme.foregroundMuted}
-                      style={{ paddingLeft: 2 }}
-                    >
+                    <text fg={theme.foregroundMuted} style={{ paddingLeft: 2 }}>
                       Last activity: {activityTime} • {server.exchangeCount}{" "}
                       exchanges
                     </text>
@@ -243,8 +266,11 @@ export function ServerDetailsModal() {
 
                   {/* Actions (only show for selected) */}
                   {isSelected && (
-                    <text fg={theme.accent} style={{ paddingLeft: 2, marginTop: 1 }}>
-                      [e] Export config    [d] Delete server
+                    <text
+                      fg={theme.accent}
+                      style={{ paddingLeft: 2, marginTop: 1 }}
+                    >
+                      [e] Export config [d] Delete server
                     </text>
                   )}
                 </box>
@@ -264,7 +290,8 @@ export function ServerDetailsModal() {
                 Navigation:
               </text>
               <text fg={theme.foregroundMuted}>
-                [↑↓] Select server • [e] Export config • [d] Delete • [a] Add new server
+                [↑↓] Select server • [e] Export config • [d] Delete • [a] Add
+                new server
               </text>
             </box>
           </>

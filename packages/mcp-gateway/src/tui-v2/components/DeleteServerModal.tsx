@@ -75,17 +75,35 @@ export function DeleteServerModal() {
   if (showConfirm && selectedServer) {
     return (
       <Modal title="Confirm Deletion" onClose={closeModal}>
-        <box style={{ flexDirection: "column", gap: 1 }}>
-          <text fg={theme.warning}>
-            Really delete <text fg={theme.success}>{selectedServer.name}</text>?
-          </text>
-          <text fg={theme.foregroundMuted}>{selectedServer.url}</text>
+        <box style={{ flexDirection: "column", alignItems: "center" }}>
+          <box
+            style={{
+              padding: 2,
+              border: true,
+              borderColor: theme.danger,
+              width: "80%",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
+            <text fg={theme.danger} style={{ marginBottom: 2 }}>
+              ⚠ Warning
+            </text>
 
-          <text fg={theme.foregroundMuted} style={{ marginTop: 1 }}>
-            Note: Capture history will be preserved on disk
-          </text>
+            <text fg={theme.foreground} style={{ marginBottom: 1 }}>
+              Really delete '{selectedServer.name}'?
+            </text>
 
-          <text fg={theme.foregroundMuted} style={{ marginTop: 1 }}>
+            <text fg={theme.foregroundMuted} style={{ marginBottom: 2 }}>
+              {selectedServer.url}
+            </text>
+
+            <text fg={theme.foregroundMuted}>
+              Note: Capture history will be preserved
+            </text>
+          </box>
+
+          <text fg={theme.foregroundMuted} style={{ marginTop: 2 }}>
             {isDeleting ? "Deleting..." : "[ENTER] Confirm • [ESC] Cancel"}
           </text>
         </box>
@@ -97,18 +115,31 @@ export function DeleteServerModal() {
   return (
     <Modal title="Delete MCP Server" onClose={closeModal}>
       <box style={{ flexDirection: "column", gap: 1 }}>
-        <text>Select a server to delete:</text>
+        <text fg={theme.accent} style={{ marginBottom: 1 }}>
+          Select a server to delete:
+        </text>
 
         <box style={{ flexDirection: "column" }}>
-          {servers.map((server, i) => (
-            <text
-              key={server.name}
-              fg={i === selectedIndex ? theme.accentActive : theme.foreground}
-            >
-              {i === selectedIndex ? "→ " : "  "}
-              {server.name} ({server.url})
-            </text>
-          ))}
+          {servers.map((server, i) => {
+            const isSelected = i === selectedIndex;
+            return (
+              <box
+                key={server.name}
+                style={{
+                  padding: 1,
+                  backgroundColor: isSelected ? theme.emphasis : undefined,
+                }}
+              >
+                <text fg={isSelected ? theme.accent : theme.foreground}>
+                  {isSelected ? "> " : "  "}
+                  {server.name}
+                </text>
+                <text fg={theme.foregroundMuted} style={{ paddingLeft: 1 }}>
+                  ({server.url})
+                </text>
+              </box>
+            );
+          })}
         </box>
 
         <text fg={theme.foregroundMuted} style={{ marginTop: 1 }}>
