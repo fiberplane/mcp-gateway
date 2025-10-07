@@ -108,7 +108,14 @@ export function ActivityLog() {
   const logs = useAppStore((state) => state.logs);
 
   if (logs.length === 0) {
-    return null; // Don't show section if no logs
+    return (
+      <box
+        style={{ flexDirection: "column", alignItems: "center", marginTop: 2 }}
+      >
+        <text fg={COLORS.GRAY}>No activity</text>
+      </box>
+    );
+    // return null; // Don't show section if no logs
   }
 
   // Show last 15 logs

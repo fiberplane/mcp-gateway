@@ -7,11 +7,10 @@ import { DeleteServerModal } from "./components/DeleteServerModal";
 import { Footer } from "./components/Footer";
 import { Header } from "./components/Header";
 import { McpInstructionsModal } from "./components/McpInstructionsModal";
-import { ServerList } from "./components/ServerList";
 import { debug } from "./debug";
 import { useExternalEvents } from "./hooks/useExternalEvents";
 import { useAppStore } from "./store";
-import { ThemeProvider } from "./theme-context";
+import { ThemeProvider, useTheme } from "./theme-context";
 
 let exitHandler: (() => Promise<void>) | undefined;
 
@@ -22,6 +21,8 @@ export function setExitHandler(handler: () => Promise<void>) {
 function App() {
   // Wire up external events (registry updates, logs)
   useExternalEvents();
+
+  const theme = useTheme();
 
   const activeModal = useAppStore((state) => state.activeModal);
   const clearLogs = useAppStore((state) => state.clearLogs);
@@ -70,23 +71,33 @@ function App() {
   });
 
   return (
-    <ThemeProvider>
-      <box style={{ flexDirection: "column", height: "100%", padding: 2 }}>
-        <Header />
+    <box
+      style={{
+        flexDirection: "column",
+        height: "100%",
+        backgroundColor: theme.background,
+      }}
+    >
+      <Header />
 
-        <box style={{ flexDirection: "column", flexGrow: 1 }}>
-          <ServerList />
-          <ActivityLog />
-        </box>
-
-        <Footer />
-
-        {/* Render active modal */}
-        {activeModal === "add-server" && <AddServerModal />}
-        {activeModal === "delete-server" && <DeleteServerModal />}
-        {activeModal === "mcp-instructions" && <McpInstructionsModal />}
+      <box
+        style={{
+          flexDirection: "column",
+          flexGrow: 1,
+          border: ["top"],
+          borderColor: theme.border,
+        }}
+      >
+        <ActivityLog />
       </box>
-    </ThemeProvider>
+
+      <Footer />
+
+      {/* Render active modal */}
+      {activeModal === "add-server" && <AddServerModal />}
+      {activeModal === "delete-server" && <DeleteServerModal />}
+      {activeModal === "mcp-instructions" && <McpInstructionsModal />}
+    </box>
   );
 }
 
@@ -124,5 +135,9 @@ export async function runOpenTUI(context: Context, registry: Registry) {
   setExitHandler(handleExit);
 
   // Render app
-  render(<App />);
+  render(
+    <ThemeProvider>
+      <App />
+    </ThemeProvider>,
+  );
 }
