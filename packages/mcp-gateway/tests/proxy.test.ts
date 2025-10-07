@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { McpServer, StreamableHttpTransport } from "mcp-lite";
 import type { Registry } from "../src/registry.js";
-import { createApp } from "../src/server.js";
+import { createApp } from "../src/server/create-server.js";
 import { saveRegistry } from "../src/storage.js";
 
 // JSON-RPC response type
