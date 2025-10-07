@@ -7,9 +7,9 @@ export function Footer() {
   const hasLogs = useAppStore((state) => state.logs.length > 0);
 
   const keyColor = (disabled: boolean) =>
-    disabled ? theme.brandForeground : theme.foregroundMuted;
+    disabled ? theme.foregroundMuted : theme.foreground;
   const labelColor = (disabled: boolean) =>
-    disabled ? theme.brandForeground : theme.foregroundMuted;
+    disabled ? theme.foregroundMuted : theme.foreground;
 
   return (
     <box
@@ -30,10 +30,8 @@ export function Footer() {
 
       {/* Center: Server actions */}
       <box style={{ flexDirection: "row", gap: 1 }}>
-        <text fg={theme.brandForeground}>Servers:</text>
-        <text fg={keyColor(false)}>
-          [a]
-        </text>
+        <text fg={theme.foreground}>Servers:</text>
+        <text fg={keyColor(false)}>[a]</text>
         <text fg={labelColor(false)}>Add</text>
         <text fg={keyColor(!hasServers)}>[d]</text>
         <text fg={labelColor(!hasServers)}>Delete</text>

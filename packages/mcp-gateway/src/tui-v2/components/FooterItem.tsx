@@ -1,4 +1,4 @@
-import { COLORS } from "../colors";
+import { useTheme } from "../theme-context";
 
 interface FooterItemProps {
   shortcutKey: string;
@@ -11,8 +11,9 @@ export function FooterItem({
   label,
   disabled = false,
 }: FooterItemProps) {
-  const keyColor = disabled ? COLORS.GRAY : COLORS.YELLOW;
-  const labelColor = disabled ? COLORS.GRAY : COLORS.WHITE;
+  const theme = useTheme();
+  const keyColor = disabled ? theme.foregroundMuted : theme.warning;
+  const labelColor = disabled ? theme.foregroundMuted : theme.foreground;
 
   return (
     <box style={{ flexDirection: "row" }}>

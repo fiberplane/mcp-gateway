@@ -92,14 +92,3 @@ export const defaultTheme: Theme = {
   syntaxString: palette.success,
   syntaxPunctuation: palette.gray500,
 };
-
-// Backward compatibility - keep COLORS export for gradual migration
-export const COLORS = {
-  CYAN: palette.info,
-  YELLOW: palette.warning,
-  GREEN: palette.success,
-  RED: palette.danger,
-  GRAY: palette.gray500,
-  WHITE: palette.white,
-  BLACK: palette.black,
-} as const;

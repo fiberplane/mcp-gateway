@@ -4,6 +4,7 @@ import type { Context } from "../tui/state";
 import { ActivityLog } from "./components/ActivityLog";
 import { AddServerModal } from "./components/AddServerModal";
 import { DeleteServerModal } from "./components/DeleteServerModal";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Footer } from "./components/Footer";
 import { Header } from "./components/Header";
 import { McpInstructionsModal } from "./components/McpInstructionsModal";
@@ -76,6 +77,7 @@ function App() {
         flexDirection: "column",
         height: "100%",
         backgroundColor: theme.background,
+        padding: 0,
       }}
     >
       <Header />
@@ -86,6 +88,7 @@ function App() {
           flexGrow: 1,
           border: ["top"],
           borderColor: theme.border,
+          marginTop: 1,
         }}
       >
         <ActivityLog />
@@ -134,10 +137,31 @@ export async function runOpenTUI(context: Context, registry: Registry) {
   // Make handler available to keyboard handler
   setExitHandler(handleExit);
 
-  // Render app
+  // Setup global error handlers
+  process.on("uncaughtException", (error) => {
+    debug("Uncaught Exception:", {
+      error: error.toString(),
+      message: error.message,
+      stack: error.stack,
+    });
+    console.error("Fatal error:", error);
+    process.exit(1);
+  });
+
+  process.on("unhandledRejection", (reason, promise) => {
+    debug("Unhandled Promise Rejection:", {
+      reason: String(reason),
+      promise: String(promise),
+    });
+    console.error("Unhandled promise rejection:", reason);
+  });
+
+  // Render app with error boundary
   render(
     <ThemeProvider>
-      <App />
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
     </ThemeProvider>,
   );
 }

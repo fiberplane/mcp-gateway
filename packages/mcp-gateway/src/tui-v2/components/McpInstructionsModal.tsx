@@ -1,14 +1,15 @@
-import { COLORS } from "../colors";
 import { useAppStore } from "../store";
+import { useTheme } from "../theme-context";
 import { Modal } from "./Modal";
 
 export function McpInstructionsModal() {
   const closeModal = useAppStore((state) => state.closeModal);
+  const theme = useTheme();
 
   return (
     <Modal title="MCP Client Configuration" onClose={closeModal}>
       <box style={{ flexDirection: "column" }}>
-        <text fg={COLORS.CYAN}>
+        <text fg={theme.accent}>
           To connect an MCP client (like Claude Desktop) to this gateway:
         </text>
 
@@ -21,16 +22,16 @@ export function McpInstructionsModal() {
             padding: 1,
           }}
         >
-          <text fg={COLORS.GRAY}>{"{"}</text>
-          <text fg={COLORS.GRAY}> "mcpServers": {"{"}</text>
-          <text fg={COLORS.YELLOW}> "gateway": {"{"}</text>
-          <text fg={COLORS.GREEN}>
+          <text fg={theme.syntaxPunctuation}>{"{"}</text>
+          <text fg={theme.syntaxPunctuation}> "mcpServers": {"{"}</text>
+          <text fg={theme.syntaxKey}> "gateway": {"{"}</text>
+          <text fg={theme.syntaxString}>
             {`      "url": "http://localhost:3333/sse",`}
           </text>
-          <text fg={COLORS.GREEN}> "transport": "sse"</text>
-          <text fg={COLORS.YELLOW}> {"}"}</text>
-          <text fg={COLORS.GRAY}> {"}"}</text>
-          <text fg={COLORS.GRAY}>{"}"}</text>
+          <text fg={theme.syntaxString}> "transport": "sse"</text>
+          <text fg={theme.syntaxKey}> {"}"}</text>
+          <text fg={theme.syntaxPunctuation}> {"}"}</text>
+          <text fg={theme.syntaxPunctuation}>{"}"}</text>
         </box>
 
         <text style={{ marginTop: 1 }}>
@@ -41,7 +42,7 @@ export function McpInstructionsModal() {
           3. Add servers using the 'a' key in this interface
         </text>
 
-        <text fg={COLORS.GRAY} style={{ marginTop: 2 }}>
+        <text fg={theme.foregroundMuted} style={{ marginTop: 2 }}>
           For more information, visit: https://github.com/fiberplane/mcp-gateway
         </text>
       </box>

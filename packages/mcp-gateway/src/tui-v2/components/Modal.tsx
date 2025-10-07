@@ -1,4 +1,4 @@
-import { COLORS } from "../colors";
+import { useTheme } from "../theme-context";
 
 interface ModalProps {
   title: string;
@@ -7,6 +7,8 @@ interface ModalProps {
 }
 
 export function Modal({ title, children }: ModalProps) {
+  const theme = useTheme();
+
   return (
     <box
       style={{
@@ -18,7 +20,7 @@ export function Modal({ title, children }: ModalProps) {
         justifyContent: "center",
         alignItems: "center",
       }}
-      backgroundColor={COLORS.BLACK}
+      backgroundColor={theme.background}
     >
       {/* Modal content box */}
       <box
@@ -32,8 +34,8 @@ export function Modal({ title, children }: ModalProps) {
         }}
         border={true}
         borderStyle="double"
-        borderColor={COLORS.CYAN}
-        backgroundColor={COLORS.BLACK}
+        borderColor={theme.accent}
+        backgroundColor={theme.background}
         title={title}
         titleAlignment="center"
       >
@@ -42,13 +44,13 @@ export function Modal({ title, children }: ModalProps) {
           style={{ flexGrow: 1 }}
           scrollY={true}
           focused={true}
-          focusedBorderColor={COLORS.CYAN}
+          focusedBorderColor={theme.accent}
         >
           {children}
         </scrollbox>
 
         {/* Fixed footer */}
-        <text fg={COLORS.GRAY} style={{ marginTop: 1 }}>
+        <text fg={theme.foregroundMuted} style={{ marginTop: 1 }}>
           Press ESC to close • ↑↓ to scroll
         </text>
       </box>
