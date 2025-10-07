@@ -11,7 +11,7 @@
     },
     "packages/mcp-gateway": {
       "name": "@fiberplane/mcp-gateway",
-      "version": "0.2.3",
+      "version": "0.3.3",
       "bin": {
         "mcp-gateway": "bin/cli.js",
       },
@@ -19,7 +19,7 @@
         "@hono/node-server": "^1.19.4",
         "@hono/standard-validator": "^0.1.5",
         "hono": "^4.9.8",
-        "mcp-lite": "^0.3.0",
+        "mcp-lite": "^0.7.0",
         "open": "^10.2.0",
         "zod": "^4.1.11",
       },
@@ -213,7 +213,7 @@
 
     "lodash.startcase": ["lodash.startcase@4.4.0", "", {}, "sha512-+WKqsK294HMSc2jEbNgpHpd0JfIBhp7rEV4aqXWqFr6AlXov+SlcgB1Fv01y2kGe3Gc8nMW7VA0SrGuSkRfIEg=="],
 
-    "mcp-lite": ["mcp-lite@0.3.0", "", { "dependencies": { "@standard-schema/spec": "^1.0.0" } }, "sha512-NBrwSOmwaylakhCL5WELEsiYPoqrG4m+qKt6sXFg+uldnU68WJTj2e25XIguC51LclyVk1SpGjZkA0MAq23QvQ=="],
+    "mcp-lite": ["mcp-lite@0.7.0", "", { "dependencies": { "@standard-schema/spec": "^1.0.0" } }, "sha512-cY64CMEAJe7QtQafq0xLjx8G3DXLgZ/troiql1gnU0ANqX9vjKZLa23+n9/elV+v5vTvxVD5FauhEnIORgxWBA=="],
 
     "merge2": ["merge2@1.4.1", "", {}, "sha512-8q7VEgMJW4J8tcfVPy8g09NcQwZdbwFEqhe/WZkoIzjn/3TGDwtOCYtXGxA3O8tPzpczCCDgv+P2P5y00ZJOOg=="],
 
