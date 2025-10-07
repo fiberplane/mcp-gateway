@@ -3,6 +3,7 @@ import { logger } from "hono/logger";
 import { createMcpApp } from "../mcp-server.js";
 import type { Registry } from "../registry.js";
 import { getStorageRoot, loadRegistry } from "../storage.js";
+import { createOAuthRoutes } from "./create-oauth-routes.js";
 import { createProxyRoutes } from "./create-proxy-routes.js";
 
 // Create main application
@@ -43,6 +44,11 @@ export async function createApp(
       storage: storage,
     });
   });
+
+  // Mount OAuth discovery and registration routes
+  // These need to be mounted BEFORE the proxy routes to handle .well-known paths
+  const oauthRoutes = await createOAuthRoutes(registry);
+  app.route("/", oauthRoutes);
 
   // Mount the proxy routes for server connections
   const proxyRoutes = await createProxyRoutes(registry, storage);
