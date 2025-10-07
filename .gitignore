@@ -1,6 +1,9 @@
 # dependencies (bun install)
 node_modules
 
+# cursor/vscode settings
+.vscode/settings.json
+
 # playwright mcp
 .playwright-mcp
 
