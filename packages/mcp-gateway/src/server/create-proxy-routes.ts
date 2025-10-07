@@ -287,21 +287,110 @@ export async function createProxyRoutes(
 
   /**
    * Proxy the GET /mcp route for SSE streams
-   * @todo - capture and record events
+   * Handles Server-Sent Events from the target MCP server, capturing and logging all events
    */
   app.get(
     "/:server/mcp",
     sValidator("param", serverParamSchema),
     sValidator("header", sessionHeaderSchema),
     async (c) => {
+      const startTime = Date.now();
+
+      // Get validated data
       const { server: serverName } = c.req.valid("param");
+
+      // Find server in registry
       const server = getServer(registry, serverName);
       if (!server) {
         return c.notFound();
       }
-      return proxy(server.url, {
-        headers: buildProxyHeaders(c, server),
-      });
+
+      // Extract session ID from headers
+      const validatedHeaders = c.req.valid("header");
+      const sessionId = extractSessionId(validatedHeaders);
+
+      // Build proxy headers for GET request
+      const proxyHeaders = buildProxyHeaders(c, server);
+
+      try {
+        // Forward GET request to target MCP server
+        const targetResponse = await proxy(server.url, {
+          method: "GET",
+          headers: proxyHeaders,
+        });
+
+        const httpStatus = targetResponse.status;
+
+        // IMPORTANT: Check for 401 early and return as-is
+        if (httpStatus === 401) {
+          const duration = Date.now() - startTime;
+          const responseText = await targetResponse.text();
+          const responseHeaders = new Headers(targetResponse.headers);
+
+          // Remove auto-generated headers
+          for (const header of AUTO_HEADERS) {
+            responseHeaders.delete(header);
+          }
+
+          // Log the 401 response (for TUI visibility)
+          logResponse(server, sessionId, "GET /mcp", 401, duration);
+
+          return new Response(responseText, {
+            status: 401,
+            headers: responseHeaders,
+          });
+        }
+
+        // Check if response is SSE stream
+        const contentType =
+          targetResponse.headers.get("content-type")?.toLowerCase() || "";
+        const isSSE = contentType.startsWith("text/event-stream");
+
+        if (isSSE) {
+          // Update server activity immediately for SSE
+          await updateServerActivity(storage, registry, server);
+
+          if (!targetResponse.body) {
+            throw new Error("SSE response has no body");
+          }
+
+          // Create two streams from the response body
+          const [streamForClient, streamForCapture] = targetResponse.body.tee();
+
+          // Start background capture processing
+          processSSECapture(
+            streamForCapture,
+            storage,
+            server,
+            sessionId,
+            "GET /mcp", // method for logging
+            null, // no request ID for GET
+          );
+
+          // Return streaming response to client
+          return new Response(streamForClient, {
+            status: httpStatus,
+            headers: targetResponse.headers,
+          });
+        }
+
+        // Handle non-SSE responses (shouldn't happen normally but be defensive)
+        const responseText = await targetResponse.text();
+        await updateServerActivity(storage, registry, server);
+
+        return new Response(responseText, {
+          status: httpStatus,
+          headers: targetResponse.headers,
+        });
+      } catch (error) {
+        const duration = Date.now() - startTime;
+
+        // Log error
+        logResponse(server, sessionId, "GET /mcp", 500, duration);
+
+        // Return error response (not JSON-RPC format for GET)
+        return c.json({ error: String(error) }, 500);
+      }
     },
   );
 
