@@ -366,4 +366,217 @@ describe("Proxy Integration Tests", () => {
       expect(responseRecord.response.result.content[0].text).toBe("30");
     });
   });
+
+  describe("Authentication Handling", () => {
+    it("should forward 401 responses with auth headers", async () => {
+      // Create a mock server that returns 401 for unauthorized requests
+      const authServerPort = 8203;
+      const authServer = Bun.serve({
+        port: authServerPort,
+        fetch(request) {
+          // Check for authorization header
+          const authHeader = request.headers.get("Authorization");
+
+          if (!authHeader || authHeader !== "Bearer valid-token") {
+            // Return 401 with WWW-Authenticate header and auth info in body
+            return new Response(
+              JSON.stringify({
+                error: "Authentication required",
+                auth_url: "https://auth.example.com/login",
+                message: "Please authenticate to access this resource",
+              }),
+              {
+                status: 401,
+                headers: {
+                  "Content-Type": "application/json",
+                  "WWW-Authenticate": 'Bearer realm="mcp-server"',
+                  "X-Auth-Provider": "test-provider",
+                },
+              },
+            );
+          }
+
+          // Return success for authorized requests
+          return new Response(
+            JSON.stringify({
+              jsonrpc: "2.0",
+              id: 1,
+              result: { content: [{ type: "text", text: "authorized" }] },
+            }),
+            {
+              headers: { "Content-Type": "application/json" },
+            },
+          );
+        },
+      });
+
+      try {
+        // Add auth server to registry
+        const authRegistry: Registry = {
+          servers: [
+            {
+              name: "auth-server",
+              type: "http" as const,
+              url: `http://localhost:${authServerPort}/mcp`,
+              headers: {},
+              lastActivity: null,
+              exchangeCount: 0,
+            },
+          ],
+        };
+
+        await saveRegistry(storageDir, authRegistry);
+
+        // Create gateway with auth server
+        const { app } = await createApp(authRegistry, storageDir);
+        const authGateway = Bun.serve({
+          port: 8204,
+          fetch: app.fetch,
+        });
+
+        try {
+          // Test 1: Unauthorized request should return 401 with all headers
+          const unauthorizedResponse = await fetch(
+            `http://localhost:8204/servers/auth-server/mcp`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "MCP-Protocol-Version": "2025-06-18",
+              },
+              body: JSON.stringify({
+                jsonrpc: "2.0",
+                id: 1,
+                method: "tools/call",
+                params: { name: "test" },
+              }),
+            },
+          );
+
+          // Should return 401
+          expect(unauthorizedResponse.status).toBe(401);
+
+          // Should preserve WWW-Authenticate header
+          expect(unauthorizedResponse.headers.get("WWW-Authenticate")).toBe(
+            'Bearer realm="mcp-server"',
+          );
+
+          // Should preserve custom auth header
+          expect(unauthorizedResponse.headers.get("X-Auth-Provider")).toBe(
+            "test-provider",
+          );
+
+          // Should preserve response body with auth info
+          // biome-ignore lint/suspicious/noExplicitAny: tests
+          const unauthorizedBody: any = await unauthorizedResponse.json();
+          expect(unauthorizedBody.error).toBe("Authentication required");
+          expect(unauthorizedBody.auth_url).toBe(
+            "https://auth.example.com/login",
+          );
+
+          // Test 2: Authorized request should succeed
+          const authorizedResponse = await fetch(
+            `http://localhost:8204/servers/auth-server/mcp`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "MCP-Protocol-Version": "2025-06-18",
+                Authorization: "Bearer valid-token",
+              },
+              body: JSON.stringify({
+                jsonrpc: "2.0",
+                id: 2,
+                method: "tools/call",
+                params: { name: "test" },
+              }),
+            },
+          );
+
+          expect(authorizedResponse.status).toBe(200);
+          const authorizedBody =
+            (await authorizedResponse.json()) as JsonRpcResponse;
+          expect(authorizedBody.result).toBeDefined();
+        } finally {
+          authGateway.stop();
+        }
+      } finally {
+        authServer.stop();
+      }
+    });
+
+    it("should forward 401 responses via short alias route", async () => {
+      // Create a mock server that returns 401
+      const authServerPort = 8205;
+      const authServer = Bun.serve({
+        port: authServerPort,
+        fetch(_request) {
+          return new Response(
+            JSON.stringify({
+              error: "Unauthorized",
+            }),
+            {
+              status: 401,
+              headers: {
+                "Content-Type": "application/json",
+                "WWW-Authenticate": 'Bearer realm="test"',
+              },
+            },
+          );
+        },
+      });
+
+      try {
+        const authRegistry: Registry = {
+          servers: [
+            {
+              name: "auth-server-2",
+              type: "http" as const,
+              url: `http://localhost:${authServerPort}/mcp`,
+              headers: {},
+              lastActivity: null,
+              exchangeCount: 0,
+            },
+          ],
+        };
+
+        await saveRegistry(storageDir, authRegistry);
+
+        const { app } = await createApp(authRegistry, storageDir);
+        const authGateway = Bun.serve({
+          port: 8206,
+          fetch: app.fetch,
+        });
+
+        try {
+          // Test via short alias /s/:server/mcp
+          const response = await fetch(
+            `http://localhost:8206/s/auth-server-2/mcp`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "MCP-Protocol-Version": "2025-06-18",
+              },
+              body: JSON.stringify({
+                jsonrpc: "2.0",
+                id: 1,
+                method: "test",
+                params: {},
+              }),
+            },
+          );
+
+          expect(response.status).toBe(401);
+          expect(response.headers.get("WWW-Authenticate")).toBe(
+            'Bearer realm="test"',
+          );
+        } finally {
+          authGateway.stop();
+        }
+      } finally {
+        authServer.stop();
+      }
+    });
+  });
 });

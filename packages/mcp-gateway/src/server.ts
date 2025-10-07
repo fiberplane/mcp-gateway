@@ -18,6 +18,7 @@ import {
 import { createMcpApp } from "./mcp-server.js";
 import { getServer, type McpServer, type Registry } from "./registry.js";
 import {
+  type CaptureRecord,
   clientInfoSchema,
   generateCaptureFilename,
   type JsonRpcRequest,
@@ -80,6 +81,12 @@ function buildProxyHeaders(
   const acceptHeader = c.req.raw.headers.get("Accept");
   if (acceptHeader) {
     proxyHeaders.Accept = acceptHeader;
+  }
+
+  // Forward Authorization header for authentication
+  const authHeader = c.req.raw.headers.get("Authorization");
+  if (authHeader) {
+    proxyHeaders.Authorization = authHeader;
   }
 
   return proxyHeaders;
@@ -204,6 +211,63 @@ function logResponse(
   emitLog(logEntry);
 }
 
+// Helper: Capture authentication error with full response
+async function captureAuthError(
+  storage: string,
+  serverName: string,
+  sessionId: string,
+  request: JsonRpcRequest,
+  responseBody: string,
+  httpStatus: number,
+): Promise<void> {
+  const clientInfo = getClientInfo(sessionId);
+
+  // Try to parse response body as JSON-RPC error
+  let response: JsonRpcResponse | undefined;
+  try {
+    const parsed = JSON.parse(responseBody);
+    if (parsed && typeof parsed === "object") {
+      response = {
+        jsonrpc: "2.0",
+        id: request.id ?? null,
+        error: {
+          code: httpStatus,
+          message: parsed.error || parsed.message || "Authentication required",
+          data: parsed,
+        },
+      };
+    }
+  } catch {
+    // If not JSON, create a generic error response
+    response = {
+      jsonrpc: "2.0",
+      id: request.id ?? null,
+      error: {
+        code: httpStatus,
+        message: "Authentication required",
+        data: { rawBody: responseBody },
+      },
+    };
+  }
+
+  const record: CaptureRecord = {
+    timestamp: new Date().toISOString(),
+    method: request.method,
+    id: request.id ?? null,
+    metadata: {
+      serverName,
+      sessionId,
+      durationMs: 0, // 401s are typically fast
+      httpStatus,
+      client: clientInfo,
+    },
+    request,
+    response,
+  };
+
+  await appendCapture(storage, record);
+}
+
 // Create main application
 export async function createApp(
   registry: Registry,
@@ -294,6 +358,38 @@ export async function createApp(
         });
 
         httpStatus = targetResponse.status;
+
+        // CRITICAL: If 401, return response as-is with all auth info
+        // 401 responses may contain authentication information (WWW-Authenticate header,
+        // auth URLs, error details) that must be preserved for the client
+        if (httpStatus === 401) {
+          const duration = Date.now() - startTime;
+          const responseText = await targetResponse.text();
+          const responseHeaders = new Headers(targetResponse.headers);
+
+          // Remove auto-generated headers to avoid duplicates
+          for (const header of AUTO_HEADERS) {
+            responseHeaders.delete(header);
+          }
+
+          // Log the 401 response (for TUI visibility)
+          logResponse(server, sessionId, jsonRpcRequest.method, 401, duration);
+
+          // Capture the 401 response with full details
+          await captureAuthError(
+            storage,
+            server.name,
+            sessionId,
+            jsonRpcRequest,
+            responseText,
+            401,
+          );
+
+          return new Response(responseText, {
+            status: 401,
+            headers: responseHeaders,
+          });
+        }
 
         // Check if response is SSE stream
         const contentType =
@@ -487,6 +583,38 @@ export async function createApp(
         });
 
         httpStatus = targetResponse.status;
+
+        // CRITICAL: If 401, return response as-is with all auth info
+        // 401 responses may contain authentication information (WWW-Authenticate header,
+        // auth URLs, error details) that must be preserved for the client
+        if (httpStatus === 401) {
+          const duration = Date.now() - startTime;
+          const responseText = await targetResponse.text();
+          const responseHeaders = new Headers(targetResponse.headers);
+
+          // Remove auto-generated headers to avoid duplicates
+          for (const header of AUTO_HEADERS) {
+            responseHeaders.delete(header);
+          }
+
+          // Log the 401 response (for TUI visibility)
+          logResponse(server, sessionId, jsonRpcRequest.method, 401, duration);
+
+          // Capture the 401 response with full details
+          await captureAuthError(
+            storage,
+            server.name,
+            sessionId,
+            jsonRpcRequest,
+            responseText,
+            401,
+          );
+
+          return new Response(responseText, {
+            status: 401,
+            headers: responseHeaders,
+          });
+        }
 
         // Check if response is SSE stream
         const contentType =
