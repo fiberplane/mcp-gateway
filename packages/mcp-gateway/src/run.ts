@@ -4,7 +4,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { serve } from "@hono/node-server";
 import { startHealthChecks } from "./health.js";
-import { createApp } from "./server.js";
+import { createApp } from "./server/index.js";
 import { getStorageRoot, loadRegistry } from "./storage.js";
 import { runTUI } from "./tui/loop.js";
 import type { Context } from "./tui/state.js";
