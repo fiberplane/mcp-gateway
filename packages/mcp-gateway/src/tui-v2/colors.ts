@@ -3,28 +3,30 @@ import { RGBA } from "@opentui/core";
 // Raw color palette from web UI design system
 const palette = {
   // Brand (Flame)
-  flame: "#FF5C33",
-  flameDark: "#E65C1F",
+  flame: "#ff5833",
+  // flameDark: "#E65C1F",
 
   // Functional colors
-  info: "#4BA8D4",
-  success: "#6CAD35",
-  danger: "#E85D75",
-  warning: "#E8A64A",
+  // info: "#4BA8D4",
+  // info: "#ffbcad",
+  info: "#a6c9dd",
+  success500: "#79a136",
+  danger500: "#e03e43",
+  warning500: "#e1a847",
 
-  // Accent colors
-  mint: "#52C9A3",
-  purple: "#B77CDD",
-  pink: "#DD7CB7",
+  // // Accent colors
+  // mint: "#52C9A3",
+  // purple: "#B77CDD",
+  // pink: "#DD7CB7",
 
   // Neutrals (warm grays)
-  white: "#F7F5F2", // neutral-50
-  gray200: "#CCC9C3", // neutral-300
-  gray500: "#797876", // neutral-500
-  gray700: "#3A3937", // neutral-700
-  gray800: "#272623", // neutral-800
-  gray900: "#1C1B18", // neutral-900
-  black: "#0F0E0C", // neutral-950
+  white: "#F6F4F4", // neutral-50
+  neutral300: "#cdcbc6", // neutral-300
+  neutral500: "#7a7975", // neutral-500
+  neutral700: "#3a3936", // neutral-700
+  neutral800: "#282725", // neutral-800
+  neutral900: "#1b1a18", // neutral-900
+  neutral950: "#0F0E0C", // neutral-950
   blackTransparent: RGBA.fromInts(28, 27, 24, 128), // neutral-900 at 50% opacity
 } as const;
 
@@ -69,33 +71,33 @@ export interface Theme {
 export const defaultTheme: Theme = {
   // Core
   foreground: palette.white,
-  foregroundMuted: palette.gray200,
-  foregroundSubtle: palette.gray500,
-  background: palette.gray900,
+  foregroundMuted: palette.neutral300,
+  foregroundSubtle: palette.neutral500,
+  background: palette.neutral900,
   backgroundTransparent: palette.blackTransparent,
 
   // Brand
   brand: palette.flame,
-  brandForeground: palette.black,
+  brandForeground: palette.neutral950,
 
   // Accent
   accent: palette.info,
-  accentForeground: palette.black,
-  accentActive: palette.warning,
+  accentForeground: palette.neutral950,
+  accentActive: palette.warning500,
 
   // Status
-  success: palette.success,
-  warning: palette.warning,
-  danger: palette.danger,
+  success: palette.success500,
+  warning: palette.warning500,
+  danger: palette.danger500,
   info: palette.info,
 
   // UI
-  border: palette.gray700,
-  borderFocus: palette.info,
-  emphasis: palette.gray800,
+  border: palette.neutral700,
+  borderFocus: palette.neutral500,
+  emphasis: palette.neutral800,
 
   // Syntax
-  syntaxKey: palette.warning,
-  syntaxString: palette.success,
-  syntaxPunctuation: palette.gray500,
+  syntaxKey: palette.warning500,
+  syntaxString: palette.success500,
+  syntaxPunctuation: palette.neutral500,
 };

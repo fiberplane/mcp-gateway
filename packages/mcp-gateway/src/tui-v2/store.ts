@@ -67,6 +67,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       headers: {},
       lastActivity: null,
       exchangeCount: 0,
+      health: "unknown" as const,
     };
 
     const updatedRegistry = {
@@ -79,6 +80,23 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
     // Update state
     set({ registry: updatedRegistry });
+
+    // Trigger immediate health check for the new server
+    // Import dynamically to avoid circular dependencies
+    const { checkServerHealth } = await import("../health.js");
+    const health = await checkServerHealth(normalizedUrl);
+    const lastHealthCheck = new Date().toISOString();
+
+    // Update the server with health status
+    const registryWithHealth = {
+      ...updatedRegistry,
+      servers: updatedRegistry.servers.map((s) =>
+        s.name === normalizedName ? { ...s, health, lastHealthCheck } : s,
+      ),
+    };
+
+    // Update state with health info
+    set({ registry: registryWithHealth });
   },
 
   removeServer: async (name) => {

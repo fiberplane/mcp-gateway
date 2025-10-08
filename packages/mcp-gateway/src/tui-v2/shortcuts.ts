@@ -65,12 +65,12 @@ export const commandShortcuts = {
   serverManagement: {
     key: "m",
     label: "m",
-    description: "Go to Server Management",
+    description: "Manage Servers",
   },
   activityLog: {
-    key: "l",
-    label: "l",
-    description: "Go to Activity Log",
+    key: "v",
+    label: "v",
+    description: "View Logs",
   },
   addServer: {
     key: "a",

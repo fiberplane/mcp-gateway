@@ -1,117 +1,16 @@
 import { useKeyboard } from "@opentui/react";
 import { useEffect, useRef, useState } from "react";
-import { getClientInfo } from "../../capture";
-import type { LogEntry } from "../../tui/state";
+import { useHandler } from "../hooks/useHandler";
 import { useAppStore } from "../store";
 import { useTheme } from "../theme-context";
-import { useHandler } from "../hooks/useHandler";
+import { ActivityLogEntry } from "./ActivityLogEntry";
+import { ActivityLogHeader } from "./ActivityLogHeader";
 
 type BoxRef = { height: number; onSizeChange?: () => void };
-
-// Format request-specific details
-function formatRequestDetails(log: LogEntry): string {
-  if (!log.request?.params) return "";
-
-  const params = log.request.params as Record<string, unknown>;
-
-  // tools/call: show tool name and args
-  if (log.method === "tools/call") {
-    const toolName = params.name as string;
-    const args = params.arguments as Record<string, unknown>;
-    const argStr = Object.entries(args || {})
-      .map(([k, v]) => `${k}:${JSON.stringify(v)}`)
-      .join(", ");
-    return ` ${toolName}${argStr ? `(${argStr})` : ""}`;
-  }
-
-  // resources/read: show URI
-  if (log.method === "resources/read") {
-    const uri = params.uri as string;
-    return ` ${uri}`;
-  }
-
-  return "";
-}
-
-// Format response-specific details
-function formatResponseDetails(log: LogEntry): string {
-  if (!log.response || "error" in log.response) return "";
-
-  const result = log.response.result as Record<string, unknown>;
-
-  // initialize: show server name and version
-  if (log.method === "initialize") {
-    const serverInfo = result.serverInfo as { name: string; version: string };
-    return ` → ${serverInfo.name}@${serverInfo.version}`;
-  }
-
-  // tools/list: show count and first few tool names
-  if (log.method === "tools/list") {
-    const tools = result.tools as Array<{ name: string }>;
-    const toolNames = tools.slice(0, 3).map((t) => t.name);
-    const more = tools.length > 3 ? `, +${tools.length - 3}` : "";
-    return ` ${tools.length} tools: ${toolNames.join(", ")}${more}`;
-  }
-
-  // tools/call: show result text (truncated)
-  if (log.method === "tools/call") {
-    const content = result.content as Array<{ type: string; text?: string }>;
-    const textContent = content?.find((c) => c.type === "text")?.text;
-    if (textContent) {
-      const truncated =
-        textContent.length > 40
-          ? `${textContent.slice(0, 40)}...`
-          : textContent;
-      return ` "${truncated}"`;
-    }
-  }
-
-  // resources/list: show count
-  if (log.method === "resources/list") {
-    const resources = result.resources as unknown[];
-    return ` ${resources?.length || 0} resources`;
-  }
-
-  // prompts/list: show count
-  if (log.method === "prompts/list") {
-    const prompts = result.prompts as unknown[];
-    return ` ${prompts?.length || 0} prompts`;
-  }
-
-  return "";
-}
-
-// Format a single log entry
-function formatLogEntry(log: LogEntry): string {
-  const clientInfo = getClientInfo(log.sessionId);
-  const clientLabel = clientInfo
-    ? `${clientInfo.name}@${clientInfo.version}`
-    : "client";
-  const sessionIdShort = `[${log.sessionId.slice(0, 8)}]`;
-  const timestamp = log.timestamp.slice(11, 19);
-
-  if (log.direction === "request") {
-    // Client → Gateway → Server (request flow)
-    const methodDetails = formatRequestDetails(log);
-    return `${timestamp} ${sessionIdShort} ${clientLabel} → ${log.serverName} ${log.method}${methodDetails}`;
-  }
-
-  // Server → Gateway → Client (response flow)
-  const responseDetails = formatResponseDetails(log);
-  const errorSuffix = log.errorMessage ? ` ${log.errorMessage}` : "";
-  return `${timestamp} ${sessionIdShort} ${log.serverName} → ${clientLabel} (${log.httpStatus}, ${log.duration}ms)${responseDetails}${errorSuffix}`;
-}
 
 export function ActivityLog() {
   const theme = useTheme();
   const logs = useAppStore((state) => state.logs);
-
-  // Get color for status code
-  const getStatusColor = (status: number) => {
-    if (status >= 200 && status < 300) return theme.success;
-    if (status >= 400 && status < 500) return theme.warning;
-    return theme.danger;
-  };
 
   // Container ref to get actual rendered height
   const containerRef = useRef<BoxRef | null>(null);
@@ -267,83 +166,6 @@ export function ActivityLog() {
     }
   });
 
-  if (logs.length === 0) {
-    return (
-      <box
-        style={{
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "flex-start",
-          flexGrow: 1,
-          maxHeight: "100%",
-          border: false,
-
-          // flexDirection: "column",
-          // flexGrow: 1,
-          // padding: 1,
-        }}
-      >
-        <text fg={theme.accent} style={{ marginBottom: 1 }}>
-          Welcome to MCP Gateway!
-        </text>
-
-        <text fg={theme.foreground}>
-          This gateway routes MCP requests to one or more servers.
-        </text>
-
-        <text fg={theme.foregroundMuted} style={{ marginBottom: 1 }}>
-          Activity will appear here as requests flow through.
-        </text>
-
-        <box
-          style={{
-            flexDirection: "column",
-            border: true,
-            borderColor: theme.border,
-            width: "80%",
-            flexGrow: 0,
-            gap: 1,
-            paddingLeft: 2,
-            paddingRight: 2,
-            alignItems: "flex-start",
-          }}
-        >
-          <box style={{ flexDirection: "row" }}>
-            <text fg={theme.accent} style={{ flexBasis: "auto" }}>
-              Get Started:
-            </text>
-          </box>
-          <box
-            style={{
-              flexDirection: "column",
-              justifyContent: "flex-start",
-              paddingLeft: 1,
-              flexGrow: 0,
-            }}
-          >
-            <text fg={theme.foreground}>
-              1. Press [a] to add your first MCP server
-            </text>
-            <text fg={theme.foreground}>
-              2. Configure your MCP client to use:
-            </text>
-            <text fg={theme.foregroundMuted}>
-              &nbsp;&nbsp;&nbsp;&nbsp;http://localhost:3333/gateway/mcp
-            </text>
-            <text fg={theme.foreground}>
-              3. Send requests and watch them here
-            </text>
-          </box>
-          <box style={{ flexDirection: "row" }}>
-            <text fg={theme.foregroundMuted}>
-              Press [m] for more information • [s] to manage servers
-            </text>
-          </box>
-        </box>
-      </box>
-    );
-  }
-
   return (
     <box
       style={{
@@ -355,38 +177,11 @@ export function ActivityLog() {
       }}
     >
       {/* Header with status and overflow indicators */}
-      <box
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          paddingLeft: 1,
-          paddingRight: 1,
-          flexGrow: 0,
-        }}
-      >
-        {/* Left: Title */}
-        <text fg={theme.accent}>Recent Activity</text>
-
-        {/* Center: Overflow indicators */}
-        <box
-          style={{
-            flexDirection: "row",
-            gap: 1,
-            flexGrow: 1,
-            justifyContent: "center",
-          }}
-        >
-          {itemsAbove > 0 && (
-            <text fg={theme.foregroundMuted}>[↑ {itemsAbove} more]</text>
-          )}
-        </box>
-
-        {/* Right: Position counter */}
-        <text fg={theme.foregroundMuted}>
-          [{safeSelectedIndex + 1}/{logs.length}]
-        </text>
-      </box>
+      <ActivityLogHeader
+        totalLogs={logs.length}
+        selectedIndex={safeSelectedIndex}
+        itemsAbove={itemsAbove}
+      />
 
       {/* Main content area */}
       <box
@@ -412,26 +207,18 @@ export function ActivityLog() {
         {/* Render visible items */}
         {logs.map((log, i) => {
           // Skip items outside viewport
-          if (!isItemVisible(i)) return null;
+          if (!isItemVisible(i)) {
+            return null;
+          }
 
           const isSelected = i === safeSelectedIndex;
-          const color =
-            log.direction === "response"
-              ? getStatusColor(log.httpStatus)
-              : theme.foregroundMuted;
 
           return (
-            <box
+            <ActivityLogEntry
               key={`${log.sessionId}-${log.timestamp}-${log.direction}`}
-              style={{
-                backgroundColor: isSelected ? theme.emphasis : undefined,
-              }}
-            >
-              <text fg={isSelected ? theme.accent : color}>
-                {isSelected ? "> " : "  "}
-                {formatLogEntry(log)}
-              </text>
-            </box>
+              log={log}
+              isSelected={isSelected}
+            />
           );
         })}
       </box>
@@ -453,6 +240,7 @@ export function ActivityLog() {
           style={{
             paddingLeft: 1,
             paddingRight: 1,
+            alignItems: "center",
           }}
         >
           <text fg={theme.foregroundMuted}>
@@ -460,7 +248,9 @@ export function ActivityLog() {
             End to follow]
           </text>
         </box>
-      ) : null}
+      ) : (
+        <box style={{ height: 1 }} />
+      )}
     </box>
   );
 }

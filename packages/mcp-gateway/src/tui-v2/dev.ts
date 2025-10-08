@@ -35,8 +35,32 @@ async function main() {
   console.log(`MCP Gateway server started at http://localhost:${port}`);
   console.log(`Debug log: ${getDebugLogPath()}`);
 
-  // Start health checks
-  const stopHealthChecks = await startHealthChecks(registry);
+  // Start health checks with callback to update store
+  const stopHealthChecks = await startHealthChecks(
+    registry,
+    30000,
+    (updates) => {
+      // Import store dynamically to get latest state
+      import("./store.js").then(({ useAppStore }) => {
+        const currentRegistry = useAppStore.getState().registry;
+        const updatedRegistry = {
+          ...currentRegistry,
+          servers: currentRegistry.servers.map((server) => {
+            const update = updates.find((u) => u.name === server.name);
+            if (update) {
+              return {
+                ...server,
+                health: update.health,
+                lastHealthCheck: update.lastHealthCheck,
+              };
+            }
+            return server;
+          }),
+        };
+        useAppStore.getState().setRegistry(updatedRegistry);
+      });
+    },
+  );
 
   // Create context (same as real app)
   const context: Context = {

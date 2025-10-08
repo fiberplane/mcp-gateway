@@ -5,6 +5,7 @@ import { ActivityLog } from "./components/ActivityLog";
 import { AddServerModal } from "./components/AddServerModal";
 import { CommandMenu } from "./components/CommandMenu";
 import { DeleteServerModal } from "./components/DeleteServerModal";
+import { EmptyState } from "./components/EmptyState";
 import { Footer } from "./components/Footer";
 import { Header } from "./components/Header";
 import { McpInstructionsModal } from "./components/McpInstructionsModal";
@@ -135,7 +136,8 @@ function App() {
           borderColor: theme.border,
         }}
       >
-        {viewMode === "activity-log" && <ActivityLog />}
+        {viewMode === "activity-log" &&
+          (logs.length === 0 ? <EmptyState /> : <ActivityLog />)}
         {viewMode === "server-management" && <ServerManagementView />}
       </box>
 

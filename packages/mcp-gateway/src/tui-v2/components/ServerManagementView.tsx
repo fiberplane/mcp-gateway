@@ -69,6 +69,7 @@ export function ServerManagementView() {
   const registry = useAppStore((state) => state.registry);
   const removeServer = useAppStore((state) => state.removeServer);
   const openModal = useAppStore((state) => state.openModal);
+  const activeModal = useAppStore((state) => state.activeModal);
 
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [showConfig, setShowConfig] = useState<string | null>(null);
@@ -77,6 +78,11 @@ export function ServerManagementView() {
   const servers = registry.servers;
 
   useKeyboard((key) => {
+    // Don't process keys if a modal is open
+    if (activeModal) {
+      return;
+    }
+
     // If showing config, any key closes it
     if (showConfig) {
       setShowConfig(null);
@@ -138,14 +144,18 @@ export function ServerManagementView() {
         <box
           style={{
             flexDirection: "row",
-            justifyContent: "center",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            paddingLeft: 1,
+            paddingRight: 1,
             paddingBottom: 1,
             border: ["bottom"],
             borderColor: theme.border,
             marginBottom: 1,
           }}
         >
-          <text fg={theme.accent}>Export Config: {server.name}</text>
+          <text fg={theme.accent}>Export Config</text>
+          <text fg={theme.foregroundMuted}>[{server.name}]</text>
         </box>
 
         {/* Content */}
@@ -198,7 +208,10 @@ export function ServerManagementView() {
       <box
         style={{
           flexDirection: "row",
-          justifyContent: "center",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          paddingLeft: 1,
+          paddingRight: 1,
           paddingBottom: 1,
           border: ["bottom"],
           borderColor: theme.border,
@@ -206,23 +219,33 @@ export function ServerManagementView() {
         }}
       >
         <text fg={theme.accent}>Server Management</text>
+        <text fg={theme.foregroundMuted}>
+          [{servers.length} {servers.length === 1 ? "server" : "servers"}]
+        </text>
       </box>
 
       {/* Content */}
       <box style={{ flexDirection: "column", flexGrow: 1 }}>
         {servers.length === 0 ? (
-          <>
+          <box
+            style={{
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              flexGrow: 1,
+            }}
+          >
             <text fg={theme.foregroundMuted} style={{ marginBottom: 2 }}>
               No servers registered yet.
             </text>
             <text fg={theme.accent}>Press [a] to add your first server</text>
-          </>
+          </box>
         ) : (
-          <>
-            <text fg={theme.accent} style={{ marginBottom: 1 }}>
-              Registered Servers ({servers.length}):
-            </text>
-
+          <scrollbox
+            scrollY={true}
+            focused={!showConfig && !deleteConfirm}
+            style={{ flexGrow: 1, paddingLeft: 1, paddingRight: 1 }}
+          >
             {servers.map((server, index) => {
               const isSelected = index === selectedIndex;
               const healthColor = getHealthColor(server.health);
@@ -291,7 +314,7 @@ export function ServerManagementView() {
                 </box>
               );
             })}
-          </>
+          </scrollbox>
         )}
       </box>
 

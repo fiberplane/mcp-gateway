@@ -13,7 +13,7 @@ interface ModalProps {
 const sizeConfig = {
   small: { width: "50%", maxWidth: 50 },
   medium: { width: "70%", maxWidth: 70 },
-  large: { width: "90%", maxWidth: 90 },
+  large: { width: "90%", maxWidth: 120 },
 } as const;
 
 export function Modal({
@@ -48,6 +48,8 @@ export function Modal({
           minHeight: 10,
           margin: 2,
           padding: 2,
+          paddingTop: 1,
+          paddingBottom: 1,
         }}
         border={true}
         borderStyle="rounded"
@@ -60,13 +62,7 @@ export function Modal({
       >
         {/* Content area - scrollable or static */}
         {scrollable ? (
-          <scrollbox
-            style={{ flexGrow: 1 }}
-            scrollY={true}
-            focused={false}
-            borderColor={theme.border}
-            focusedBorderColor={theme.borderFocus}
-          >
+          <scrollbox style={{ flexGrow: 1 }} scrollY={true} focused={true}>
             {children}
           </scrollbox>
         ) : (

@@ -25,15 +25,39 @@ export async function checkServerHealth(url: string): Promise<ServerHealth> {
 export async function startHealthChecks(
   registry: Registry,
   intervalMs_ms: number = 30000,
+  onHealthUpdate?: (
+    updates: Array<{
+      name: string;
+      health: ServerHealth;
+      lastHealthCheck: string;
+    }>,
+  ) => void,
 ): Promise<() => void> {
   const checkAll = async () => {
-    const checks = registry.servers.map(async (server) => {
-      server.health = await checkServerHealth(server.url);
-      server.lastHealthCheck = new Date().toISOString();
-    });
+    const updates = await Promise.all(
+      registry.servers.map(async (server) => {
+        const health = await checkServerHealth(server.url);
+        const lastHealthCheck = new Date().toISOString();
 
-    await Promise.all(checks);
-    emitRegistryUpdate();
+        // Update the registry object for non-TUI usage
+        server.health = health;
+        server.lastHealthCheck = lastHealthCheck;
+
+        return {
+          name: server.name,
+          health,
+          lastHealthCheck,
+        };
+      }),
+    );
+
+    // Call custom update handler if provided (for TUI)
+    if (onHealthUpdate) {
+      onHealthUpdate(updates);
+    } else {
+      // Fallback for non-TUI usage
+      emitRegistryUpdate();
+    }
   };
 
   // Initial check (await to ensure it completes before returning)

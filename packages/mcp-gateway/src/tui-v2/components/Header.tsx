@@ -1,35 +1,36 @@
+import type { BoxProps } from "@opentui/react";
 import packageJson from "../../../package.json" with { type: "json" };
 import type { McpServer, ServerHealth } from "../../registry";
 import { useAppStore } from "../store";
 import { useTheme } from "../theme-context";
 
-function formatRelativeTime(timestamp: string | null): string {
-  if (!timestamp) return "—";
-  try {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffSecs = Math.floor(diffMs / 1000);
-    const diffMins = Math.floor(diffSecs / 60);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
+// function formatRelativeTime(timestamp: string | null): string {
+//   if (!timestamp) return "—";
+//   try {
+//     const date = new Date(timestamp);
+//     const now = new Date();
+//     const diffMs = now.getTime() - date.getTime();
+//     const diffSecs = Math.floor(diffMs / 1000);
+//     const diffMins = Math.floor(diffSecs / 60);
+//     const diffHours = Math.floor(diffMins / 60);
+//     const diffDays = Math.floor(diffHours / 24);
 
-    if (diffSecs < 60) return "just now";
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toISOString().slice(0, 16).replace("T", " ");
-  } catch {
-    return "—";
-  }
-}
+//     if (diffSecs < 60) return "just now";
+//     if (diffMins < 60) return `${diffMins}m ago`;
+//     if (diffHours < 24) return `${diffHours}h ago`;
+//     if (diffDays < 7) return `${diffDays}d ago`;
+//     return date.toISOString().slice(0, 16).replace("T", " ");
+//   } catch {
+//     return "—";
+//   }
+// }
 
 export function Header() {
   const theme = useTheme();
   const registry = useAppStore((state) => state.registry);
 
   return (
-    <box style={{ flexDirection: "column" }}>
+    <box style={{ flexDirection: "column", flexShrink: 0 }}>
       {/* Centered title */}
       <box
         style={{
@@ -45,24 +46,17 @@ export function Header() {
       </box>
 
       {/* Two-column layout: Details | Servers */}
-      <box style={{ flexDirection: "row" }}>
+      <box style={{ flexDirection: "row", flexShrink: 0 }}>
         {/* Left column: Gateway details */}
-        <box
+        <HeaderSection
+          title="Status:"
           style={{
-            flexDirection: "column",
             width: "50%",
-            maxWidth: 80,
             border: ["right", "left"],
             borderColor: theme.border,
-            // paddingRight: 1,
-            paddingLeft: 1,
-            paddingRight: 1,
             gap: 1,
           }}
         >
-          <text fg={theme.foreground}>
-            <strong>Status:</strong>
-          </text>
           <text fg={theme.foregroundMuted}>
             Running server on port 3333. This gateway routes all requests to the
             servers listed on the right.
@@ -70,7 +64,7 @@ export function Header() {
 
           <box style={{ flexDirection: "row", gap: 1 }}>
             <box style={{ flexDirection: "column", width: "40%" }}>
-              <text fg={theme.foregroundMuted}>Unified MCP:</text>
+              <text fg={theme.foregroundMuted}>Debug MCP server:</text>
             </box>
             <box style={{ flexDirection: "column" }}>
               <text fg={theme.foreground}>
@@ -78,33 +72,53 @@ export function Header() {
               </text>
             </box>
           </box>
-        </box>
-
+        </HeaderSection>
         {/* Right column: Server list */}
-        <box
+        <HeaderSection
+          title={`Servers (${registry.servers.length}):`}
           style={{
-            flexDirection: "column",
             width: "50%",
-            paddingLeft: 1,
-            gap: 1,
           }}
         >
           {registry.servers.length === 0 ? (
             <text fg={theme.foregroundMuted}>No servers registered</text>
           ) : (
-            <>
-              <text fg={theme.foreground}>
-                Servers ({registry.servers.length}):
-              </text>
-              <box style={{ flexDirection: "column" }}>
-                {registry.servers.map((server) => (
-                  <ServerEntry server={server} />
-                ))}
-              </box>
-            </>
+            <box style={{ flexShrink: 0 }}>
+              {registry.servers.map((server) => (
+                <ServerEntry key={server.name} server={server} />
+              ))}
+            </box>
           )}
-        </box>
+        </HeaderSection>
       </box>
+    </box>
+  );
+}
+
+function HeaderSection({
+  title,
+  children,
+  style,
+}: {
+  title: string;
+  children: React.ReactNode;
+  style?: BoxProps["style"];
+}) {
+  const theme = useTheme();
+  // const
+  return (
+    <box
+      style={{
+        flexDirection: "column",
+        gap: 1,
+        paddingLeft: 1,
+        paddingRight: 1,
+        paddingBottom: 1,
+        ...style,
+      }}
+    >
+      <text fg={theme.foreground}>{title}</text>
+      {children}
     </box>
   );
 }
@@ -132,7 +146,6 @@ function ServerEntry({ server }: { server: McpServer }) {
 
   return (
     <box
-      key={server.name}
       style={{
         flexDirection: "row",
         justifyContent: "space-between",
