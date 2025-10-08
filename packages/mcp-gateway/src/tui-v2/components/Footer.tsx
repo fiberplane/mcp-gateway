@@ -1,15 +1,14 @@
+import { formatShortcut, globalShortcuts } from "../shortcuts";
 import { useAppStore } from "../store";
 import { useTheme } from "../theme-context";
 
 export function Footer() {
   const theme = useTheme();
-  const hasServers = useAppStore((state) => state.registry.servers.length > 0);
-  const hasLogs = useAppStore((state) => state.logs.length > 0);
+  const logs = useAppStore((state) => state.logs);
+  const viewMode = useAppStore((state) => state.viewMode);
 
-  const keyColor = (disabled: boolean) =>
-    disabled ? theme.foregroundMuted : theme.foreground;
-  const labelColor = (disabled: boolean) =>
-    disabled ? theme.foregroundMuted : theme.foreground;
+  const keyColor = theme.foreground;
+  const labelColor = theme.foreground;
 
   return (
     <box
@@ -22,26 +21,32 @@ export function Footer() {
       }}
       backgroundColor={theme.brand}
     >
-      {/* Left: Clear logs */}
+      {/* Left: View context */}
       <box style={{ flexDirection: "row", gap: 1 }}>
-        <text fg={keyColor(!hasLogs)}>[c]</text>
-        <text fg={labelColor(!hasLogs)}>Clear logs</text>
+        <text fg={labelColor}>
+          {viewMode === "activity-log"
+            ? `Activity Log • ${logs.length} entries`
+            : "Server Management"}
+        </text>
       </box>
 
-      {/* Center: Server actions */}
+      {/* Right: Essential shortcuts */}
       <box style={{ flexDirection: "row", gap: 1 }}>
-        <text fg={keyColor(false)}>[a]</text>
-        <text fg={labelColor(false)}>Add server</text>
-        <text fg={keyColor(false)}>[s]</text>
-        <text fg={labelColor(false)}>Servers</text>
-      </box>
-
-      {/* Right: Info and Quit */}
-      <box style={{ flexDirection: "row", gap: 1 }}>
-        <text fg={keyColor(false)}>[m]</text>
-        <text fg={labelColor(false)}>Info</text>
-        <text fg={keyColor(false)}>[q]</text>
-        <text fg={labelColor(false)}>Quit</text>
+        <text fg={keyColor}>
+          {formatShortcut(globalShortcuts.commandMenu.key)}
+        </text>
+        <text fg={labelColor}>Commands</text>
+        {viewMode !== "activity-log" && (
+          <>
+            <text fg={keyColor}>
+              {" "}
+              • {formatShortcut(globalShortcuts.escape.key)}
+            </text>
+            <text fg={labelColor}>Back</text>
+          </>
+        )}
+        <text fg={keyColor}> • {formatShortcut(globalShortcuts.quit.key)}</text>
+        <text fg={labelColor}>Quit</text>
       </box>
     </box>
   );

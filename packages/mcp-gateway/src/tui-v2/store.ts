@@ -10,12 +10,16 @@ type ModalType =
   | "mcp-instructions"
   | null;
 
+export type ViewMode = "activity-log" | "server-management";
+
 interface AppStore {
   // State
   registry: Registry;
   logs: LogEntry[];
   storageDir: string;
   activeModal: ModalType;
+  viewMode: ViewMode;
+  showCommandMenu: boolean;
 
   // Actions
   initialize: (registry: Registry, storageDir: string) => void;
@@ -26,6 +30,9 @@ interface AppStore {
   clearLogs: () => void;
   openModal: (modal: ModalType) => void;
   closeModal: () => void;
+  setViewMode: (mode: ViewMode) => void;
+  openCommandMenu: () => void;
+  closeCommandMenu: () => void;
 }
 
 export const useAppStore = create<AppStore>((set, get) => ({
@@ -34,6 +41,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
   logs: [],
   storageDir: "",
   activeModal: null,
+  viewMode: "activity-log",
+  showCommandMenu: false,
 
   // Actions
   initialize: (registry, storageDir) => set({ registry, storageDir }),
@@ -89,4 +98,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   clearLogs: () => set({ logs: [] }),
   openModal: (modal) => set({ activeModal: modal }),
   closeModal: () => set({ activeModal: null }),
+  setViewMode: (mode) => set({ viewMode: mode }),
+  openCommandMenu: () => set({ showCommandMenu: true }),
+  closeCommandMenu: () => set({ showCommandMenu: false }),
 }));

@@ -3,14 +3,15 @@ import type { Registry } from "../registry";
 import type { Context } from "../tui/state";
 import { ActivityLog } from "./components/ActivityLog";
 import { AddServerModal } from "./components/AddServerModal";
+import { CommandMenu } from "./components/CommandMenu";
 import { DeleteServerModal } from "./components/DeleteServerModal";
-import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Footer } from "./components/Footer";
 import { Header } from "./components/Header";
 import { McpInstructionsModal } from "./components/McpInstructionsModal";
-import { ServerDetailsModal } from "./components/ServerDetailsModal";
+import { ServerManagementView } from "./components/ServerManagementView";
 import { debug } from "./debug";
 import { useExternalEvents } from "./hooks/useExternalEvents";
+import { commandShortcuts, globalShortcuts } from "./shortcuts";
 import { useAppStore } from "./store";
 import { ThemeProvider, useTheme } from "./theme-context";
 
@@ -27,18 +28,42 @@ function App() {
   const theme = useTheme();
 
   const activeModal = useAppStore((state) => state.activeModal);
+  const logs = useAppStore((state) => state.logs);
   const clearLogs = useAppStore((state) => state.clearLogs);
   const openModal = useAppStore((state) => state.openModal);
   const closeModal = useAppStore((state) => state.closeModal);
+  const viewMode = useAppStore((state) => state.viewMode);
+  const setViewMode = useAppStore((state) => state.setViewMode);
+  const showCommandMenu = useAppStore((state) => state.showCommandMenu);
+  const openCommandMenu = useAppStore((state) => state.openCommandMenu);
+  const closeCommandMenu = useAppStore((state) => state.closeCommandMenu);
 
   useKeyboard((key) => {
     debug("Key pressed:", key.name);
 
-    // ESC closes any modal
-    if (key.name === "escape" && activeModal) {
-      debug("Closing modal");
-      closeModal();
-      return;
+    // ESC hierarchy: command menu -> modals -> return to activity log
+    if (key.name === globalShortcuts.escape.key) {
+      if (showCommandMenu) {
+        debug("Closing command menu");
+        closeCommandMenu();
+        return;
+      }
+      if (activeModal) {
+        debug("Closing modal");
+        closeModal();
+        return;
+      }
+      // ESC returns to activity log from any view
+      if (viewMode !== "activity-log") {
+        debug("Returning to activity log");
+        setViewMode("activity-log");
+        return;
+      }
+    }
+
+    // Command menu takes precedence
+    if (showCommandMenu) {
+      return; // Let CommandMenu handle its own keys
     }
 
     // Don't process other keys if a modal is open
@@ -46,34 +71,48 @@ function App() {
       return;
     }
 
-    if (key.name === "q") {
+    // Global shortcuts
+    if (key.name === globalShortcuts.quit.key) {
       debug("Exiting app");
       exitHandler?.();
+      return;
     }
 
-    if (key.name === "c") {
-      debug("Clearing logs");
-      clearLogs();
+    if (key.name === globalShortcuts.commandMenu.key) {
+      debug("Opening command menu");
+      openCommandMenu();
+      return;
     }
 
-    if (key.name === "a") {
+    // Command shortcuts (work globally)
+    if (key.name === commandShortcuts.serverManagement.key) {
+      debug("Navigating to server management");
+      setViewMode("server-management");
+      return;
+    }
+
+    if (key.name === commandShortcuts.activityLog.key) {
+      debug("Navigating to activity log");
+      setViewMode("activity-log");
+      return;
+    }
+
+    if (key.name === commandShortcuts.addServer.key) {
       debug("Opening add server modal");
       openModal("add-server");
+      return;
     }
 
-    if (key.name === "d") {
-      debug("Opening delete server modal");
-      openModal("delete-server");
+    if (key.name === commandShortcuts.clearLogs.key && logs.length > 0) {
+      debug("Clearing logs");
+      clearLogs();
+      return;
     }
 
-    if (key.name === "s") {
-      debug("Opening server details modal");
-      openModal("server-details");
-    }
-
-    if (key.name === "m") {
-      debug("Opening MCP instructions modal");
+    if (key.name === commandShortcuts.help.key) {
+      debug("Opening help modal");
       openModal("mcp-instructions");
+      return;
     }
   });
 
@@ -94,10 +133,10 @@ function App() {
           flexGrow: 1,
           border: ["top"],
           borderColor: theme.border,
-          marginTop: 1,
         }}
       >
-        <ActivityLog />
+        {viewMode === "activity-log" && <ActivityLog />}
+        {viewMode === "server-management" && <ServerManagementView />}
       </box>
 
       <Footer />
@@ -105,8 +144,10 @@ function App() {
       {/* Render active modal */}
       {activeModal === "add-server" && <AddServerModal />}
       {activeModal === "delete-server" && <DeleteServerModal />}
-      {activeModal === "server-details" && <ServerDetailsModal />}
       {activeModal === "mcp-instructions" && <McpInstructionsModal />}
+
+      {/* Render command menu */}
+      {showCommandMenu && <CommandMenu />}
     </box>
   );
 }
@@ -163,12 +204,10 @@ export async function runOpenTUI(context: Context, registry: Registry) {
     console.error("Unhandled promise rejection:", reason);
   });
 
-  // Render app with error boundary
+  // Render app (render() automatically includes ErrorBoundary)
   render(
     <ThemeProvider>
-      <ErrorBoundary>
-        <App />
-      </ErrorBoundary>
+      <App />
     </ThemeProvider>,
   );
 }

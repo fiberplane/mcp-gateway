@@ -1,3 +1,5 @@
+import { RGBA } from "@opentui/core";
+
 // Raw color palette from web UI design system
 const palette = {
   // Brand (Flame)
@@ -23,40 +25,44 @@ const palette = {
   gray800: "#272623", // neutral-800
   gray900: "#1C1B18", // neutral-900
   black: "#0F0E0C", // neutral-950
+  blackTransparent: RGBA.fromInts(28, 27, 24, 128), // neutral-900 at 50% opacity
 } as const;
 
 // Theme type definition
+
+type Color = string | RGBA;
 export interface Theme {
   // Core colors
-  foreground: string;
-  foregroundMuted: string;
-  foregroundSubtle: string;
-  background: string;
+  foreground: Color;
+  foregroundMuted: Color;
+  foregroundSubtle: Color;
+  background: Color;
+  backgroundTransparent: Color;
 
   // Brand colors
-  brand: string;
-  brandForeground: string;
+  brand: Color;
+  brandForeground: Color;
 
   // Accent colors
-  accent: string;
-  accentForeground: string;
-  accentActive: string;
+  accent: Color;
+  accentForeground: Color;
+  accentActive: Color;
 
   // Status colors
-  success: string;
-  warning: string;
-  danger: string;
-  info: string;
+  success: Color;
+  warning: Color;
+  danger: Color;
+  info: Color;
 
   // UI elements
-  border: string;
-  borderFocus: string;
-  emphasis: string;
+  border: Color;
+  borderFocus: Color;
+  emphasis: Color;
 
   // Syntax highlighting
-  syntaxKey: string;
-  syntaxString: string;
-  syntaxPunctuation: string;
+  syntaxKey: Color;
+  syntaxString: Color;
+  syntaxPunctuation: Color;
 }
 
 // Default theme with semantic color names
@@ -66,6 +72,7 @@ export const defaultTheme: Theme = {
   foregroundMuted: palette.gray200,
   foregroundSubtle: palette.gray500,
   background: palette.gray900,
+  backgroundTransparent: palette.blackTransparent,
 
   // Brand
   brand: palette.flame,

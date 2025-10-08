@@ -107,7 +107,7 @@ export function ActivityLog() {
   const logs = useAppStore((state) => state.logs);
 
   // Get color for status code
-  const getStatusColor = (status: number): string => {
+  const getStatusColor = (status: number) => {
     if (status >= 200 && status < 300) return theme.success;
     if (status >= 400 && status < 500) return theme.warning;
     return theme.danger;
@@ -273,12 +273,17 @@ export function ActivityLog() {
         style={{
           flexDirection: "column",
           alignItems: "center",
-          justifyContent: "center",
+          justifyContent: "flex-start",
           flexGrow: 1,
-          padding: 4,
+          maxHeight: "100%",
+          border: false,
+
+          // flexDirection: "column",
+          // flexGrow: 1,
+          // padding: 1,
         }}
       >
-        <text fg={theme.accent} style={{ marginBottom: 2 }}>
+        <text fg={theme.accent} style={{ marginBottom: 1 }}>
           Welcome to MCP Gateway!
         </text>
 
@@ -296,45 +301,41 @@ export function ActivityLog() {
             border: true,
             borderColor: theme.border,
             width: "80%",
+            flexGrow: 0,
             gap: 1,
+            paddingLeft: 2,
+            paddingRight: 2,
+            alignItems: "flex-start",
           }}
         >
           <box style={{ flexDirection: "row" }}>
-            <text
-              fg={theme.accent}
-              style={{ marginBottom: 1, flexBasis: "auto" }}
-            >
+            <text fg={theme.accent} style={{ flexBasis: "auto" }}>
               Get Started:
             </text>
           </box>
           <box
-            style={{ flexDirection: "column", padding: 1, flexGrow: 1, gap: 1 }}
+            style={{
+              flexDirection: "column",
+              justifyContent: "flex-start",
+              paddingLeft: 1,
+              flexGrow: 0,
+            }}
           >
-            <box style={{ flexDirection: "row" }}>
-              <text fg={theme.foreground}>
-                1. Press [a] to add your first MCP server
-              </text>
-            </box>
-            <box
-              style={{
-                flexDirection: "row",
-                borderColor: theme.border,
-                gap: 1,
-              }}
-            >
-              <text fg={theme.foreground}>
-                2. Configure your MCP client to use:
-              </text>
-              <text fg={theme.foregroundMuted} style={{ paddingLeft: 3 }}>
-                http://localhost:3333/gateway/mcp
-              </text>
-            </box>
+            <text fg={theme.foreground}>
+              1. Press [a] to add your first MCP server
+            </text>
+            <text fg={theme.foreground}>
+              2. Configure your MCP client to use:
+            </text>
+            <text fg={theme.foregroundMuted}>
+              &nbsp;&nbsp;&nbsp;&nbsp;http://localhost:3333/gateway/mcp
+            </text>
             <text fg={theme.foreground}>
               3. Send requests and watch them here
             </text>
           </box>
           <box style={{ flexDirection: "row" }}>
-            <text fg={theme.foregroundMuted} style={{ marginTop: 2 }}>
+            <text fg={theme.foregroundMuted}>
               Press [m] for more information • [s] to manage servers
             </text>
           </box>
@@ -349,6 +350,8 @@ export function ActivityLog() {
         flexDirection: "column",
         flexGrow: 1,
         maxHeight: "100%",
+        border: false,
+        // borderColor: theme.border,
       }}
     >
       {/* Header with status and overflow indicators */}
@@ -356,9 +359,10 @@ export function ActivityLog() {
         style={{
           flexDirection: "row",
           justifyContent: "space-between",
-          alignItems: "center",
+          alignItems: "flex-start",
           paddingLeft: 1,
           paddingRight: 1,
+          flexGrow: 0,
         }}
       >
         {/* Left: Title */}
@@ -398,6 +402,7 @@ export function ActivityLog() {
         }}
         style={{
           flexGrow: 1,
+          flexBasis: 1,
           flexDirection: "column",
           paddingLeft: 1,
           paddingRight: 1,

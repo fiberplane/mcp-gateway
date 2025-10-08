@@ -1,5 +1,5 @@
 import packageJson from "../../../package.json" with { type: "json" };
-import type { ServerHealth } from "../../registry";
+import type { McpServer, ServerHealth } from "../../registry";
 import { useAppStore } from "../store";
 import { useTheme } from "../theme-context";
 
@@ -28,17 +28,6 @@ export function Header() {
   const theme = useTheme();
   const registry = useAppStore((state) => state.registry);
 
-  const getHealthColor = (health?: ServerHealth): string => {
-    switch (health) {
-      case "up":
-        return theme.success;
-      case "down":
-        return theme.danger;
-      default:
-        return theme.foregroundMuted;
-    }
-  };
-
   return (
     <box style={{ flexDirection: "column" }}>
       {/* Centered title */}
@@ -51,36 +40,44 @@ export function Header() {
         }}
       >
         <text fg={theme.brand}>
-          Fiberplane MCP Gateway v{packageJson.version}
+          <strong>Fiberplane</strong> MCP Gateway v{packageJson.version}
         </text>
       </box>
 
       {/* Two-column layout: Details | Servers */}
-      <box style={{ flexDirection: "row", paddingLeft: 1, paddingRight: 1 }}>
+      <box style={{ flexDirection: "row" }}>
         {/* Left column: Gateway details */}
         <box
           style={{
             flexDirection: "column",
             width: "50%",
-            border: ["right"],
+            maxWidth: 80,
+            border: ["right", "left"],
             borderColor: theme.border,
+            // paddingRight: 1,
+            paddingLeft: 1,
             paddingRight: 1,
             gap: 1,
           }}
         >
+          <text fg={theme.foreground}>
+            <strong>Status:</strong>
+          </text>
+          <text fg={theme.foregroundMuted}>
+            Running server on port 3333. This gateway routes all requests to the
+            servers listed on the right.
+          </text>
+
           <box style={{ flexDirection: "row", gap: 1 }}>
-            <box style={{ flexDirection: "column" }}>
-              <text fg={theme.foregroundMuted}>Gateway:</text>
+            <box style={{ flexDirection: "column", width: "40%" }}>
               <text fg={theme.foregroundMuted}>Unified MCP:</text>
             </box>
             <box style={{ flexDirection: "column" }}>
-              <text fg={theme.foreground}>http://localhost:3333</text>
               <text fg={theme.foreground}>
                 http://localhost:3333/gateway/mcp
               </text>
             </box>
           </box>
-          <text fg={theme.foregroundMuted}>(Routes to all servers below)</text>
         </box>
 
         {/* Right column: Server list */}
@@ -96,36 +93,61 @@ export function Header() {
             <text fg={theme.foregroundMuted}>No servers registered</text>
           ) : (
             <>
-              <text fg={theme.accent}>
+              <text fg={theme.foreground}>
                 Servers ({registry.servers.length}):
               </text>
               <box style={{ flexDirection: "column" }}>
-                {registry.servers.map((server) => {
-                  const healthColor = getHealthColor(server.health);
-                  const statusText =
-                    server.health === "up"
-                      ? "✓ up"
-                      : server.health === "down"
-                        ? "✗ down"
-                        : "<unknown>";
-
-                  return (
-                    <box
-                      key={server.name}
-                      style={{
-                        flexDirection: "row",
-                        justifyContent: "space-between",
-                      }}
-                    >
-                      <text fg={theme.foreground}>{server.name}</text>
-                      <text fg={healthColor}>{statusText}</text>
-                    </box>
-                  );
-                })}
+                {registry.servers.map((server) => (
+                  <ServerEntry server={server} />
+                ))}
               </box>
             </>
           )}
         </box>
+      </box>
+    </box>
+  );
+}
+
+function ServerEntry({ server }: { server: McpServer }) {
+  const theme = useTheme();
+  const getHealthColor = (health?: ServerHealth) => {
+    switch (health) {
+      case "up":
+        return theme.success;
+      case "down":
+        return theme.danger;
+      default:
+        return theme.foregroundMuted;
+    }
+  };
+
+  const healthColor = getHealthColor(server.health);
+  const statusText =
+    server.health === "up"
+      ? "up"
+      : server.health === "down"
+        ? "down"
+        : "<unknown>";
+
+  return (
+    <box
+      key={server.name}
+      style={{
+        flexDirection: "row",
+        justifyContent: "space-between",
+      }}
+    >
+      <box style={{ flexDirection: "row", gap: 1 }}>
+        <text fg={healthColor}>
+          {!server.health || server.health === "unknown" ? (
+            <>&#x25CB;</>
+          ) : (
+            <>&#x25CF;</>
+          )}
+        </text>
+        <text fg={theme.foreground}>{server.name}</text>
+        <text fg={theme.foregroundSubtle}>(status: {statusText})</text>
       </box>
     </box>
   );

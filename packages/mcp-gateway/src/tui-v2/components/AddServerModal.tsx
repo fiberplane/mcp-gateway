@@ -71,7 +71,12 @@ export function AddServerModal() {
         : "";
 
   return (
-    <Modal title="Add MCP Server" onClose={closeModal}>
+    <Modal
+      title="Add MCP Server"
+      onClose={closeModal}
+      size="medium"
+      scrollable={false}
+    >
       <box style={{ flexDirection: "column", gap: 1 }}>
         <box title="Server Name" style={{ border: true, width: 50, height: 3 }}>
           <input

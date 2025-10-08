@@ -1,9 +1,18 @@
 import { useKeyboard } from "@opentui/react";
 import { useState } from "react";
-import type { Server } from "../../registry";
 import { useAppStore } from "../store";
 import { useTheme } from "../theme-context";
-import { Modal } from "./Modal";
+
+type Server = {
+  name: string;
+  url: string;
+  type: string;
+  headers: Record<string, string>;
+  lastActivity: string | null;
+  exchangeCount: number;
+  health?: string;
+  lastHealthCheck?: string;
+};
 
 function getStatusText(health?: string): string {
   switch (health) {
@@ -12,7 +21,7 @@ function getStatusText(health?: string): string {
     case "down":
       return "✗ down";
     default:
-      return "<unknown>";
+      return "? unknown";
   }
 }
 
@@ -55,9 +64,8 @@ function generateMcpConfig(server: Server): string {
   );
 }
 
-export function ServerDetailsModal() {
+export function ServerManagementView() {
   const theme = useTheme();
-  const closeModal = useAppStore((state) => state.closeModal);
   const registry = useAppStore((state) => state.registry);
   const removeServer = useAppStore((state) => state.removeServer);
   const openModal = useAppStore((state) => state.openModal);
@@ -80,9 +88,6 @@ export function ServerDetailsModal() {
       if (key.name === "y") {
         removeServer(deleteConfirm);
         setDeleteConfirm(null);
-        if (servers.length === 1) {
-          closeModal();
-        }
       } else if (key.name === "n" || key.name === "escape") {
         setDeleteConfirm(null);
       }
@@ -99,12 +104,11 @@ export function ServerDetailsModal() {
     } else if (key.name === "d" && servers[selectedIndex]) {
       setDeleteConfirm(servers[selectedIndex].name);
     } else if (key.name === "a") {
-      closeModal();
       openModal("add-server");
     }
   });
 
-  const getHealthColor = (health?: string): string => {
+  const getHealthColor = (health?: string) => {
     switch (health) {
       case "up":
         return theme.success;
@@ -123,8 +127,29 @@ export function ServerDetailsModal() {
     const config = generateMcpConfig(server);
 
     return (
-      <Modal title={`Export Config: ${server.name}`} onClose={closeModal}>
-        <box style={{ flexDirection: "column" }}>
+      <box
+        style={{
+          flexDirection: "column",
+          flexGrow: 1,
+          padding: 1,
+        }}
+      >
+        {/* Header */}
+        <box
+          style={{
+            flexDirection: "row",
+            justifyContent: "center",
+            paddingBottom: 1,
+            border: ["bottom"],
+            borderColor: theme.border,
+            marginBottom: 1,
+          }}
+        >
+          <text fg={theme.accent}>Export Config: {server.name}</text>
+        </box>
+
+        {/* Content */}
+        <box style={{ flexDirection: "column", flexGrow: 1 }}>
           <text fg={theme.accent} style={{ marginBottom: 1 }}>
             Copy this configuration to your Claude Desktop config:
           </text>
@@ -143,58 +168,48 @@ export function ServerDetailsModal() {
               </text>
             ))}
           </box>
+        </box>
 
-          <text fg={theme.foregroundMuted} style={{ marginTop: 1 }}>
-            Press any key to go back
+        {/* Footer */}
+        <box
+          style={{
+            paddingTop: 1,
+            border: ["top"],
+            borderColor: theme.border,
+          }}
+        >
+          <text fg={theme.foregroundMuted}>
+            Press any key to go back • [ESC] Return to Activity Log
           </text>
         </box>
-      </Modal>
-    );
-  }
-
-  // Show delete confirmation
-  if (deleteConfirm) {
-    return (
-      <Modal title="Delete Server" onClose={closeModal}>
-        <box style={{ flexDirection: "column", alignItems: "center" }}>
-          <box
-            style={{
-              padding: 2,
-              border: true,
-              borderColor: theme.danger,
-              width: "80%",
-              flexDirection: "column",
-              alignItems: "center",
-            }}
-          >
-            <text fg={theme.danger} style={{ marginBottom: 2 }}>
-              ⚠ Warning
-            </text>
-
-            <text fg={theme.foreground} style={{ marginBottom: 1 }}>
-              Are you sure you want to delete:
-            </text>
-
-            <text fg={theme.accent} style={{ marginBottom: 2 }}>
-              '{deleteConfirm}'
-            </text>
-
-            <text fg={theme.foregroundMuted}>
-              This action cannot be undone.
-            </text>
-          </box>
-
-          <text fg={theme.foregroundMuted} style={{ marginTop: 2 }}>
-            Press [y] to confirm, [n] or [ESC] to cancel
-          </text>
-        </box>
-      </Modal>
+      </box>
     );
   }
 
   return (
-    <Modal title="Server Management" onClose={closeModal}>
-      <box style={{ flexDirection: "column" }}>
+    <box
+      style={{
+        flexDirection: "column",
+        flexGrow: 1,
+        padding: 1,
+      }}
+    >
+      {/* Header */}
+      <box
+        style={{
+          flexDirection: "row",
+          justifyContent: "center",
+          paddingBottom: 1,
+          border: ["bottom"],
+          borderColor: theme.border,
+          marginBottom: 1,
+        }}
+      >
+        <text fg={theme.accent}>Server Management</text>
+      </box>
+
+      {/* Content */}
+      <box style={{ flexDirection: "column", flexGrow: 1 }}>
         {servers.length === 0 ? (
           <>
             <text fg={theme.foregroundMuted} style={{ marginBottom: 2 }}>
@@ -205,7 +220,7 @@ export function ServerDetailsModal() {
         ) : (
           <>
             <text fg={theme.accent} style={{ marginBottom: 1 }}>
-              Registered Servers:
+              Registered Servers ({servers.length}):
             </text>
 
             {servers.map((server, index) => {
@@ -221,8 +236,8 @@ export function ServerDetailsModal() {
                   key={server.name}
                   style={{
                     flexDirection: "column",
-                    // marginBottom: 2,
                     padding: 1,
+                    marginBottom: 1,
                     backgroundColor: isSelected ? theme.emphasis : undefined,
                   }}
                 >
@@ -264,8 +279,8 @@ export function ServerDetailsModal() {
                     </text>
                   )}
 
-                  {/* Actions (only show for selected) */}
-                  {isSelected && (
+                  {/* Actions (only show for selected, not when confirming delete) */}
+                  {isSelected && deleteConfirm !== server.name && (
                     <text
                       fg={theme.accent}
                       style={{ paddingLeft: 2, marginTop: 1 }}
@@ -276,27 +291,35 @@ export function ServerDetailsModal() {
                 </box>
               );
             })}
-
-            <box
-              style={{
-                flexDirection: "column",
-                marginTop: 2,
-                paddingTop: 1,
-                borderTop: true,
-                borderColor: theme.border,
-              }}
-            >
-              <text fg={theme.accent} style={{ marginBottom: 1 }}>
-                Navigation:
-              </text>
-              <text fg={theme.foregroundMuted}>
-                [↑↓] Select server • [e] Export config • [d] Delete • [a] Add
-                new server
-              </text>
-            </box>
           </>
         )}
       </box>
-    </Modal>
+
+      {/* Footer - Delete confirmation or normal navigation */}
+      <box
+        style={{
+          flexDirection: "column",
+          paddingTop: 1,
+          border: ["top"],
+          borderColor: deleteConfirm ? theme.danger : theme.border,
+        }}
+      >
+        {deleteConfirm ? (
+          <>
+            <text fg={theme.danger}>
+              ⚠ Delete '{deleteConfirm}'? This cannot be undone.
+            </text>
+            <text fg={theme.accent}>[y] Yes [n] No</text>
+          </>
+        ) : (
+          <>
+            <text fg={theme.foregroundMuted}>
+              [↑↓] Select • [e] Export • [d] Delete • [a] Add • [ESC] Back to
+              Activity Log
+            </text>
+          </>
+        )}
+      </box>
+    </box>
   );
 }

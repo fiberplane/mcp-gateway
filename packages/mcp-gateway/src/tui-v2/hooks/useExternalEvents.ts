@@ -28,12 +28,31 @@ export function useExternalEvents() {
 
     const handleRegistryUpdate = async () => {
       debug("Registry update event received, reloading from disk");
+      // Get current registry to preserve runtime fields
+      const currentRegistry = useAppStore.getState().registry;
+
       // Reload registry from disk
       const updatedRegistry = await loadRegistry(storageDir);
-      debug("Registry reloaded:", {
-        serverCount: updatedRegistry.servers.length,
+
+      // Preserve runtime fields (health, lastHealthCheck) that aren't persisted
+      const mergedServers = updatedRegistry.servers.map((server) => {
+        const currentServer = currentRegistry.servers.find(
+          (s) => s.name === server.name,
+        );
+        if (currentServer) {
+          return {
+            ...server,
+            health: currentServer.health,
+            lastHealthCheck: currentServer.lastHealthCheck,
+          };
+        }
+        return server;
       });
-      setRegistry(updatedRegistry);
+
+      debug("Registry reloaded:", {
+        serverCount: mergedServers.length,
+      });
+      setRegistry({ servers: mergedServers });
     };
 
     // Subscribe to events
