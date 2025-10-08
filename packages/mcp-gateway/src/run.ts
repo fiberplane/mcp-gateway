@@ -4,6 +4,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { serve } from "@hono/node-server";
 import { startHealthChecks } from "./health.js";
+import { logger } from "./logger.js";
 import { createApp } from "./server/index.js";
 import { getStorageRoot, loadRegistry } from "./storage.js";
 import { runTUI } from "./tui/loop.js";
@@ -75,6 +76,9 @@ export async function runCli(): Promise<void> {
     // Get storage directory
     const storageDir = getStorageRoot(values["storage-dir"]);
 
+    // Initialize logger
+    await logger.initialize(storageDir);
+
     // Load registry once and share it between server and CLI
     const registry = await loadRegistry(storageDir);
 
@@ -104,7 +108,7 @@ export async function runCli(): Promise<void> {
     // Start TUI only if running in a TTY
     if (process.stdin.isTTY) {
       runTUI(context, registry).catch((error) => {
-        console.error("TUI error:", error);
+        logger.error("TUI error", { error: String(error) });
         stopHealthChecks();
         server.close();
         process.exit(1);
@@ -127,9 +131,9 @@ export async function runCli(): Promise<void> {
     }
   } catch (error) {
     if (error instanceof Error) {
-      console.error(`Error: ${error.message}`);
+      logger.error("CLI error", { message: error.message });
     }
-    console.error("Run with --help for usage information.");
+    logger.error("Run with --help for usage information");
     process.exit(1);
   }
 }

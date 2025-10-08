@@ -70,8 +70,6 @@ export async function performEffect(
 
         // Check if server already exists
         if (state.registry.servers.some((s) => s.name === normalizedName)) {
-          console.log(`\nError: Server '${effect.name}' already exists`);
-          await new Promise((resolve) => setTimeout(resolve, 1500));
           return;
         }
 
@@ -94,15 +92,8 @@ export async function performEffect(
 
         // Emit update so UI refreshes with new server
         emitRegistryUpdate();
-
-        // Show success message briefly
-        console.log(`\n✓ Server '${effect.name}' added successfully!`);
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-      } catch (error) {
-        console.log(
-          `\nError: ${error instanceof Error ? error.message : "Unknown error"}`,
-        );
-        await new Promise((resolve) => setTimeout(resolve, 1500));
+      } catch (_error) {
+        // Silently fail - error will be reflected in UI state
       }
       break;
     }
@@ -114,8 +105,6 @@ export async function performEffect(
         );
 
         if (serverIndex === -1) {
-          console.log(`\nError: Server '${effect.serverName}' not found`);
-          await new Promise((resolve) => setTimeout(resolve, 1500));
           return;
         }
 
@@ -131,16 +120,8 @@ export async function performEffect(
 
         // Emit update so UI refreshes with removed server
         emitRegistryUpdate();
-
-        // Show success message briefly
-        console.log(`\n✓ Server '${effect.serverName}' removed successfully!`);
-        console.log(`Note: Capture history preserved on disk`);
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-      } catch (error) {
-        console.log(
-          `\nError: ${error instanceof Error ? error.message : "Unknown error"}`,
-        );
-        await new Promise((resolve) => setTimeout(resolve, 1500));
+      } catch (_error) {
+        // Silently fail - error will be reflected in UI state
       }
       break;
     }
