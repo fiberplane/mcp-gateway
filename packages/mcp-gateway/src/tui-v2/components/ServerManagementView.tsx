@@ -103,17 +103,6 @@ export function ServerManagementView() {
     }
   });
 
-  const getHealthColor = (health?: string) => {
-    switch (health) {
-      case "up":
-        return theme.success;
-      case "down":
-        return theme.danger;
-      default:
-        return theme.foregroundMuted;
-    }
-  };
-
   // Show config export view
   if (showConfig) {
     const server = servers.find((s) => s.name === showConfig);
@@ -126,7 +115,6 @@ export function ServerManagementView() {
         style={{
           flexDirection: "column",
           flexGrow: 1,
-          backgroundColor: theme.emphasis,
           padding: 0,
           paddingLeft: 1,
           paddingRight: 1,
@@ -152,7 +140,7 @@ export function ServerManagementView() {
 
         {/* Content */}
         <box style={{ flexDirection: "column", flexGrow: 1 }}>
-          <text fg={theme.accent} style={{ marginBottom: 1 }}>
+          <text style={{ marginBottom: 1 }}>
             Copy this configuration to your Claude Desktop config:
           </text>
 
@@ -196,6 +184,7 @@ export function ServerManagementView() {
         padding: 0,
         paddingLeft: 1,
         paddingRight: 1,
+        // backgroundColor: theme.accent
       }}
     >
       {/* Header */}
@@ -209,7 +198,6 @@ export function ServerManagementView() {
           paddingBottom: 1,
           border: ["bottom"],
           borderColor: theme.border,
-          marginBottom: 1,
         }}
       >
         <text fg={theme.accent}>Server Management</text>
@@ -219,7 +207,7 @@ export function ServerManagementView() {
       </box>
 
       {/* Content */}
-      <box style={{ flexDirection: "column", flexGrow: 1 }}>
+      <box style={{ flexDirection: "column", flexGrow: 1, padding: 0 }}>
         {servers.length === 0 ? (
           <box
             style={{
@@ -242,70 +230,12 @@ export function ServerManagementView() {
           >
             {servers.map((server, index) => {
               const isSelected = index === selectedIndex;
-              const healthColor = getHealthColor(server.health);
-              const statusText = getStatusText(server.health);
-              const encodedName = encodeURIComponent(server.name);
-              const gatewayUrl = `http://localhost:3333/servers/${encodedName}/mcp`;
-              const activityTime = formatRelativeTime(server.lastActivity);
-
               return (
-                <box
+                <ServerOption
                   key={server.name}
-                  style={{
-                    flexDirection: "column",
-                    padding: 1,
-                    marginBottom: 1,
-                    backgroundColor: isSelected ? theme.emphasis : undefined,
-                  }}
-                >
-                  {/* Server name and status */}
-                  <box style={{ flexDirection: "row", gap: 1 }}>
-                    <text fg={isSelected ? theme.accent : theme.foreground}>
-                      {isSelected ? ">" : " "}
-                    </text>
-                    <text fg={healthColor}>{statusText}</text>
-                    <text fg={theme.foreground}>{server.name}</text>
-                  </box>
-
-                  {/* Source URL */}
-                  <text
-                    fg={theme.foregroundMuted}
-                    style={{ paddingLeft: 2, marginTop: 0 }}
-                  >
-                    Source: {server.url}
-                  </text>
-
-                  {/* Gateway URL */}
-                  <text fg={theme.foregroundMuted} style={{ paddingLeft: 2 }}>
-                    Gateway: {gatewayUrl}
-                  </text>
-
-                  {/* Health check info for down servers */}
-                  {server.health === "down" && server.lastHealthCheck && (
-                    <text fg={theme.danger} style={{ paddingLeft: 2 }}>
-                      Server unreachable (checked{" "}
-                      {formatRelativeTime(server.lastHealthCheck)})
-                    </text>
-                  )}
-
-                  {/* Activity info */}
-                  {server.lastActivity && (
-                    <text fg={theme.foregroundMuted} style={{ paddingLeft: 2 }}>
-                      Last activity: {activityTime} • {server.exchangeCount}{" "}
-                      exchanges
-                    </text>
-                  )}
-
-                  {/* Actions (only show for selected) */}
-                  {isSelected && (
-                    <text
-                      fg={theme.accent}
-                      style={{ paddingLeft: 2, marginTop: 1 }}
-                    >
-                      [e] Export config [d] Delete server
-                    </text>
-                  )}
-                </box>
+                  server={server}
+                  isSelected={isSelected}
+                />
               );
             })}
           </scrollbox>
@@ -326,6 +256,85 @@ export function ServerManagementView() {
           Activity Log
         </text>
       </box>
+    </box>
+  );
+}
+
+function ServerOption({
+  server,
+  isSelected,
+}: {
+  server: Server;
+  isSelected?: boolean;
+}) {
+  const theme = useTheme();
+  const getHealthColor = (health?: string) => {
+    switch (health) {
+      case "up":
+        return theme.success;
+      case "down":
+        return theme.danger;
+      default:
+        return theme.foregroundMuted;
+    }
+  };
+
+  const healthColor = getHealthColor(server.health);
+  const statusText = getStatusText(server.health);
+  const encodedName = encodeURIComponent(server.name);
+  const gatewayUrl = `http://localhost:3333/servers/${encodedName}/mcp`;
+  const activityTime = formatRelativeTime(server.lastActivity);
+
+  return (
+    <box
+      key={server.name}
+      style={{
+        flexDirection: "column",
+        padding: 1,
+        marginBottom: 1,
+        backgroundColor: isSelected ? theme.emphasis : undefined,
+      }}
+    >
+      {/* Server name and status */}
+      <box style={{ flexDirection: "row", gap: 1 }}>
+        <text fg={isSelected ? theme.accent : theme.foreground}>
+          {isSelected ? ">" : " "}
+        </text>
+        <text fg={healthColor}>{statusText}</text>
+        <text fg={theme.foreground}>{server.name}</text>
+      </box>
+
+      {/* Source URL */}
+      <text fg={theme.foregroundMuted} style={{ paddingLeft: 2, marginTop: 0 }}>
+        Source: {server.url}
+      </text>
+
+      {/* Gateway URL */}
+      <text fg={theme.foregroundMuted} style={{ paddingLeft: 2 }}>
+        Gateway: {gatewayUrl}
+      </text>
+
+      {/* Health check info for down servers */}
+      {server.health === "down" && server.lastHealthCheck && (
+        <text fg={theme.danger} style={{ paddingLeft: 2 }}>
+          Server unreachable (checked{" "}
+          {formatRelativeTime(server.lastHealthCheck)})
+        </text>
+      )}
+
+      {/* Activity info */}
+      {server.lastActivity && (
+        <text fg={theme.foregroundMuted} style={{ paddingLeft: 2 }}>
+          Last activity: {activityTime} • {server.exchangeCount} exchanges
+        </text>
+      )}
+
+      {/* Actions (only show for selected) */}
+      {isSelected && (
+        <text fg={theme.accent} style={{ paddingLeft: 2, marginTop: 1 }}>
+          [e] Export config [d] Delete server
+        </text>
+      )}
     </box>
   );
 }

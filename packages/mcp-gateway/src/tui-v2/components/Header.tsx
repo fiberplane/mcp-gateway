@@ -3,6 +3,7 @@ import packageJson from "../../../package.json" with { type: "json" };
 import type { McpServer, ServerHealth } from "../../registry";
 import { useAppStore } from "../store";
 import { useTheme } from "../theme-context";
+import { useIsSmall } from "../hooks/useIsSmall";
 
 // function formatRelativeTime(timestamp: string | null): string {
 //   if (!timestamp) return "—";
@@ -57,21 +58,7 @@ export function Header() {
             gap: 1,
           }}
         >
-          <text fg={theme.foregroundMuted}>
-            Running server on port 3333. This gateway routes all requests to the
-            servers listed on the right.
-          </text>
-
-          <box style={{ flexDirection: "row", gap: 1 }}>
-            <box style={{ flexDirection: "column", width: "40%" }}>
-              <text fg={theme.foregroundMuted}>Debug MCP server:</text>
-            </box>
-            <box style={{ flexDirection: "column" }}>
-              <text fg={theme.foreground}>
-                http://localhost:3333/gateway/mcp
-              </text>
-            </box>
-          </box>
+          <text fg={theme.foregroundMuted}>Running server on port 3333.</text>
         </HeaderSection>
         {/* Right column: Server list */}
         <HeaderSection
@@ -105,6 +92,7 @@ function HeaderSection({
   style?: BoxProps["style"];
 }) {
   const theme = useTheme();
+  const isSmall = useIsSmall();
   // const
   return (
     <box
@@ -113,7 +101,7 @@ function HeaderSection({
         gap: 1,
         paddingLeft: 1,
         paddingRight: 1,
-        paddingBottom: 1,
+        paddingBottom: isSmall ? 0 : 1,
         ...style,
       }}
     >

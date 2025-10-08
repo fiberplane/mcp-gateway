@@ -85,6 +85,18 @@ export function AddServerModal() {
             onInput={setName}
             onSubmit={handleSubmit}
             focused={focusedField === "name"}
+            enableLayout
+            style={{
+              paddingLeft: 1,
+              paddingRight: 1,
+            }}
+            // cursorColor={theme.accent}
+            // style={{
+            //   paddingLeft: 1,
+            //   paddingRight: 1,
+            // }}
+            // paddingLeft={1}
+            // paddingRight={1}
           />
         </box>
 

@@ -1,7 +1,9 @@
-import type { BoxProps } from "@opentui/react";
+import { useTerminalDimensions, type BoxProps } from "@opentui/react";
 import { commandShortcuts, formatShortcut } from "../shortcuts";
 import { useAppStore } from "../store";
 import { useTheme } from "../theme-context";
+import { debug } from "../debug";
+import { useIsSmall } from "../hooks/useIsSmall";
 
 export function EmptyState() {
   const theme = useTheme();
@@ -41,13 +43,14 @@ export function EmptyState() {
           justifyContent: "center",
           flexGrow: 1,
           gap: 1,
+          flexShrink: 0,
         }}
       >
         {!hasServers ? (
           // No servers configured
           <>
             <text fg={theme.foregroundMuted}>
-              <em>&lt; No servers configured &gt;</em>
+              <em>No servers configured</em>
             </text>
             <RoundedBox style={{ borderColor: theme.accent }}>
               <text fg={theme.foreground}>
@@ -153,6 +156,8 @@ const RoundedBox = ({
   style?: BoxProps["style"];
 }) => {
   const theme = useTheme();
+  const isSmall = useIsSmall();
+
   return (
     <box
       style={{
@@ -161,6 +166,8 @@ const RoundedBox = ({
         border: true,
         borderColor: theme.border,
         padding: 1,
+        paddingTop: isSmall ? 0 : 1,
+        paddingBottom: isSmall ? 0 : 1,
         borderStyle: "rounded",
         maxWidth: 66,
         ...style,

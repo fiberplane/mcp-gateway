@@ -18,6 +18,7 @@ export function McpInstructionsModal() {
           gap: 1,
           paddingLeft: 1,
           paddingRight: 1,
+          paddingBottom: 1,
         }}
       >
         {/* Overview */}
@@ -33,7 +34,10 @@ export function McpInstructionsModal() {
 
         <box>
           <text fg={theme.foreground}>
-            1. Add MCP Server{hasServers ? " ✓" : ""}
+            1. Add MCP Server
+            <span fg={hasServers ? theme.success : theme.foregroundMuted}>
+              {hasServers ? " ✓" : ""}
+            </span>
           </text>
           <text fg={theme.foregroundMuted} style={{ paddingLeft: 2 }}>
             Press {formatShortcut(commandShortcuts.addServer.key)} to add
@@ -76,8 +80,8 @@ export function McpInstructionsModal() {
                     flexDirection: "column",
                     backgroundColor: theme.emphasis,
                     padding: 1,
-                    marginLeft: 2,
                     borderStyle: "rounded",
+                    borderColor: theme.emphasis,
                   }}
                 >
                   <text fg={theme.foregroundMuted}>
@@ -96,7 +100,8 @@ export function McpInstructionsModal() {
                 flexDirection: "column",
                 backgroundColor: theme.emphasis,
                 padding: 1,
-                marginLeft: 2,
+                borderStyle: "rounded",
+                borderColor: theme.emphasis,
               }}
             >
               <text fg={theme.foregroundMuted}>{"{"}</text>
@@ -180,6 +185,12 @@ export function McpInstructionsModal() {
             • Ensure network connectivity to the backend server
           </text>
         </IndentedText>
+
+        <text fg={theme.foreground}>Can't copy the URL?</text>
+        <text fg={theme.foregroundMuted} style={{ paddingLeft: 2 }}>
+          This app supports mouse interaction and selecting text for copying may
+          require the use of modifier keys in the terminal emulator
+        </text>
 
         {/* More Info */}
         <box>
