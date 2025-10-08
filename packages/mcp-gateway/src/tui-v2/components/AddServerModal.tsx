@@ -4,6 +4,7 @@ import { debug } from "../debug";
 import { useAppStore } from "../store";
 import { useTheme } from "../theme-context";
 import { Modal } from "./Modal";
+import { useIsSmall } from "../hooks/useIsSmall";
 
 export function AddServerModal() {
   const theme = useTheme();
@@ -15,6 +16,19 @@ export function AddServerModal() {
   const [focusedField, setFocusedField] = useState<"name" | "url">("url");
   const [status, setStatus] = useState<"idle" | "submitting" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
+
+  const isSmall = useIsSmall();
+
+  // Debug paste handling
+  const handleUrlPaste = useCallback((pastedText: string) => {
+    debug("Paste detected in URL field:", pastedText);
+    setUrl(pastedText.trim());
+  }, []);
+
+  const handleNamePaste = useCallback((pastedText: string) => {
+    debug("Paste detected in name field:", pastedText);
+    setName(pastedText.trim());
+  }, []);
 
   // Handle Tab key to switch between fields
   useKeyboard((key) => {
@@ -89,48 +103,59 @@ export function AddServerModal() {
       scrollable={false}
     >
       <box style={{ flexDirection: "column", gap: 1 }}>
-        <text fg={theme.foregroundMuted}>Enter your MCP server URL</text>
-        <box
-          title="Server URL"
-          style={{
-            border: true,
-            width: 50,
-            height: 3,
-            paddingLeft: 1,
-            paddingRight: 1,
-          }}
-        >
-          <input
-            placeholder="http://localhost:3000/mcp"
-            value={url}
-            onInput={setUrl}
-            onSubmit={handleSubmit}
-            focused={focusedField === "url"}
-          />
-        </box>
-
-        <text fg={theme.foregroundMuted}>Give it a name</text>
-        <box
-          title="Server Name"
-          style={{
-            border: true,
-            width: 50,
-            height: 3,
-            paddingLeft: 1,
-            paddingRight: 1,
-          }}
-        >
-          <input
-            placeholder="my-server"
-            value={name}
-            onInput={setName}
-            onSubmit={handleSubmit}
-            focused={focusedField === "name"}
+        <box style={{ flexDirection: "column", gap: isSmall ? 0 : 1 }}>
+          <box
+            title="Server URL"
             style={{
+              border: true,
+              borderColor: theme.foregroundMuted,
+              width: 50,
+              height: 3,
               paddingLeft: 1,
               paddingRight: 1,
             }}
-          />
+          >
+            <input
+              placeholder="http://localhost:3000/mcp"
+              value={url}
+              onInput={setUrl}
+              onPaste={handleUrlPaste}
+              onSubmit={handleSubmit}
+              focused={focusedField === "url"}
+            />
+          </box>
+          <text fg={theme.foregroundMuted}>Your MCP server URL</text>
+        </box>
+
+        <box style={{ flexDirection: "column", gap: isSmall ? 0 : 1 }}>
+          <box
+            title="Server Name"
+            style={{
+              border: true,
+              borderColor: theme.foregroundMuted,
+              width: 50,
+              height: 3,
+              paddingLeft: 1,
+              paddingRight: 1,
+              flexShrink: 0,
+            }}
+          >
+            <input
+              placeholder="my-server"
+              value={name}
+              onInput={setName}
+              onPaste={handleNamePaste}
+              onSubmit={handleSubmit}
+              focused={focusedField === "name"}
+              style={{
+                paddingLeft: 1,
+                paddingRight: 1,
+              }}
+            />
+          </box>
+          <text fg={theme.foregroundMuted}>
+            Give your server/service a name
+          </text>
         </box>
         {/* Gateway URL Preview */}
         <box
@@ -138,16 +163,20 @@ export function AddServerModal() {
             flexDirection: "column",
           }}
         >
-          <text fg={theme.foregroundMuted}>Forward traffic from:</text>
-          <text fg={theme.accent}>{gatewayUrl}</text>
-          <text fg={theme.foregroundMuted}>&#x2192;</text>
-          <text fg={theme.accent}>
-            {url || (
-              <em style={{ fg: theme.foregroundSubtle }}>
-                http://localhost:3000/mcp
-              </em>
-            )}
+          <text fg={theme.foregroundMuted}>
+            This will enable traffic from the gateway at:
           </text>
+          <text fg={theme.accent}>{gatewayUrl}</text>
+          <box style={{ flexDirection: "row", gap: 1 }}>
+            <text fg={theme.foregroundMuted}>&#x2192; </text>
+            {url ? (
+              <text fg={theme.accent}>{url}</text>
+            ) : (
+              <text fg={theme.foregroundSubtle}>
+                <em>http://localhost:3000/mcp</em>
+              </text>
+            )}
+          </box>
         </box>
 
         {statusText && (

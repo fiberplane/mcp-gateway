@@ -207,6 +207,15 @@ export async function runOpenTUI(context: Context, registry: Registry) {
     console.error("Unhandled promise rejection:", reason);
   });
 
+  // Enable bracketed paste mode manually (OpenTUI doesn't enable it by default)
+  process.stdout.write("\x1b[?2004h");
+
+  // Disable on exit
+  const disableBracketedPaste = () => {
+    process.stdout.write("\x1b[?2004l");
+  };
+  process.on("exit", disableBracketedPaste);
+
   // Render app (render() automatically includes ErrorBoundary)
   render(
     <ThemeProvider>

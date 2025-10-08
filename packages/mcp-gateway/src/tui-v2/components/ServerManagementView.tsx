@@ -193,9 +193,6 @@ export function ServerManagementView() {
           flexDirection: "row",
           justifyContent: "space-between",
           alignItems: "flex-start",
-          paddingLeft: 1,
-          paddingRight: 1,
-          paddingBottom: 1,
           border: ["bottom"],
           borderColor: theme.border,
         }}
@@ -218,7 +215,7 @@ export function ServerManagementView() {
             }}
           >
             <text fg={theme.foregroundMuted} style={{ marginBottom: 2 }}>
-              No servers registered yet.
+              <em>No servers registered yet.</em>
             </text>
             <text fg={theme.accent}>Press [a] to add your first server</text>
           </box>
@@ -287,54 +284,70 @@ function ServerOption({
 
   return (
     <box
-      key={server.name}
       style={{
-        flexDirection: "column",
-        padding: 1,
-        marginBottom: 1,
+        flexDirection: "row",
+        gap: 1,
         backgroundColor: isSelected ? theme.emphasis : undefined,
       }}
     >
-      {/* Server name and status */}
-      <box style={{ flexDirection: "row", gap: 1 }}>
-        <text fg={isSelected ? theme.accent : theme.foreground}>
+      <box>
+        <text
+          fg={isSelected ? theme.accent : theme.foreground}
+          style={{ width: 1 }}
+        >
           {isSelected ? ">" : " "}
         </text>
-        <text fg={healthColor}>{statusText}</text>
-        <text fg={theme.foreground}>{server.name}</text>
       </box>
 
-      {/* Source URL */}
-      <text fg={theme.foregroundMuted} style={{ paddingLeft: 2, marginTop: 0 }}>
-        Source: {server.url}
-      </text>
+      <box
+        key={server.name}
+        style={{
+          flexDirection: "column",
+          // padding: 1,
+          // marginBottom: 1,
+        }}
+      >
+        {/* Server name and status */}
+        <box style={{ flexDirection: "row", gap: 1 }}>
+          <text fg={healthColor}>{statusText}</text>
+          <text fg={theme.foreground}>{server.name}</text>
+        </box>
 
-      {/* Gateway URL */}
-      <text fg={theme.foregroundMuted} style={{ paddingLeft: 2 }}>
-        Gateway: {gatewayUrl}
-      </text>
-
-      {/* Health check info for down servers */}
-      {server.health === "down" && server.lastHealthCheck && (
-        <text fg={theme.danger} style={{ paddingLeft: 2 }}>
-          Server unreachable (checked{" "}
-          {formatRelativeTime(server.lastHealthCheck)})
+        {/* Source URL */}
+        <text
+          fg={theme.foregroundMuted}
+          style={{ paddingLeft: 2, marginTop: 0 }}
+        >
+          Source: {server.url}
         </text>
-      )}
 
-      {/* Activity info */}
-      {server.lastActivity && (
+        {/* Gateway URL */}
         <text fg={theme.foregroundMuted} style={{ paddingLeft: 2 }}>
-          Last activity: {activityTime} • {server.exchangeCount} exchanges
+          Gateway: {gatewayUrl}
         </text>
-      )}
 
-      {/* Actions (only show for selected) */}
-      {isSelected && (
-        <text fg={theme.accent} style={{ paddingLeft: 2, marginTop: 1 }}>
-          [e] Export config [d] Delete server
-        </text>
-      )}
+        {/* Health check info for down servers */}
+        {server.health === "down" && server.lastHealthCheck && (
+          <text fg={theme.danger} style={{ paddingLeft: 2 }}>
+            Server unreachable (checked{" "}
+            {formatRelativeTime(server.lastHealthCheck)})
+          </text>
+        )}
+
+        {/* Activity info */}
+        {server.lastActivity && (
+          <text fg={theme.foregroundMuted} style={{ paddingLeft: 2 }}>
+            Last activity: {activityTime} • {server.exchangeCount} exchanges
+          </text>
+        )}
+
+        {/* Actions (only show for selected) */}
+        {isSelected && (
+          <text fg={theme.accent} style={{ paddingLeft: 2, marginTop: 1 }}>
+            [e] Export config [d] Delete server
+          </text>
+        )}
+      </box>
     </box>
   );
 }
