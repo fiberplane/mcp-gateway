@@ -131,9 +131,18 @@ export async function runCli(): Promise<void> {
     }
   } catch (error) {
     if (error instanceof Error) {
-      logger.error("CLI error", { message: error.message });
+      // print error message to user
+      console.error("CLI error:", error.message);
+
+      // Also log the error message and stack to the log files
+      logger.error("CLI error", {
+        message: error.message,
+        stack: error.stack,
+      });
     }
-    logger.error("Run with --help for usage information");
+
+    // print message to user on how to look up usage
+    console.error("Run with --help for usage information");
     process.exit(1);
   }
 }
