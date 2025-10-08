@@ -116,16 +116,7 @@ function App() {
       openModal("mcp-instructions");
       return;
     }
-
-    if (key.name === commandShortcuts.debug.key) {
-      debug("Opening debug modal");
-      renderer.console.toggle();
-      // openModal("debug");
-      return;
-    }
   });
-
-  console.log("Hi");
 
   return (
     <box

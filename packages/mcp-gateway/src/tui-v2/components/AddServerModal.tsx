@@ -12,7 +12,7 @@ export function AddServerModal() {
 
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
-  const [focusedField, setFocusedField] = useState<"name" | "url">("name");
+  const [focusedField, setFocusedField] = useState<"name" | "url">("url");
   const [status, setStatus] = useState<"idle" | "submitting" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -70,6 +70,17 @@ export function AddServerModal() {
         ? `Error: ${errorMessage}`
         : "";
 
+  // Generate preview of gateway URL
+  const previewName = name.trim();
+  const encodedName = encodeURIComponent(previewName);
+  const gatewayUrl = (
+    <>
+      http://localhost:3333/servers/
+      {encodedName || <em style={{ fg: theme.foregroundSubtle }}>my-server</em>}
+      /mcp
+    </>
+  );
+
   return (
     <Modal
       title="Add MCP Server"
@@ -78,29 +89,17 @@ export function AddServerModal() {
       scrollable={false}
     >
       <box style={{ flexDirection: "column", gap: 1 }}>
-        <box title="Server Name" style={{ border: true, width: 50, height: 3 }}>
-          <input
-            placeholder="my-server"
-            value={name}
-            onInput={setName}
-            onSubmit={handleSubmit}
-            focused={focusedField === "name"}
-            enableLayout
-            style={{
-              paddingLeft: 1,
-              paddingRight: 1,
-            }}
-            // cursorColor={theme.accent}
-            // style={{
-            //   paddingLeft: 1,
-            //   paddingRight: 1,
-            // }}
-            // paddingLeft={1}
-            // paddingRight={1}
-          />
-        </box>
-
-        <box title="Server URL" style={{ border: true, width: 50, height: 3 }}>
+        <text fg={theme.foregroundMuted}>Enter your MCP server URL</text>
+        <box
+          title="Server URL"
+          style={{
+            border: true,
+            width: 50,
+            height: 3,
+            paddingLeft: 1,
+            paddingRight: 1,
+          }}
+        >
           <input
             placeholder="http://localhost:3000/mcp"
             value={url}
@@ -108,6 +107,47 @@ export function AddServerModal() {
             onSubmit={handleSubmit}
             focused={focusedField === "url"}
           />
+        </box>
+
+        <text fg={theme.foregroundMuted}>Give it a name</text>
+        <box
+          title="Server Name"
+          style={{
+            border: true,
+            width: 50,
+            height: 3,
+            paddingLeft: 1,
+            paddingRight: 1,
+          }}
+        >
+          <input
+            placeholder="my-server"
+            value={name}
+            onInput={setName}
+            onSubmit={handleSubmit}
+            focused={focusedField === "name"}
+            style={{
+              paddingLeft: 1,
+              paddingRight: 1,
+            }}
+          />
+        </box>
+        {/* Gateway URL Preview */}
+        <box
+          style={{
+            flexDirection: "column",
+          }}
+        >
+          <text fg={theme.foregroundMuted}>Forward traffic from:</text>
+          <text fg={theme.accent}>{gatewayUrl}</text>
+          <text fg={theme.foregroundMuted}>&#x2192;</text>
+          <text fg={theme.accent}>
+            {url || (
+              <em style={{ fg: theme.foregroundSubtle }}>
+                http://localhost:3000/mcp
+              </em>
+            )}
+          </text>
         </box>
 
         {statusText && (

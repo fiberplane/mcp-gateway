@@ -87,11 +87,6 @@ export const commandShortcuts = {
     label: "h",
     description: "Help",
   },
-  debug: {
-    key: "t",
-    label: "t",
-    description: "Toggle debug",
-  },
 } as const;
 
 /**
