@@ -20,6 +20,7 @@ interface AppStore {
   activeModal: ModalType;
   viewMode: ViewMode;
   showCommandMenu: boolean;
+  serverToDelete: string | null;
 
   // Actions
   initialize: (registry: Registry, storageDir: string) => void;
@@ -33,6 +34,7 @@ interface AppStore {
   setViewMode: (mode: ViewMode) => void;
   openCommandMenu: () => void;
   closeCommandMenu: () => void;
+  setServerToDelete: (serverName: string | null) => void;
 }
 
 export const useAppStore = create<AppStore>((set, get) => ({
@@ -43,6 +45,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   activeModal: null,
   viewMode: "activity-log",
   showCommandMenu: false,
+  serverToDelete: null,
 
   // Actions
   initialize: (registry, storageDir) => set({ registry, storageDir }),
@@ -115,8 +118,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
   addLog: (entry) => set((state) => ({ logs: [...state.logs, entry] })),
   clearLogs: () => set({ logs: [] }),
   openModal: (modal) => set({ activeModal: modal }),
-  closeModal: () => set({ activeModal: null }),
+  closeModal: () => set({ activeModal: null, serverToDelete: null }),
   setViewMode: (mode) => set({ viewMode: mode }),
   openCommandMenu: () => set({ showCommandMenu: true }),
   closeCommandMenu: () => set({ showCommandMenu: false }),
+  setServerToDelete: (serverName) => set({ serverToDelete: serverName }),
 }));

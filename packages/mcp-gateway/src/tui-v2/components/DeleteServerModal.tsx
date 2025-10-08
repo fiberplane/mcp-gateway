@@ -10,9 +10,17 @@ export function DeleteServerModal() {
   const servers = useAppStore((state) => state.registry.servers);
   const removeServer = useAppStore((state) => state.removeServer);
   const closeModal = useAppStore((state) => state.closeModal);
+  const serverToDelete = useAppStore((state) => state.serverToDelete);
 
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const [showConfirm, setShowConfirm] = useState(false);
+  // If serverToDelete is set, find its index and go straight to confirmation
+  const preselectedIndex = serverToDelete
+    ? servers.findIndex((s) => s.name === serverToDelete)
+    : -1;
+
+  const [selectedIndex, setSelectedIndex] = useState(
+    preselectedIndex >= 0 ? preselectedIndex : 0,
+  );
+  const [showConfirm, setShowConfirm] = useState(preselectedIndex >= 0);
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Handle keyboard navigation
@@ -74,37 +82,49 @@ export function DeleteServerModal() {
   // Confirmation state
   if (showConfirm && selectedServer) {
     return (
-      <Modal title="Confirm Deletion" onClose={closeModal}>
-        <box style={{ flexDirection: "column", alignItems: "center" }}>
-          <box
-            style={{
-              padding: 2,
-              border: true,
-              borderColor: theme.danger,
-              width: "80%",
-              flexDirection: "column",
-              alignItems: "center",
-            }}
-          >
-            <text fg={theme.danger} style={{ marginBottom: 2 }}>
-              ⚠ Warning
+      <Modal
+        title={`Delete Server ${selectedServer.name}`}
+        onClose={closeModal}
+      >
+        <box style={{ flexDirection: "column", gap: 1 }}>
+          <box>
+            <text fg={theme.foreground}>
+              Are you sure you want to delete{" "}
+              <em fg={theme.warning}>{selectedServer.name}</em>?
             </text>
-
-            <text fg={theme.foreground} style={{ marginBottom: 1 }}>
-              Really delete '{selectedServer.name}'?
-            </text>
-
-            <text fg={theme.foregroundMuted} style={{ marginBottom: 2 }}>
-              {selectedServer.url}
-            </text>
-
+            <text fg={theme.warning}>This cannot be undone.</text>
+          </box>
+          <box>
             <text fg={theme.foregroundMuted}>
-              Note: Capture history will be preserved
+              The gateway forwarded requests to:
+            </text>
+            <box
+              style={{
+                backgroundColor: theme.emphasis,
+                padding: 1,
+                borderStyle: "rounded",
+                borderColor: theme.emphasis,
+                marginTop: 1,
+              }}
+            >
+              <text fg={theme.foregroundMuted}>{selectedServer.url}</text>
+            </box>
+            <text fg={theme.foregroundMuted}>
+              <em>Note:</em>
+              The Capture history will be preserved
             </text>
           </box>
 
-          <text fg={theme.foregroundMuted} style={{ marginTop: 2 }}>
-            {isDeleting ? "Deleting..." : "[ENTER] Confirm • [ESC] Cancel"}
+          <text fg={theme.foregroundMuted}>
+            {isDeleting ? (
+              "Deleting..."
+            ) : (
+              <span>
+                <span fg={theme.danger}>
+                  <strong>[ENTER]</strong> Confirm
+                </span>
+              </span>
+            )}
           </text>
         </box>
       </Modal>

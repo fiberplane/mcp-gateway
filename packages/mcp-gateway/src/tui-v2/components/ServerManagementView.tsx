@@ -67,13 +67,12 @@ function generateMcpConfig(server: Server): string {
 export function ServerManagementView() {
   const theme = useTheme();
   const registry = useAppStore((state) => state.registry);
-  const removeServer = useAppStore((state) => state.removeServer);
   const openModal = useAppStore((state) => state.openModal);
+  const setServerToDelete = useAppStore((state) => state.setServerToDelete);
   const activeModal = useAppStore((state) => state.activeModal);
 
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [showConfig, setShowConfig] = useState<string | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const servers = registry.servers;
 
@@ -89,17 +88,6 @@ export function ServerManagementView() {
       return;
     }
 
-    // If confirming delete, handle y/n
-    if (deleteConfirm) {
-      if (key.name === "y") {
-        removeServer(deleteConfirm);
-        setDeleteConfirm(null);
-      } else if (key.name === "n" || key.name === "escape") {
-        setDeleteConfirm(null);
-      }
-      return;
-    }
-
     // Normal navigation
     if (key.name === "up") {
       setSelectedIndex((prev) => Math.max(0, prev - 1));
@@ -108,7 +96,8 @@ export function ServerManagementView() {
     } else if (key.name === "e" && servers[selectedIndex]) {
       setShowConfig(servers[selectedIndex].name);
     } else if (key.name === "d" && servers[selectedIndex]) {
-      setDeleteConfirm(servers[selectedIndex].name);
+      setServerToDelete(servers[selectedIndex].name);
+      openModal("delete-server");
     } else if (key.name === "a") {
       openModal("add-server");
     }
@@ -137,7 +126,10 @@ export function ServerManagementView() {
         style={{
           flexDirection: "column",
           flexGrow: 1,
-          padding: 1,
+          backgroundColor: theme.emphasis,
+          padding: 0,
+          paddingLeft: 1,
+          paddingRight: 1,
         }}
       >
         {/* Header */}
@@ -146,12 +138,12 @@ export function ServerManagementView() {
             flexDirection: "row",
             justifyContent: "space-between",
             alignItems: "flex-start",
+            backgroundColor: theme.background,
+            padding: 0,
             paddingLeft: 1,
             paddingRight: 1,
-            paddingBottom: 1,
             border: ["bottom"],
             borderColor: theme.border,
-            marginBottom: 1,
           }}
         >
           <text fg={theme.accent}>Export Config</text>
@@ -201,7 +193,9 @@ export function ServerManagementView() {
       style={{
         flexDirection: "column",
         flexGrow: 1,
-        padding: 1,
+        padding: 0,
+        paddingLeft: 1,
+        paddingRight: 1,
       }}
     >
       {/* Header */}
@@ -243,7 +237,7 @@ export function ServerManagementView() {
         ) : (
           <scrollbox
             scrollY={true}
-            focused={!showConfig && !deleteConfirm}
+            focused={!showConfig}
             style={{ flexGrow: 1, paddingLeft: 1, paddingRight: 1 }}
           >
             {servers.map((server, index) => {
@@ -302,8 +296,8 @@ export function ServerManagementView() {
                     </text>
                   )}
 
-                  {/* Actions (only show for selected, not when confirming delete) */}
-                  {isSelected && deleteConfirm !== server.name && (
+                  {/* Actions (only show for selected) */}
+                  {isSelected && (
                     <text
                       fg={theme.accent}
                       style={{ paddingLeft: 2, marginTop: 1 }}
@@ -318,30 +312,19 @@ export function ServerManagementView() {
         )}
       </box>
 
-      {/* Footer - Delete confirmation or normal navigation */}
+      {/* Footer */}
       <box
         style={{
           flexDirection: "column",
           paddingTop: 1,
           border: ["top"],
-          borderColor: deleteConfirm ? theme.danger : theme.border,
+          borderColor: theme.border,
         }}
       >
-        {deleteConfirm ? (
-          <>
-            <text fg={theme.danger}>
-              ⚠ Delete '{deleteConfirm}'? This cannot be undone.
-            </text>
-            <text fg={theme.accent}>[y] Yes [n] No</text>
-          </>
-        ) : (
-          <>
-            <text fg={theme.foregroundMuted}>
-              [↑↓] Select • [e] Export • [d] Delete • [a] Add • [ESC] Back to
-              Activity Log
-            </text>
-          </>
-        )}
+        <text fg={theme.foregroundMuted}>
+          [↑↓] Select • [e] Export • [d] Delete • [a] Add • [ESC] Back to
+          Activity Log
+        </text>
       </box>
     </box>
   );
