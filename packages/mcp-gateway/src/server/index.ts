@@ -7,10 +7,13 @@ export { createApp };
 
 // Create app instance for development
 const storageDir = getStorageRoot();
-await logger.initialize(storageDir);
 const devRegistry = await loadRegistry(storageDir);
 const { app } = await createApp(devRegistry, storageDir);
 const port = 3333;
+
+if (import.meta.main) {
+  await logger.initialize(storageDir);
+}
 
 export default {
   port,
