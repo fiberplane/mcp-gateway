@@ -134,13 +134,16 @@ export async function appendCapture(
   record: CaptureRecord,
 ): Promise<string> {
   // Generate filename (one per session)
-  const filename = generateCaptureFilename(
-    record.metadata.serverName,
-    record.metadata.sessionId,
-  );
-  const filePath = join(storageDir, record.metadata.serverName, filename);
+  let filePath: string = "unknown";
 
   try {
+    const filename = generateCaptureFilename(
+      record.metadata.serverName,
+      record.metadata.sessionId,
+    );
+
+    filePath = join(storageDir, record.metadata.serverName, filename);
+
     // Ensure server capture directory exists
     await ensureServerCaptureDir(storageDir, record.metadata.serverName);
 
@@ -160,10 +163,18 @@ export async function appendCapture(
     return filename;
   } catch (error) {
     logger.error("Failed to append capture record", {
-      error: String(error),
+      error:
+        error instanceof Error
+          ? {
+              message: error.message,
+              stack: error.stack,
+            }
+          : String(error),
       filePath,
     });
-    throw new Error(`Capture storage failed: ${error}`);
+    throw new Error(
+      `Capture storage failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 }
 
