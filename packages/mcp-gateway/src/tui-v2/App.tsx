@@ -1,4 +1,4 @@
-import { render, useKeyboard, useRenderer } from "@opentui/react";
+import { render, useKeyboard } from "@opentui/react";
 import type { Registry } from "../registry";
 import type { Context } from "../tui/state";
 import { ActivityLog } from "./components/ActivityLog";
@@ -40,7 +40,6 @@ function App() {
   const openCommandMenu = useAppStore((state) => state.openCommandMenu);
   const closeCommandMenu = useAppStore((state) => state.closeCommandMenu);
 
-  const renderer = useRenderer();
   useKeyboard((key) => {
     debug("Key pressed:", key.name);
 

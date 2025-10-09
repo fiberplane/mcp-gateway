@@ -1,10 +1,6 @@
 import { useAppStore } from "../store";
 import { useTheme } from "../theme-context";
-import {
-  calculateTimeDelta,
-  formatTimeDelta,
-  getRequestResponsePair,
-} from "../utils/logCorrelation";
+import { getRequestResponsePair } from "../utils/logCorrelation";
 import { Modal } from "./Modal";
 import { RoundedBox } from "./ui/RoundedBox";
 
@@ -32,10 +28,6 @@ export function ActivityLogDetailModal() {
   // Calculate timing
   const requestTime = requestLog ? new Date(requestLog.timestamp) : null;
   const responseTime = responseLog ? new Date(responseLog.timestamp) : null;
-  const timeDelta =
-    requestTime && responseTime
-      ? calculateTimeDelta(requestLog!, responseLog!)
-      : null;
 
   // Get request/response IDs
   const requestId = requestLog?.request?.id ?? responseLog?.response?.id;

@@ -153,7 +153,11 @@ export function ServerManagementView() {
             backgroundColor={theme.emphasis}
           >
             {config.split("\n").map((line, i) => (
-              <text key={i} fg={theme.foreground}>
+              <text
+                // biome-ignore lint/suspicious/noArrayIndexKey: It's okay to use the index as the key here
+                key={i}
+                fg={theme.foreground}
+              >
                 {line}
               </text>
             ))}

@@ -32,7 +32,7 @@ const palette = {
 
 // Theme type definition
 
-type Color = string | RGBA;
+export type Color = string | RGBA;
 export interface Theme {
   // Core colors
   foreground: Color;

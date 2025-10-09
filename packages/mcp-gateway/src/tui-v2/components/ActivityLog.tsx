@@ -1,16 +1,213 @@
-import { useKeyboard } from "@opentui/react";
-import { useEffect, useRef, useState } from "react";
+import { useKeyboard, useTerminalDimensions } from "@opentui/react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { LogEntry } from "../../tui/state";
+import type { Color, Theme } from "../colors";
 import { useHandler } from "../hooks/useHandler";
 import { useAppStore } from "../store";
 import { useTheme } from "../theme-context";
-import { ActivityLogEntry } from "./ActivityLogEntry";
 import { ActivityLogHeader } from "./ActivityLogHeader";
+import { formatRequestDetails, formatResponseDetails } from "./formatters";
+import { type Column, truncateText } from "./ui/Table";
 
 type BoxRef = { height: number; onSizeChange?: () => void };
+
+// Helper to create a simple text column with format function
+function textColumn<T>(config: {
+  id: string;
+  label?: string;
+  width?: number;
+  align?: "left" | "right";
+  format: (item: T) => string;
+  color?: (item: T, isSelected: boolean) => Color | undefined;
+  truncate?: boolean;
+}): Column<T> {
+  return {
+    id: config.id,
+    label: config.label,
+    style: {
+      width: config.width,
+      align: config.align,
+      truncate: config.truncate,
+    },
+    cell: (item, isSelected) => {
+      const text = config.format(item);
+      const shouldTruncate = config.truncate !== false;
+      const truncated = shouldTruncate
+        ? truncateText(text, config.width)
+        : text;
+      // const padded = padText(truncated, config.width, config.align);
+      const color = config.color?.(item, isSelected);
+
+      return (
+        <text
+          fg={color}
+          style={{
+            alignSelf: config.align === "right" ? "flex-end" : "flex-start",
+          }}
+        >
+          {truncated}
+        </text>
+      );
+    },
+  };
+}
+
+// Helper to format HTTP status
+function formatStatus(status: number): string {
+  if (status === 200) return "200 OK";
+  if (status === 404) return "404";
+  if (status >= 500) return `${status}`;
+  if (status >= 400) return `${status}`;
+  return `${status}`;
+}
+
+// Helper to get status color
+function getStatusColor(status: number, theme: Theme): Color {
+  if (status >= 200 && status < 300) return theme.success;
+  if (status >= 400 && status < 500) return theme.warning;
+  return theme.danger;
+}
+
+// Calculate width for flexible columns based on terminal width
+function calculateFlexibleColumnWidth(
+  columns: Column<LogEntry>[],
+  terminalWidth: number,
+): number {
+  // Calculate total width of fixed columns
+  const fixedWidthTotal = columns
+    .filter((col) => col.style?.width !== undefined)
+    .reduce((sum, col) => sum + (col.style?.width ?? 0), 0);
+
+  // Calculate gaps (1 char between each column)
+  const gapTotal = columns.length;
+
+  // Selection indicator width
+  const selectionIndicatorWidth = 2;
+
+  // Available space for flexible columns
+  const availableSpace =
+    terminalWidth - fixedWidthTotal - gapTotal - selectionIndicatorWidth;
+
+  // Count flexible columns
+  const flexibleCount = columns.filter(
+    (col) => col.style?.width === undefined,
+  ).length;
+
+  // Calculate width per flexible column (minimum 10 chars)
+  return Math.max(10, Math.floor(availableSpace / flexibleCount));
+}
+
+// Column configuration for the activity log table (stable, defined outside component)
+function createActivityLogColumns(theme: Theme): Column<LogEntry>[] {
+  return [
+    textColumn({
+      id: "time",
+      label: "Time",
+      width: 8,
+      format: (log) => log.timestamp.slice(11, 19), // HH:MM:SS
+    }),
+    textColumn({
+      id: "direction",
+      label: "Dir",
+      width: 3,
+      format: (log) => (log.direction === "request" ? " → " : " ← "),
+      color: (log, isSelected) =>
+        isSelected
+          ? theme.accent
+          : log.direction === "request"
+            ? theme.foregroundMuted
+            : getStatusColor(log.httpStatus, theme),
+    }),
+    textColumn({
+      id: "session",
+      label: "Session",
+      width: 10,
+      format: (log) => `[${log.sessionId.slice(0, 8)}]`,
+    }),
+    textColumn({
+      id: "requestId",
+      label: "Req ID",
+      align: "right",
+      width: 6,
+      format: (log) => {
+        const id = log.request?.id ?? log.response?.id;
+        return id ? String(id).slice(0, 6) : "-";
+      },
+    }),
+    textColumn({
+      id: "server",
+      label: "Server",
+      width: 12,
+      format: (log) => log.serverName,
+    }),
+    textColumn({
+      id: "method",
+      label: "Method",
+      width: 20,
+      format: (log) => log.method,
+    }),
+    textColumn({
+      id: "status",
+      label: "Status",
+      width: 8,
+      format: (log) =>
+        log.direction === "response" ? formatStatus(log.httpStatus) : "-",
+      color: (log, isSelected) =>
+        isSelected
+          ? theme.accent
+          : log.direction === "response"
+            ? getStatusColor(log.httpStatus, theme)
+            : undefined,
+    }),
+    textColumn({
+      id: "duration",
+      label: "ms",
+      width: 6,
+      align: "right",
+      format: (log) => (log.direction === "response" ? `${log.duration}` : "-"),
+    }),
+    textColumn({
+      id: "details",
+      label: "Details",
+      width: undefined, // Flexible - will be calculated based on terminal width
+      format: (log) => {
+        if (log.direction === "request") {
+          return formatRequestDetails(log);
+        }
+        return formatResponseDetails(log);
+      },
+    }),
+  ];
+}
 
 export function ActivityLog() {
   const theme = useTheme();
   const logs = useAppStore((state) => state.logs);
+  const { width: terminalWidth } = useTerminalDimensions();
+
+  // Get columns with theme
+  const activityLogColumns = useMemo(
+    () => createActivityLogColumns(theme),
+    [theme],
+  );
+
+  // Calculate flexible column widths based on terminal width
+  const columnsWithCalculatedWidths = useMemo(() => {
+    const flexibleWidth = calculateFlexibleColumnWidth(
+      activityLogColumns,
+      terminalWidth,
+    );
+
+    return activityLogColumns.map((col) => {
+      if (col.style?.width === undefined) {
+        return {
+          ...col,
+          style: { ...col.style, width: flexibleWidth },
+        };
+      }
+      return col;
+    });
+  }, [activityLogColumns, terminalWidth]);
 
   // Container ref to get actual rendered height
   const containerRef = useRef<BoxRef | null>(null);
@@ -219,23 +416,85 @@ export function ActivityLog() {
           width: "100%",
         }}
       >
-        {/* Render visible items */}
-        {logs.map((log, i) => {
-          // Skip items outside viewport
-          if (!isItemVisible(i)) {
-            return null;
-          }
+        <box style={{ flexDirection: "column" }}>
+          {/* Table header */}
+          <box style={{ flexDirection: "row", gap: 1 }}>
+            {/* Selection indicator space */}
+            <box style={{ width: 2 }}>
+              <text fg={theme.foregroundMuted}>{"  "}</text>
+            </box>
 
-          const isSelected = i === safeSelectedIndex;
+            {/* Column headers */}
+            {columnsWithCalculatedWidths.map((col) => {
+              if (typeof col.label === "function") {
+                return <box key={col.id}>{col.label()}</box>;
+              }
 
-          return (
-            <ActivityLogEntry
-              key={`${log.sessionId}-${log.timestamp}-${log.direction}`}
-              log={log}
-              isSelected={isSelected}
-            />
-          );
-        })}
+              if (typeof col.label === "string") {
+                const width = col.style?.width;
+                const labelText =
+                  width && width > 0
+                    ? col.label.padEnd(width).slice(0, width)
+                    : col.label;
+
+                return (
+                  <text
+                    key={col.id}
+                    style={{ width: width || undefined }}
+                    fg={theme.foregroundMuted}
+                  >
+                    {labelText}
+                  </text>
+                );
+              }
+
+              return (
+                <box
+                  key={col.id}
+                  style={{ width: col.style?.width || undefined }}
+                />
+              );
+            })}
+          </box>
+
+          {/* Render visible items */}
+          {logs.map((log, i) => {
+            // Skip items outside viewport
+            if (!isItemVisible(i)) {
+              return null;
+            }
+
+            const isSelected = i === safeSelectedIndex;
+
+            return (
+              <box
+                key={`${log.sessionId}-${log.timestamp}-${log.direction}`}
+                style={{
+                  flexDirection: "row",
+                  gap: 1,
+                  backgroundColor: isSelected ? theme.emphasis : undefined,
+                }}
+              >
+                {/* Selection indicator */}
+                <box style={{ width: 2 }}>
+                  <text fg={isSelected ? theme.accent : theme.foreground}>
+                    {isSelected ? "> " : "  "}
+                  </text>
+                </box>
+
+                {/* Data columns */}
+                {columnsWithCalculatedWidths.map((col) => (
+                  <box
+                    key={col.id}
+                    style={{ width: col.style?.width || undefined }}
+                  >
+                    {col.cell(log, isSelected)}
+                  </box>
+                ))}
+              </box>
+            );
+          })}
+        </box>
       </box>
 
       {/* Bottom overflow/follow indicator */}
