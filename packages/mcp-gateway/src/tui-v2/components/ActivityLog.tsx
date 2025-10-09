@@ -11,6 +11,12 @@ import { type Column, ColumnBasedTable, truncateText } from "./ui/Table";
 
 type BoxRef = { height: number; onSizeChange?: () => void };
 
+// Constants for terminal sizing
+const TERMINAL_PADDING = 2;
+const MIN_FLEXIBLE_WIDTH = 20;
+const TERMINAL_MARGIN = 4;
+const SELECTION_INDICATOR_WIDTH = 2;
+
 // Helper to create a simple text column with format function
 function textColumn<T>(config: {
   id: string;
@@ -83,12 +89,9 @@ function calculateFlexibleColumnWidth(
     .filter((col) => col.style?.width !== undefined)
     .reduce((sum, col) => sum + (col.style?.width ?? 0), 0);
 
-  // Selection indicator width
-  const selectionIndicatorWidth = 2;
-
   // Available space for flexible columns
   const availableSpace =
-    terminalWidth - fixedWidthTotal - selectionIndicatorWidth;
+    terminalWidth - fixedWidthTotal - SELECTION_INDICATOR_WIDTH;
 
   // Count flexible columns
   const flexibleCount = columns.filter(
@@ -214,23 +217,22 @@ export function ActivityLog() {
   const columnsWithCalculatedWidths = useMemo(() => {
     const flexibleWidth = calculateFlexibleColumnWidth(
       activityLogColumns,
-      // Remove 2 characters for padding on the left and right
-      terminalWidth - 2,
+      terminalWidth - TERMINAL_PADDING,
     );
 
-    if (flexibleWidth <= 20) {
-      const newResult: Column<LogEntry>[] = [];
-      const columns = [...activityLogColumns];
-      let col = columns.shift();
-      let width = col?.style?.width ?? 0;
-      while (width < terminalWidth - 4 && col) {
-        if (col?.style?.width) {
-          newResult.push(col);
-          width += col.style.width;
-        }
-        col = columns.shift();
+    if (flexibleWidth <= MIN_FLEXIBLE_WIDTH) {
+      const result: Column<LogEntry>[] = [];
+      let totalWidth = 0;
+
+      for (const col of activityLogColumns) {
+        if (!col.style?.width) continue;
+
+        totalWidth += col.style.width;
+        if (totalWidth >= terminalWidth - TERMINAL_MARGIN) break;
+
+        result.push(col);
       }
-      return newResult;
+      return result;
     }
 
     return activityLogColumns.map((col) => {
