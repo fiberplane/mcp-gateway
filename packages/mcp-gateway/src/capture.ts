@@ -1,5 +1,4 @@
-import { constants } from "node:fs";
-import { access, readFile, writeFile } from "node:fs/promises";
+import { appendFile } from "node:fs/promises";
 import { join } from "node:path";
 import { logger } from "./logger.js";
 import type {
@@ -147,19 +146,10 @@ export async function appendCapture(
     // Ensure server capture directory exists
     await ensureServerCaptureDir(storageDir, record.metadata.serverName);
 
-    // Append JSONL record to file
+    // Append JSONL record to file (atomic operation - safe for concurrent writes)
     const jsonLine = `${JSON.stringify(record)}\n`;
+    await appendFile(filePath, jsonLine, "utf8");
 
-    // Use Node.js fs to append content
-    let existingContent = "";
-    try {
-      await access(filePath, constants.F_OK);
-      existingContent = await readFile(filePath, "utf8");
-    } catch {
-      // File doesn't exist, start with empty content
-    }
-
-    await writeFile(filePath, existingContent + jsonLine, "utf8");
     return filename;
   } catch (error) {
     logger.error("Failed to append capture record", {
@@ -254,7 +244,7 @@ export function createSSEEventCaptureRecord(
   return record;
 }
 
-function resolveJsonRpcMethod(
+export function resolveJsonRpcMethod(
   jsonRpcMessage: JsonRpcRequest | JsonRpcResponse,
 ): string {
   if ("method" in jsonRpcMessage) {

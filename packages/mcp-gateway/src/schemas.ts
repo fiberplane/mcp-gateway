@@ -1,13 +1,15 @@
 import { z } from "zod";
 
 // JSON-RPC schemas
+// Requests always have a method field
 export const jsonRpcRequestSchema = z.object({
   jsonrpc: z.literal("2.0"),
   id: z.union([z.string(), z.number(), z.null()]).optional(), // Optional for notifications
-  method: z.string(),
+  method: z.string(), // Required for requests
   params: z.unknown().optional(),
 });
 
+// Responses never have a method field, only result or error
 export const jsonRpcResponseSchema = z.object({
   jsonrpc: z.literal("2.0"),
   id: z.union([z.string(), z.number(), z.null()]),
@@ -20,6 +22,21 @@ export const jsonRpcResponseSchema = z.object({
     })
     .optional(),
 });
+
+// Type guard to differentiate requests from responses
+export const isJsonRpcRequest = (
+  jsonRpcMessage: JsonRpcRequest | JsonRpcResponse,
+): jsonRpcMessage is JsonRpcRequest => {
+  return (
+    "method" in jsonRpcMessage && typeof jsonRpcMessage.method === "string"
+  );
+};
+
+// Union type for validating either request or response
+export const jsonRpcReqResSchema = z.union([
+  jsonRpcRequestSchema,
+  jsonRpcResponseSchema,
+]);
 
 // Client info from MCP initialize handshake
 export const clientInfoSchema = z.object({

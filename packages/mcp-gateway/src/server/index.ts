@@ -18,4 +18,7 @@ if (import.meta.main) {
 export default {
   port,
   fetch: app.fetch,
+  // Disable idle timeout for development (SSE connections can be long-lived)
+  // Set IDLE_TIMEOUT env var to customize (0 = disabled)
+  idleTimeout: Number.parseInt(process.env.IDLE_TIMEOUT || "0", 10),
 };

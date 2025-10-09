@@ -13,6 +13,7 @@ import {
   createRequestCaptureRecord,
   createResponseCaptureRecord,
   getClientInfo,
+  resolveJsonRpcMethod,
   storeClientInfo,
 } from "../capture.js";
 import { logger } from "../logger.js";
@@ -21,9 +22,10 @@ import {
   type CaptureRecord,
   clientInfoSchema,
   generateCaptureFilename,
+  isJsonRpcRequest,
   type JsonRpcRequest,
   type JsonRpcResponse,
-  jsonRpcRequestSchema,
+  jsonRpcReqResSchema,
   serverParamSchema,
   sessionHeaderSchema,
 } from "../schemas.js";
@@ -31,6 +33,7 @@ import {
   createSSEEventStream,
   isJsonRpcResponse,
   parseJsonRpcFromSSE,
+  type SSEEvent,
 } from "../sse-parser.js";
 import { getStorageRoot, saveRegistry } from "../storage.js";
 import { emitLog, emitRegistryUpdate } from "../tui/events.js";
@@ -176,7 +179,8 @@ function logRequest(
     timestamp: new Date().toISOString(),
     serverName: server.name,
     sessionId,
-    method: request.method,
+    // HACK - Method is undefined for json rpc responses from the client (e.g., elicitation)
+    method: request.method ?? "",
     httpStatus: 0,
     duration: 0,
     direction: "request",
@@ -256,7 +260,8 @@ async function captureAuthError(
 
   const record: CaptureRecord = {
     timestamp: new Date().toISOString(),
-    method: request.method,
+    // HACK - Method is undefined for json rpc responses from the client (e.g., elicitation)
+    method: request.method ?? "",
     id: request.id ?? null,
     metadata: {
       serverName,
@@ -290,18 +295,19 @@ export async function createProxyRoutes(
   // Determine storage directory
   const storage = getStorageRoot(storageDir);
 
-  // Canonical proxy route for server connections
-  app.post(
+  /**
+   * Proxy the GET /mcp route for SSE streams
+   * Handles Server-Sent Events from the target MCP server, capturing and logging all events
+   */
+  app.get(
     "/:server/mcp",
     sValidator("param", serverParamSchema),
-    sValidator("json", jsonRpcRequestSchema),
     sValidator("header", sessionHeaderSchema),
     async (c) => {
       const startTime = Date.now();
 
       // Get validated data
       const { server: serverName } = c.req.valid("param");
-      const jsonRpcRequest = c.req.valid("json");
 
       // Find server in registry
       const server = getServer(registry, serverName);
@@ -312,6 +318,211 @@ export async function createProxyRoutes(
       // Extract session ID from headers
       const validatedHeaders = c.req.valid("header");
       const sessionId = extractSessionId(validatedHeaders);
+
+      // Build proxy headers for GET request
+      // We don't want to forward the Content-Type header, since this is a GET request
+      const { "Content-Type": _, ...proxyHeaders } = buildProxyHeaders(
+        c,
+        server,
+      );
+
+      try {
+        // Forward GET request to target MCP server
+        const targetResponse = await proxy(server.url, {
+          method: "GET",
+          headers: proxyHeaders,
+        });
+
+        const httpStatus = targetResponse.status;
+
+        // IMPORTANT: Check for 401 early and return as-is
+        if (httpStatus === 401) {
+          const duration = Date.now() - startTime;
+          const responseText = await targetResponse.text();
+          const responseHeaders = new Headers(targetResponse.headers);
+
+          // Remove auto-generated headers
+          for (const header of AUTO_HEADERS) {
+            responseHeaders.delete(header);
+          }
+
+          // Log the 401 response (for TUI visibility)
+          // FIXME - The `method` parameter is kinda unknown here, since it's not a JSON-RPC request
+          //         I don't know what to record.
+          logResponse(server, sessionId, "GET /mcp", 401, duration);
+
+          return new Response(responseText, {
+            status: 401,
+            headers: responseHeaders,
+          });
+        }
+
+        // Check if response is SSE stream
+        const contentType =
+          targetResponse.headers.get("content-type")?.toLowerCase() || "";
+        const isSSE = contentType.startsWith("text/event-stream");
+
+        if (isSSE) {
+          // Update server activity immediately for SSE
+          await updateServerActivity(storage, registry, server);
+
+          if (!targetResponse.body) {
+            throw new Error("SSE response has no body");
+          }
+
+          // Create two streams from the response body
+          const [streamForClient, streamForCapture] = targetResponse.body.tee();
+
+          // Start background capture processing (non-blocking, with error isolation)
+          processSSECapture(
+            streamForCapture,
+            storage,
+            server,
+            sessionId,
+            // FIXME - The method parameter is kinda unknown here, since it's not a JSON-RPC request to begin
+            //         I don't know what to record.
+            "GET /mcp", // method for logging
+            null, // no request ID for GET
+          ).catch((error) => {
+            // Log capture errors but don't let them crash the server
+            // Note: ECONNRESET errors are common when the client or server closes the SSE stream
+            const errorCode = error?.code || "UNKNOWN";
+            const errorMsg = error?.message || String(error);
+            logger.error("[SSE Capture] error", {
+              server: server.name,
+              sessionId,
+              error: {
+                code: errorCode,
+                message: errorMsg,
+                stack: error?.stack,
+              },
+            });
+          });
+
+          // Return streaming response to client
+          return new Response(streamForClient, {
+            status: httpStatus,
+            headers: targetResponse.headers,
+          });
+        }
+
+        // Handle non-SSE responses (shouldn't happen normally but be defensive)
+        const responseText = await targetResponse.text();
+        await updateServerActivity(storage, registry, server);
+
+        return new Response(responseText, {
+          status: httpStatus,
+          headers: targetResponse.headers,
+        });
+      } catch (error) {
+        const duration = Date.now() - startTime;
+
+        // Log error
+        logResponse(server, sessionId, "GET /mcp", 500, duration);
+
+        // Return error response (not JSON-RPC format for GET)
+        return c.json({ error: String(error) }, 500);
+      }
+    },
+  );
+
+  /**
+   * Proxy the DELETE /mcp route for terminating sessions
+   * @todo - capture and record events
+   */
+  app.delete(
+    "/:server/mcp",
+    sValidator("param", serverParamSchema),
+    sValidator("header", sessionHeaderSchema),
+    async (c) => {
+      const { server: serverName } = c.req.valid("param");
+      const server = getServer(registry, serverName);
+      if (!server) {
+        return c.notFound();
+      }
+
+      // We don't want to forward the Content-Type header, since this is a DELETE request
+      const { "Content-Type": _, ...proxyHeaders } = buildProxyHeaders(
+        c,
+        server,
+      );
+      return proxy(server.url, {
+        method: "DELETE",
+        headers: proxyHeaders,
+      });
+    },
+  );
+
+  // Canonical proxy route for server connections
+  app.post(
+    "/:server/mcp",
+    sValidator("param", serverParamSchema),
+    sValidator("json", jsonRpcReqResSchema),
+    sValidator("header", sessionHeaderSchema),
+    async (c) => {
+      const startTime = Date.now();
+
+      // Get validated data
+      const { server: serverName } = c.req.valid("param");
+      const jsonRpcMessage = c.req.valid("json");
+
+      // Find server in registry
+      const server = getServer(registry, serverName);
+      if (!server) {
+        return c.notFound();
+      }
+
+      // Extract session ID from headers
+      const validatedHeaders = c.req.valid("header");
+      const sessionId = extractSessionId(validatedHeaders);
+
+      // Differentiate between requests and responses
+      // Responses from the client (e.g., elicitation or sampling) don't have a "method" field
+      const isRequest = isJsonRpcRequest(jsonRpcMessage);
+
+      // For responses (e.g., elicitation responses), we still need to capture and forward
+      if (!isRequest) {
+        const jsonRpcResponse = jsonRpcMessage;
+
+        // Determine the method from the response ID if we have it
+        const method = resolveJsonRpcMethod(jsonRpcResponse);
+
+        // Capture the response before forwarding
+        const responseRecord = createResponseCaptureRecord(
+          server.name,
+          sessionId,
+          jsonRpcResponse,
+          200, // Status is 200 for successful forwarding
+          method,
+        );
+        await appendCapture(storage, responseRecord);
+
+        // Log the response to TUI
+        logResponse(
+          server,
+          sessionId,
+          method,
+          200,
+          responseRecord.metadata.durationMs,
+          jsonRpcResponse,
+        );
+
+        // Update server activity
+        await updateServerActivity(storage, registry, server);
+
+        // Forward to target server
+        const proxyHeaders = buildProxyHeaders(c, server);
+        // TODO - What should we capture here????
+        //        Doesn't seem correct to just proxy without recording the server's reaction
+        return proxy(server.url, {
+          method: "POST",
+          headers: proxyHeaders,
+          body: JSON.stringify(jsonRpcResponse),
+        });
+      }
+
+      // From here on, we know it's a request
+      const jsonRpcRequest = jsonRpcMessage;
 
       // Capture request immediately (before forwarding)
       const requestRecord = createRequestCaptureRecord(
@@ -395,7 +606,7 @@ export async function createProxyRoutes(
           // Create two streams from the response body
           const [streamForClient, streamForCapture] = targetResponse.body.tee();
 
-          // Start background capture processing
+          // Start background capture processing (non-blocking, with error isolation)
           processSSECapture(
             streamForCapture,
             storage,
@@ -403,7 +614,21 @@ export async function createProxyRoutes(
             sessionId,
             jsonRpcRequest.method,
             jsonRpcRequest.id,
-          );
+          ).catch((error) => {
+            // Log capture errors but don't let them crash the server
+            // Note: ECONNRESET errors are common when the client or server closes the SSE stream
+            const errorCode = error?.code || "UNKNOWN";
+            const errorMsg = error?.message || String(error);
+            logger.error("[SSE Capture] error", {
+              server: server.name,
+              sessionId,
+              error: {
+                code: errorCode,
+                message: errorMsg,
+                stack: error?.stack,
+              },
+            });
+          });
 
           // Return streaming response to client
           return new Response(streamForClient, {
@@ -526,6 +751,8 @@ async function processSSECapture(
   sessionId: string,
   method: string,
   requestId?: string | number | null,
+  /** A logger function to log SSE events, useful for debugging */
+  log?: (sseEvent: SSEEvent) => void,
 ): Promise<void> {
   try {
     const reader = stream.getReader();
@@ -545,6 +772,10 @@ async function processSSECapture(
 
       // Try to parse SSE data as JSON-RPC
       if (sseEvent.data) {
+        if (log) {
+          log(sseEvent);
+        }
+
         const jsonRpcMessage = parseJsonRpcFromSSE(sseEvent.data);
 
         if (jsonRpcMessage) {
@@ -598,10 +829,14 @@ async function processSSECapture(
       }
     }
   } catch (error) {
+    // Log the error with context
     logger.error("SSE capture error", {
       server: server.name,
       method,
-      error: String(error),
+      error:
+        error instanceof Error
+          ? { message: error.message, stack: error.stack }
+          : String(error),
     });
     // Don't throw - capture failures shouldn't affect the client stream
   }
