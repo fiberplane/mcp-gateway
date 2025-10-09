@@ -310,7 +310,11 @@ export async function createProxyRoutes(
       const sessionId = extractSessionId(validatedHeaders);
 
       // Build proxy headers for GET request
-      const proxyHeaders = buildProxyHeaders(c, server);
+      // We don't want to forward the Content-Type header, since this is a GET request
+      const { "Content-Type": _, ...proxyHeaders } = buildProxyHeaders(
+        c,
+        server,
+      );
 
       try {
         // Forward GET request to target MCP server
@@ -333,6 +337,8 @@ export async function createProxyRoutes(
           }
 
           // Log the 401 response (for TUI visibility)
+          // FIXME - The `method` parameter is kinda unknown here, since it's not a JSON-RPC request
+          //         I don't know what to record.
           logResponse(server, sessionId, "GET /mcp", 401, duration);
 
           return new Response(responseText, {
@@ -363,6 +369,8 @@ export async function createProxyRoutes(
             storage,
             server,
             sessionId,
+            // FIXME - The method parameter is kinda unknown here, since it's not a JSON-RPC request to begin
+            //         I don't know what to record.
             "GET /mcp", // method for logging
             null, // no request ID for GET
           ).catch((error) => {
@@ -416,9 +424,15 @@ export async function createProxyRoutes(
       if (!server) {
         return c.notFound();
       }
+
+      // We don't want to forward the Content-Type header, since this is a DELETE request
+      const { "Content-Type": _, ...proxyHeaders } = buildProxyHeaders(
+        c,
+        server,
+      );
       return proxy(server.url, {
         method: "DELETE",
-        headers: buildProxyHeaders(c, server),
+        headers: proxyHeaders,
       });
     },
   );
