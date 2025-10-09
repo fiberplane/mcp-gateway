@@ -42,6 +42,7 @@ class Logger {
     // Clean up old logs (non-blocking)
     this.cleanupOldLogs().catch((error) => {
       // Silently fail - don't block initialization
+      // biome-ignore lint/suspicious/noConsole: actually want to print to console
       console.error("Failed to cleanup old logs:", error);
     });
   }
@@ -122,6 +123,7 @@ class Logger {
       // Silently fail - don't throw errors from logger
       // HACK - Don't log errors in test environment (this was a quickfix, sorry)
       if (!this.isTestEnvironment()) {
+        // biome-ignore lint/suspicious/noConsole: actually want to print to console
         console.error("Failed to write log:", error);
       }
     }

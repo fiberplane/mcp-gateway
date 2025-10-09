@@ -11,6 +11,7 @@ import { runTUI } from "./tui/loop.js";
 import type { Context } from "./tui/state.js";
 
 function showHelp(): void {
+  // biome-ignore lint/suspicious/noConsole: actually want to print to console
   console.log(`
 Usage: mcp-gateway [options]
 
@@ -37,6 +38,7 @@ function showVersion(): void {
   const __dirname = dirname(__filename);
   const packageJsonPath = join(__dirname, "../package.json");
   const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
+  // biome-ignore lint/suspicious/noConsole: actually want to print to console
   console.log(`mcp-gateway v${packageJson.version}`);
 }
 
@@ -91,6 +93,7 @@ export async function runCli(): Promise<void> {
       port,
     });
 
+    // biome-ignore lint/suspicious/noConsole: actually want to print to console
     console.log(`MCP Gateway server started at http://localhost:${port}`);
 
     // Start health checks
@@ -114,16 +117,19 @@ export async function runCli(): Promise<void> {
         process.exit(1);
       });
     } else {
+      // biome-ignore lint/suspicious/noConsole: actually want to print to console
       console.log(
         "Running in headless mode (no TTY detected). Server will run until terminated.",
       );
       // Keep process alive and handle signals
       process.on("SIGTERM", () => {
+        // biome-ignore lint/suspicious/noConsole: actually want to print to console
         console.log("\nReceived SIGTERM, shutting down...");
         context.onExit?.();
         process.exit(0);
       });
       process.on("SIGINT", () => {
+        // biome-ignore lint/suspicious/noConsole: actually want to print to console
         console.log("\nReceived SIGINT, shutting down...");
         context.onExit?.();
         process.exit(0);
@@ -132,6 +138,7 @@ export async function runCli(): Promise<void> {
   } catch (error) {
     if (error instanceof Error) {
       // print error message to user
+      // biome-ignore lint/suspicious/noConsole: actually want to print to console
       console.error("CLI error:", error.message);
 
       // Also log the error message and stack to the log files
@@ -142,6 +149,7 @@ export async function runCli(): Promise<void> {
     }
 
     // print message to user on how to look up usage
+    // biome-ignore lint/suspicious/noConsole: actually want to print to console
     console.error("Run with --help for usage information");
     process.exit(1);
   }
