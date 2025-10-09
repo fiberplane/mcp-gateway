@@ -1,6 +1,7 @@
 import { constants } from "node:fs";
 import { access, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { logger } from "./logger.js";
 import type {
   CaptureRecord,
   ClientInfo,
@@ -76,7 +77,7 @@ export function createRequestCaptureRecord(
   // Validate the record
   const result = captureRecordSchema.safeParse(record);
   if (!result.success) {
-    console.warn("Invalid capture record:", result.error);
+    logger.warn("Invalid capture record", { error: result.error });
     throw new Error("Failed to create valid capture record");
   }
 
@@ -121,7 +122,7 @@ export function createResponseCaptureRecord(
   // Validate the record
   const result = captureRecordSchema.safeParse(record);
   if (!result.success) {
-    console.warn("Invalid capture record:", result.error);
+    logger.warn("Invalid capture record", { error: result.error });
     throw new Error("Failed to create valid capture record");
   }
 
@@ -132,17 +133,19 @@ export async function appendCapture(
   storageDir: string,
   record: CaptureRecord,
 ): Promise<string> {
-  try {
-    // Ensure server capture directory exists
-    await ensureServerCaptureDir(storageDir, record.metadata.serverName);
+  // Generate filename (one per session)
+  let filePath: string = "unknown";
 
-    // Generate filename (one per session)
+  try {
     const filename = generateCaptureFilename(
       record.metadata.serverName,
       record.metadata.sessionId,
     );
 
-    const filePath = join(storageDir, record.metadata.serverName, filename);
+    filePath = join(storageDir, record.metadata.serverName, filename);
+
+    // Ensure server capture directory exists
+    await ensureServerCaptureDir(storageDir, record.metadata.serverName);
 
     // Append JSONL record to file
     const jsonLine = `${JSON.stringify(record)}\n`;
@@ -159,8 +162,19 @@ export async function appendCapture(
     await writeFile(filePath, existingContent + jsonLine, "utf8");
     return filename;
   } catch (error) {
-    console.error("Failed to append capture record:", error);
-    throw new Error(`Capture storage failed: ${error}`);
+    logger.error("Failed to append capture record", {
+      error:
+        error instanceof Error
+          ? {
+              message: error.message,
+              stack: error.stack,
+            }
+          : String(error),
+      filePath,
+    });
+    throw new Error(
+      `Capture storage failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 }
 
@@ -233,7 +247,7 @@ export function createSSEEventCaptureRecord(
   // Validate the record
   const result = captureRecordSchema.safeParse(record);
   if (!result.success) {
-    console.warn("Invalid SSE capture record:", result.error);
+    logger.warn("Invalid SSE capture record", { error: result.error });
     throw new Error("Failed to create valid SSE capture record");
   }
 
@@ -315,7 +329,7 @@ export function createSSEJsonRpcCaptureRecord(
   // Validate the record
   const result = captureRecordSchema.safeParse(record);
   if (!result.success) {
-    console.warn("Invalid SSE JSON-RPC capture record:", result.error);
+    logger.warn("Invalid SSE JSON-RPC capture record", { error: result.error });
     throw new Error("Failed to create valid SSE JSON-RPC capture record");
   }
 
@@ -341,7 +355,7 @@ export async function captureSSEEvent(
     );
     await appendCapture(storageDir, record);
   } catch (error) {
-    console.error("Failed to capture SSE event:", error);
+    logger.error("Failed to capture SSE event", { error: String(error) });
     // Don't throw - SSE capture failures shouldn't break streaming
   }
 }
@@ -366,7 +380,7 @@ export async function captureSSEJsonRpc(
     await appendCapture(storageDir, record);
     return record;
   } catch (error) {
-    console.error("Failed to capture SSE JSON-RPC:", error);
+    logger.error("Failed to capture SSE JSON-RPC", { error: String(error) });
     // Don't throw - SSE capture failures shouldn't break streaming
     return null;
   }

@@ -18,6 +18,7 @@ import { executeCode } from "./executor/evil";
 import type { ExecutionContext, ExecutionResult } from "./executor/types";
 import { buildRpcHandler } from "./rpc-handler";
 import { toCodeModeServer } from "./types";
+import { logger } from "../logger.js";
 
 /**
  * Configuration for code mode
@@ -91,15 +92,13 @@ export async function createCodeMode(
   const typeDefinitions = await generateTypes(servers);
 
   // FIXME - Logging type definitions to a file for debugging
-  const isoTimestamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const random = crypto.randomUUID().slice(0, 8);
-  Bun.write(`${isoTimestamp}-typeDefinitions-${random}.ts`, typeDefinitions);
+  logger.debug("Generated typeDefinitions", { typeDefinitions });
 
   // Generate JavaScript runtime API
   const runtimeApi = generateApiClient(servers);
 
   // FIXME - Logging runtime api code to a file for debugging
-  Bun.write(`${isoTimestamp}-runtimeApi-${random}.ts`, runtimeApi);
+  logger.debug("Generated runtimeApi", { runtimeApi });
 
   // Create execution context
   const executionContext: ExecutionContext = {

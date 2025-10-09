@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { McpServer, RpcError, StreamableHttpTransport } from "mcp-lite";
 import { z } from "zod";
+import { logger } from "./logger.js";
 import { createCaptureTools } from "./mcp-tools/capture-tools.js";
 import { createServerTools } from "./mcp-tools/server-tools.js";
 import type { Registry } from "./registry.js";
@@ -29,12 +30,18 @@ export function createMcpServer(
   // Add request logging middleware
   mcp.use(async (ctx, next) => {
     const startTime = Date.now();
-    console.log(`[MCP] ${ctx.request.method} - Request ID: ${ctx.requestId}`);
+    logger.debug("MCP request started", {
+      method: ctx.request.method,
+      requestId: ctx.requestId,
+    });
 
     await next();
 
     const duration = Date.now() - startTime;
-    console.log(`[MCP] ${ctx.request.method} completed in ${duration}ms`);
+    logger.debug("MCP request completed", {
+      method: ctx.request.method,
+      duration,
+    });
   });
 
   // Add error handling middleware
@@ -42,7 +49,10 @@ export function createMcpServer(
     try {
       await next();
     } catch (error) {
-      console.error(`[MCP] Error in ${ctx.request.method}:`, error);
+      logger.error("MCP request error", {
+        method: ctx.request.method,
+        error: String(error),
+      });
       throw error;
     }
   });
@@ -55,10 +65,10 @@ export function createMcpServer(
 
   // Set up custom error handler
   mcp.onError((error, ctx) => {
-    console.error(
-      `[MCP] Error handler called for ${ctx.request.method}:`,
-      error,
-    );
+    logger.error("MCP error handler called", {
+      method: ctx.request.method,
+      error: String(error),
+    });
 
     // Handle RpcError instances from mcp-lite (e.g., validation errors)
     if (error instanceof RpcError) {

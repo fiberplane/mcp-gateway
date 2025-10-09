@@ -1,9 +1,11 @@
+/** biome-ignore-all lint/suspicious/noConsole: tests */
+
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Registry } from "../src/registry.js";
-import { createApp } from "../src/server.js";
+import { createApp } from "../src/server/index.js";
 import { createSSEEventStream, type SSEEvent } from "../src/sse-parser.js";
 import { saveRegistry } from "../src/storage.js";
 

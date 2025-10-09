@@ -1,11 +1,13 @@
+/** biome-ignore-all lint/suspicious/noConsole: tests */
+
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { McpServer, StreamableHttpTransport } from "mcp-lite";
-import type { Registry } from "../src/registry.js";
-import { createApp } from "../src/server.js";
-import { saveRegistry } from "../src/storage.js";
+import type { Registry } from "../../src/registry.js";
+import { createApp } from "../../src/server/index.js";
+import { saveRegistry } from "../../src/storage.js";
 
 // JSON-RPC response type
 interface JsonRpcResponse {

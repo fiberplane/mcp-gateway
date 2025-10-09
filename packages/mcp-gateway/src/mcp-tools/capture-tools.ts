@@ -2,6 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { McpServer } from "mcp-lite";
 import { z } from "zod";
+import { logger } from "../logger.js";
 import type { Registry } from "../registry.js";
 import type { CaptureRecord } from "../schemas.js";
 
@@ -158,11 +159,14 @@ async function findCaptureFiles(
           });
         }
       } catch (error) {
-        console.warn(`Failed to read server directory ${serverName}:`, error);
+        logger.warn("Failed to read server directory", {
+          serverName,
+          error: String(error),
+        });
       }
     }
   } catch (error) {
-    console.warn("Failed to read storage directory:", error);
+    logger.warn("Failed to read storage directory", { error: String(error) });
   }
 
   return captureFiles.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
@@ -185,13 +189,19 @@ async function parseJsonlFile(filePath: string): Promise<CaptureRecord[]> {
         const record = JSON.parse(line) as CaptureRecord;
         records.push(record);
       } catch (error) {
-        console.warn(`Failed to parse JSONL line in ${filePath}:`, error);
+        logger.warn("Failed to parse JSONL line", {
+          filePath,
+          error: String(error),
+        });
       }
     }
 
     return records;
   } catch (error) {
-    console.warn(`Failed to read capture file ${filePath}:`, error);
+    logger.warn("Failed to read capture file", {
+      filePath,
+      error: String(error),
+    });
     return [];
   }
 }
