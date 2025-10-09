@@ -330,7 +330,10 @@ describe("GET /mcp SSE Logging and Capture Tests", () => {
       // 9. Verify capture contains SSE events
       if (captureFile) {
         const content = await Bun.file(captureFile).text();
-        const lines = content.trim().split("\n");
+        const lines = content
+          .trim()
+          .split("\n")
+          .filter((line) => line.trim());
 
         // Should have captured events (init request + tool call request + SSE events)
         expect(lines.length).toBeGreaterThan(0);
@@ -458,8 +461,21 @@ describe("GET /mcp SSE Logging and Capture Tests", () => {
       const captureFile = files.trim().split("\n")[0];
       if (captureFile) {
         const content = await Bun.file(captureFile).text();
-        const lines = content.trim().split("\n");
-        const records = lines.map((line) => JSON.parse(line));
+        const lines = content
+          .trim()
+          .split("\n")
+          .filter((line) => line.trim());
+        const records = lines.map((line, index) => {
+          try {
+            return JSON.parse(line);
+          } catch (error) {
+            console.error(
+              `Failed to parse line ${index + 1}:`,
+              line.substring(0, 200),
+            );
+            throw error;
+          }
+        });
         const sseRecords = records.filter(
           (r) => r.sseEvent || r.metadata?.sseEventId,
         );
@@ -585,11 +601,24 @@ describe("GET /mcp SSE Logging and Capture Tests", () => {
         const captureFile = files.trim().split("\n")[0];
         if (captureFile) {
           const content = await Bun.file(captureFile).text();
-          const lines = content.trim().split("\n");
+          const lines = content
+            .trim()
+            .split("\n")
+            .filter((line) => line.trim());
 
           // Look for SSE JSON-RPC capture records (progress notifications are sent as JSON-RPC via SSE)
           const jsonRpcRecords = lines
-            .map((line) => JSON.parse(line))
+            .map((line, index) => {
+              try {
+                return JSON.parse(line);
+              } catch (error) {
+                console.error(
+                  `Failed to parse line ${index + 1}:`,
+                  line.substring(0, 200),
+                );
+                throw error;
+              }
+            })
             .filter((record) => record.metadata?.sseEventId);
 
           // Should have captured JSON-RPC messages (progress notifications)
