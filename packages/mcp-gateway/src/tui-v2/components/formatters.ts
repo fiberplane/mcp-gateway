@@ -1,4 +1,3 @@
-import { getClientInfo } from "../../capture";
 import type { LogEntry } from "../../tui/state";
 
 // Format request-specific details
@@ -72,25 +71,4 @@ export function formatResponseDetails(log: LogEntry): string {
   }
 
   return "";
-}
-
-// Format a single log entry
-export function formatLogEntry(log: LogEntry): string {
-  const clientInfo = getClientInfo(log.sessionId);
-  const clientLabel = clientInfo
-    ? `${clientInfo.name}@${clientInfo.version}`
-    : "client";
-  const sessionIdShort = `[${log.sessionId.slice(0, 8)}]`;
-  const timestamp = log.timestamp.slice(11, 19);
-
-  if (log.direction === "request") {
-    // Client → Gateway → Server (request flow)
-    const methodDetails = formatRequestDetails(log);
-    return `${timestamp} ${sessionIdShort} ${clientLabel} → ${log.serverName} ${log.method}${methodDetails}`;
-  }
-
-  // Server → Gateway → Client (response flow)
-  const responseDetails = formatResponseDetails(log);
-  const errorSuffix = log.errorMessage ? ` ${log.errorMessage}` : "";
-  return `${timestamp} ${sessionIdShort} ${log.serverName} → ${clientLabel} (${log.httpStatus}, ${log.duration}ms)${responseDetails}${errorSuffix}`;
 }

@@ -231,15 +231,6 @@ export function ActivityLog() {
         col = columns.shift();
       }
       return newResult;
-      // for (const col of activityLogColumns) {
-      //   if (col.style?.width === undefined) {
-      //     width += flexibleWidth;
-      //   } else {
-      //     width += col.style.width;
-      //   }
-
-      // }
-      // return activityLogColumns;
     }
 
     return activityLogColumns.map((col) => {
