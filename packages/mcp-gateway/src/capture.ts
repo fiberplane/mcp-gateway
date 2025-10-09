@@ -230,7 +230,7 @@ export function createSSEEventCaptureRecord(
   return record;
 }
 
-function resolveJsonRpcMethod(
+export function resolveJsonRpcMethod(
   jsonRpcMessage: JsonRpcRequest | JsonRpcResponse,
 ): string {
   if ("method" in jsonRpcMessage) {

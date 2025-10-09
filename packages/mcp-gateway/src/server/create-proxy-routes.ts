@@ -13,6 +13,7 @@ import {
   createRequestCaptureRecord,
   createResponseCaptureRecord,
   getClientInfo,
+  resolveJsonRpcMethod,
   storeClientInfo,
 } from "../capture.js";
 import { getServer, type McpServer, type Registry } from "../registry.js";
@@ -20,9 +21,10 @@ import {
   type CaptureRecord,
   clientInfoSchema,
   generateCaptureFilename,
+  isJsonRpcRequest,
   type JsonRpcRequest,
   type JsonRpcResponse,
-  jsonRpcRequestSchema,
+  jsonRpcReqResSchema,
   serverParamSchema,
   sessionHeaderSchema,
 } from "../schemas.js";
@@ -172,7 +174,8 @@ function logRequest(
     timestamp: new Date().toISOString(),
     serverName: server.name,
     sessionId,
-    method: request.method,
+    // HACK - Method is undefined for json rpc responses from the client (e.g., elicitation)
+    method: request.method ?? "",
     httpStatus: 0,
     duration: 0,
     direction: "request",
@@ -252,7 +255,8 @@ async function captureAuthError(
 
   const record: CaptureRecord = {
     timestamp: new Date().toISOString(),
-    method: request.method,
+    // HACK - Method is undefined for json rpc responses from the client (e.g., elicitation)
+    method: request.method ?? "",
     id: request.id ?? null,
     metadata: {
       serverName,
@@ -377,7 +381,10 @@ export async function createProxyRoutes(
             "GET /mcp", // method for logging
             null, // no request ID for GET
             (sseEvent) => {
-              console.log("HEY THERE IS SOME SSE EVENT from the GET stream...", sseEvent);
+              console.log(
+                "HEY THERE IS SOME SSE EVENT from the GET stream...",
+                sseEvent,
+              );
             },
           ).catch((error) => {
             // Log capture errors but don't let them crash the server
@@ -447,14 +454,14 @@ export async function createProxyRoutes(
   app.post(
     "/:server/mcp",
     sValidator("param", serverParamSchema),
-    sValidator("json", jsonRpcRequestSchema),
+    sValidator("json", jsonRpcReqResSchema),
     sValidator("header", sessionHeaderSchema),
     async (c) => {
       const startTime = Date.now();
 
       // Get validated data
       const { server: serverName } = c.req.valid("param");
-      const jsonRpcRequest = c.req.valid("json");
+      const jsonRpcMessage = c.req.valid("json");
 
       // Find server in registry
       const server = getServer(registry, serverName);
@@ -465,6 +472,54 @@ export async function createProxyRoutes(
       // Extract session ID from headers
       const validatedHeaders = c.req.valid("header");
       const sessionId = extractSessionId(validatedHeaders);
+
+      // Differentiate between requests and responses
+      // Responses from the client (e.g., elicitation or sampling) don't have a "method" field
+      const isRequest = isJsonRpcRequest(jsonRpcMessage);
+
+      // For responses (e.g., elicitation responses), we still need to capture and forward
+      if (!isRequest) {
+        const jsonRpcResponse = jsonRpcMessage;
+
+        // Determine the method from the response ID if we have it
+        const method = resolveJsonRpcMethod(jsonRpcResponse);
+
+        // Capture the response before forwarding
+        const responseRecord = createResponseCaptureRecord(
+          server.name,
+          sessionId,
+          jsonRpcResponse,
+          200, // Status is 200 for successful forwarding
+          method,
+        );
+        await appendCapture(storage, responseRecord);
+
+        // Log the response to TUI
+        logResponse(
+          server,
+          sessionId,
+          method,
+          200,
+          responseRecord.metadata.durationMs,
+          jsonRpcResponse,
+        );
+
+        // Update server activity
+        await updateServerActivity(storage, registry, server);
+
+        // Forward to target server
+        const proxyHeaders = buildProxyHeaders(c, server);
+        // TODO - What should we capture here????
+        //        Doesn't seem correct to just proxy without recording the server's reaction
+        return proxy(server.url, {
+          method: "POST",
+          headers: proxyHeaders,
+          body: JSON.stringify(jsonRpcResponse),
+        });
+      }
+
+      // From here on, we know it's a request
+      const jsonRpcRequest = jsonRpcMessage;
 
       // Capture request immediately (before forwarding)
       const requestRecord = createRequestCaptureRecord(
