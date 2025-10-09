@@ -2,6 +2,7 @@ import { constants } from "node:fs";
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { logger } from "./logger.js";
 import type { Registry } from "./registry.js";
 import { fromMcpJson, toMcpJson } from "./registry.js";
 
@@ -42,9 +43,9 @@ export async function loadRegistry(storageDir: string): Promise<Registry> {
     const data = JSON.parse(content);
     return fromMcpJson(data);
   } catch (_error) {
-    console.warn(
-      `Warning: Invalid mcp.json at ${mcpPath}, starting with empty registry`,
-    );
+    logger.warn("Invalid mcp.json, starting with empty registry", {
+      path: mcpPath,
+    });
     return { servers: [] };
   }
 }

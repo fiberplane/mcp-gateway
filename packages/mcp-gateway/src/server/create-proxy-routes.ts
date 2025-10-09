@@ -16,6 +16,7 @@ import {
   resolveJsonRpcMethod,
   storeClientInfo,
 } from "../capture.js";
+import { logger } from "../logger.js";
 import { getServer, type McpServer, type Registry } from "../registry.js";
 import {
   type CaptureRecord,
@@ -159,7 +160,11 @@ async function handleSessionTransition(
     try {
       await rename(oldPath, newPath);
     } catch (error) {
-      console.warn(`Failed to rename capture file: ${error}`);
+      logger.warn("Failed to rename capture file", {
+        error: String(error),
+        oldPath,
+        newPath,
+      });
     }
   }
 }
@@ -383,9 +388,15 @@ export async function createProxyRoutes(
             // Note: ECONNRESET errors are common when the client or server closes the SSE stream
             const errorCode = error?.code || "UNKNOWN";
             const errorMsg = error?.message || String(error);
-            console.error(
-              `[SSE Capture] ${server.name} (session: ${sessionId}): ${errorCode} - ${errorMsg}`,
-            );
+            logger.error("[SSE Capture] error", {
+              server: server.name,
+              sessionId,
+              error: {
+                code: errorCode,
+                message: errorMsg,
+                stack: error?.stack,
+              },
+            });
           });
 
           // Return streaming response to client
@@ -608,9 +619,15 @@ export async function createProxyRoutes(
             // Note: ECONNRESET errors are common when the client or server closes the SSE stream
             const errorCode = error?.code || "UNKNOWN";
             const errorMsg = error?.message || String(error);
-            console.error(
-              `[SSE Capture] ${server.name} (session: ${sessionId}): ${errorCode} - ${errorMsg}`,
-            );
+            logger.error("[SSE Capture] error", {
+              server: server.name,
+              sessionId,
+              error: {
+                code: errorCode,
+                message: errorMsg,
+                stack: error?.stack,
+              },
+            });
           });
 
           // Return streaming response to client
@@ -813,7 +830,14 @@ async function processSSECapture(
     }
   } catch (error) {
     // Log the error with context
-    console.error(`${server.name} → ${method} (SSE capture error):`, error);
+    logger.error("SSE capture error", {
+      server: server.name,
+      method,
+      error:
+        error instanceof Error
+          ? { message: error.message, stack: error.stack }
+          : String(error),
+    });
     // Don't throw - capture failures shouldn't affect the client stream
   }
 }

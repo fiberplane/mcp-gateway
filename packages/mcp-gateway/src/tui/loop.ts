@@ -334,6 +334,7 @@ export async function runTUI(
 ): Promise<void> {
   // Guard against non-TTY environments
   if (!process.stdin.isTTY || !process.stdin.setRawMode) {
+    // biome-ignore lint/suspicious/noConsole: actually want to print to console
     console.log("TUI requires a TTY environment. Run in headless mode.");
     return;
   }
@@ -410,6 +411,7 @@ export async function runTUI(
     if (!state.running) {
       process.stdin.removeListener("data", stdinHandler);
       cleanup();
+      // biome-ignore lint/suspicious/noConsole: actually want to print to console
       console.log("Closing the MCP Gateway...");
       context.onExit?.();
       process.exit(0);

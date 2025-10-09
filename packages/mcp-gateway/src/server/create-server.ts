@@ -1,5 +1,6 @@
 import { Hono } from "hono";
-import { logger } from "hono/logger";
+import { logger as loggerMiddleware } from "hono/logger";
+import { logger } from "../logger.js";
 import { createMcpApp } from "../mcp-server.js";
 import type { Registry } from "../registry.js";
 import { getStorageRoot } from "../storage.js";
@@ -12,6 +13,17 @@ export async function createApp(
   storageDir?: string,
 ): Promise<{ app: Hono; registry: Registry }> {
   const app = new Hono();
+
+  // Custom Hono logger middleware to log to our log files
+  app.use(
+    loggerMiddleware((message: string, ...rest: string[]) => {
+      if (rest.length > 0) {
+        logger.debug(message, { honoLoggerArgs: rest });
+      } else {
+        logger.debug(message);
+      }
+    }),
+  );
 
   // Determine storage directory
   const storage = getStorageRoot(storageDir);
