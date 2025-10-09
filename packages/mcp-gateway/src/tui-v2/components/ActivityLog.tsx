@@ -220,16 +220,18 @@ export function ActivityLog() {
       terminalWidth - 2,
     );
 
-    if (flexibleWidth < 10) {
+    debug("flexibleWidth", flexibleWidth);
+    if (flexibleWidth <= 20) {
       const newResult: Column<LogEntry>[] = [];
-
-      let width = 0;
-      while (width < terminalWidth - 2) {
-        const col = activityLogColumns.shift();
-        if (col) {
+      const columns = [...activityLogColumns];
+      let col = columns.shift();
+      let width = col?.style?.width ?? 0;
+      while (width < terminalWidth - 4 && col) {
+        if (col?.style?.width) {
           newResult.push(col);
-          width += col.style?.width ?? 0;
+          width += col.style.width;
         }
+        col = columns.shift();
       }
       return newResult;
       // for (const col of activityLogColumns) {

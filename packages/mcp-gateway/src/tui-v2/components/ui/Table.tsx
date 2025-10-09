@@ -1,6 +1,5 @@
 import type { RGBA } from "@opentui/core";
 import type React from "react";
-import { debug } from "../../debug";
 
 export interface ColumnStyle {
   width?: number; // Fixed width in characters (undefined = flexible)
@@ -40,7 +39,6 @@ export function truncateText(text: string, width?: number): string {
   if (!width || width === 0) return text; // Flexible column, don't truncate
   if (text.length <= width) return text;
   if (width < 3) return text.slice(0, width);
-  debug("going to", { text, width });
   return `${text.slice(0, width - 3)}…`;
 }
 
