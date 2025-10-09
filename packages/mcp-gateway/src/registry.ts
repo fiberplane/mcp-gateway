@@ -1,5 +1,14 @@
+import type { TempJsonSchemaType } from "./code-goat/types";
+
 // Health status for servers
 export type ServerHealth = "up" | "down" | "unknown";
+
+export type McpServerTool = {
+  name: string;
+  inputSchema: TempJsonSchemaType;
+  outputSchema?: TempJsonSchemaType;
+  description: string;
+};
 
 // Pure data types for MCP servers and registry
 export interface McpServer {
@@ -7,6 +16,7 @@ export interface McpServer {
   url: string;
   type: "http";
   headers: Record<string, string>;
+  tools?: McpServerTool[];
   lastActivity: string | null;
   exchangeCount: number;
   health?: ServerHealth;
@@ -73,26 +83,6 @@ export function removeServer(registry: Registry, name: string): Registry {
   return {
     servers: filtered,
   };
-}
-
-// Pure function to update server activity
-export function updateServerActivity(
-  registry: Registry,
-  name: string,
-  activity: { lastActivity: string; exchangeCount?: number },
-): Registry {
-  const servers = registry.servers.map((server) => {
-    if (server.name === name.toLowerCase().trim()) {
-      return {
-        ...server,
-        lastActivity: activity.lastActivity,
-        exchangeCount: activity.exchangeCount ?? server.exchangeCount,
-      };
-    }
-    return server;
-  });
-
-  return { servers };
 }
 
 // Convert registry to mcp.json format

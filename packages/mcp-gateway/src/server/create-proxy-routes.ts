@@ -15,8 +15,18 @@ import {
   getClientInfo,
   storeClientInfo,
 } from "../capture.js";
+import {
+  CODE_GOAT_TOOL_NAME,
+  createCodeMode,
+  formatExecutionResult,
+} from "../code-goat/index.js";
 import { logger } from "../logger.js";
-import { getServer, type McpServer, type Registry } from "../registry.js";
+import {
+  getServer,
+  type McpServer,
+  type McpServerTool,
+  type Registry,
+} from "../registry.js";
 import {
   type CaptureRecord,
   clientInfoSchema,
@@ -123,6 +133,25 @@ async function updateServerActivity(
   server.exchangeCount = server.exchangeCount + 1;
   await saveRegistry(storage, registry);
   emitRegistryUpdate();
+}
+
+/**
+ * Update the server tools in place and persist to storage
+ *
+ * Helpful for caching server tool lists (which are used in code mode)
+ *
+ * @note - Mutates the registry
+ */
+async function updateServerTools(
+  storageDir: string,
+  registry: Registry,
+  server: McpServer,
+  tools: McpServerTool[],
+) {
+  // Update the server tools in place
+  server.tools = tools;
+  // Persist to storage
+  await saveRegistry(storageDir, registry);
 }
 
 // Helper: Handle session transition for initialize
@@ -446,7 +475,281 @@ export async function createProxyRoutes(
           jsonRpcRequest,
           requestCaptureFilename,
         );
+        // Log response
+        logResponse(
+          server,
+          sessionId,
+          jsonRpcRequest.method,
+          httpStatus,
+          duration,
+          response,
+        );
 
+        // Update server activity
+        await updateServerActivity(storage, registry, server);
+
+        // Create new response with the same data and headers
+        // Remove auto-generated headers to avoid duplicates when Response constructor adds them
+        const responseHeaders = new Headers(targetResponse.headers);
+        for (const header of AUTO_HEADERS) {
+          responseHeaders.delete(header);
+        }
+        return new Response(responseText, {
+          status: httpStatus,
+          headers: responseHeaders,
+        });
+      } catch (error) {
+        const duration = Date.now() - startTime;
+
+        // Create error response
+        const errorResponse: JsonRpcResponse = {
+          jsonrpc: "2.0",
+          id: jsonRpcRequest.id ?? null,
+          error: {
+            code: -32603,
+            message: String(error),
+          },
+        };
+
+        // Log error response
+        logResponse(
+          server,
+          sessionId,
+          jsonRpcRequest.method,
+          httpStatus,
+          duration,
+          errorResponse,
+        );
+
+        // Capture error
+        await captureError(
+          storage,
+          server.name,
+          sessionId,
+          jsonRpcRequest,
+          {
+            code: -32603,
+            message: String(error),
+          },
+          httpStatus,
+          duration,
+        );
+
+        return new Response(JSON.stringify(errorResponse), {
+          status: httpStatus,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+    },
+  );
+
+  // Canonical proxy route for codemode server connections
+  app.post(
+    "/servers/:server/mcp-codemode",
+    sValidator("param", serverParamSchema),
+    sValidator("json", jsonRpcRequestSchema),
+    sValidator("header", sessionHeaderSchema),
+    async (c) => {
+      const startTime = Date.now();
+
+      // Get validated data
+      const { server: serverName } = c.req.valid("param");
+      const jsonRpcRequest = c.req.valid("json");
+
+      // Find server in registry
+      const server = getServer(registry, serverName);
+      if (!server) {
+        return c.notFound();
+      }
+
+      // Extract session ID from headers
+      const validatedHeaders = c.req.valid("header");
+      const sessionId = extractSessionId(validatedHeaders);
+
+      // Capture request immediately (before forwarding)
+      const requestRecord = createRequestCaptureRecord(
+        server.name,
+        sessionId,
+        jsonRpcRequest,
+      );
+      const requestCaptureFilename = await appendCapture(
+        storage,
+        requestRecord,
+      );
+
+      // Log incoming request from client
+      logRequest(server, sessionId, jsonRpcRequest);
+
+      // Intercept tool call for code mode
+      if (jsonRpcRequest.method === "tools/call") {
+        // @ts-expect-error - do not feel like using type guard
+        if (jsonRpcRequest.params.name === CODE_GOAT_TOOL_NAME) {
+          const codeModeServers = [server];
+          const codeMode = await createCodeMode({
+            servers: codeModeServers,
+            sessionId,
+          });
+          // @ts-expect-error - do not feel like using type guard
+          const userCode = jsonRpcRequest.params.arguments.code;
+          const result = await codeMode.executeCode(userCode);
+
+          logger.debug("Generated codemode result", { result });
+
+          // TODO - return the result as a tool call response
+          const toolCallResponse: JsonRpcResponse = {
+            jsonrpc: "2.0",
+            id: jsonRpcRequest.id ?? null, // hack coaelescing, should be string
+            result: {
+              content: [
+                {
+                  type: "text",
+                  // TODO - Format the result as markdown
+                  text: formatExecutionResult(result),
+                },
+              ],
+            },
+          };
+          return c.json(toolCallResponse);
+        }
+      }
+
+      // Intercept tool list for code mode
+      if (jsonRpcRequest.method === "tools/list") {
+        // 1. Actually list all tools
+        const response = await proxy(server.url, {
+          method: "POST",
+          headers: {
+            ...buildProxyHeaders(c, server),
+            // HACK - need to handle stream
+            Accept: "application/json",
+          },
+          body: JSON.stringify(jsonRpcRequest),
+        });
+
+        // biome-ignore lint/suspicious/noExplicitAny: prototyping
+        const responseBody: any = await response.json();
+
+        // 2. Update the server tools stashed on the record in memory (registry)
+        //    and persist to storage to survive restarts
+        await updateServerTools(
+          storage,
+          registry,
+          server,
+          responseBody?.result?.tools,
+        );
+        console.log("updated cached server tools for:", server.name);
+
+        // 3. Return the code mode goat instead of all tools (with code mode description)
+
+        // Only include this single server in code mode
+        const codeModeServers = [server];
+        const codeMode = await createCodeMode({
+          servers: codeModeServers,
+          sessionId,
+        });
+
+        const codeToolSchema = codeMode.getExecuteCodeToolSchema();
+
+        const toolCallResponse: JsonRpcResponse = {
+          jsonrpc: "2.0",
+          id: jsonRpcRequest.id ?? null, // hack coaelescing, should be string
+          result: {
+            tools: [codeToolSchema],
+          },
+        };
+        return new Response(JSON.stringify(toolCallResponse), {
+          status: response.status,
+          headers: response.headers,
+        });
+      }
+
+      let response: JsonRpcResponse;
+      let httpStatus = 200;
+
+      try {
+        // Handle initialize method - store client info
+        handleInitializeClientInfo(sessionId, jsonRpcRequest);
+
+        // Forward request to target MCP server using Hono proxy helper
+        const proxyHeaders = buildProxyHeaders(c, server);
+
+        const targetResponse = await proxy(server.url, {
+          method: "POST",
+          headers: proxyHeaders,
+          body: JSON.stringify(jsonRpcRequest),
+        });
+
+        httpStatus = targetResponse.status;
+
+        // Check if response is SSE stream
+        const contentType =
+          targetResponse.headers.get("content-type")?.toLowerCase() || "";
+        const isSSE = contentType.startsWith("text/event-stream");
+
+        if (isSSE) {
+          // Handle SSE streaming response
+
+          // Update server activity immediately for SSE
+          await updateServerActivity(storage, registry, server);
+
+          if (!targetResponse.body) {
+            throw new Error("SSE response has no body");
+          }
+
+          // Create two streams from the response body
+          const [streamForClient, streamForCapture] = targetResponse.body.tee();
+
+          // Start background capture processing
+          processSSECapture(
+            streamForCapture,
+            storage,
+            server,
+            sessionId,
+            jsonRpcRequest.method,
+            jsonRpcRequest.id,
+          );
+
+          // Return streaming response to client
+          return new Response(streamForClient, {
+            status: httpStatus,
+            headers: targetResponse.headers,
+          });
+        }
+
+        // Handle regular JSON response (existing logic)
+        // Read body as text first to avoid consuming the stream twice
+        const responseText = await targetResponse.text();
+        let responseBody: unknown;
+        try {
+          responseBody = JSON.parse(responseText);
+        } catch {
+          // If not valid JSON, use as-is
+          responseBody = responseText;
+        }
+        response = responseBody as JsonRpcResponse;
+        const duration = Date.now() - startTime;
+
+        // Capture response (only if request expected one - has id)
+        if (jsonRpcRequest.id != null) {
+          const responseRecord = createResponseCaptureRecord(
+            server.name,
+            sessionId,
+            response,
+            httpStatus,
+            jsonRpcRequest.method,
+          );
+          await appendCapture(storage, responseRecord);
+        }
+
+        // Handle initialize → session transition
+        await handleSessionTransition(
+          storage,
+          server,
+          targetResponse,
+          sessionId,
+          jsonRpcRequest,
+          requestCaptureFilename,
+        );
         // Log response
         logResponse(
           server,

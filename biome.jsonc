@@ -36,7 +36,8 @@
       "**/*.md",
       "!**/dist",
       "!**/build",
-      "!**/node_modules"
+      "!**/node_modules",
+      "!**/test-results"
     ]
   }
 }
