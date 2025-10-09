@@ -13,9 +13,6 @@ export async function createApp(
 ): Promise<{ app: Hono; registry: Registry }> {
   const app = new Hono();
 
-  // TODO - Remove me, I added this for debugging
-  app.use(logger());
-
   // Determine storage directory
   const storage = getStorageRoot(storageDir);
 
