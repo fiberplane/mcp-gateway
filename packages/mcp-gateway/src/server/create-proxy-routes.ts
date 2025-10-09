@@ -30,6 +30,7 @@ import {
   createSSEEventStream,
   isJsonRpcResponse,
   parseJsonRpcFromSSE,
+  type SSEEvent,
 } from "../sse-parser.js";
 import { getStorageRoot, saveRegistry } from "../storage.js";
 import { emitLog, emitRegistryUpdate } from "../tui/events.js";
@@ -347,6 +348,8 @@ export async function createProxyRoutes(
           });
         }
 
+        console.log("HEY THERE IS SOME GET ACTIVITY...");
+
         // Check if response is SSE stream
         const contentType =
           targetResponse.headers.get("content-type")?.toLowerCase() || "";
@@ -373,6 +376,9 @@ export async function createProxyRoutes(
             //         I don't know what to record.
             "GET /mcp", // method for logging
             null, // no request ID for GET
+            (sseEvent) => {
+              console.log("HEY THERE IS SOME SSE EVENT from the GET stream...", sseEvent);
+            },
           ).catch((error) => {
             // Log capture errors but don't let them crash the server
             // Note: ECONNRESET errors are common when the client or server closes the SSE stream
@@ -681,6 +687,7 @@ async function processSSECapture(
   sessionId: string,
   method: string,
   requestId?: string | number | null,
+  log?: (sseEvent: SSEEvent) => void,
 ): Promise<void> {
   try {
     const reader = stream.getReader();
@@ -700,6 +707,10 @@ async function processSSECapture(
 
       // Try to parse SSE data as JSON-RPC
       if (sseEvent.data) {
+        if (log) {
+          log(sseEvent);
+        }
+
         const jsonRpcMessage = parseJsonRpcFromSSE(sseEvent.data);
 
         if (jsonRpcMessage) {
