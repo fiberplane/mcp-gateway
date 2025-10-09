@@ -15,6 +15,7 @@ class Logger {
   private storageDir: string | null = null;
   private currentDate: string | null = null;
   private logDir: string | null = null;
+  private minLevel: LogLevel = "info"; // Default: skip debug logs
 
   /**
    * Initialize the logger with the storage directory
@@ -24,6 +25,17 @@ class Logger {
     this.logDir = join(storageDir, "logs");
     this.currentDate = this.getDateString();
 
+    // Set minimum log level from environment variable
+    const envLevel = process.env.LOG_LEVEL?.toLowerCase();
+    if (
+      envLevel === "debug" ||
+      envLevel === "info" ||
+      envLevel === "warn" ||
+      envLevel === "error"
+    ) {
+      this.minLevel = envLevel;
+    }
+
     // Ensure log directory exists
     await ensureStorageDir(this.logDir);
 
@@ -32,6 +44,19 @@ class Logger {
       // Silently fail - don't block initialization
       console.error("Failed to cleanup old logs:", error);
     });
+  }
+
+  /**
+   * Check if a log level should be written based on minimum level
+   */
+  private shouldLog(level: LogLevel): boolean {
+    const levels: Record<LogLevel, number> = {
+      debug: 0,
+      info: 1,
+      warn: 2,
+      error: 3,
+    };
+    return levels[level] >= levels[this.minLevel];
   }
 
   /**
@@ -76,6 +101,11 @@ class Logger {
       return;
     }
 
+    // Check if this log level should be written
+    if (!this.shouldLog(level)) {
+      return;
+    }
+
     try {
       const entry: LogEntry = {
         timestamp: new Date().toISOString(),
@@ -90,8 +120,19 @@ class Logger {
       await appendFile(logFile, logLine, "utf-8");
     } catch (error) {
       // Silently fail - don't throw errors from logger
-      console.error("Failed to write log:", error);
+      // HACK - Don't log errors in test environment (this was a quickfix, sorry)
+      if (!this.isTestEnvironment()) {
+        console.error("Failed to write log:", error);
+      }
     }
+  }
+
+  private isTestEnvironment(): boolean {
+    return (
+      process.env.NODE_ENV === "test" ||
+      process.env.BTEST === "1" || // Bun sets this during tests
+      (typeof Bun !== "undefined" && Bun.env.TEST === "true")
+    );
   }
 
   /**

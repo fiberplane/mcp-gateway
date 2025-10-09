@@ -1,11 +1,11 @@
 import { Hono } from "hono";
+import { logger as loggerMiddleware } from "hono/logger";
+import { logger } from "../logger.js";
 import { createMcpApp } from "../mcp-server.js";
 import type { Registry } from "../registry.js";
 import { getStorageRoot } from "../storage.js";
 import { createOAuthRoutes } from "./create-oauth-routes.js";
 import { createProxyRoutes } from "./create-proxy-routes.js";
-import { logger as loggerMiddleware } from "hono/logger";
-import { logger } from "../logger.js";
 
 // Create main application
 export async function createApp(
@@ -15,13 +15,15 @@ export async function createApp(
   const app = new Hono();
 
   // Custom Hono logger middleware to log to our log files
-  app.use(loggerMiddleware((message: string, ...rest: string[]) => {
-    if (rest.length > 0) {
-      logger.debug(message, { honoLoggerArgs: rest })
-    } else {
-      logger.debug(message)
-    }
-  }))
+  app.use(
+    loggerMiddleware((message: string, ...rest: string[]) => {
+      if (rest.length > 0) {
+        logger.debug(message, { honoLoggerArgs: rest });
+      } else {
+        logger.debug(message);
+      }
+    }),
+  );
 
   // Determine storage directory
   const storage = getStorageRoot(storageDir);
