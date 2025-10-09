@@ -2,12 +2,13 @@ import { useKeyboard, useTerminalDimensions } from "@opentui/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { LogEntry } from "../../tui/state";
 import type { Color, Theme } from "../colors";
+import { debug } from "../debug";
 import { useHandler } from "../hooks/useHandler";
 import { useAppStore } from "../store";
 import { useTheme } from "../theme-context";
 import { ActivityLogHeader } from "./ActivityLogHeader";
 import { formatRequestDetails, formatResponseDetails } from "./formatters";
-import { type Column, truncateText } from "./ui/Table";
+import { type Column, ColumnBasedTable, truncateText } from "./ui/Table";
 
 type BoxRef = { height: number; onSizeChange?: () => void };
 
@@ -16,7 +17,7 @@ function textColumn<T>(config: {
   id: string;
   label?: string;
   width?: number;
-  align?: "left" | "right";
+  align?: "flex-start" | "flex-end" | "center";
   format: (item: T) => string;
   color?: (item: T, isSelected: boolean) => Color | undefined;
   backgroundColor?: (isSelected: boolean) => Color | undefined;
@@ -32,20 +33,21 @@ function textColumn<T>(config: {
       truncate: config.truncate,
     },
     cell: (item, isSelected) => {
-      const text = config.format(item);
+      const text = config.format(item).trim();
       const shouldTruncate = config.truncate !== false;
       const truncated = shouldTruncate
         ? truncateText(text, config.width)
         : text;
       const color = config.color?.(item, isSelected);
-      const bg = config.backgroundColor?.(isSelected);
+      const bg = config.backgroundColor?.(isSelected) ?? undefined;
 
       return (
         <box backgroundColor={bg} paddingRight={config.last ? 0 : 1}>
           <text
             fg={color}
             style={{
-              alignSelf: config.align === "right" ? "flex-end" : "flex-start",
+              alignSelf: config.align || "flex-start",
+              maxHeight: 1,
             }}
           >
             {truncated}
@@ -82,15 +84,12 @@ function calculateFlexibleColumnWidth(
     .filter((col) => col.style?.width !== undefined)
     .reduce((sum, col) => sum + (col.style?.width ?? 0), 0);
 
-  // Calculate gaps (1 char between each column)
-  const gapTotal = columns.length;
-
   // Selection indicator width
   const selectionIndicatorWidth = 2;
 
   // Available space for flexible columns
   const availableSpace =
-    terminalWidth - fixedWidthTotal - gapTotal - selectionIndicatorWidth;
+    terminalWidth - fixedWidthTotal - selectionIndicatorWidth;
 
   // Count flexible columns
   const flexibleCount = columns.filter(
@@ -119,7 +118,7 @@ function createActivityLogColumns(theme: Theme): Column<LogEntry>[] {
       id: "direction",
       label: "Dir",
       width: 4,
-      format: (log) => (log.direction === "request" ? " → " : " ← "),
+      format: (log) => (log.direction === "request" ? "→" : "←"),
       color: (log, isSelected) =>
         isSelected
           ? theme.accent
@@ -127,19 +126,21 @@ function createActivityLogColumns(theme: Theme): Column<LogEntry>[] {
             ? theme.foregroundMuted
             : getStatusColor(log.httpStatus, theme),
       backgroundColor: cellBackground,
+      align: "center",
     }),
     textColumn({
       id: "session",
       label: "Session",
-      width: 11,
+      width: 12,
       format: (log) => `[${log.sessionId.slice(0, 8)}]`,
       backgroundColor: cellBackground,
     }),
     textColumn({
       id: "requestId",
       label: "Req ID",
-      align: "right",
-      width: 7,
+      align: "flex-end",
+      width: 10,
+      truncate: true,
       format: (log) => {
         const id = log.request?.id ?? log.response?.id;
         return id ? String(id).slice(0, 6) : "-";
@@ -157,6 +158,7 @@ function createActivityLogColumns(theme: Theme): Column<LogEntry>[] {
       id: "method",
       label: "Method",
       width: 20,
+      truncate: true,
       format: (log) => log.method,
       backgroundColor: cellBackground,
     }),
@@ -178,7 +180,7 @@ function createActivityLogColumns(theme: Theme): Column<LogEntry>[] {
       id: "duration",
       label: "ms",
       width: 6,
-      align: "right",
+      align: "flex-end",
       format: (log) => (log.direction === "response" ? `${log.duration}` : "-"),
       backgroundColor: cellBackground,
     }),
@@ -202,6 +204,7 @@ export function ActivityLog() {
   const theme = useTheme();
   const logs = useAppStore((state) => state.logs);
   const { width: terminalWidth } = useTerminalDimensions();
+  debug("ActivityLog", { terminalWidth });
 
   // Get columns with theme
   const activityLogColumns = useMemo(
@@ -213,8 +216,32 @@ export function ActivityLog() {
   const columnsWithCalculatedWidths = useMemo(() => {
     const flexibleWidth = calculateFlexibleColumnWidth(
       activityLogColumns,
-      terminalWidth,
+      // Remove 2 characters for padding on the left and right
+      terminalWidth - 2,
     );
+
+    if (flexibleWidth < 10) {
+      const newResult: Column<LogEntry>[] = [];
+
+      let width = 0;
+      while (width < terminalWidth - 2) {
+        const col = activityLogColumns.shift();
+        if (col) {
+          newResult.push(col);
+          width += col.style?.width ?? 0;
+        }
+      }
+      return newResult;
+      // for (const col of activityLogColumns) {
+      //   if (col.style?.width === undefined) {
+      //     width += flexibleWidth;
+      //   } else {
+      //     width += col.style.width;
+      //   }
+
+      // }
+      // return activityLogColumns;
+    }
 
     return activityLogColumns.map((col) => {
       if (col.style?.width === undefined) {
@@ -434,54 +461,25 @@ export function ActivityLog() {
           width: "100%",
         }}
       >
-        {/* Column-based table layout */}
-        <box style={{ flexDirection: "row", gap: 0 }}>
-          {/* Selection indicator column */}
-          <box style={{ flexDirection: "column", width: 2 }}>
-            {/* Header cell */}
-            <text fg={theme.foregroundMuted}>{"  "}</text>
-
-            {/* Data cells */}
-            {logs.map((log, i) => {
-              if (!isItemVisible(i)) return null;
-              const isSelected = i === safeSelectedIndex;
-              return (
-                <box
-                  key={`sel-${log.sessionId}-${log.timestamp}-${log.direction}`}
-                  backgroundColor={isSelected ? theme.emphasis : undefined}
-                >
-                  <text fg={isSelected ? theme.accent : theme.foreground}>
-                    {isSelected ? "> " : "  "}
-                  </text>
-                </box>
-              );
-            })}
-          </box>
-
-          {/* Data columns */}
-          {columnsWithCalculatedWidths.map((col, index) => (
-            <box
-              key={col.id}
-              style={{ flexDirection: "column", width: col.style?.width }}
-            >
-              {/* Header cell */}
-              {typeof col.label === "string" && (
-                <text fg={theme.foregroundMuted}>{col.label}</text>
-              )}
-              {typeof col.label === "function" && col.label()}
-              {!col.label && <text> </text>}
-
-              {/* Data cells */}
-              {logs.map((log, i) => {
-                if (!isItemVisible(i)) return null;
-                const isSelected = i === safeSelectedIndex;
-                return (
-                  <box key={`${col.id}-${i}`}>{col.cell(log, isSelected)}</box>
-                );
-              })}
+        {/* Column-based table */}
+        <ColumnBasedTable
+          key={terminalWidth}
+          columns={columnsWithCalculatedWidths}
+          data={logs}
+          selectedIndex={safeSelectedIndex}
+          isItemVisible={isItemVisible}
+          getItemKey={(log) =>
+            `${log.sessionId}-${log.timestamp}-${log.direction}`
+          }
+          headerForegroundColor={theme.foregroundMuted}
+          renderSelectionIndicator={(isSelected) => (
+            <box backgroundColor={isSelected ? theme.emphasis : undefined}>
+              <text fg={isSelected ? theme.accent : theme.foreground}>
+                {isSelected ? "> " : "  "}
+              </text>
             </box>
-          ))}
-        </box>
+          )}
+        />
       </box>
 
       {/* Bottom overflow/follow indicator */}
