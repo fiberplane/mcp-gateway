@@ -4,6 +4,7 @@ import { useIsSmall } from "../hooks/useIsSmall";
 import { commandShortcuts, formatShortcut } from "../shortcuts";
 import { useAppStore } from "../store";
 import { useTheme } from "../theme-context";
+import { RoundedBox } from "./ui/RoundedBox";
 
 export function EmptyState() {
   const theme = useTheme();
@@ -147,33 +148,3 @@ export function EmptyState() {
     </box>
   );
 }
-
-const RoundedBox = ({
-  children,
-  style,
-}: {
-  children: React.ReactNode;
-  style?: BoxProps["style"];
-}) => {
-  const theme = useTheme();
-  const isSmall = useIsSmall();
-
-  return (
-    <box
-      style={{
-        flexDirection: "column",
-        gap: 1,
-        border: true,
-        borderColor: theme.border,
-        padding: 1,
-        paddingTop: isSmall ? 0 : 1,
-        paddingBottom: isSmall ? 0 : 1,
-        borderStyle: "rounded",
-        maxWidth: 66,
-        ...style,
-      }}
-    >
-      {children}
-    </box>
-  );
-};

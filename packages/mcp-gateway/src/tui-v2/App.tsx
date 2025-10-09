@@ -2,6 +2,7 @@ import { render, useKeyboard, useRenderer } from "@opentui/react";
 import type { Registry } from "../registry";
 import type { Context } from "../tui/state";
 import { ActivityLog } from "./components/ActivityLog";
+import { ActivityLogDetailModal } from "./components/ActivityLogDetailModal";
 import { AddServerModal } from "./components/AddServerModal";
 import { CommandMenu } from "./components/CommandMenu";
 import { DeleteServerModal } from "./components/DeleteServerModal";
@@ -148,6 +149,7 @@ function App() {
       {activeModal === "add-server" && <AddServerModal />}
       {activeModal === "delete-server" && <DeleteServerModal />}
       {activeModal === "mcp-instructions" && <McpInstructionsModal />}
+      {activeModal === "activity-log-detail" && <ActivityLogDetailModal />}
 
       {/* Render command menu */}
       {showCommandMenu && <CommandMenu />}

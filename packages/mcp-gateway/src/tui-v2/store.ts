@@ -8,9 +8,15 @@ type ModalType =
   | "delete-server"
   | "server-details"
   | "mcp-instructions"
+  | "activity-log-detail"
   | null;
 
 export type ViewMode = "activity-log" | "server-management";
+
+export interface Toast {
+  message: string;
+  type: "success" | "error" | "info";
+}
 
 interface AppStore {
   // State
@@ -21,6 +27,8 @@ interface AppStore {
   viewMode: ViewMode;
   showCommandMenu: boolean;
   serverToDelete: string | null;
+  selectedLog: LogEntry | null;
+  toast: Toast | null;
 
   // Actions
   initialize: (registry: Registry, storageDir: string) => void;
@@ -35,6 +43,9 @@ interface AppStore {
   openCommandMenu: () => void;
   closeCommandMenu: () => void;
   setServerToDelete: (serverName: string | null) => void;
+  setSelectedLog: (log: LogEntry | null) => void;
+  showToast: (message: string, type: Toast["type"]) => void;
+  clearToast: () => void;
 }
 
 export const useAppStore = create<AppStore>((set, get) => ({
@@ -46,6 +57,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
   viewMode: "activity-log",
   showCommandMenu: false,
   serverToDelete: null,
+  selectedLog: null,
+  toast: null,
 
   // Actions
   initialize: (registry, storageDir) => set({ registry, storageDir }),
@@ -118,9 +131,13 @@ export const useAppStore = create<AppStore>((set, get) => ({
   addLog: (entry) => set((state) => ({ logs: [...state.logs, entry] })),
   clearLogs: () => set({ logs: [] }),
   openModal: (modal) => set({ activeModal: modal }),
-  closeModal: () => set({ activeModal: null, serverToDelete: null }),
+  closeModal: () =>
+    set({ activeModal: null, serverToDelete: null, selectedLog: null }),
   setViewMode: (mode) => set({ viewMode: mode }),
   openCommandMenu: () => set({ showCommandMenu: true }),
   closeCommandMenu: () => set({ showCommandMenu: false }),
   setServerToDelete: (serverName) => set({ serverToDelete: serverName }),
+  setSelectedLog: (log) => set({ selectedLog: log }),
+  showToast: (message, type) => set({ toast: { message, type } }),
+  clearToast: () => set({ toast: null }),
 }));

@@ -112,10 +112,25 @@ export function ActivityLog() {
     }
   }, [logs.length, isFollowMode, selectedIndex]);
 
+  const openModal = useAppStore((state) => state.openModal);
+  const setSelectedLog = useAppStore((state) => state.setSelectedLog);
+  const activeModal = useAppStore((state) => state.activeModal);
+
   // Keyboard navigation
   useKeyboard((key) => {
+    // Don't process keys if a modal is open
+    if (activeModal) return;
     if (logs.length === 0) return;
 
+    if (key.name === "return" || key.name === "enter") {
+      // Open detail modal for selected log
+      const selectedLog = logs[safeSelectedIndex];
+      if (selectedLog) {
+        setSelectedLog(selectedLog);
+        openModal("activity-log-detail");
+      }
+      return;
+    }
     if (key.name === "up") {
       setSelectedIndex((prev) => Math.max(0, prev - 1));
       // Exit follow mode when scrolling up

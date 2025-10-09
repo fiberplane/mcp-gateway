@@ -45,6 +45,7 @@ export function Modal({
           width,
           maxWidth,
           maxHeight: "90%",
+          height: scrollable ? undefined : "auto",
           minHeight: 10,
           margin: 2,
           padding: 2,
@@ -62,11 +63,15 @@ export function Modal({
       >
         {/* Content area - scrollable or static */}
         {scrollable ? (
-          <scrollbox style={{ flexGrow: 1 }} scrollY={true} focused={true}>
+          <scrollbox
+            style={{ maxHeight: 40, flexShrink: 1 }}
+            scrollY={true}
+            focused={true}
+          >
             {children}
           </scrollbox>
         ) : (
-          <box style={{ flexDirection: "column", flexGrow: 1 }}>{children}</box>
+          <box style={{ flexDirection: "column" }}>{children}</box>
         )}
 
         {/* Fixed footer */}
