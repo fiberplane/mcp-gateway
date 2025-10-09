@@ -15,6 +15,7 @@ import {
   getClientInfo,
   storeClientInfo,
 } from "../capture.js";
+import { logger } from "../logger.js";
 import { getServer, type McpServer, type Registry } from "../registry.js";
 import {
   type CaptureRecord,
@@ -156,7 +157,11 @@ async function handleSessionTransition(
     try {
       await rename(oldPath, newPath);
     } catch (error) {
-      console.warn(`Failed to rename capture file: ${error}`);
+      logger.warn("Failed to rename capture file", {
+        error: String(error),
+        oldPath,
+        newPath,
+      });
     }
   }
 }
@@ -593,7 +598,11 @@ async function processSSECapture(
       }
     }
   } catch (error) {
-    console.error(`${server.name} → ${method} (SSE capture error):`, error);
+    logger.error("SSE capture error", {
+      server: server.name,
+      method,
+      error: String(error),
+    });
     // Don't throw - capture failures shouldn't affect the client stream
   }
 }

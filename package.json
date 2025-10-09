@@ -12,8 +12,8 @@
     "build:types": "bun run --filter @fiberplane/mcp-gateway build:types",
     "test": "bun test",
     "typecheck": "bun run --filter '*' typecheck",
-    "lint": "biome check .",
-    "format": "biome format --write .",
+    "lint": "biome ci .",
+    "format": "biome check --write .",
     "changeset": "changeset",
     "release": "changeset publish"
   },

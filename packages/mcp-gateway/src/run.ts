@@ -4,12 +4,14 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { serve } from "@hono/node-server";
 import { startHealthChecks } from "./health.js";
+import { logger } from "./logger.js";
 import { createApp } from "./server/index.js";
 import { getStorageRoot, loadRegistry } from "./storage.js";
 import { runTUI } from "./tui/loop.js";
 import type { Context } from "./tui/state.js";
 
 function showHelp(): void {
+  // biome-ignore lint/suspicious/noConsole: actually want to print to console
   console.log(`
 Usage: mcp-gateway [options]
 
@@ -36,6 +38,7 @@ function showVersion(): void {
   const __dirname = dirname(__filename);
   const packageJsonPath = join(__dirname, "../package.json");
   const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
+  // biome-ignore lint/suspicious/noConsole: actually want to print to console
   console.log(`mcp-gateway v${packageJson.version}`);
 }
 
@@ -75,6 +78,9 @@ export async function runCli(): Promise<void> {
     // Get storage directory
     const storageDir = getStorageRoot(values["storage-dir"]);
 
+    // Initialize logger
+    await logger.initialize(storageDir);
+
     // Load registry once and share it between server and CLI
     const registry = await loadRegistry(storageDir);
 
@@ -87,6 +93,7 @@ export async function runCli(): Promise<void> {
       port,
     });
 
+    // biome-ignore lint/suspicious/noConsole: actually want to print to console
     console.log(`MCP Gateway server started at http://localhost:${port}`);
 
     // Start health checks
@@ -104,22 +111,25 @@ export async function runCli(): Promise<void> {
     // Start TUI only if running in a TTY
     if (process.stdin.isTTY) {
       runTUI(context, registry).catch((error) => {
-        console.error("TUI error:", error);
+        logger.error("TUI error", { error: String(error) });
         stopHealthChecks();
         server.close();
         process.exit(1);
       });
     } else {
+      // biome-ignore lint/suspicious/noConsole: actually want to print to console
       console.log(
         "Running in headless mode (no TTY detected). Server will run until terminated.",
       );
       // Keep process alive and handle signals
       process.on("SIGTERM", () => {
+        // biome-ignore lint/suspicious/noConsole: actually want to print to console
         console.log("\nReceived SIGTERM, shutting down...");
         context.onExit?.();
         process.exit(0);
       });
       process.on("SIGINT", () => {
+        // biome-ignore lint/suspicious/noConsole: actually want to print to console
         console.log("\nReceived SIGINT, shutting down...");
         context.onExit?.();
         process.exit(0);
@@ -127,9 +137,20 @@ export async function runCli(): Promise<void> {
     }
   } catch (error) {
     if (error instanceof Error) {
-      console.error(`Error: ${error.message}`);
+      // print error message to user
+      // biome-ignore lint/suspicious/noConsole: actually want to print to console
+      console.error("CLI error:", error.message);
+
+      // Also log the error message and stack to the log files
+      logger.error("CLI error", {
+        message: error.message,
+        stack: error.stack,
+      });
     }
-    console.error("Run with --help for usage information.");
+
+    // print message to user on how to look up usage
+    // biome-ignore lint/suspicious/noConsole: actually want to print to console
+    console.error("Run with --help for usage information");
     process.exit(1);
   }
 }

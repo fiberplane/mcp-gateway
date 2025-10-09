@@ -19,11 +19,12 @@
   "sideEffects": false,
   "scripts": {
     "dev": "bun build ./src/run.ts --outdir dist --root src --sourcemap=inline --target node --format esm --watch",
+    "dev:server": "LOG_LEVEL=debug bun run src/server --watch",
     "build": "bun run scripts/build.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "lint": "biome check --write .",
-    "format": "biome format --write .",
+    "lint": "biome ci .",
+    "format": "biome check --write .",
     "prepublishOnly": "bun run build"
   },
   "exports": {

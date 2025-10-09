@@ -1,3 +1,5 @@
+/** biome-ignore-all lint/suspicious/noConsole: tests */
+
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
