@@ -2,7 +2,6 @@ import { useKeyboard, useTerminalDimensions } from "@opentui/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { LogEntry } from "../../tui/state";
 import type { Color, Theme } from "../colors";
-import { debug } from "../debug";
 import { useHandler } from "../hooks/useHandler";
 import { useAppStore } from "../store";
 import { useTheme } from "../theme-context";
@@ -204,7 +203,6 @@ export function ActivityLog() {
   const theme = useTheme();
   const logs = useAppStore((state) => state.logs);
   const { width: terminalWidth } = useTerminalDimensions();
-  debug("ActivityLog", { terminalWidth });
 
   // Get columns with theme
   const activityLogColumns = useMemo(
@@ -220,7 +218,6 @@ export function ActivityLog() {
       terminalWidth - 2,
     );
 
-    debug("flexibleWidth", flexibleWidth);
     if (flexibleWidth <= 20) {
       const newResult: Column<LogEntry>[] = [];
       const columns = [...activityLogColumns];
