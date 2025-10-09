@@ -1,9 +1,9 @@
-import { useTerminalDimensions, type BoxProps } from "@opentui/react";
+import { type BoxProps, useTerminalDimensions } from "@opentui/react";
+import { debug } from "../debug";
+import { useIsSmall } from "../hooks/useIsSmall";
 import { commandShortcuts, formatShortcut } from "../shortcuts";
 import { useAppStore } from "../store";
 import { useTheme } from "../theme-context";
-import { debug } from "../debug";
-import { useIsSmall } from "../hooks/useIsSmall";
 
 export function EmptyState() {
   const theme = useTheme();

@@ -1,9 +1,9 @@
 import type { BoxProps } from "@opentui/react";
 import packageJson from "../../../package.json" with { type: "json" };
 import type { McpServer, ServerHealth } from "../../registry";
+import { useIsSmall } from "../hooks/useIsSmall";
 import { useAppStore } from "../store";
 import { useTheme } from "../theme-context";
-import { useIsSmall } from "../hooks/useIsSmall";
 
 // function formatRelativeTime(timestamp: string | null): string {
 //   if (!timestamp) return "—";

@@ -1,10 +1,10 @@
 import { useKeyboard } from "@opentui/react";
 import { useCallback, useState } from "react";
 import { debug } from "../debug";
+import { useIsSmall } from "../hooks/useIsSmall";
 import { useAppStore } from "../store";
 import { useTheme } from "../theme-context";
 import { Modal } from "./Modal";
-import { useIsSmall } from "../hooks/useIsSmall";
 
 export function AddServerModal() {
   const theme = useTheme();
