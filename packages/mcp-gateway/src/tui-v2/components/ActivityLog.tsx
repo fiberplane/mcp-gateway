@@ -19,7 +19,9 @@ function textColumn<T>(config: {
   align?: "left" | "right";
   format: (item: T) => string;
   color?: (item: T, isSelected: boolean) => Color | undefined;
+  backgroundColor?: (isSelected: boolean) => Color | undefined;
   truncate?: boolean;
+  last?: boolean;
 }): Column<T> {
   return {
     id: config.id,
@@ -35,18 +37,20 @@ function textColumn<T>(config: {
       const truncated = shouldTruncate
         ? truncateText(text, config.width)
         : text;
-      // const padded = padText(truncated, config.width, config.align);
       const color = config.color?.(item, isSelected);
+      const bg = config.backgroundColor?.(isSelected);
 
       return (
-        <text
-          fg={color}
-          style={{
-            alignSelf: config.align === "right" ? "flex-end" : "flex-start",
-          }}
-        >
-          {truncated}
-        </text>
+        <box backgroundColor={bg} paddingRight={config.last ? 0 : 1}>
+          <text
+            fg={color}
+            style={{
+              alignSelf: config.align === "right" ? "flex-end" : "flex-start",
+            }}
+          >
+            {truncated}
+          </text>
+        </box>
       );
     },
   };
@@ -99,17 +103,22 @@ function calculateFlexibleColumnWidth(
 
 // Column configuration for the activity log table (stable, defined outside component)
 function createActivityLogColumns(theme: Theme): Column<LogEntry>[] {
+  // Helper to get background color for selected cells
+  const cellBackground = (isSelected: boolean) =>
+    isSelected ? theme.emphasis : undefined;
+
   return [
     textColumn({
       id: "time",
       label: "Time",
-      width: 8,
+      width: 9,
       format: (log) => log.timestamp.slice(11, 19), // HH:MM:SS
+      backgroundColor: cellBackground,
     }),
     textColumn({
       id: "direction",
       label: "Dir",
-      width: 3,
+      width: 4,
       format: (log) => (log.direction === "request" ? " → " : " ← "),
       color: (log, isSelected) =>
         isSelected
@@ -117,34 +126,39 @@ function createActivityLogColumns(theme: Theme): Column<LogEntry>[] {
           : log.direction === "request"
             ? theme.foregroundMuted
             : getStatusColor(log.httpStatus, theme),
+      backgroundColor: cellBackground,
     }),
     textColumn({
       id: "session",
       label: "Session",
-      width: 10,
+      width: 11,
       format: (log) => `[${log.sessionId.slice(0, 8)}]`,
+      backgroundColor: cellBackground,
     }),
     textColumn({
       id: "requestId",
       label: "Req ID",
       align: "right",
-      width: 6,
+      width: 7,
       format: (log) => {
         const id = log.request?.id ?? log.response?.id;
         return id ? String(id).slice(0, 6) : "-";
       },
+      backgroundColor: cellBackground,
     }),
     textColumn({
       id: "server",
       label: "Server",
       width: 12,
       format: (log) => log.serverName,
+      backgroundColor: cellBackground,
     }),
     textColumn({
       id: "method",
       label: "Method",
       width: 20,
       format: (log) => log.method,
+      backgroundColor: cellBackground,
     }),
     textColumn({
       id: "status",
@@ -158,6 +172,7 @@ function createActivityLogColumns(theme: Theme): Column<LogEntry>[] {
           : log.direction === "response"
             ? getStatusColor(log.httpStatus, theme)
             : undefined,
+      backgroundColor: cellBackground,
     }),
     textColumn({
       id: "duration",
@@ -165,6 +180,7 @@ function createActivityLogColumns(theme: Theme): Column<LogEntry>[] {
       width: 6,
       align: "right",
       format: (log) => (log.direction === "response" ? `${log.duration}` : "-"),
+      backgroundColor: cellBackground,
     }),
     textColumn({
       id: "details",
@@ -176,6 +192,8 @@ function createActivityLogColumns(theme: Theme): Column<LogEntry>[] {
         }
         return formatResponseDetails(log);
       },
+      backgroundColor: cellBackground,
+      last: true,
     }),
   ];
 }
@@ -416,84 +434,53 @@ export function ActivityLog() {
           width: "100%",
         }}
       >
-        <box style={{ flexDirection: "column" }}>
-          {/* Table header */}
-          <box style={{ flexDirection: "row", gap: 1 }}>
-            {/* Selection indicator space */}
-            <box style={{ width: 2 }}>
-              <text fg={theme.foregroundMuted}>{"  "}</text>
-            </box>
+        {/* Column-based table layout */}
+        <box style={{ flexDirection: "row", gap: 0 }}>
+          {/* Selection indicator column */}
+          <box style={{ flexDirection: "column", width: 2 }}>
+            {/* Header cell */}
+            <text fg={theme.foregroundMuted}>{"  "}</text>
 
-            {/* Column headers */}
-            {columnsWithCalculatedWidths.map((col) => {
-              if (typeof col.label === "function") {
-                return <box key={col.id}>{col.label()}</box>;
-              }
-
-              if (typeof col.label === "string") {
-                const width = col.style?.width;
-                const labelText =
-                  width && width > 0
-                    ? col.label.padEnd(width).slice(0, width)
-                    : col.label;
-
-                return (
-                  <text
-                    key={col.id}
-                    style={{ width: width || undefined }}
-                    fg={theme.foregroundMuted}
-                  >
-                    {labelText}
-                  </text>
-                );
-              }
-
+            {/* Data cells */}
+            {logs.map((log, i) => {
+              if (!isItemVisible(i)) return null;
+              const isSelected = i === safeSelectedIndex;
               return (
                 <box
-                  key={col.id}
-                  style={{ width: col.style?.width || undefined }}
-                />
-              );
-            })}
-          </box>
-
-          {/* Render visible items */}
-          {logs.map((log, i) => {
-            // Skip items outside viewport
-            if (!isItemVisible(i)) {
-              return null;
-            }
-
-            const isSelected = i === safeSelectedIndex;
-
-            return (
-              <box
-                key={`${log.sessionId}-${log.timestamp}-${log.direction}`}
-                style={{
-                  flexDirection: "row",
-                  gap: 1,
-                  backgroundColor: isSelected ? theme.emphasis : undefined,
-                }}
-              >
-                {/* Selection indicator */}
-                <box style={{ width: 2 }}>
+                  key={`sel-${log.sessionId}-${log.timestamp}-${log.direction}`}
+                  backgroundColor={isSelected ? theme.emphasis : undefined}
+                >
                   <text fg={isSelected ? theme.accent : theme.foreground}>
                     {isSelected ? "> " : "  "}
                   </text>
                 </box>
+              );
+            })}
+          </box>
 
-                {/* Data columns */}
-                {columnsWithCalculatedWidths.map((col) => (
-                  <box
-                    key={col.id}
-                    style={{ width: col.style?.width || undefined }}
-                  >
-                    {col.cell(log, isSelected)}
-                  </box>
-                ))}
-              </box>
-            );
-          })}
+          {/* Data columns */}
+          {columnsWithCalculatedWidths.map((col, index) => (
+            <box
+              key={col.id}
+              style={{ flexDirection: "column", width: col.style?.width }}
+            >
+              {/* Header cell */}
+              {typeof col.label === "string" && (
+                <text fg={theme.foregroundMuted}>{col.label}</text>
+              )}
+              {typeof col.label === "function" && col.label()}
+              {!col.label && <text> </text>}
+
+              {/* Data cells */}
+              {logs.map((log, i) => {
+                if (!isItemVisible(i)) return null;
+                const isSelected = i === safeSelectedIndex;
+                return (
+                  <box key={`${col.id}-${i}`}>{col.cell(log, isSelected)}</box>
+                );
+              })}
+            </box>
+          ))}
         </box>
       </box>
 

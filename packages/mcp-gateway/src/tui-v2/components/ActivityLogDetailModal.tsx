@@ -152,15 +152,6 @@ export function ActivityLogDetailModal() {
 
         {/* Response Section */}
         {responseLog?.response && (
-          // <box
-          //   style={{
-          //     flexDirection: "column",
-          //     border: true,
-          //     borderColor: responseLog.response.error ? theme.danger : theme.border,
-          //     padding: 1,
-          //   }}
-          //   title={responseLog.response.error ? "Error Response" : "Response"}
-          // >
           <RoundedBox
             title={responseLog.response.error ? "Error Response" : "Response"}
             style={{ borderColor: theme.foregroundMuted }}

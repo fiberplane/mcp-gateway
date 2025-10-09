@@ -120,7 +120,7 @@ export function Table<T>({
             key={rowIndex}
             style={{
               flexDirection: "row",
-              gap: 1,
+              gap: 0,
               backgroundColor: isSelected
                 ? selectionBackgroundColor
                 : undefined,
@@ -137,7 +137,7 @@ export function Table<T>({
             {columns.map((col) => (
               <box
                 key={col.id}
-                style={{ width: col.style?.width || undefined }}
+                style={{ width: col.style?.width || undefined, backgroundColor: selectionBackgroundColor }}
               >
                 {col.cell(item, isSelected)}
               </box>
