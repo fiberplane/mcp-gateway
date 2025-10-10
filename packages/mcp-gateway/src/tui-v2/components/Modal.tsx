@@ -1,3 +1,4 @@
+import { useTerminalDimensions } from "@opentui/react";
 import { useOverflowDetection } from "../hooks/useOverflowDetection";
 import { useTheme } from "../theme-context";
 
@@ -9,7 +10,6 @@ interface ModalProps {
   onClose: () => void;
   size?: ModalSize;
   scrollable?: boolean;
-  maxContentHeight?: number; // Max height for scrollbox content area
 }
 
 const sizeConfig = {
@@ -24,20 +24,15 @@ export function Modal({
   onClose,
   size = "medium",
   scrollable = false,
-  maxContentHeight = 60,
 }: ModalProps) {
+  const maxContentHeight = useTerminalDimensions().height - 8;
   const theme = useTheme();
   const { width, maxWidth } = sizeConfig[size];
   const { hasOverflow, measured, measurementRef } =
     useOverflowDetection(maxContentHeight);
 
-  // Handle click on background to close modal
-  const handleBackgroundClick = () => {
-    onClose();
-  };
-
   // Prevent modal content clicks from closing the modal
-  const handleContentClick = (event: any) => {
+  const handleContentClick = (event: { stopPropagation: () => void }) => {
     event.stopPropagation();
   };
 
@@ -54,7 +49,7 @@ export function Modal({
         alignItems: "center",
       }}
       backgroundColor={theme.backgroundTransparent}
-      onMouseDown={handleBackgroundClick}
+      onMouseDown={onClose}
     >
       {/* Modal content box */}
       {/* biome-ignore lint/a11y/noStaticElementInteractions: This is not a web ui */}
@@ -87,7 +82,7 @@ export function Modal({
             {/* Hidden measurement box to determine natural content height */}
             {!measured && (
               <box
-                ref={measurementRef as React.Ref<any>}
+                ref={measurementRef}
                 style={{
                   position: "absolute",
                   left: -9999,

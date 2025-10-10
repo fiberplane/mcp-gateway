@@ -25,6 +25,7 @@ export function RoundedBox({
         paddingBottom: compactHeight.enabled ? 0 : 1,
         borderStyle: "rounded",
         maxWidth: 66,
+        flexShrink: 0,
         ...style,
       }}
     >

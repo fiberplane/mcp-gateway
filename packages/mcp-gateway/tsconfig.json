@@ -7,5 +7,5 @@
     "jsxImportSource": "@opentui/react"
   },
   "include": ["src/**/*", "tests/**/*", "package.json"],
-  "exclude": ["bin/**/*", "dist"]
+  "exclude": ["bin/**/*", "dist", "node_modules"]
 }

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-
-type BoxRef = { height: number; on?: (event: string, handler: () => void) => void; off?: (event: string, handler: () => void) => void };
+import { logger } from "../../logger";
 
 /**
  * Hook to detect if content overflows by measuring in a hidden box
@@ -21,7 +20,8 @@ type BoxRef = { height: number; on?: (event: string, handler: () => void) => voi
  *   )
  */
 export function useOverflowDetection(maxHeight: number) {
-  const measurementRef = useRef<BoxRef | null>(null);
+  // biome-ignore lint/suspicious/noExplicitAny: BoxRenderable type has complex nested dependency issues
+  const measurementRef = useRef<any>(null);
   const [hasOverflow, setHasOverflow] = useState(false);
   const [measured, setMeasured] = useState(false);
 
@@ -34,6 +34,7 @@ export function useOverflowDetection(maxHeight: number) {
     // Measure the natural height of content
     const checkOverflow = () => {
       const contentHeight = measureBox.height;
+      logger.info("contentHeight", { contentHeight, maxHeight });
       const needsScrolling = contentHeight > maxHeight;
       setHasOverflow(needsScrolling);
       setMeasured(true);

@@ -85,7 +85,9 @@ export async function runCli(): Promise<void> {
     // Parse and validate port
     const port = Number.parseInt(values.port || "3333", 10);
     if (Number.isNaN(port) || port < 1 || port > 65535) {
-      throw new Error(`Invalid port number: ${values.port}. Must be between 1 and 65535.`);
+      throw new Error(
+        `Invalid port number: ${values.port}. Must be between 1 and 65535.`,
+      );
     }
 
     // Get storage directory

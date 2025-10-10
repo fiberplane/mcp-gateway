@@ -12,7 +12,8 @@
   "dependencies": {
     "@fiberplane/mcp-gateway": "workspace:*",
     "hono": "^4.9.8",
-    "zod": "^4.1.11"
+    "zod": "^4.1.11",
+    "zod-to-json-schema": "^3.24.6"
   },
   "devDependencies": {
     "typescript": "^5.7.2"

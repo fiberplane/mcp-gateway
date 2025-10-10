@@ -176,8 +176,7 @@ export async function runOpenTUI(context: Context, registry: Registry) {
         await result;
       }
       process.exit(0);
-    } catch (error) {
-      console.error("Cleanup error:", error);
+    } catch (_error) {
       process.exit(1);
     }
   };
@@ -196,7 +195,6 @@ export async function runOpenTUI(context: Context, registry: Registry) {
       message: error.message,
       stack: error.stack,
     });
-    console.error("Fatal error:", error);
     process.exit(1);
   });
 
@@ -205,7 +203,6 @@ export async function runOpenTUI(context: Context, registry: Registry) {
       reason: String(reason),
       promise: String(promise),
     });
-    console.error("Unhandled promise rejection:", reason);
   });
 
   // Enable bracketed paste mode manually (OpenTUI doesn't enable it by default)

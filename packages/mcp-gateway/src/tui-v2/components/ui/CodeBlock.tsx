@@ -20,6 +20,7 @@ export function CodeBlock({ content, padding = 1, style }: CodeBlockProps) {
         flexDirection: "column",
         maxWidth: 66,
         padding,
+        flexShrink: 0,
         ...style,
       }}
       backgroundColor={theme.emphasis}

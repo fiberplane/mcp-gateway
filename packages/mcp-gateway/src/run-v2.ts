@@ -40,14 +40,19 @@ Examples:
 `);
 }
 
-function showVersion(): void {
+function getVersion(): string {
   // Read version from package.json
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = dirname(__filename);
   const packageJsonPath = join(__dirname, "../package.json");
   const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
+  return packageJson.version;
+}
+
+function showVersion(): void {
+  const version = getVersion();
   // biome-ignore lint/suspicious/noConsole: actually want to print to console
-  console.log(`mcp-gateway v${packageJson.version}`);
+  console.log(`mcp-gateway v${version}`);
 }
 
 export async function runCli(): Promise<void> {
@@ -159,6 +164,7 @@ export async function runCli(): Promise<void> {
 
     // biome-ignore lint/suspicious/noConsole: actually want to print to console
     console.log(`✓ MCP Gateway server started at http://localhost:${port}`);
+    logger.info("MCP Gateway server started", { port });
 
     // Start health checks with callback to update store
     const stopHealthChecks = await startHealthChecks(
@@ -168,21 +174,18 @@ export async function runCli(): Promise<void> {
         // Import store dynamically to get latest state
         import("./tui-v2/store.js").then(({ useAppStore }) => {
           const currentRegistry = useAppStore.getState().registry;
-          const updatedRegistry = {
-            ...currentRegistry,
-            servers: currentRegistry.servers.map((server) => {
-              const update = updates.find((u) => u.name === server.name);
-              if (update) {
-                return {
-                  ...server,
-                  health: update.health,
-                  lastHealthCheck: update.lastHealthCheck,
-                };
-              }
-              return server;
-            }),
-          };
-          useAppStore.getState().setRegistry(updatedRegistry);
+          // Mutate servers in place so HTTP server sees the changes
+          for (const update of updates) {
+            const server = currentRegistry.servers.find(
+              (s) => s.name === update.name,
+            );
+            if (server) {
+              server.health = update.health;
+              server.lastHealthCheck = update.lastHealthCheck;
+            }
+          }
+          // Trigger re-render with shallow copy
+          useAppStore.getState().setRegistry({ ...currentRegistry });
         });
       },
     );
@@ -199,6 +202,7 @@ export async function runCli(): Promise<void> {
 
     // Start TUI only if running in a TTY
     if (process.stdin.isTTY) {
+      logger.info("Starting UI", { version: getVersion() });
       await runOpenTUI(context, registry);
     } else {
       // biome-ignore lint/suspicious/noConsole: actually want to print to console

@@ -87,7 +87,7 @@ export function McpInstructionsModal() {
               </box>
             ))}
 
-            <text fg={theme.foreground} style={{}}>
+            <text fg={theme.foreground} style={{ marginTop: 1 }}>
               Claude Desktop Example ({registry.servers[0]?.name}):
             </text>
             <CodeBlock
@@ -96,13 +96,28 @@ export function McpInstructionsModal() {
                   mcpServers: {
                     [registry.servers[0]?.name || ""]: {
                       transport: "sse",
-                      url: getServerMcpUrl(port, registry.servers[0]?.name || ""),
+                      url: getServerMcpUrl(
+                        port,
+                        registry.servers[0]?.name || "",
+                      ),
                     },
                   },
                 },
                 null,
                 2,
               )}
+              padding={1}
+              style={{ backgroundColor: undefined }}
+            />
+
+            <text fg={theme.foreground} style={{ marginTop: 1 }}>
+              Claude Code CLI Example ({registry.servers[0]?.name}):
+            </text>
+            <text fg={theme.foregroundMuted}>
+              Run this command to add the server:
+            </text>
+            <CodeBlock
+              content={`claude mcp add -s project -t http ${registry.servers[0]?.name || ""} ${getServerMcpUrl(port, registry.servers[0]?.name || "")}`}
               padding={1}
               style={{ backgroundColor: undefined }}
             />
@@ -124,9 +139,7 @@ export function McpInstructionsModal() {
           The gateway also provides its own MCP server for introspection:
         </text>
         <RoundedBox>
-          <text fg={theme.foregroundMuted}>
-            {getGatewayMcpUrl(port)}
-          </text>
+          <text fg={theme.foregroundMuted}>{getGatewayMcpUrl(port)}</text>
         </RoundedBox>
         <text fg={theme.foregroundMuted} style={{ paddingLeft: 2 }}>
           This provides tools to view activity logs and gateway information

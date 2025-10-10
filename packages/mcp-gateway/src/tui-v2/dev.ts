@@ -7,7 +7,6 @@
 
 import { runCli } from "../run-v2.js";
 
-runCli().catch((error) => {
-  console.error("Error:", error);
+runCli().catch((_error) => {
   process.exit(1);
 });

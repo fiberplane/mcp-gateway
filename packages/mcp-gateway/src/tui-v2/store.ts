@@ -94,7 +94,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
   serverManagementShowConfig: null,
 
   // Actions
-  initialize: (registry, storageDir, port) => set({ registry, storageDir, port }),
+  initialize: (registry, storageDir, port) =>
+    set({ registry, storageDir, port }),
 
   addServer: async (name, url) => {
     const { registry, storageDir } = get();
@@ -119,16 +120,14 @@ export const useAppStore = create<AppStore>((set, get) => ({
       health: "unknown" as const,
     };
 
-    const updatedRegistry = {
-      ...registry,
-      servers: [...registry.servers, newServer],
-    };
+    // Mutate the registry.servers array directly so the HTTP server sees the change
+    registry.servers.push(newServer);
 
     // Save to disk
-    await saveRegistry(storageDir, updatedRegistry);
+    await saveRegistry(storageDir, registry);
 
-    // Update state
-    set({ registry: updatedRegistry });
+    // Trigger re-render by creating a new state object
+    set({ registry: { ...registry } });
 
     // Trigger immediate health check for the new server
     // Import dynamically to avoid circular dependencies
@@ -136,28 +135,28 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const health = await checkServerHealth(normalizedUrl);
     const lastHealthCheck = new Date().toISOString();
 
-    // Update the server with health status
-    const registryWithHealth = {
-      ...updatedRegistry,
-      servers: updatedRegistry.servers.map((s) =>
-        s.name === normalizedName ? { ...s, health, lastHealthCheck } : s,
-      ),
-    };
-
-    // Update state with health info
-    set({ registry: registryWithHealth });
+    // Update the server with health status (mutate in place)
+    const server = registry.servers.find((s) => s.name === normalizedName);
+    if (server) {
+      server.health = health;
+      server.lastHealthCheck = lastHealthCheck;
+      // Trigger re-render
+      set({ registry: { ...registry } });
+    }
   },
 
   removeServer: async (name) => {
     const { registry, storageDir } = get();
 
-    const updatedRegistry = {
-      ...registry,
-      servers: registry.servers.filter((s) => s.name !== name),
-    };
+    // Mutate the registry.servers array directly so the HTTP server sees the change
+    const index = registry.servers.findIndex((s) => s.name === name);
+    if (index !== -1) {
+      registry.servers.splice(index, 1);
+    }
 
-    await saveRegistry(storageDir, updatedRegistry);
-    set({ registry: updatedRegistry });
+    await saveRegistry(storageDir, registry);
+    // Trigger re-render
+    set({ registry: { ...registry } });
   },
 
   setRegistry: (registry) => set({ registry }),

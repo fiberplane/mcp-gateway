@@ -46,13 +46,8 @@ export function ActivityLogDetailModal() {
   const modalTitle = isRequest ? "Request Details" : "Response Details";
 
   return (
-    <Modal
-      title={modalTitle}
-      onClose={closeModal}
-      size="large"
-      scrollable={true}
-    >
-      <box style={{ flexDirection: "column", gap: 1 }}>
+    <Modal title={modalTitle} onClose={closeModal} size="large" scrollable>
+      <box style={{ flexDirection: "column", gap: 1, flexShrink: 0 }}>
         {/* Header Section - Two Column Layout */}
         <box style={{ flexDirection: "row", gap: 2 }}>
           {/* Left Column - Labels */}

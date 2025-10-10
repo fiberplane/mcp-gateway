@@ -89,6 +89,15 @@ export function EmptyState() {
                 <text fg={theme.accent}>
                   {getServerMcpUrl(port, firstServer.name)}
                 </text>
+                <text fg={theme.foregroundMuted}>
+                  <br />
+                  To add to claude code use:
+                </text>
+                <text fg={theme.accent}>
+                  claude mcp add -s project -t http{" "}
+                  {registry.servers[0]?.name || ""}{" "}
+                  {getServerMcpUrl(port, registry.servers[0]?.name || "")}
+                </text>
               </box>
               <box style={{ flexDirection: "column", gap: 0 }}>
                 <text fg={theme.foregroundMuted}>See also:</text>
