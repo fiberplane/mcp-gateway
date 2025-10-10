@@ -10,7 +10,7 @@ import { EmptyState } from "./components/EmptyState";
 import { Footer } from "./components/Footer";
 import { Header } from "./components/Header";
 import { McpInstructionsModal } from "./components/McpInstructionsModal";
-import { ServerManagementView } from "./components/ServerManagementView";
+import { ServerManagementView } from "./components/ServerManagement";
 import { debug } from "./debug";
 import { useExternalEvents } from "./hooks/useExternalEvents";
 import { commandShortcuts, globalShortcuts } from "./shortcuts";
