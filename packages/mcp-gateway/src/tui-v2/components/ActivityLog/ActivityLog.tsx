@@ -6,7 +6,7 @@ import { useAppStore } from "../../store";
 import { useTheme } from "../../theme-context";
 import { ActivityLogHeader } from "../ActivityLogHeader";
 import { type Column, ColumnBasedTable } from "../ui/Table";
-import { createActivityLogColumns } from "./columns";
+import { useActivityLogColumns } from "./columns";
 import {
   calculateFlexibleColumnWidth,
   MIN_FLEXIBLE_WIDTH,
@@ -27,11 +27,8 @@ export function ActivityLog() {
   const containerRef = useRef<BoxRef | null>(null);
   const containerHeightRef = useRef(10);
 
-  // Get columns with theme
-  const activityLogColumns = useMemo(
-    () => createActivityLogColumns(theme),
-    [theme],
-  );
+  // Get memoized columns with theme
+  const activityLogColumns = useActivityLogColumns(theme);
 
   // Calculate flexible column widths based on terminal width
   const columnsWithCalculatedWidths = useMemo(() => {
@@ -55,8 +52,13 @@ export function ActivityLog() {
       return result;
     }
 
+    // Only create new column objects if width actually needs updating
     return activityLogColumns.map((col) => {
       if (col.style?.width === undefined) {
+        // Check if we already have the correct width to avoid recreating object
+        if (col.style?.width === flexibleWidth) {
+          return col;
+        }
         return {
           ...col,
           style: { ...col.style, width: flexibleWidth },
