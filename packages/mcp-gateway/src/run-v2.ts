@@ -1,3 +1,8 @@
+/**
+ * Run script for OpenTUI version (v2)
+ * This is identical to run.ts but uses the new OpenTUI interface
+ */
+
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -7,8 +12,8 @@ import { startHealthChecks } from "./health.js";
 import { logger } from "./logger.js";
 import { createApp } from "./server/index.js";
 import { getStorageRoot, loadRegistry } from "./storage.js";
-import { runTUI } from "./tui/loop.js";
 import type { Context } from "./tui/state.js";
+import { runOpenTUI } from "./tui-v2/App.js";
 
 function showHelp(): void {
   // biome-ignore lint/suspicious/noConsole: actually want to print to console
@@ -85,7 +90,9 @@ export async function runCli(): Promise<void> {
     // Parse and validate port
     const port = Number.parseInt(values.port || "3333", 10);
     if (Number.isNaN(port) || port < 1 || port > 65535) {
-      throw new Error(`Invalid port number: ${values.port}. Must be between 1 and 65535.`);
+      throw new Error(
+        `Invalid port number: ${values.port}. Must be between 1 and 65535.`,
+      );
     }
 
     // Get storage directory
@@ -153,8 +160,32 @@ export async function runCli(): Promise<void> {
     // biome-ignore lint/suspicious/noConsole: actually want to print to console
     console.log(`✓ MCP Gateway server started at http://localhost:${port}`);
 
-    // Start health checks
-    const stopHealthChecks = await startHealthChecks(registry);
+    // Start health checks with callback to update store
+    const stopHealthChecks = await startHealthChecks(
+      registry,
+      30000,
+      (updates) => {
+        // Import store dynamically to get latest state
+        import("./tui-v2/store.js").then(({ useAppStore }) => {
+          const currentRegistry = useAppStore.getState().registry;
+          const updatedRegistry = {
+            ...currentRegistry,
+            servers: currentRegistry.servers.map((server) => {
+              const update = updates.find((u) => u.name === server.name);
+              if (update) {
+                return {
+                  ...server,
+                  health: update.health,
+                  lastHealthCheck: update.lastHealthCheck,
+                };
+              }
+              return server;
+            }),
+          };
+          useAppStore.getState().setRegistry(updatedRegistry);
+        });
+      },
+    );
 
     // Create context for TUI
     const context: Context = {
@@ -168,12 +199,7 @@ export async function runCli(): Promise<void> {
 
     // Start TUI only if running in a TTY
     if (process.stdin.isTTY) {
-      runTUI(context, registry).catch((error) => {
-        logger.error("TUI error", { error: String(error) });
-        stopHealthChecks();
-        server.close();
-        process.exit(1);
-      });
+      await runOpenTUI(context, registry);
     } else {
       // biome-ignore lint/suspicious/noConsole: actually want to print to console
       console.log(

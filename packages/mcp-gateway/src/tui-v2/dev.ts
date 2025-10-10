@@ -1,82 +1,13 @@
 /**
  * Development entry point for OpenTUI version
- * Run with: bun run src/tui-v2/dev.ts
+ * Run with: bun run --watch src/tui-v2/dev.ts
  *
- * This mimics the real app's setup to test the OpenTUI implementation
+ * This simply runs run-v2.ts which has the full CLI implementation
  */
 
-import { serve } from "@hono/node-server";
-import { startHealthChecks } from "../health.js";
-import { logger } from "../logger.js";
-import { createApp } from "../server/index.js";
-import { getStorageRoot, loadRegistry } from "../storage.js";
-import type { Context } from "../tui/state.js";
-import { runOpenTUI } from "./App.js";
+import { runCli } from "../run-v2.js";
 
-async function main() {
-  // Get storage directory (same as real app)
-  const storageDir = getStorageRoot();
-
-  // Initialize logger
-  await logger.initialize(storageDir);
-
-  // Load registry
-  const registry = await loadRegistry(storageDir);
-
-  // Start HTTP server
-  const { app } = await createApp(registry, storageDir);
-  const port = 3333;
-
-  const server = serve({
-    fetch: app.fetch,
-    port,
-  });
-
-  console.log(`MCP Gateway server started at http://localhost:${port}`);
-
-  // Start health checks with callback to update store
-  const stopHealthChecks = await startHealthChecks(
-    registry,
-    30000,
-    (updates) => {
-      // Import store dynamically to get latest state
-      import("./store.js").then(({ useAppStore }) => {
-        const currentRegistry = useAppStore.getState().registry;
-        const updatedRegistry = {
-          ...currentRegistry,
-          servers: currentRegistry.servers.map((server) => {
-            const update = updates.find((u) => u.name === server.name);
-            if (update) {
-              return {
-                ...server,
-                health: update.health,
-                lastHealthCheck: update.lastHealthCheck,
-              };
-            }
-            return server;
-          }),
-        };
-        useAppStore.getState().setRegistry(updatedRegistry);
-      });
-    },
-  );
-
-  // Create context (same as real app)
-  const context: Context = {
-    storageDir,
-    port,
-    onExit: () => {
-      console.log("Running cleanup...");
-      stopHealthChecks();
-      server.close();
-    },
-  };
-
-  // Start OpenTUI version
-  await runOpenTUI(context, registry);
-}
-
-main().catch((error) => {
+runCli().catch((error) => {
   console.error("Error:", error);
   process.exit(1);
 });
