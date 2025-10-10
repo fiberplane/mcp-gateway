@@ -1,5 +1,6 @@
-import type { BoxRenderable } from "@opentui/core";
 import { useEffect, useRef, useState } from "react";
+
+type BoxRef = { height: number; on?: (event: string, handler: () => void) => void; off?: (event: string, handler: () => void) => void };
 
 /**
  * Hook to detect if content overflows by measuring in a hidden box
@@ -20,7 +21,7 @@ import { useEffect, useRef, useState } from "react";
  *   )
  */
 export function useOverflowDetection(maxHeight: number) {
-  const measurementRef = useRef<BoxRenderable>(null);
+  const measurementRef = useRef<BoxRef | null>(null);
   const [hasOverflow, setHasOverflow] = useState(false);
   const [measured, setMeasured] = useState(false);
 
@@ -46,12 +47,11 @@ export function useOverflowDetection(maxHeight: number) {
       checkOverflow();
     };
 
-    // Use any cast for event listener methods that may not be typed
-    (measureBox as any).on?.("layout-changed", handleLayoutChange);
+    measureBox.on?.("layout-changed", handleLayoutChange);
 
     return () => {
       clearTimeout(timer);
-      (measureBox as any).off?.("layout-changed", handleLayoutChange);
+      measureBox.off?.("layout-changed", handleLayoutChange);
     };
   }, [maxHeight]);
 

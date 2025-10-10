@@ -77,7 +77,7 @@ export function McpInstructionsModal() {
                 style={{ flexDirection: "column", marginTop: 1 }}
               >
                 <text fg={theme.foreground}>{server.name}:</text>
-                <RoundedBox style={{ borderColor: theme.accent, padding: 0 }}>
+                <RoundedBox>
                   <text fg={theme.foregroundMuted}>
                     http://localhost:3333/servers/
                     {encodeURIComponent(server.name)}/mcp
@@ -89,24 +89,22 @@ export function McpInstructionsModal() {
             <text fg={theme.foreground} style={{}}>
               Claude Desktop Example ({registry.servers[0]?.name}):
             </text>
-            <RoundedBox style={{ gap: 0 }}>
-              <CodeBlock
-                content={JSON.stringify(
-                  {
-                    mcpServers: {
-                      [registry.servers[0]?.name || ""]: {
-                        transport: "sse",
-                        url: `http://localhost:3333/servers/${encodeURIComponent(registry.servers[0]?.name || "")}/mcp`,
-                      },
+            <CodeBlock
+              content={JSON.stringify(
+                {
+                  mcpServers: {
+                    [registry.servers[0]?.name || ""]: {
+                      transport: "sse",
+                      url: `http://localhost:3333/servers/${encodeURIComponent(registry.servers[0]?.name || "")}/mcp`,
                     },
                   },
-                  null,
-                  2,
-                )}
-                padding={0}
-                style={{ backgroundColor: undefined }}
-              />
-            </RoundedBox>
+                },
+                null,
+                2,
+              )}
+              padding={1}
+              style={{ backgroundColor: undefined }}
+            />
           </>
         ) : (
           <box>
@@ -124,7 +122,7 @@ export function McpInstructionsModal() {
         <text fg={theme.foregroundMuted}>
           The gateway also provides its own MCP server for introspection:
         </text>
-        <RoundedBox style={{ padding: 0 }}>
+        <RoundedBox>
           <text fg={theme.foregroundMuted}>
             http://localhost:3333/gateway/mcp
           </text>

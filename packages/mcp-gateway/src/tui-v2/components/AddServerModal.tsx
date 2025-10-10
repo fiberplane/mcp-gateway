@@ -117,7 +117,12 @@ export function AddServerModal() {
           <text fg={theme.foregroundMuted}>Your MCP server URL</text>
         </box>
 
-        <box style={{ flexDirection: "column", gap: compactHeight.enabled ? 0 : 1 }}>
+        <box
+          style={{
+            flexDirection: "column",
+            gap: compactHeight.enabled ? 0 : 1,
+          }}
+        >
           <BorderedInput
             title="Server Name"
             placeholder="my-server"

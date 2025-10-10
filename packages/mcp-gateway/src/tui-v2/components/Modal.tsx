@@ -28,7 +28,8 @@ export function Modal({
 }: ModalProps) {
   const theme = useTheme();
   const { width, maxWidth } = sizeConfig[size];
-  const { hasOverflow, measured, measurementRef } = useOverflowDetection(maxContentHeight);
+  const { hasOverflow, measured, measurementRef } =
+    useOverflowDetection(maxContentHeight);
 
   // Handle click on background to close modal
   const handleBackgroundClick = () => {
@@ -41,6 +42,7 @@ export function Modal({
   };
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: This is not a web ui
     <box
       style={{
         position: "absolute",
@@ -55,6 +57,7 @@ export function Modal({
       onMouseDown={handleBackgroundClick}
     >
       {/* Modal content box */}
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: This is not a web ui */}
       <box
         onMouseDown={handleContentClick}
         style={{
@@ -84,7 +87,7 @@ export function Modal({
             {/* Hidden measurement box to determine natural content height */}
             {!measured && (
               <box
-                ref={measurementRef as any}
+                ref={measurementRef as React.Ref<any>}
                 style={{
                   position: "absolute",
                   left: -9999,
@@ -117,7 +120,10 @@ export function Modal({
         )}
 
         {/* Fixed footer */}
-        <text fg={theme.foregroundMuted} style={{ marginTop: 1, flexShrink: 0 }}>
+        <text
+          fg={theme.foregroundMuted}
+          style={{ marginTop: 1, flexShrink: 0 }}
+        >
           Press ESC to close{scrollable ? " • ↑↓ to scroll" : ""}
         </text>
       </box>

@@ -18,6 +18,7 @@ export function CodeBlock({ content, padding = 1, style }: CodeBlockProps) {
     <box
       style={{
         flexDirection: "column",
+        maxWidth: 66,
         padding,
         ...style,
       }}
