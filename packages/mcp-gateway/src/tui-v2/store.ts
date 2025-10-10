@@ -57,12 +57,16 @@ interface AppStore {
   clearToast: () => void;
 
   // Activity Log view actions
-  setActivityLogSelectedIndex: (index: number) => void;
+  setActivityLogSelectedIndex: (
+    index: number | ((prev: number) => number),
+  ) => void;
   setActivityLogScrollPosition: (position: number) => void;
   setActivityLogFollowMode: (enabled: boolean) => void;
 
   // Server Management view actions
-  setServerManagementSelectedIndex: (index: number) => void;
+  setServerManagementSelectedIndex: (
+    index: number | ((prev: number) => number),
+  ) => void;
   setServerManagementShowConfig: (serverName: string | null) => void;
 }
 
@@ -170,7 +174,12 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
   // Activity Log view actions
   setActivityLogSelectedIndex: (index) =>
-    set({ activityLogSelectedIndex: index }),
+    set((state) => ({
+      activityLogSelectedIndex:
+        typeof index === "function"
+          ? index(state.activityLogSelectedIndex)
+          : index,
+    })),
   setActivityLogScrollPosition: (position) =>
     set({ activityLogScrollPosition: position }),
   setActivityLogFollowMode: (enabled) =>
@@ -178,7 +187,12 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
   // Server Management view actions
   setServerManagementSelectedIndex: (index) =>
-    set({ serverManagementSelectedIndex: index }),
+    set((state) => ({
+      serverManagementSelectedIndex:
+        typeof index === "function"
+          ? index(state.serverManagementSelectedIndex)
+          : index,
+    })),
   setServerManagementShowConfig: (serverName) =>
     set({ serverManagementShowConfig: serverName }),
 }));
