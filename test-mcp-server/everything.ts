@@ -249,12 +249,12 @@ mcp.tool("annotatedMessage", {
         },
         ...(args.includeImage
           ? [
-            {
-              type: "image",
-              data: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
-              mimeType: "image/png",
-            } as const,
-          ]
+              {
+                type: "image",
+                data: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+                mimeType: "image/png",
+              } as const,
+            ]
           : []),
       ],
     };
@@ -1043,11 +1043,11 @@ mcp.prompt("summarizeContent", {
         mimeType?: string;
       };
     }> = [
-        {
-          role: "user",
-          content: {
-            type: "text",
-            text: `Please summarize the following content:
+      {
+        role: "user",
+        content: {
+          type: "text",
+          text: `Please summarize the following content:
 
 Length: ${args.length}
 ${lengthInstructions[args.length]}
@@ -1060,9 +1060,9 @@ ${args.content}
 ---
 
 Please structure your summary clearly and highlight the most important insights.`,
-          },
         },
-      ];
+      },
+    ];
 
     messages.push({
       role: "user",
