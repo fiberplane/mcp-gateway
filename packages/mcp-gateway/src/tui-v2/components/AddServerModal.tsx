@@ -5,6 +5,7 @@ import { useIsSmall } from "../hooks/useIsSmall";
 import { useAppStore } from "../store";
 import { useTheme } from "../theme-context";
 import { Modal } from "./Modal";
+import { BorderedInput } from "./ui/BorderedInput";
 
 export function AddServerModal() {
   const theme = useTheme();
@@ -104,55 +105,28 @@ export function AddServerModal() {
     >
       <box style={{ flexDirection: "column", gap: 1 }}>
         <box style={{ flexDirection: "column", gap: isSmall ? 0 : 1 }}>
-          <box
+          <BorderedInput
             title="Server URL"
-            style={{
-              border: true,
-              borderColor: theme.foregroundMuted,
-              width: 50,
-              height: 3,
-              paddingLeft: 1,
-              paddingRight: 1,
-            }}
-          >
-            <input
-              placeholder="http://localhost:3000/mcp"
-              value={url}
-              onInput={setUrl}
-              onPaste={handleUrlPaste}
-              onSubmit={handleSubmit}
-              focused={focusedField === "url"}
-            />
-          </box>
+            placeholder="http://localhost:3000/mcp"
+            value={url}
+            onInput={setUrl}
+            onPaste={handleUrlPaste}
+            onSubmit={handleSubmit}
+            focused={focusedField === "url"}
+          />
           <text fg={theme.foregroundMuted}>Your MCP server URL</text>
         </box>
 
         <box style={{ flexDirection: "column", gap: isSmall ? 0 : 1 }}>
-          <box
+          <BorderedInput
             title="Server Name"
-            style={{
-              border: true,
-              borderColor: theme.foregroundMuted,
-              width: 50,
-              height: 3,
-              paddingLeft: 1,
-              paddingRight: 1,
-              flexShrink: 0,
-            }}
-          >
-            <input
-              placeholder="my-server"
-              value={name}
-              onInput={setName}
-              onPaste={handleNamePaste}
-              onSubmit={handleSubmit}
-              focused={focusedField === "name"}
-              style={{
-                paddingLeft: 1,
-                paddingRight: 1,
-              }}
-            />
-          </box>
+            placeholder="my-server"
+            value={name}
+            onInput={setName}
+            onPaste={handleNamePaste}
+            onSubmit={handleSubmit}
+            focused={focusedField === "name"}
+          />
           <text fg={theme.foregroundMuted}>
             Give your server/service a name
           </text>

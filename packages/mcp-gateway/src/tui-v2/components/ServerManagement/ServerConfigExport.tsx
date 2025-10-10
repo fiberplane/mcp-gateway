@@ -1,4 +1,5 @@
 import { useTheme } from "../../theme-context";
+import { CodeBlock } from "../ui/CodeBlock";
 import type { Server } from "./utils";
 import { generateMcpConfig } from "./utils";
 
@@ -47,24 +48,7 @@ export function ServerConfigExport({ server }: ServerConfigExportProps) {
 					Copy this configuration to your Claude Desktop config:
 				</text>
 
-				<box
-					style={{
-						flexDirection: "column",
-						padding: 1,
-						marginBottom: 1,
-					}}
-					backgroundColor={theme.emphasis}
-				>
-					{config.split("\n").map((line, i) => (
-						<text
-							// biome-ignore lint/suspicious/noArrayIndexKey: It's okay to use the index as the key here
-							key={i}
-							fg={theme.foreground}
-						>
-							{line}
-						</text>
-					))}
-				</box>
+				<CodeBlock content={config} style={{ marginBottom: 1 }} />
 			</box>
 
 			{/* Footer */}

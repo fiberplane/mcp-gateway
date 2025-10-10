@@ -1,6 +1,7 @@
 import { useAppStore } from "../store";
 import { useTheme } from "../theme-context";
 import { Modal } from "./Modal";
+import { CodeBlock } from "./ui/CodeBlock";
 import { RoundedBox } from "./ui/RoundedBox";
 
 export function ActivityLogDetailModal() {
@@ -94,16 +95,11 @@ export function ActivityLogDetailModal() {
             title="Request"
             style={{ borderColor: theme.foregroundMuted, gap: 0 }}
           >
-            {JSON.stringify(selectedLog.request, null, 2)
-              .split("\n")
-              .map((line, i) => (
-                <text
-                  key={`req-${i}-${line.slice(0, 20)}`}
-                  fg={theme.foreground}
-                >
-                  {line || " "}
-                </text>
-              ))}
+            <CodeBlock
+              content={JSON.stringify(selectedLog.request, null, 2)}
+              padding={0}
+              style={{ backgroundColor: undefined }}
+            />
           </RoundedBox>
         )}
 
@@ -113,16 +109,11 @@ export function ActivityLogDetailModal() {
             title={selectedLog.response.error ? "Error Response" : "Response"}
             style={{ borderColor: theme.foregroundMuted, gap: 0 }}
           >
-            {JSON.stringify(selectedLog.response, null, 2)
-              .split("\n")
-              .map((line, i) => (
-                <text
-                  key={`res-${i}-${line.slice(0, 20)}`}
-                  fg={theme.foreground}
-                >
-                  {line || " "}
-                </text>
-              ))}
+            <CodeBlock
+              content={JSON.stringify(selectedLog.response, null, 2)}
+              padding={0}
+              style={{ backgroundColor: undefined }}
+            />
           </RoundedBox>
         )}
 

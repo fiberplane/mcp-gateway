@@ -2,6 +2,8 @@ import { commandShortcuts, formatShortcut } from "../shortcuts";
 import { useAppStore } from "../store";
 import { useTheme } from "../theme-context";
 import { Modal } from "./Modal";
+import { CodeBlock } from "./ui/CodeBlock";
+import { RoundedBox } from "./ui/RoundedBox";
 
 export function McpInstructionsModal() {
   const closeModal = useAppStore((state) => state.closeModal);
@@ -75,54 +77,36 @@ export function McpInstructionsModal() {
                 style={{ flexDirection: "column", marginTop: 1 }}
               >
                 <text fg={theme.foreground}>{server.name}:</text>
-                <box
-                  style={{
-                    flexDirection: "column",
-                    backgroundColor: theme.emphasis,
-                    padding: 1,
-                    borderStyle: "rounded",
-                    borderColor: theme.emphasis,
-                  }}
-                >
+                <RoundedBox style={{ borderColor: theme.accent, padding: 0 }}>
                   <text fg={theme.foregroundMuted}>
                     http://localhost:3333/servers/
                     {encodeURIComponent(server.name)}/mcp
                   </text>
-                </box>
+                </RoundedBox>
               </box>
             ))}
 
             <text fg={theme.foreground} style={{}}>
               Claude Desktop Example ({registry.servers[0]?.name}):
             </text>
-            <box
-              style={{
-                flexDirection: "column",
-                backgroundColor: theme.emphasis,
-                padding: 1,
-                borderStyle: "rounded",
-                borderColor: theme.emphasis,
-              }}
-            >
-              <text fg={theme.foregroundMuted}>{"{"}</text>
-              <text fg={theme.foregroundMuted}>{'  "mcpServers": {'}</text>
-              <text fg={theme.foregroundMuted}>
-                {'    "'}
-                {registry.servers[0]?.name}
-                {'": {'}
-              </text>
-              <text fg={theme.foregroundMuted}>
-                {'      "transport": "sse",'}
-              </text>
-              <text fg={theme.foregroundMuted}>
-                {'      "url": "http://localhost:3333/servers/'}
-                {encodeURIComponent(registry.servers[0]?.name || "")}
-                {'/mcp"'}
-              </text>
-              <text fg={theme.foregroundMuted}>{"    }"}</text>
-              <text fg={theme.foregroundMuted}>{"  }"}</text>
-              <text fg={theme.foregroundMuted}>{"}"}</text>
-            </box>
+            <RoundedBox style={{ gap: 0 }}>
+              <CodeBlock
+                content={JSON.stringify(
+                  {
+                    mcpServers: {
+                      [registry.servers[0]?.name || ""]: {
+                        transport: "sse",
+                        url: `http://localhost:3333/servers/${encodeURIComponent(registry.servers[0]?.name || "")}/mcp`,
+                      },
+                    },
+                  },
+                  null,
+                  2,
+                )}
+                padding={0}
+                style={{ backgroundColor: undefined }}
+              />
+            </RoundedBox>
           </>
         ) : (
           <box>
@@ -140,18 +124,11 @@ export function McpInstructionsModal() {
         <text fg={theme.foregroundMuted}>
           The gateway also provides its own MCP server for introspection:
         </text>
-        <box
-          style={{
-            flexDirection: "column",
-            backgroundColor: theme.emphasis,
-            padding: 1,
-            borderStyle: "rounded",
-          }}
-        >
+        <RoundedBox style={{ padding: 0 }}>
           <text fg={theme.foregroundMuted}>
             http://localhost:3333/gateway/mcp
           </text>
-        </box>
+        </RoundedBox>
         <text fg={theme.foregroundMuted} style={{ paddingLeft: 2 }}>
           This provides tools to view activity logs and gateway information
         </text>

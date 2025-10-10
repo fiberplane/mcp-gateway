@@ -4,6 +4,8 @@ import { debug } from "../debug";
 import { useAppStore } from "../store";
 import { useTheme } from "../theme-context";
 import { Modal } from "./Modal";
+import { RoundedBox } from "./ui/RoundedBox";
+import { SelectableList } from "./ui/SelectableList";
 
 export function DeleteServerModal() {
   const theme = useTheme();
@@ -98,17 +100,9 @@ export function DeleteServerModal() {
             <text fg={theme.foregroundMuted}>
               The gateway forwarded requests to:
             </text>
-            <box
-              style={{
-                backgroundColor: theme.emphasis,
-                padding: 1,
-                borderStyle: "rounded",
-                borderColor: theme.emphasis,
-                marginTop: 1,
-              }}
-            >
+            <RoundedBox style={{ marginTop: 1, padding: 0 }}>
               <text fg={theme.foregroundMuted}>{selectedServer.url}</text>
-            </box>
+            </RoundedBox>
             <text fg={theme.foregroundMuted}>
               <em>Note:</em>
               The Capture history will be preserved
@@ -139,28 +133,22 @@ export function DeleteServerModal() {
           Select a server to delete:
         </text>
 
-        <box style={{ flexDirection: "column" }}>
-          {servers.map((server, i) => {
-            const isSelected = i === selectedIndex;
-            return (
-              <box
-                key={server.name}
-                style={{
-                  padding: 1,
-                  backgroundColor: isSelected ? theme.emphasis : undefined,
-                }}
-              >
-                <text fg={isSelected ? theme.accent : theme.foreground}>
-                  {isSelected ? "> " : "  "}
-                  {server.name}
-                </text>
-                <text fg={theme.foregroundMuted} style={{ paddingLeft: 1 }}>
-                  ({server.url})
-                </text>
-              </box>
-            );
-          })}
-        </box>
+        <SelectableList
+          items={servers}
+          selectedIndex={selectedIndex}
+          getItemKey={(server) => server.name}
+          renderItem={(server, isSelected) => (
+            <>
+              <text fg={isSelected ? theme.accent : theme.foreground}>
+                {isSelected ? "> " : "  "}
+                {server.name}
+              </text>
+              <text fg={theme.foregroundMuted} style={{ paddingLeft: 1 }}>
+                ({server.url})
+              </text>
+            </>
+          )}
+        />
 
         <text fg={theme.foregroundMuted} style={{ marginTop: 1 }}>
           [↑↓] Select • [ENTER] Delete • [ESC] Cancel
