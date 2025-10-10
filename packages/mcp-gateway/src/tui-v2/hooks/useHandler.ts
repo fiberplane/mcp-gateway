@@ -13,5 +13,6 @@ export function useHandler<Handler extends (...args: Array<any>) => any>(
   const handlerRef = useRef(handler);
   handlerRef.current = handler;
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: noDeps is an empty array
   return useCallback((...args) => handlerRef.current(...args), noDeps);
 }

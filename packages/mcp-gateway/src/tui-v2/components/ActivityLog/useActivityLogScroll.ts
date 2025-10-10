@@ -91,6 +91,7 @@ export function useActivityLogScroll(logs: LogEntry[], viewportHeight: number) {
 
     // Item is fully visible, don't scroll
   }, [
+    logs.length,
     safeSelectedIndex,
     itemPositions,
     itemHeights,
