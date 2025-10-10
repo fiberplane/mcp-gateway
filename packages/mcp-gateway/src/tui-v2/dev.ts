@@ -7,18 +7,18 @@
 
 import { serve } from "@hono/node-server";
 import { startHealthChecks } from "../health.js";
-import { createApp } from "../server.js";
+import { logger } from "../logger.js";
+import { createApp } from "../server/index.js";
 import { getStorageRoot, loadRegistry } from "../storage.js";
 import type { Context } from "../tui/state.js";
 import { runOpenTUI } from "./App.js";
-import { getDebugLogPath, initDebugLog } from "./debug.js";
 
 async function main() {
-  // Initialize debug logging
-  initDebugLog();
-
   // Get storage directory (same as real app)
   const storageDir = getStorageRoot();
+
+  // Initialize logger
+  await logger.initialize(storageDir);
 
   // Load registry
   const registry = await loadRegistry(storageDir);
@@ -33,7 +33,6 @@ async function main() {
   });
 
   console.log(`MCP Gateway server started at http://localhost:${port}`);
-  console.log(`Debug log: ${getDebugLogPath()}`);
 
   // Start health checks with callback to update store
   const stopHealthChecks = await startHealthChecks(

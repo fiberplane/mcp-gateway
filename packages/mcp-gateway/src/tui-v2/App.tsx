@@ -1,4 +1,5 @@
 import { render, useKeyboard } from "@opentui/react";
+import { logger } from "../logger.js";
 import type { Registry } from "../registry";
 import type { Context } from "../tui/state";
 import { ActivityLog } from "./components/ActivityLog";
@@ -11,7 +12,6 @@ import { Footer } from "./components/Footer";
 import { Header } from "./components/Header";
 import { McpInstructionsModal } from "./components/McpInstructionsModal";
 import { ServerManagementView } from "./components/ServerManagement";
-import { debug } from "./debug";
 import { useExternalEvents } from "./hooks/useExternalEvents";
 import { commandShortcuts, globalShortcuts } from "./shortcuts";
 import { useAppStore } from "./store";
@@ -41,23 +41,23 @@ function App() {
   const closeCommandMenu = useAppStore((state) => state.closeCommandMenu);
 
   useKeyboard((key) => {
-    debug("Key pressed:", key.name);
+    logger.debug("Key pressed", { key: key.name });
 
     // ESC hierarchy: command menu -> modals -> return to activity log
     if (key.name === globalShortcuts.escape.key) {
       if (showCommandMenu) {
-        debug("Closing command menu");
+        logger.debug("Closing command menu");
         closeCommandMenu();
         return;
       }
       if (activeModal) {
-        debug("Closing modal");
+        logger.debug("Closing modal");
         closeModal();
         return;
       }
       // ESC returns to activity log from any view
       if (viewMode !== "activity-log") {
-        debug("Returning to activity log");
+        logger.debug("Returning to activity log");
         setViewMode("activity-log");
         return;
       }
@@ -75,44 +75,44 @@ function App() {
 
     // Global shortcuts
     if (key.name === globalShortcuts.quit.key) {
-      debug("Exiting app");
+      logger.debug("Exiting app");
       exitHandler?.();
       return;
     }
 
     if (key.name === globalShortcuts.commandMenu.key) {
-      debug("Opening command menu");
+      logger.debug("Opening command menu");
       openCommandMenu();
       return;
     }
 
     // Command shortcuts (work globally)
     if (key.name === commandShortcuts.serverManagement.key) {
-      debug("Navigating to server management");
+      logger.debug("Navigating to server management");
       setViewMode("server-management");
       return;
     }
 
     if (key.name === commandShortcuts.activityLog.key) {
-      debug("Navigating to activity log");
+      logger.debug("Navigating to activity log");
       setViewMode("activity-log");
       return;
     }
 
     if (key.name === commandShortcuts.addServer.key) {
-      debug("Opening add server modal");
+      logger.debug("Opening add server modal");
       openModal("add-server");
       return;
     }
 
     if (key.name === commandShortcuts.clearLogs.key && logs.length > 0) {
-      debug("Clearing logs");
+      logger.debug("Clearing logs");
       clearLogs();
       return;
     }
 
     if (key.name === commandShortcuts.help.key) {
-      debug("Opening help modal");
+      logger.debug("Opening help modal");
       openModal("mcp-instructions");
       return;
     }
@@ -157,7 +157,7 @@ function App() {
 }
 
 export async function runOpenTUI(context: Context, registry: Registry) {
-  debug("Initializing OpenTUI app", {
+  logger.debug("Initializing OpenTUI app", {
     serverCount: registry.servers.length,
     storageDir: context.storageDir,
   });
@@ -191,7 +191,7 @@ export async function runOpenTUI(context: Context, registry: Registry) {
 
   // Setup global error handlers
   process.on("uncaughtException", (error) => {
-    debug("Uncaught Exception:", {
+    logger.error("Uncaught Exception", {
       error: error.toString(),
       message: error.message,
       stack: error.stack,
@@ -201,7 +201,7 @@ export async function runOpenTUI(context: Context, registry: Registry) {
   });
 
   process.on("unhandledRejection", (reason, promise) => {
-    debug("Unhandled Promise Rejection:", {
+    logger.error("Unhandled Promise Rejection", {
       reason: String(reason),
       promise: String(promise),
     });

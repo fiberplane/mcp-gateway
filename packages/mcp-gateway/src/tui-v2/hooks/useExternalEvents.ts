@@ -1,9 +1,9 @@
 import { useEffect } from "react";
+import { logger } from "../../logger.js";
 import { loadRegistry } from "../../storage";
 import type { Action } from "../../tui/events";
 import { tuiEvents } from "../../tui/events";
 import type { LogEntry } from "../../tui/state";
-import { debug } from "../debug";
 import { useAppStore } from "../store";
 
 /**
@@ -18,7 +18,7 @@ export function useExternalEvents() {
 
   useEffect(() => {
     const handleLog = (entry: LogEntry) => {
-      debug("Log entry received:", {
+      logger.debug("Log entry received", {
         method: entry.method,
         serverName: entry.serverName,
         httpStatus: entry.httpStatus,
@@ -27,7 +27,7 @@ export function useExternalEvents() {
     };
 
     const handleRegistryUpdate = async () => {
-      debug("Registry update event received, reloading from disk");
+      logger.debug("Registry update event received, reloading from disk");
       // Get current registry to preserve runtime fields
       const currentRegistry = useAppStore.getState().registry;
 
@@ -49,7 +49,7 @@ export function useExternalEvents() {
         return server;
       });
 
-      debug("Registry reloaded:", {
+      logger.debug("Registry reloaded", {
         serverCount: mergedServers.length,
       });
       setRegistry({ servers: mergedServers });
@@ -64,13 +64,13 @@ export function useExternalEvents() {
       }
     });
 
-    debug("External events wired up");
+    logger.debug("External events wired up");
 
     // Cleanup on unmount
     return () => {
       tuiEvents.removeListener("action", handleLog);
       tuiEvents.removeListener("action", handleRegistryUpdate);
-      debug("External events cleaned up");
+      logger.debug("External events cleaned up");
     };
   }, [storageDir, setRegistry, addLog]);
 }

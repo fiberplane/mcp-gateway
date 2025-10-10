@@ -1,6 +1,6 @@
 import { useKeyboard } from "@opentui/react";
 import { useState } from "react";
-import { debug } from "../debug";
+import { logger } from "../../logger.js";
 import { useAppStore } from "../store";
 import { useTheme } from "../theme-context";
 import { Modal } from "./Modal";
@@ -35,14 +35,14 @@ export function DeleteServerModal() {
         const server = servers[selectedIndex];
         if (server) {
           setIsDeleting(true);
-          debug("Deleting server", server.name);
+          logger.debug("Deleting server", { serverName: server.name });
           removeServer(server.name)
             .then(() => {
-              debug("Server deleted successfully");
+              logger.debug("Server deleted successfully");
               closeModal();
             })
             .catch((err) => {
-              debug("Error deleting server", err);
+              logger.error("Error deleting server", { error: String(err) });
               setIsDeleting(false);
             });
         }

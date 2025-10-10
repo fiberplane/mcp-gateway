@@ -1,6 +1,6 @@
 import { useKeyboard } from "@opentui/react";
 import { useCallback, useState } from "react";
-import { debug } from "../debug";
+import { logger } from "../../logger.js";
 import { useIsSmall } from "../hooks/useIsSmall";
 import { useAppStore } from "../store";
 import { useTheme } from "../theme-context";
@@ -22,12 +22,12 @@ export function AddServerModal() {
 
   // Debug paste handling
   const handleUrlPaste = useCallback((pastedText: string) => {
-    debug("Paste detected in URL field:", pastedText);
+    logger.debug("Paste detected in URL field", { text: pastedText });
     setUrl(pastedText.trim());
   }, []);
 
   const handleNamePaste = useCallback((pastedText: string) => {
-    debug("Paste detected in name field:", pastedText);
+    logger.debug("Paste detected in name field", { text: pastedText });
     setName(pastedText.trim());
   }, []);
 
@@ -65,13 +65,13 @@ export function AddServerModal() {
     try {
       setStatus("submitting");
       setErrorMessage("");
-      debug("Adding server", { name, url });
+      logger.debug("Adding server", { name, url });
       await addServer(name, url);
-      debug("Server added successfully");
+      logger.debug("Server added successfully");
       closeModal();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
-      debug("Error adding server", message);
+      logger.error("Error adding server", { error: message });
       setStatus("error");
       setErrorMessage(message);
     }
