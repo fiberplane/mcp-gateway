@@ -4,8 +4,7 @@
     "composite": true,
     "outDir": "dist",
     "rootDir": ".",
-    "noEmit": true,
-    "types": ["bun-types"]
+    "noEmit": true
   },
   "include": ["*.ts", "src/**/*"],
   "exclude": ["node_modules"]
