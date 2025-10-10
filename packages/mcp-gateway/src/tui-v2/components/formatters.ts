@@ -34,7 +34,7 @@ export function formatResponseDetails(log: LogEntry): string {
   // initialize: show server name and version
   if (log.method === "initialize") {
     const serverInfo = result.serverInfo as { name: string; version: string };
-    return ` → ${serverInfo.name}@${serverInfo.version}`;
+    return `→ ${serverInfo.name}@${serverInfo.version}`;
   }
 
   // tools/list: show count and first few tool names
@@ -42,7 +42,7 @@ export function formatResponseDetails(log: LogEntry): string {
     const tools = result.tools as Array<{ name: string }>;
     const toolNames = tools.slice(0, 3).map((t) => t.name);
     const more = tools.length > 3 ? `, +${tools.length - 3}` : "";
-    return ` ${tools.length} tools: ${toolNames.join(", ")}${more}`;
+    return `${tools.length} tools: ${toolNames.join(", ")}${more}`;
   }
 
   // tools/call: show result text (truncated)
@@ -54,20 +54,20 @@ export function formatResponseDetails(log: LogEntry): string {
         textContent.length > 40
           ? `${textContent.slice(0, 40)}...`
           : textContent;
-      return ` "${truncated}"`;
+      return `"${truncated}"`;
     }
   }
 
   // resources/list: show count
   if (log.method === "resources/list") {
     const resources = result.resources as unknown[];
-    return ` ${resources?.length || 0} resources`;
+    return `${resources?.length || 0} resources`;
   }
 
   // prompts/list: show count
   if (log.method === "prompts/list") {
     const prompts = result.prompts as unknown[];
-    return ` ${prompts?.length || 0} prompts`;
+    return `${prompts?.length || 0} prompts`;
   }
 
   return "";
