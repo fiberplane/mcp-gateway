@@ -1,7 +1,7 @@
 import type { BoxProps } from "@opentui/react";
 import packageJson from "../../../package.json" with { type: "json" };
 import type { McpServer, ServerHealth } from "../../registry";
-import { useIsSmall } from "../hooks/useIsSmall";
+import { useCompactHeight } from "../hooks/useCompactHeight";
 import { useAppStore } from "../store";
 import { useTheme } from "../theme-context";
 
@@ -92,7 +92,7 @@ function HeaderSection({
   style?: BoxProps["style"];
 }) {
   const theme = useTheme();
-  const isSmall = useIsSmall();
+  const compactHeight = useCompactHeight();
   // const
   return (
     <box
@@ -101,7 +101,7 @@ function HeaderSection({
         gap: 1,
         paddingLeft: 1,
         paddingRight: 1,
-        paddingBottom: isSmall ? 0 : 1,
+        paddingBottom: compactHeight.enabled ? 0 : 1,
         ...style,
       }}
     >

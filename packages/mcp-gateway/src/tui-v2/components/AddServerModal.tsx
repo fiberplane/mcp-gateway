@@ -1,7 +1,7 @@
 import { useKeyboard } from "@opentui/react";
 import { useCallback, useState } from "react";
 import { logger } from "../../logger.js";
-import { useIsSmall } from "../hooks/useIsSmall";
+import { useCompactHeight } from "../hooks/useCompactHeight";
 import { useAppStore } from "../store";
 import { useTheme } from "../theme-context";
 import { Modal } from "./Modal";
@@ -18,7 +18,7 @@ export function AddServerModal() {
   const [status, setStatus] = useState<"idle" | "submitting" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
-  const isSmall = useIsSmall();
+  const compactHeight = useCompactHeight();
 
   // Debug paste handling
   const handleUrlPaste = useCallback((pastedText: string) => {
@@ -104,7 +104,7 @@ export function AddServerModal() {
       scrollable={false}
     >
       <box style={{ flexDirection: "column", gap: 1 }}>
-        <box style={{ flexDirection: "column", gap: isSmall ? 0 : 1 }}>
+        <box style={{ flexDirection: "column" }}>
           <BorderedInput
             title="Server URL"
             placeholder="http://localhost:3000/mcp"
@@ -117,7 +117,7 @@ export function AddServerModal() {
           <text fg={theme.foregroundMuted}>Your MCP server URL</text>
         </box>
 
-        <box style={{ flexDirection: "column", gap: isSmall ? 0 : 1 }}>
+        <box style={{ flexDirection: "column", gap: compactHeight.enabled ? 0 : 1 }}>
           <BorderedInput
             title="Server Name"
             placeholder="my-server"

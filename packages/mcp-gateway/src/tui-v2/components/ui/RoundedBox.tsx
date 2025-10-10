@@ -1,5 +1,5 @@
 import type { BoxProps } from "@opentui/react";
-import { useIsSmall } from "../../hooks/useIsSmall";
+import { useCompactHeight } from "../../hooks/useCompactHeight";
 import { useTheme } from "../../theme-context";
 
 export function RoundedBox({
@@ -10,7 +10,7 @@ export function RoundedBox({
   children: React.ReactNode;
 } & Pick<BoxProps, "style" | "title">) {
   const theme = useTheme();
-  const isSmall = useIsSmall();
+  const compactHeight = useCompactHeight();
 
   return (
     <box
@@ -21,8 +21,8 @@ export function RoundedBox({
         border: true,
         borderColor: theme.border,
         padding: 1,
-        paddingTop: isSmall ? 0 : 1,
-        paddingBottom: isSmall ? 0 : 1,
+        paddingTop: compactHeight.enabled ? 0 : 1,
+        paddingBottom: compactHeight.enabled ? 0 : 1,
         borderStyle: "rounded",
         maxWidth: 66,
         ...style,
