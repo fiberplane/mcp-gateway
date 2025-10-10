@@ -3,8 +3,9 @@
   "compilerOptions": {
     "composite": true,
     "outDir": "dist",
-    "rootDir": "."
+    "rootDir": ".",
+    "jsxImportSource": "@opentui/react"
   },
-  "include": ["src/**/*", "tests/**/*", "package.json"],
-  "exclude": ["bin/**/*", "dist"]
+  "include": ["src/**/*", "package.json"],
+  "exclude": ["bin/**/*", "dist", "node_modules", "tests/**/*"]
 }

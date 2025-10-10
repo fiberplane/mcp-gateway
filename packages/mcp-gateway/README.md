@@ -14,9 +14,11 @@ Runs on port 3333 with an interactive TUI for server management. Configuration p
 
 ## Adding MCP Servers
 
-**Interactive (press `a` in TUI):**
-- Enter server name, URL, and optional headers
-- Server immediately available at `http://localhost:3333/servers/:serverName/mcp`
+**Interactive (TUI):**
+1. Press `/` to open the command menu
+2. Select "Add New Server" or press `a`
+3. Enter server name and URL
+4. Server immediately available at `http://localhost:3333/servers/:serverName/mcp`
 
 **Configuration file (`~/.mcp-gateway/mcp.json`):**
 
@@ -34,13 +36,30 @@ Runs on port 3333 with an interactive TUI for server management. Configuration p
 }
 ```
 
-## TUI Controls
+## TUI Navigation
 
-- `a` - Add server
-- `d` - Delete server
-- `c` - Clear logs
-- `m` - Show MCP client instructions
-- `q` - Quit
+### Global Shortcuts
+- `/` - Open command menu (quick access to all commands)
+- `q` - Quit application
+- `ESC` - Go back / Close modal / Return to Activity Log
+
+### Command Menu (press `/`)
+- `v` - View Activity Log
+- `m` - Manage Servers
+- `a` - Add New Server
+- `c` - Clear Activity Logs
+- `h` - Help & Setup Guide
+
+### Activity Log View
+- `↑` / `↓` - Navigate log entries
+- `Home` / `End` - Jump to first/last entry
+- `Enter` - View log details
+- Auto-follows new entries (press `↑` to pause)
+
+### Server Management View
+- `↑` / `↓` - Navigate servers
+- `Enter` - View server configuration
+- `d` - Delete selected server
 
 ## Features
 
@@ -57,8 +76,27 @@ Runs on port 3333 with an interactive TUI for server management. Configuration p
 ## CLI Options
 
 ```bash
+# Custom storage directory
 mcp-gateway --storage-dir /custom/path
+
+# Custom port (useful for running multiple instances)
+mcp-gateway --port 8080
+
+# Combine options
+mcp-gateway --port 8080 --storage-dir /custom/path
+
+# Show help
+mcp-gateway --help
+
+# Show version
+mcp-gateway --version
 ```
+
+**Available Options:**
+- `--port <number>` - Port to run the gateway server on (default: 3333)
+- `--storage-dir <path>` - Storage directory for registry and captures (default: ~/.mcp-gateway)
+- `-h, --help` - Show help information
+- `-v, --version` - Show version number
 
 ## Development
 

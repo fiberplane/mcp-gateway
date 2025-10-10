@@ -24,6 +24,18 @@
       }
     }
   },
+  "overrides": [
+    {
+      "includes": ["test-mcp-server/**/*.ts", "test-mcp-server/**/*.tsx"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off"
+          }
+        }
+      }
+    }
+  ],
   "files": {
     "ignoreUnknown": false,
     "includes": [

@@ -7,11 +7,12 @@ import {
   StreamableHttpTransport,
 } from "mcp-lite";
 import { z } from "zod";
+import { zodToJsonSchema } from "zod-to-json-schema";
 
 const mcp = new McpServer({
   name: "comprehensive-mcp-demo",
   version: "2.0.0",
-  schemaAdapter: (s) => z.toJSONSchema(s as z.ZodType),
+  schemaAdapter: (schema) => zodToJsonSchema(schema as z.ZodType),
 });
 
 // ===== MIDDLEWARE =====
