@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useAppStore } from "../../store";
 import { ServerConfigExport } from "./ServerConfigExport";
 import { ServerList } from "./ServerList";
@@ -6,6 +5,7 @@ import { useServerManagementKeys } from "./useServerManagementKeys";
 
 /**
  * Main server management view with list and config export
+ * Now uses Zustand store to persist state across view changes
  */
 export function ServerManagementView() {
 	const registry = useAppStore((state) => state.registry);
@@ -13,8 +13,17 @@ export function ServerManagementView() {
 	const setServerToDelete = useAppStore((state) => state.setServerToDelete);
 	const activeModal = useAppStore((state) => state.activeModal);
 
-	const [selectedIndex, setSelectedIndex] = useState(0);
-	const [showConfig, setShowConfig] = useState<string | null>(null);
+	// Get state from store
+	const selectedIndex = useAppStore(
+		(state) => state.serverManagementSelectedIndex,
+	);
+	const setSelectedIndex = useAppStore(
+		(state) => state.setServerManagementSelectedIndex,
+	);
+	const showConfig = useAppStore((state) => state.serverManagementShowConfig);
+	const setShowConfig = useAppStore(
+		(state) => state.setServerManagementShowConfig,
+	);
 
 	const servers = registry.servers;
 

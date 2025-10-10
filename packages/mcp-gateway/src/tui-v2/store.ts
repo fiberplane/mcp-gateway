@@ -30,6 +30,15 @@ interface AppStore {
   selectedLog: LogEntry | null;
   toast: Toast | null;
 
+  // Activity Log view state
+  activityLogSelectedIndex: number;
+  activityLogScrollPosition: number;
+  activityLogFollowMode: boolean;
+
+  // Server Management view state
+  serverManagementSelectedIndex: number;
+  serverManagementShowConfig: string | null;
+
   // Actions
   initialize: (registry: Registry, storageDir: string) => void;
   addServer: (name: string, url: string) => Promise<void>;
@@ -46,6 +55,15 @@ interface AppStore {
   setSelectedLog: (log: LogEntry | null) => void;
   showToast: (message: string, type: Toast["type"]) => void;
   clearToast: () => void;
+
+  // Activity Log view actions
+  setActivityLogSelectedIndex: (index: number) => void;
+  setActivityLogScrollPosition: (position: number) => void;
+  setActivityLogFollowMode: (enabled: boolean) => void;
+
+  // Server Management view actions
+  setServerManagementSelectedIndex: (index: number) => void;
+  setServerManagementShowConfig: (serverName: string | null) => void;
 }
 
 export const useAppStore = create<AppStore>((set, get) => ({
@@ -59,6 +77,15 @@ export const useAppStore = create<AppStore>((set, get) => ({
   serverToDelete: null,
   selectedLog: null,
   toast: null,
+
+  // Activity Log view state
+  activityLogSelectedIndex: 0,
+  activityLogScrollPosition: 0,
+  activityLogFollowMode: true,
+
+  // Server Management view state
+  serverManagementSelectedIndex: 0,
+  serverManagementShowConfig: null,
 
   // Actions
   initialize: (registry, storageDir) => set({ registry, storageDir }),
@@ -140,4 +167,18 @@ export const useAppStore = create<AppStore>((set, get) => ({
   setSelectedLog: (log) => set({ selectedLog: log }),
   showToast: (message, type) => set({ toast: { message, type } }),
   clearToast: () => set({ toast: null }),
+
+  // Activity Log view actions
+  setActivityLogSelectedIndex: (index) =>
+    set({ activityLogSelectedIndex: index }),
+  setActivityLogScrollPosition: (position) =>
+    set({ activityLogScrollPosition: position }),
+  setActivityLogFollowMode: (enabled) =>
+    set({ activityLogFollowMode: enabled }),
+
+  // Server Management view actions
+  setServerManagementSelectedIndex: (index) =>
+    set({ serverManagementSelectedIndex: index }),
+  setServerManagementShowConfig: (serverName) =>
+    set({ serverManagementShowConfig: serverName }),
 }));
