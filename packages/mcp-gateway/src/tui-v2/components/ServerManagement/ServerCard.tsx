@@ -1,3 +1,4 @@
+import { useAppStore } from "../../store";
 import { useTheme } from "../../theme-context";
 import type { Server } from "./utils";
 import { formatRelativeTime, getGatewayUrl, getStatusText } from "./utils";
@@ -12,6 +13,7 @@ interface ServerCardProps {
  */
 export function ServerCard({ server, isSelected }: ServerCardProps) {
   const theme = useTheme();
+  const port = useAppStore((state) => state.port);
 
   const getHealthColor = (health?: string) => {
     switch (health) {
@@ -26,7 +28,7 @@ export function ServerCard({ server, isSelected }: ServerCardProps) {
 
   const healthColor = getHealthColor(server.health);
   const statusText = getStatusText(server.health);
-  const gatewayUrl = getGatewayUrl(server.name);
+  const gatewayUrl = getGatewayUrl(server.name, port);
   const activityTime = formatRelativeTime(server.lastActivity);
 
   return (

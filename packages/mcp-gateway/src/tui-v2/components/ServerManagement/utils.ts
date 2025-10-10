@@ -50,9 +50,9 @@ export function formatRelativeTime(timestamp: string | null): string {
 /**
  * Generate MCP configuration JSON for Claude Desktop
  */
-export function generateMcpConfig(server: Server): string {
+export function generateMcpConfig(server: Server, port: number): string {
   const encodedName = encodeURIComponent(server.name);
-  const gatewayUrl = `http://localhost:3333/servers/${encodedName}/mcp`;
+  const gatewayUrl = `http://localhost:${port}/servers/${encodedName}/mcp`;
 
   return JSON.stringify(
     {
@@ -71,7 +71,7 @@ export function generateMcpConfig(server: Server): string {
 /**
  * Get gateway URL for a server
  */
-export function getGatewayUrl(serverName: string): string {
+export function getGatewayUrl(serverName: string, port: number): string {
   const encodedName = encodeURIComponent(serverName);
-  return `http://localhost:3333/servers/${encodedName}/mcp`;
+  return `http://localhost:${port}/servers/${encodedName}/mcp`;
 }

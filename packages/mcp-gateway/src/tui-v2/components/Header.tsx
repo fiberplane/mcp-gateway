@@ -29,6 +29,7 @@ import { useTheme } from "../theme-context";
 export function Header() {
   const theme = useTheme();
   const registry = useAppStore((state) => state.registry);
+  const port = useAppStore((state) => state.port);
 
   return (
     <box style={{ flexDirection: "column", flexShrink: 0 }}>
@@ -58,7 +59,7 @@ export function Header() {
             gap: 1,
           }}
         >
-          <text fg={theme.foregroundMuted}>Running server on port 3333.</text>
+          <text fg={theme.foregroundMuted}>Running server on port {port}.</text>
         </HeaderSection>
         {/* Right column: Server list */}
         <HeaderSection

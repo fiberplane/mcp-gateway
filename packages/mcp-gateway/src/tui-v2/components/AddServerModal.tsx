@@ -4,6 +4,7 @@ import { logger } from "../../logger.js";
 import { useCompactHeight } from "../hooks/useCompactHeight";
 import { useAppStore } from "../store";
 import { useTheme } from "../theme-context";
+import { getGatewayBaseUrl } from "../utils/gateway-urls";
 import { Modal } from "./Modal";
 import { BorderedInput } from "./ui/BorderedInput";
 
@@ -11,6 +12,7 @@ export function AddServerModal() {
   const theme = useTheme();
   const closeModal = useAppStore((state) => state.closeModal);
   const addServer = useAppStore((state) => state.addServer);
+  const port = useAppStore((state) => state.port);
 
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
@@ -88,9 +90,10 @@ export function AddServerModal() {
   // Generate preview of gateway URL
   const previewName = name.trim();
   const encodedName = encodeURIComponent(previewName);
+  const baseUrl = getGatewayBaseUrl(port);
   const gatewayUrl = (
     <>
-      http://localhost:3333/servers/
+      {baseUrl}/servers/
       {encodedName || <em style={{ fg: theme.foregroundSubtle }}>my-server</em>}
       /mcp
     </>

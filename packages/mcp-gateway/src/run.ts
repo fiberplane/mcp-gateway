@@ -21,11 +21,14 @@ Description:
 Options:
   -h, --help                    Show help
   -v, --version                 Show version
+  --port <number>               Port to run the gateway server on
+                               (default: 3333)
   --storage-dir <path>          Storage directory for registry and captures
                                (default: ~/.mcp-gateway)
 
 Examples:
   mcp-gateway
+  mcp-gateway --port 8080
   mcp-gateway --storage-dir /tmp/mcp-data
   mcp-gateway --help
   mcp-gateway --version
@@ -57,6 +60,10 @@ export async function runCli(): Promise<void> {
           short: "v",
           default: false,
         },
+        port: {
+          type: "string",
+          default: "3333",
+        },
         "storage-dir": {
           type: "string",
           default: undefined,
@@ -75,6 +82,12 @@ export async function runCli(): Promise<void> {
       return;
     }
 
+    // Parse and validate port
+    const port = Number.parseInt(values.port || "3333", 10);
+    if (Number.isNaN(port) || port < 1 || port > 65535) {
+      throw new Error(`Invalid port number: ${values.port}. Must be between 1 and 65535.`);
+    }
+
     // Get storage directory
     const storageDir = getStorageRoot(values["storage-dir"]);
 
@@ -86,15 +99,37 @@ export async function runCli(): Promise<void> {
 
     // Start HTTP server
     const { app } = await createApp(registry, storageDir);
-    const port = 3333;
 
-    const server = serve({
-      fetch: app.fetch,
-      port,
-    });
-
-    // biome-ignore lint/suspicious/noConsole: actually want to print to console
-    console.log(`MCP Gateway server started at http://localhost:${port}`);
+    let server;
+    try {
+      server = serve({
+        fetch: app.fetch,
+        port,
+      });
+      // biome-ignore lint/suspicious/noConsole: actually want to print to console
+      console.log(`✓ MCP Gateway server started at http://localhost:${port}`);
+    } catch (serverError) {
+      const err = serverError as NodeJS.ErrnoException;
+      if (err.code === "EADDRINUSE") {
+        // biome-ignore lint/suspicious/noConsole: actually want to print to console
+        console.error(`✗ Port ${port} is already in use`);
+        // biome-ignore lint/suspicious/noConsole: actually want to print to console
+        console.error(
+          `  Try running with a different port: mcp-gateway --port ${port + 1}`,
+        );
+      } else if (err.code === "EACCES") {
+        // biome-ignore lint/suspicious/noConsole: actually want to print to console
+        console.error(`✗ Permission denied to bind to port ${port}`);
+        // biome-ignore lint/suspicious/noConsole: actually want to print to console
+        console.error(
+          "  Try using a port above 1024 or run with appropriate permissions",
+        );
+      } else {
+        // biome-ignore lint/suspicious/noConsole: actually want to print to console
+        console.error(`✗ Failed to start server: ${err.message}`);
+      }
+      process.exit(1);
+    }
 
     // Start health checks
     const stopHealthChecks = await startHealthChecks(registry);
@@ -102,6 +137,7 @@ export async function runCli(): Promise<void> {
     // Create context for TUI
     const context: Context = {
       storageDir,
+      port,
       onExit: () => {
         stopHealthChecks();
         server.close();

@@ -64,6 +64,7 @@ async function main() {
   // Create context (same as real app)
   const context: Context = {
     storageDir,
+    port,
     onExit: () => {
       console.log("Running cleanup...");
       stopHealthChecks();

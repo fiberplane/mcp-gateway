@@ -4,6 +4,7 @@ import type { JsonRpcRequest, JsonRpcResponse } from "../schemas.js";
 // Context holds configuration and dependencies (read-only)
 export type Context = {
   storageDir: string;
+  port: number;
   onExit?: () => void;
 };
 

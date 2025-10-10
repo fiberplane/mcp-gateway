@@ -4,7 +4,7 @@ import { useAppStore } from "./store";
 describe("AppStore", () => {
   beforeEach(() => {
     // Reset store before each test
-    useAppStore.getState().initialize({ servers: [] }, ".test-storage");
+    useAppStore.getState().initialize({ servers: [] }, ".test-storage", 3333);
   });
 
   test("initialize sets registry and storageDir", () => {
@@ -21,11 +21,12 @@ describe("AppStore", () => {
       ],
     };
 
-    useAppStore.getState().initialize(registry, "/test/dir");
+    useAppStore.getState().initialize(registry, "/test/dir", 8080);
 
     const state = useAppStore.getState();
     expect(state.registry).toEqual(registry);
     expect(state.storageDir).toBe("/test/dir");
+    expect(state.port).toBe(8080);
   });
 
   test("addServer normalizes name and URL", async () => {
@@ -59,6 +60,7 @@ describe("AppStore", () => {
         ],
       },
       ".test-storage",
+      3333,
     );
 
     await expect(

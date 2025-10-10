@@ -1,3 +1,4 @@
+import { useAppStore } from "../../store";
 import { useTheme } from "../../theme-context";
 import { CodeBlock } from "../ui/CodeBlock";
 import type { Server } from "./utils";
@@ -12,7 +13,8 @@ interface ServerConfigExportProps {
  */
 export function ServerConfigExport({ server }: ServerConfigExportProps) {
   const theme = useTheme();
-  const config = generateMcpConfig(server);
+  const port = useAppStore((state) => state.port);
+  const config = generateMcpConfig(server, port);
 
   return (
     <box

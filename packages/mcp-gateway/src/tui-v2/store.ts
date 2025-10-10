@@ -23,6 +23,7 @@ interface AppStore {
   registry: Registry;
   logs: LogEntry[];
   storageDir: string;
+  port: number;
   activeModal: ModalType;
   viewMode: ViewMode;
   showCommandMenu: boolean;
@@ -40,7 +41,7 @@ interface AppStore {
   serverManagementShowConfig: string | null;
 
   // Actions
-  initialize: (registry: Registry, storageDir: string) => void;
+  initialize: (registry: Registry, storageDir: string, port: number) => void;
   addServer: (name: string, url: string) => Promise<void>;
   removeServer: (name: string) => Promise<void>;
   setRegistry: (registry: Registry) => void;
@@ -75,6 +76,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   registry: { servers: [] },
   logs: [],
   storageDir: "",
+  port: 3333,
   activeModal: null,
   viewMode: "activity-log",
   showCommandMenu: false,
@@ -92,7 +94,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   serverManagementShowConfig: null,
 
   // Actions
-  initialize: (registry, storageDir) => set({ registry, storageDir }),
+  initialize: (registry, storageDir, port) => set({ registry, storageDir, port }),
 
   addServer: async (name, url) => {
     const { registry, storageDir } = get();

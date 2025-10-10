@@ -1,6 +1,7 @@
 import { commandShortcuts, formatShortcut } from "../shortcuts";
 import { useAppStore } from "../store";
 import { useTheme } from "../theme-context";
+import { getGatewayMcpUrl, getServerMcpUrl } from "../utils/gateway-urls";
 import { Modal } from "./Modal";
 import { CodeBlock } from "./ui/CodeBlock";
 import { RoundedBox } from "./ui/RoundedBox";
@@ -8,6 +9,7 @@ import { RoundedBox } from "./ui/RoundedBox";
 export function McpInstructionsModal() {
   const closeModal = useAppStore((state) => state.closeModal);
   const registry = useAppStore((state) => state.registry);
+  const port = useAppStore((state) => state.port);
   const theme = useTheme();
 
   const hasServers = registry.servers.length > 0;
@@ -79,8 +81,7 @@ export function McpInstructionsModal() {
                 <text fg={theme.foreground}>{server.name}:</text>
                 <RoundedBox>
                   <text fg={theme.foregroundMuted}>
-                    http://localhost:3333/servers/
-                    {encodeURIComponent(server.name)}/mcp
+                    {getServerMcpUrl(port, server.name)}
                   </text>
                 </RoundedBox>
               </box>
@@ -95,7 +96,7 @@ export function McpInstructionsModal() {
                   mcpServers: {
                     [registry.servers[0]?.name || ""]: {
                       transport: "sse",
-                      url: `http://localhost:3333/servers/${encodeURIComponent(registry.servers[0]?.name || "")}/mcp`,
+                      url: getServerMcpUrl(port, registry.servers[0]?.name || ""),
                     },
                   },
                 },
@@ -124,7 +125,7 @@ export function McpInstructionsModal() {
         </text>
         <RoundedBox>
           <text fg={theme.foregroundMuted}>
-            http://localhost:3333/gateway/mcp
+            {getGatewayMcpUrl(port)}
           </text>
         </RoundedBox>
         <text fg={theme.foregroundMuted} style={{ paddingLeft: 2 }}>

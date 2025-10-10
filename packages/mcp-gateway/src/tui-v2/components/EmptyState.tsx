@@ -1,11 +1,13 @@
 import { commandShortcuts, formatShortcut } from "../shortcuts";
 import { useAppStore } from "../store";
 import { useTheme } from "../theme-context";
+import { getServerMcpUrl } from "../utils/gateway-urls";
 import { RoundedBox } from "./ui/RoundedBox";
 
 export function EmptyState() {
   const theme = useTheme();
   const registry = useAppStore((state) => state.registry);
+  const port = useAppStore((state) => state.port);
 
   const hasServers = registry.servers.length > 0;
   const firstServer = registry.servers[0];
@@ -85,9 +87,7 @@ export function EmptyState() {
                   this service:
                 </text>
                 <text fg={theme.accent}>
-                  http://localhost:3333/servers/
-                  {encodeURIComponent(firstServer.name)}
-                  /mcp
+                  {getServerMcpUrl(port, firstServer.name)}
                 </text>
               </box>
               <box style={{ flexDirection: "column", gap: 0 }}>
