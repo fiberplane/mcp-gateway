@@ -8,7 +8,7 @@ import { useServerManagementKeys } from "./useServerManagementKeys";
  * Now uses Zustand store to persist state across view changes
  */
 export function ServerManagementView() {
-  const registry = useAppStore((state) => state.registry);
+  const servers = useAppStore((state) => state.servers);
   const openModal = useAppStore((state) => state.openModal);
   const setServerToDelete = useAppStore((state) => state.setServerToDelete);
   const activeModal = useAppStore((state) => state.activeModal);
@@ -24,8 +24,6 @@ export function ServerManagementView() {
   const setShowConfig = useAppStore(
     (state) => state.setServerManagementShowConfig,
   );
-
-  const servers = registry.servers;
 
   // Keyboard navigation
   useServerManagementKeys({

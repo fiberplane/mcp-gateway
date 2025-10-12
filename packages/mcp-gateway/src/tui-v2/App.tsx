@@ -162,9 +162,19 @@ export async function runOpenTUI(context: Context, registry: Registry) {
     storageDir: context.storageDir,
   });
 
+  // Convert registry servers to UI servers
+  const uiServers = registry.servers.map((server) => ({
+    name: server.name,
+    url: server.url,
+    type: server.type,
+    headers: server.headers,
+    health: server.health ?? ("unknown" as const),
+    lastHealthCheck: server.lastHealthCheck,
+  }));
+
   // Initialize store
   const initialize = useAppStore.getState().initialize;
-  initialize(registry, context.storageDir, context.port);
+  initialize(uiServers, context.storageDir, context.port);
 
   // Setup async exit handler
   const handleExit = async () => {

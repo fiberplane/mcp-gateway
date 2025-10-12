@@ -6,11 +6,11 @@ import { RoundedBox } from "./ui/RoundedBox";
 
 export function EmptyState() {
   const theme = useTheme();
-  const registry = useAppStore((state) => state.registry);
+  const servers = useAppStore((state) => state.servers);
   const port = useAppStore((state) => state.port);
 
-  const hasServers = registry.servers.length > 0;
-  const firstServer = registry.servers[0];
+  const hasServers = servers.length > 0;
+  const firstServer = servers[0];
 
   return (
     <box
@@ -69,7 +69,7 @@ export function EmptyState() {
               </box>
             </RoundedBox>
           </>
-        ) : registry.servers.length === 1 && firstServer ? (
+        ) : servers.length === 1 && firstServer ? (
           // Single server - show direct URL
           <>
             <text fg={theme.foregroundMuted}>
@@ -94,9 +94,8 @@ export function EmptyState() {
                   To add to claude code use:
                 </text>
                 <text fg={theme.accent}>
-                  claude mcp add -s project -t http{" "}
-                  {registry.servers[0]?.name || ""}{" "}
-                  {getServerMcpUrl(port, registry.servers[0]?.name || "")}
+                  claude mcp add -s project -t http {servers[0]?.name || ""}{" "}
+                  {getServerMcpUrl(port, servers[0]?.name || "")}
                 </text>
               </box>
               <box style={{ flexDirection: "column", gap: 0 }}>
@@ -124,8 +123,7 @@ export function EmptyState() {
             <RoundedBox style={{ maxWidth: 66 }}>
               <box>
                 <text fg={theme.foreground}>
-                  {registry.servers.length} servers are configured for this
-                  gateway
+                  {servers.length} servers are configured for this gateway
                 </text>
                 <text fg={theme.foregroundMuted}>
                   Press{" "}

@@ -13,7 +13,8 @@ import { useAppStore } from "../store";
  */
 export function useExternalEvents() {
   const storageDir = useAppStore((state) => state.storageDir);
-  const setRegistry = useAppStore((state) => state.setRegistry);
+  const servers = useAppStore((state) => state.servers);
+  const setServers = useAppStore((state) => state.setServers);
   const addLog = useAppStore((state) => state.addLog);
 
   useEffect(() => {
@@ -28,49 +29,48 @@ export function useExternalEvents() {
 
     const handleRegistryUpdate = async () => {
       logger.debug("Registry update event received, reloading from disk");
-      // Get current registry to preserve runtime fields
-      const currentRegistry = useAppStore.getState().registry;
 
       // Reload registry from disk
       const updatedRegistry = await loadRegistry(storageDir);
 
-      // Preserve runtime fields (health, lastHealthCheck) that aren't persisted
-      const mergedServers = updatedRegistry.servers.map((server) => {
-        const currentServer = currentRegistry.servers.find(
-          (s) => s.name === server.name,
-        );
-        if (currentServer) {
-          return {
-            ...server,
-            health: currentServer.health,
-            lastHealthCheck: currentServer.lastHealthCheck,
-          };
-        }
-        return server;
+      // Convert to UI servers, preserving health info from current state
+      const updatedServers = updatedRegistry.servers.map((server) => {
+        const currentServer = servers.find((s) => s.name === server.name);
+        return {
+          name: server.name,
+          url: server.url,
+          type: server.type,
+          headers: server.headers,
+          health: currentServer?.health ?? ("unknown" as const),
+          lastHealthCheck: currentServer?.lastHealthCheck,
+        };
       });
 
       logger.debug("Registry reloaded", {
-        serverCount: mergedServers.length,
+        serverCount: updatedServers.length,
       });
-      setRegistry({ servers: mergedServers });
+
+      // Update UI state
+      setServers(updatedServers);
     };
 
-    // Subscribe to events
-    tuiEvents.on("action", (action: Action) => {
+    const handleAction = (action: Action) => {
       if (action.type === "log_added") {
         handleLog(action.entry);
       } else if (action.type === "registry_updated") {
         handleRegistryUpdate();
       }
-    });
+    };
+
+    // Subscribe to events
+    tuiEvents.on("action", handleAction);
 
     logger.debug("External events wired up");
 
     // Cleanup on unmount
     return () => {
-      tuiEvents.removeListener("action", handleLog);
-      tuiEvents.removeListener("action", handleRegistryUpdate);
+      tuiEvents.off("action", handleAction);
       logger.debug("External events cleaned up");
     };
-  }, [storageDir, setRegistry, addLog]);
+  }, [storageDir, servers, setServers, addLog]);
 }

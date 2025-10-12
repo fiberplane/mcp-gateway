@@ -26,14 +26,14 @@ export function CommandMenu() {
   const setViewMode = useAppStore((state) => state.setViewMode);
   const openModal = useAppStore((state) => state.openModal);
   const clearLogs = useAppStore((state) => state.clearLogs);
-  const registry = useAppStore((state) => state.registry);
+  const servers = useAppStore((state) => state.servers);
   const logs = useAppStore((state) => state.logs);
   const viewMode = useAppStore((state) => state.viewMode);
 
   // Calculate status information
-  const serverCount = registry.servers.length;
-  const upCount = registry.servers.filter((s) => s.health === "up").length;
-  const downCount = registry.servers.filter((s) => s.health === "down").length;
+  const serverCount = servers.length;
+  const upCount = servers.filter((s) => s.health === "up").length;
+  const downCount = servers.filter((s) => s.health === "down").length;
   const serverStatus = `${serverCount} servers • ${upCount} up, ${downCount} down`;
 
   const logCount = logs.length;

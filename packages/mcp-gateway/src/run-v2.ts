@@ -171,21 +171,17 @@ export async function runCli(): Promise<void> {
       registry,
       30000,
       (updates) => {
-        // Import store dynamically to get latest state
+        // Import store dynamically to update UI state
         import("./tui-v2/store.js").then(({ useAppStore }) => {
-          const currentRegistry = useAppStore.getState().registry;
-          // Mutate servers in place so HTTP server sees the changes
+          const updateServerHealth = useAppStore.getState().updateServerHealth;
+          // Update UI state for each health check result
           for (const update of updates) {
-            const server = currentRegistry.servers.find(
-              (s) => s.name === update.name,
+            updateServerHealth(
+              update.name,
+              update.health,
+              update.lastHealthCheck,
             );
-            if (server) {
-              server.health = update.health;
-              server.lastHealthCheck = update.lastHealthCheck;
-            }
           }
-          // Trigger re-render with shallow copy
-          useAppStore.getState().setRegistry({ ...currentRegistry });
         });
       },
     );

@@ -1,6 +1,7 @@
 import { create } from "zustand";
-import type { Registry } from "../registry";
-import { saveRegistry } from "../storage";
+import type { Registry, ServerHealth } from "../registry";
+import { loadRegistry, saveRegistry } from "../storage";
+import { emitRegistryUpdate } from "../tui/events";
 import type { LogEntry } from "../tui/state";
 
 type ModalType =
@@ -18,9 +19,22 @@ export interface Toast {
   type: "success" | "error" | "info";
 }
 
+/**
+ * UI-specific server representation
+ * Contains only what the UI needs to display
+ */
+export interface UIServer {
+  name: string;
+  url: string;
+  type: "http";
+  headers: Record<string, string>;
+  health: ServerHealth;
+  lastHealthCheck?: string;
+}
+
 interface AppStore {
   // State
-  registry: Registry;
+  servers: UIServer[];
   logs: LogEntry[];
   storageDir: string;
   port: number;
@@ -41,10 +55,15 @@ interface AppStore {
   serverManagementShowConfig: string | null;
 
   // Actions
-  initialize: (registry: Registry, storageDir: string, port: number) => void;
+  initialize: (servers: UIServer[], storageDir: string, port: number) => void;
   addServer: (name: string, url: string) => Promise<void>;
   removeServer: (name: string) => Promise<void>;
-  setRegistry: (registry: Registry) => void;
+  setServers: (servers: UIServer[]) => void;
+  updateServerHealth: (
+    name: string,
+    health: ServerHealth,
+    lastHealthCheck: string,
+  ) => void;
   addLog: (entry: LogEntry) => void;
   clearLogs: () => void;
   openModal: (modal: ModalType) => void;
@@ -71,9 +90,23 @@ interface AppStore {
   setServerManagementShowConfig: (serverName: string | null) => void;
 }
 
+/**
+ * Helper: Transform Registry server to UIServer
+ */
+export function toUIServer(server: Registry["servers"][number]): UIServer {
+  return {
+    name: server.name,
+    url: server.url,
+    type: server.type,
+    headers: server.headers,
+    health: server.health ?? "unknown",
+    lastHealthCheck: server.lastHealthCheck,
+  };
+}
+
 export const useAppStore = create<AppStore>((set, get) => ({
   // Initial state
-  registry: { servers: [] },
+  servers: [],
   logs: [],
   storageDir: "",
   port: 3333,
@@ -94,22 +127,24 @@ export const useAppStore = create<AppStore>((set, get) => ({
   serverManagementShowConfig: null,
 
   // Actions
-  initialize: (registry, storageDir, port) =>
-    set({ registry, storageDir, port }),
+  initialize: (servers, storageDir, port) => set({ servers, storageDir, port }),
 
   addServer: async (name, url) => {
-    const { registry, storageDir } = get();
+    const { storageDir, servers } = get();
 
     // Normalize inputs
     const normalizedUrl = new URL(url).toString().replace(/\/$/, "");
     const normalizedName = name.toLowerCase().trim();
 
     // Check if server already exists
-    if (registry.servers.some((s) => s.name === normalizedName)) {
+    if (servers.some((s) => s.name === normalizedName)) {
       throw new Error(`Server '${name}' already exists`);
     }
 
-    // Add server
+    // Load current registry from disk
+    const registry = await loadRegistry(storageDir);
+
+    // Add server to registry
     const newServer = {
       name: normalizedName,
       url: normalizedUrl,
@@ -117,49 +152,67 @@ export const useAppStore = create<AppStore>((set, get) => ({
       headers: {},
       lastActivity: null,
       exchangeCount: 0,
-      health: "unknown" as const,
     };
-
-    // Mutate the registry.servers array directly so the HTTP server sees the change
     registry.servers.push(newServer);
 
     // Save to disk
     await saveRegistry(storageDir, registry);
 
-    // Trigger re-render by creating a new state object
-    set({ registry: { ...registry } });
+    // Emit event so HTTP server updates
+    emitRegistryUpdate();
+
+    // Add to UI state
+    const uiServer: UIServer = {
+      name: normalizedName,
+      url: normalizedUrl,
+      type: "http",
+      headers: {},
+      health: "unknown",
+    };
+    set({ servers: [...servers, uiServer] });
 
     // Trigger immediate health check for the new server
-    // Import dynamically to avoid circular dependencies
     const { checkServerHealth } = await import("../health.js");
     const health = await checkServerHealth(normalizedUrl);
     const lastHealthCheck = new Date().toISOString();
 
-    // Update the server with health status (mutate in place)
-    const server = registry.servers.find((s) => s.name === normalizedName);
-    if (server) {
-      server.health = health;
-      server.lastHealthCheck = lastHealthCheck;
-      // Trigger re-render
-      set({ registry: { ...registry } });
-    }
+    // Update UI with health status
+    set((state) => ({
+      servers: state.servers.map((s) =>
+        s.name === normalizedName ? { ...s, health, lastHealthCheck } : s,
+      ),
+    }));
   },
 
   removeServer: async (name) => {
-    const { registry, storageDir } = get();
+    const { storageDir, servers } = get();
 
-    // Mutate the registry.servers array directly so the HTTP server sees the change
+    // Load current registry from disk
+    const registry = await loadRegistry(storageDir);
+
+    // Remove server from registry
     const index = registry.servers.findIndex((s) => s.name === name);
     if (index !== -1) {
       registry.servers.splice(index, 1);
     }
 
+    // Save to disk
     await saveRegistry(storageDir, registry);
-    // Trigger re-render
-    set({ registry: { ...registry } });
+
+    // Emit event so HTTP server updates
+    emitRegistryUpdate();
+
+    // Remove from UI state
+    set({ servers: servers.filter((s) => s.name !== name) });
   },
 
-  setRegistry: (registry) => set({ registry }),
+  setServers: (servers) => set({ servers }),
+  updateServerHealth: (name, health, lastHealthCheck) =>
+    set((state) => ({
+      servers: state.servers.map((s) =>
+        s.name === name ? { ...s, health, lastHealthCheck } : s,
+      ),
+    })),
   addLog: (entry) => set((state) => ({ logs: [...state.logs, entry] })),
   clearLogs: () => set({ logs: [] }),
   openModal: (modal) => set({ activeModal: modal }),

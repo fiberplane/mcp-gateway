@@ -9,7 +9,7 @@ import { SelectableList } from "./ui/SelectableList";
 
 export function DeleteServerModal() {
   const theme = useTheme();
-  const servers = useAppStore((state) => state.registry.servers);
+  const servers = useAppStore((state) => state.servers);
   const removeServer = useAppStore((state) => state.removeServer);
   const closeModal = useAppStore((state) => state.closeModal);
   const serverToDelete = useAppStore((state) => state.serverToDelete);
@@ -105,7 +105,7 @@ export function DeleteServerModal() {
             </RoundedBox>
             <text fg={theme.foregroundMuted}>
               <em>Note:</em>
-              The Capture history will be preserved
+              The capture history will be preserved
             </text>
           </box>
 

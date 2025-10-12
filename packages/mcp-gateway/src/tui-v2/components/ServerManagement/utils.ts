@@ -1,13 +1,6 @@
-export type Server = {
-  name: string;
-  url: string;
-  type: string;
-  headers: Record<string, string>;
-  lastActivity: string | null;
-  exchangeCount: number;
-  health?: string;
-  lastHealthCheck?: string;
-};
+import type { UIServer } from "../../store";
+
+export type Server = UIServer;
 
 /**
  * Get human-readable status text from health status

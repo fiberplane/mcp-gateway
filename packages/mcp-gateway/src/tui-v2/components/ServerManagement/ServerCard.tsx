@@ -29,7 +29,6 @@ export function ServerCard({ server, isSelected }: ServerCardProps) {
   const healthColor = getHealthColor(server.health);
   const statusText = getStatusText(server.health);
   const gatewayUrl = getGatewayUrl(server.name, port);
-  const activityTime = formatRelativeTime(server.lastActivity);
 
   return (
     <box
@@ -78,13 +77,6 @@ export function ServerCard({ server, isSelected }: ServerCardProps) {
           <text fg={theme.danger} style={{ paddingLeft: 2 }}>
             Server unreachable (checked{" "}
             {formatRelativeTime(server.lastHealthCheck)})
-          </text>
-        )}
-
-        {/* Activity info */}
-        {server.lastActivity && (
-          <text fg={theme.foregroundMuted} style={{ paddingLeft: 2 }}>
-            Last activity: {activityTime} • {server.exchangeCount} exchanges
           </text>
         )}
 

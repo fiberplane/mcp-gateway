@@ -2,17 +2,17 @@ import { useAppStore } from "../store";
 import { useTheme } from "../theme-context";
 
 export function ServerList() {
-  const registry = useAppStore((state) => state.registry);
+  const servers = useAppStore((state) => state.servers);
   const theme = useTheme();
 
-  if (registry.servers.length === 0) {
+  if (servers.length === 0) {
     return <text fg={theme.foregroundMuted}>No servers registered</text>;
   }
 
   return (
     <box style={{ flexDirection: "column" }}>
       <text fg={theme.accent}>Servers:</text>
-      {registry.servers.map((server) => (
+      {servers.map((server) => (
         <box
           key={server.name}
           style={{ flexDirection: "column", marginTop: 1 }}

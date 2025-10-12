@@ -4,27 +4,24 @@ import { useAppStore } from "./store";
 describe("AppStore", () => {
   beforeEach(() => {
     // Reset store before each test
-    useAppStore.getState().initialize({ servers: [] }, ".test-storage", 3333);
+    useAppStore.getState().initialize([], ".test-storage", 3333);
   });
 
-  test("initialize sets registry and storageDir", () => {
-    const registry = {
-      servers: [
-        {
-          name: "test",
-          url: "http://localhost:3000/mcp",
-          type: "http" as const,
-          headers: {},
-          lastActivity: null,
-          exchangeCount: 0,
-        },
-      ],
-    };
+  test("initialize sets servers and storageDir", () => {
+    const servers = [
+      {
+        name: "test",
+        url: "http://localhost:3000/mcp",
+        type: "http" as const,
+        headers: {},
+        health: "unknown" as const,
+      },
+    ];
 
-    useAppStore.getState().initialize(registry, "/test/dir", 8080);
+    useAppStore.getState().initialize(servers, "/test/dir", 8080);
 
     const state = useAppStore.getState();
-    expect(state.registry).toEqual(registry);
+    expect(state.servers).toEqual(servers);
     expect(state.storageDir).toBe("/test/dir");
     expect(state.port).toBe(8080);
   });
@@ -37,8 +34,8 @@ describe("AppStore", () => {
         .addServer("Test-Server  ", "http://localhost:3000/mcp/");
 
       const state = useAppStore.getState();
-      expect(state.registry.servers[0]?.name).toBe("test-server");
-      expect(state.registry.servers[0]?.url).toBe("http://localhost:3000/mcp");
+      expect(state.servers[0]?.name).toBe("test-server");
+      expect(state.servers[0]?.url).toBe("http://localhost:3000/mcp");
     } catch (error) {
       // Expected to fail without real file system
       expect(error).toBeDefined();
@@ -47,18 +44,15 @@ describe("AppStore", () => {
 
   test("addServer rejects duplicate names", async () => {
     useAppStore.getState().initialize(
-      {
-        servers: [
-          {
-            name: "existing",
-            url: "http://localhost:3000/mcp",
-            type: "http" as const,
-            headers: {},
-            lastActivity: null,
-            exchangeCount: 0,
-          },
-        ],
-      },
+      [
+        {
+          name: "existing",
+          url: "http://localhost:3000/mcp",
+          type: "http" as const,
+          headers: {},
+          health: "unknown" as const,
+        },
+      ],
       ".test-storage",
       3333,
     );
@@ -68,23 +62,20 @@ describe("AppStore", () => {
     ).rejects.toThrow("already exists");
   });
 
-  test("setRegistry updates registry state", () => {
-    const newRegistry = {
-      servers: [
-        {
-          name: "new-server",
-          url: "http://localhost:5000/mcp",
-          type: "http" as const,
-          headers: {},
-          lastActivity: null,
-          exchangeCount: 0,
-        },
-      ],
-    };
+  test("setServers updates server state", () => {
+    const newServers = [
+      {
+        name: "new-server",
+        url: "http://localhost:5000/mcp",
+        type: "http" as const,
+        headers: {},
+        health: "unknown" as const,
+      },
+    ];
 
-    useAppStore.getState().setRegistry(newRegistry);
+    useAppStore.getState().setServers(newServers);
 
-    expect(useAppStore.getState().registry).toEqual(newRegistry);
+    expect(useAppStore.getState().servers).toEqual(newServers);
   });
 
   test("addLog and clearLogs work correctly", () => {

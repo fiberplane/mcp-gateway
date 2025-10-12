@@ -8,11 +8,11 @@ import { RoundedBox } from "./ui/RoundedBox";
 
 export function McpInstructionsModal() {
   const closeModal = useAppStore((state) => state.closeModal);
-  const registry = useAppStore((state) => state.registry);
+  const servers = useAppStore((state) => state.servers);
   const port = useAppStore((state) => state.port);
   const theme = useTheme();
 
-  const hasServers = registry.servers.length > 0;
+  const hasServers = servers.length > 0;
 
   return (
     <Modal title="Setup Guide" onClose={closeModal} size="large" scrollable>
@@ -73,7 +73,7 @@ export function McpInstructionsModal() {
             </text>
 
             {/* List all servers with their URLs */}
-            {registry.servers.map((server) => (
+            {servers.map((server) => (
               <box
                 key={server.name}
                 style={{ flexDirection: "column", marginTop: 1 }}
@@ -88,18 +88,15 @@ export function McpInstructionsModal() {
             ))}
 
             <text fg={theme.foreground} style={{ marginTop: 1 }}>
-              Claude Desktop Example ({registry.servers[0]?.name}):
+              Claude Desktop Example ({servers[0]?.name}):
             </text>
             <CodeBlock
               content={JSON.stringify(
                 {
                   mcpServers: {
-                    [registry.servers[0]?.name || ""]: {
+                    [servers[0]?.name || ""]: {
                       transport: "sse",
-                      url: getServerMcpUrl(
-                        port,
-                        registry.servers[0]?.name || "",
-                      ),
+                      url: getServerMcpUrl(port, servers[0]?.name || ""),
                     },
                   },
                 },
@@ -111,13 +108,13 @@ export function McpInstructionsModal() {
             />
 
             <text fg={theme.foreground} style={{ marginTop: 1 }}>
-              Claude Code CLI Example ({registry.servers[0]?.name}):
+              Claude Code CLI Example ({servers[0]?.name}):
             </text>
             <text fg={theme.foregroundMuted}>
               Run this command to add the server:
             </text>
             <CodeBlock
-              content={`claude mcp add -s project -t http ${registry.servers[0]?.name || ""} ${getServerMcpUrl(port, registry.servers[0]?.name || "")}`}
+              content={`claude mcp add -s project -t http ${servers[0]?.name || ""} ${getServerMcpUrl(port, servers[0]?.name || "")}`}
               padding={1}
               style={{ backgroundColor: undefined }}
             />
