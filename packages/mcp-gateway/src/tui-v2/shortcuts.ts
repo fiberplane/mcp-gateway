@@ -95,10 +95,3 @@ export const commandShortcuts = {
 export function formatShortcut(key: string): string {
   return `[${key}]`;
 }
-
-/**
- * Get shortcut with label (e.g., "[m] Server Management")
- */
-export function formatShortcutWithLabel(key: string, label: string): string {
-  return `${formatShortcut(key)} ${label}`;
-}

@@ -24,11 +24,3 @@ export function getServerMcpUrl(port: number, serverName: string): string {
 export function getGatewayMcpUrl(port: number): string {
   return `${getGatewayBaseUrl(port)}/gateway/mcp`;
 }
-
-/**
- * Get the base path for server endpoints (without protocol/host)
- */
-export function getServerBasePath(serverName: string): string {
-  const encodedName = encodeURIComponent(serverName);
-  return `/servers/${encodedName}/mcp`;
-}

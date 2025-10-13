@@ -19,7 +19,7 @@ import { ThemeProvider, useTheme } from "./theme-context";
 
 let exitHandler: (() => Promise<void>) | undefined;
 
-export function setExitHandler(handler: () => Promise<void>) {
+function setExitHandler(handler: () => Promise<void>) {
   exitHandler = handler;
 }
 
