@@ -413,8 +413,19 @@ export async function runTUI(
       cleanup();
       // biome-ignore lint/suspicious/noConsole: actually want to print to console
       console.log("Closing the MCP Gateway...");
-      context.onExit?.();
-      process.exit(0);
+
+      // Handle both sync and async onExit callbacks
+      const exitResult = context.onExit?.();
+      if (
+        exitResult &&
+        typeof exitResult === "object" &&
+        "then" in exitResult
+      ) {
+        exitResult.then(() => process.exit(0)).catch(() => process.exit(1));
+      } else {
+        process.exit(0);
+      }
+      return; // Prevent further execution
     }
 
     // Process any actions that were queued during processing

@@ -190,7 +190,11 @@ export async function runCli(): Promise<void> {
       port,
       onExit: () => {
         stopHealthChecks();
-        server.close();
+        return new Promise<void>((resolve) => {
+          server.close(() => {
+            resolve();
+          });
+        });
       },
     };
 
@@ -221,16 +225,16 @@ export async function runCli(): Promise<void> {
         "Running in headless mode (no TTY detected). Server will run until terminated.",
       );
       // Keep process alive and handle signals
-      process.on("SIGTERM", () => {
+      process.on("SIGTERM", async () => {
         // biome-ignore lint/suspicious/noConsole: actually want to print to console
         console.log("\nReceived SIGTERM, shutting down...");
-        context.onExit?.();
+        await context.onExit?.();
         process.exit(0);
       });
-      process.on("SIGINT", () => {
+      process.on("SIGINT", async () => {
         // biome-ignore lint/suspicious/noConsole: actually want to print to console
         console.log("\nReceived SIGINT, shutting down...");
-        context.onExit?.();
+        await context.onExit?.();
         process.exit(0);
       });
     }

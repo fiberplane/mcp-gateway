@@ -5,7 +5,7 @@ import type { JsonRpcRequest, JsonRpcResponse } from "../schemas.js";
 export type Context = {
   storageDir: string;
   port: number;
-  onExit?: () => void;
+  onExit?: () => void | Promise<void>;
 };
 
 // UI mode
