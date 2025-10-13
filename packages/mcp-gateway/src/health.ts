@@ -1,5 +1,5 @@
+import { emitRegistryUpdate } from "./events.js";
 import type { Registry, ServerHealth } from "./registry.js";
-import { emitRegistryUpdate } from "./tui/events.js";
 
 export async function checkServerHealth(url: string): Promise<ServerHealth> {
   try {

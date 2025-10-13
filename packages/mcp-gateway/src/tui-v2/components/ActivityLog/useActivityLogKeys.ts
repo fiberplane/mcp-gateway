@@ -1,5 +1,5 @@
 import { useKeyboard } from "@opentui/react";
-import type { LogEntry } from "../../../tui/state";
+import type { LogEntry } from "../../../types";
 import { useAppStore } from "../../store";
 
 interface ScrollState {

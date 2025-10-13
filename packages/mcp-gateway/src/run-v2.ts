@@ -12,9 +12,9 @@ import { startHealthChecks } from "./health.js";
 import { logger } from "./logger.js";
 import { createApp } from "./server/index.js";
 import { getStorageRoot, loadRegistry } from "./storage.js";
-import type { Context } from "./tui/state.js";
 import { runOpenTUI } from "./tui-v2/App.js";
 import { useAppStore } from "./tui-v2/store.js";
+import type { Context } from "./types.js";
 
 function showHelp(): void {
   // biome-ignore lint/suspicious/noConsole: actually want to print to console
@@ -201,7 +201,7 @@ export async function runCli(): Promise<void> {
     // Start TUI only if running in a TTY
     if (process.stdin.isTTY) {
       // Listen for registry updates and reload into HTTP server's registry
-      const { tuiEvents } = await import("./tui/events.js");
+      const { tuiEvents } = await import("./events.js");
       tuiEvents.on("action", async (action) => {
         if (action.type === "registry_updated") {
           logger.debug("Registry update event received in HTTP server");

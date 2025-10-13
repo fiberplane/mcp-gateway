@@ -1,4 +1,4 @@
-import type { LogEntry } from "../../../tui/state";
+import type { LogEntry } from "../../../types";
 import type { Color, Theme } from "../../colors";
 import { type Column, truncateText } from "../ui/Table";
 

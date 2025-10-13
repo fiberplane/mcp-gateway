@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { LogEntry } from "../../../tui/state";
+import type { LogEntry } from "../../../types";
 import type { Theme } from "../../colors";
 import { formatRequestDetails, formatResponseDetails } from "../formatters";
 import type { Column } from "../ui/Table";

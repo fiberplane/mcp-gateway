@@ -1,9 +1,9 @@
 import { useEffect } from "react";
+import type { Action } from "../../events";
+import { tuiEvents } from "../../events";
 import { logger } from "../../logger.js";
 import { loadRegistry } from "../../storage";
-import type { Action } from "../../tui/events";
-import { tuiEvents } from "../../tui/events";
-import type { LogEntry } from "../../tui/state";
+import type { LogEntry } from "../../types";
 import { useAppStore } from "../store";
 
 /**

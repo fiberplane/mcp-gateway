@@ -1,8 +1,8 @@
 import { create } from "zustand";
+import { emitRegistryUpdate } from "../events";
 import type { Registry, ServerHealth } from "../registry";
 import { loadRegistry, saveRegistry } from "../storage";
-import { emitRegistryUpdate } from "../tui/events";
-import type { LogEntry } from "../tui/state";
+import type { LogEntry } from "../types";
 
 type ModalType =
   | "add-server"

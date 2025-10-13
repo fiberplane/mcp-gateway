@@ -1,4 +1,4 @@
-import type { LogEntry } from "../../tui/state";
+import type { LogEntry } from "../../types";
 
 // Format request-specific details
 export function formatRequestDetails(log: LogEntry): string {

@@ -15,6 +15,7 @@ import {
   getClientInfo,
   storeClientInfo,
 } from "../capture.js";
+import { emitLog, emitRegistryUpdate } from "../events.js";
 import { logger } from "../logger.js";
 import { getServer, type McpServer, type Registry } from "../registry.js";
 import {
@@ -33,8 +34,7 @@ import {
   parseJsonRpcFromSSE,
 } from "../sse-parser.js";
 import { getStorageRoot, saveRegistry } from "../storage.js";
-import { emitLog, emitRegistryUpdate } from "../tui/events.js";
-import type { LogEntry } from "../tui/state.js";
+import type { LogEntry } from "../types.js";
 
 // Constant for sessionless (stateless) requests - used when no session ID is provided
 const SESSIONLESS_ID = "stateless";
