@@ -58,7 +58,7 @@ export function createActivityLogColumns(theme: Theme): Column<LogEntry>[] {
     textColumn({
       id: "server",
       label: "Server",
-      width: 12,
+      width: 14,
       format: (log) => log.serverName,
       backgroundColor: cellBackground,
     }),

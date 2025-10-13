@@ -14,6 +14,7 @@ import { createApp } from "./server/index.js";
 import { getStorageRoot, loadRegistry } from "./storage.js";
 import type { Context } from "./tui/state.js";
 import { runOpenTUI } from "./tui-v2/App.js";
+import { useAppStore } from "./tui-v2/store.js";
 
 function showHelp(): void {
   // biome-ignore lint/suspicious/noConsole: actually want to print to console
@@ -171,18 +172,15 @@ export async function runCli(): Promise<void> {
       registry,
       30000,
       (updates) => {
-        // Import store dynamically to update UI state
-        import("./tui-v2/store.js").then(({ useAppStore }) => {
-          const updateServerHealth = useAppStore.getState().updateServerHealth;
-          // Update UI state for each health check result
-          for (const update of updates) {
-            updateServerHealth(
-              update.name,
-              update.health,
-              update.lastHealthCheck,
-            );
-          }
-        });
+        const updateServerHealth = useAppStore.getState().updateServerHealth;
+        // Update UI state for each health check result
+        for (const update of updates) {
+          updateServerHealth(
+            update.name,
+            update.health,
+            update.lastHealthCheck,
+          );
+        }
       },
     );
 
@@ -198,6 +196,23 @@ export async function runCli(): Promise<void> {
 
     // Start TUI only if running in a TTY
     if (process.stdin.isTTY) {
+      // Listen for registry updates and reload into HTTP server's registry
+      const { tuiEvents } = await import("./tui/events.js");
+      tuiEvents.on("action", async (action) => {
+        if (action.type === "registry_updated") {
+          logger.debug("Registry update event received in HTTP server");
+          const updatedRegistry = await loadRegistry(storageDir);
+
+          // Mutate the registry object in place so HTTP server sees the changes
+          registry.servers.length = 0;
+          registry.servers.push(...updatedRegistry.servers);
+
+          logger.debug("Registry reloaded in HTTP server", {
+            serverCount: registry.servers.length,
+          });
+        }
+      });
+
       logger.info("Starting UI", { version: getVersion() });
       await runOpenTUI(context, registry);
     } else {

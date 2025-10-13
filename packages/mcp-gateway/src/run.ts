@@ -7,6 +7,7 @@ import { startHealthChecks } from "./health.js";
 import { logger } from "./logger.js";
 import { createApp } from "./server/index.js";
 import { getStorageRoot, loadRegistry } from "./storage.js";
+import { tuiEvents } from "./tui/events.js";
 import { runTUI } from "./tui/loop.js";
 import type { Context } from "./tui/state.js";
 
@@ -170,6 +171,22 @@ export async function runCli(): Promise<void> {
 
     // Start TUI only if running in a TTY
     if (process.stdin.isTTY) {
+      // Listen for registry updates and reload into HTTP server's registry
+      tuiEvents.on("action", async (action) => {
+        if (action.type === "registry_updated") {
+          logger.debug("Registry update event received in HTTP server");
+          const updatedRegistry = await loadRegistry(storageDir);
+
+          // Mutate the registry object in place so HTTP server sees the changes
+          registry.servers.length = 0;
+          registry.servers.push(...updatedRegistry.servers);
+
+          logger.debug("Registry reloaded in HTTP server", {
+            serverCount: registry.servers.length,
+          });
+        }
+      });
+
       runTUI(context, registry).catch((error) => {
         logger.error("TUI error", { error: String(error) });
         stopHealthChecks();
