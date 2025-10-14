@@ -57,6 +57,21 @@ for (const path of possiblePaths) {
 }
 
 if (!binaryPath) {
+  // Check if we're in a workspace (dev) context by looking for workspace protocol in package.json
+  try {
+    const pkgJsonPath = join(__dirname, "package.json");
+    const pkgJson = JSON.parse(require("fs").readFileSync(pkgJsonPath, "utf-8"));
+    const optDeps = pkgJson.optionalDependencies || {};
+    const hasWorkspaceProtocol = Object.values(optDeps).some(v => typeof v === "string" && v.startsWith("workspace:"));
+
+    if (hasWorkspaceProtocol) {
+      console.log(`⏭️  Skipping binary setup in workspace context (binaries not built yet)`);
+      process.exit(0);
+    }
+  } catch (e) {
+    // If we can't read package.json, continue to error
+  }
+
   console.error(`❌ Binary not found for ${platform}-${arch}`);
   console.error(`Searched in:`);
   for (const path of possiblePaths) {
