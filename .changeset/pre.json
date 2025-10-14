@@ -9,7 +9,5 @@
     "@fiberplane/mcp-gateway-server": "0.1.0",
     "@fiberplane/mcp-gateway-types": "0.1.0"
   },
-  "changesets": [
-    "binary-distribution-preview"
-  ]
+  "changesets": ["binary-distribution-preview"]
 }
