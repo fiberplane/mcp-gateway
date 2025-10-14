@@ -1,7 +1,7 @@
 {
   "name": "@fiberplane/mcp-gateway-types",
   "type": "module",
-  "version": "0.1.0",
+  "version": "0.2.0-next.0",
   "description": "Shared types and schemas for MCP Gateway",
   "homepage": "https://github.com/fiberplane/mcp-gateway",
   "repository": {

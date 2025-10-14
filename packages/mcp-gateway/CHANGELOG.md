@@ -1,5 +1,14 @@
 # @fiberplane/mcp-gateway
 
+## 0.4.1-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @fiberplane/mcp-gateway-types@0.2.0-next.0
+  - @fiberplane/mcp-gateway-core@0.2.0-next.0
+  - @fiberplane/mcp-gateway-server@0.2.0-next.0
+
 ## 0.4.0
 
 ### Minor Changes

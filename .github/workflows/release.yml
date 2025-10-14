@@ -106,8 +106,8 @@ jobs:
     name: Publish to npm
     needs: build-binaries
     runs-on: ubuntu-latest
-    # Only publish on main branch
-    if: github.ref == 'refs/heads/main'
+    # Publish on main or when in prerelease mode on refactor branch
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/refactor-monorepo-phases'
     steps:
       - name: Checkout
         uses: actions/checkout@v4

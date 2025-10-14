@@ -1,0 +1,15 @@
+{
+  "mode": "pre",
+  "tag": "next",
+  "initialVersions": {
+    "@fiberplane/mcp-gateway": "0.3.3",
+    "@fiberplane/mcp-gateway-core": "0.1.0",
+    "@fiberplane/mcp-gateway-cli": "0.4.0",
+    "@fiberplane/mcp-gateway-darwin-arm64": "0.3.3",
+    "@fiberplane/mcp-gateway-server": "0.1.0",
+    "@fiberplane/mcp-gateway-types": "0.1.0"
+  },
+  "changesets": [
+    "binary-distribution-preview"
+  ]
+}

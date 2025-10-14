@@ -1,7 +1,7 @@
 {
   "name": "@fiberplane/mcp-gateway-core",
   "type": "module",
-  "version": "0.1.0",
+  "version": "0.2.0-next.0",
   "description": "Core MCP Gateway functionality - registry, capture, health checks",
   "homepage": "https://github.com/fiberplane/mcp-gateway",
   "repository": {
