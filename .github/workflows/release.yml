@@ -72,8 +72,6 @@ jobs:
         include:
           - platform: linux-x64
             os: ubuntu-latest
-          - platform: darwin-x64
-            os: macos-15-intel
           - platform: darwin-arm64
             os: macos-latest
           - platform: windows-x64
@@ -135,7 +133,6 @@ jobs:
       - name: Restore binary artifacts to correct locations
         run: |
           mv packages/binary-linux-x64/* packages/mcp-gateway-linux-x64/
-          mv packages/binary-darwin-x64/* packages/mcp-gateway-darwin-x64/
           mv packages/binary-darwin-arm64/* packages/mcp-gateway-darwin-arm64/
           mv packages/binary-windows-x64/* packages/mcp-gateway-windows-x64/
           rm -rf packages/binary-*

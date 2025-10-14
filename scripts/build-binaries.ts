@@ -23,13 +23,6 @@ const ALL_PLATFORMS = [
     ext: "",
   },
   {
-    target: "bun-darwin-x64",
-    name: "darwin-x64",
-    os: "darwin",
-    cpu: "x64",
-    ext: "",
-  },
-  {
     target: "bun-windows-x64",
     name: "windows-x64",
     os: "win32",

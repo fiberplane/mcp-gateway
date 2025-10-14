@@ -29,7 +29,6 @@
   },
   "optionalDependencies": {
     "@fiberplane/mcp-gateway-darwin-arm64": "workspace:*",
-    "@fiberplane/mcp-gateway-darwin-x64": "workspace:*",
     "@fiberplane/mcp-gateway-linux-x64": "workspace:*",
     "@fiberplane/mcp-gateway-windows-x64": "workspace:*"
   },

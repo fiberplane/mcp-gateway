@@ -11,7 +11,6 @@
     "test-mcp-server",
     "@fiberplane/mcp-gateway-linux-x64",
     "@fiberplane/mcp-gateway-darwin-arm64",
-    "@fiberplane/mcp-gateway-darwin-x64",
     "@fiberplane/mcp-gateway-windows-x64"
   ],
   "packages": ["packages/*"]
