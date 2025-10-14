@@ -277,10 +277,13 @@ export async function runCli(): Promise<void> {
   }
 }
 
-// Auto-run if this is the main module
+// Auto-run if this is the main module (but not in compiled binary)
+// Compiled binaries use binary-entry.ts as the entry point
 if (
   process.argv[1] &&
-  import.meta.url === pathToFileURL(process.argv[1]).href
+  import.meta.url === pathToFileURL(process.argv[1]).href &&
+  // @ts-expect-error - BUILD_VERSION is defined by --define flag during binary build
+  typeof BUILD_VERSION === "undefined"
 ) {
   runCli();
 }
