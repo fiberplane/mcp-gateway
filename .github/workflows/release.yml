@@ -26,7 +26,7 @@ jobs:
           bun-version: latest
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: bun install
 
       - name: Check for circular dependencies
         run: bun run check-circular
@@ -58,7 +58,7 @@ jobs:
           bun-version: latest
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: bun install
 
       - name: Build CLI package
         run: bun run --filter @fiberplane/mcp-gateway-cli build
@@ -89,7 +89,7 @@ jobs:
           bun-version: latest
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: bun install
 
       - name: Build binary for ${{ matrix.platform }}
         run: bun run build:binaries
@@ -125,7 +125,7 @@ jobs:
           always-auth: true
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: bun install
 
       - name: Download all binary artifacts
         uses: actions/download-artifact@v4

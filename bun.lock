@@ -10,9 +10,22 @@
         "typescript": "^5.7.2",
       },
     },
+    "packages/cli": {
+      "name": "@fiberplane/mcp-gateway",
+      "version": "0.4.0-next.0",
+      "bin": {
+        "mcp-gateway": "./bin/mcp-gateway",
+      },
+      "optionalDependencies": {
+        "@fiberplane/mcp-gateway-darwin-arm64": "0.4.1-next.0",
+        "@fiberplane/mcp-gateway-darwin-x64": "0.4.1-next.0",
+        "@fiberplane/mcp-gateway-linux-x64": "0.4.1-next.0",
+        "@fiberplane/mcp-gateway-windows-x64": "0.4.1-next.0",
+      },
+    },
     "packages/core": {
       "name": "@fiberplane/mcp-gateway-core",
-      "version": "0.1.0",
+      "version": "0.2.0-next.0",
       "dependencies": {
         "@fiberplane/mcp-gateway-types": "workspace:*",
         "hono": "^4.9.8",
@@ -21,8 +34,8 @@
       },
     },
     "packages/mcp-gateway": {
-      "name": "@fiberplane/mcp-gateway",
-      "version": "0.3.3",
+      "name": "@fiberplane/mcp-gateway-cli",
+      "version": "0.4.1-next.0",
       "bin": {
         "mcp-gateway": "bin/cli.js",
       },
@@ -49,9 +62,13 @@
         "typescript": "^5",
       },
     },
+    "packages/mcp-gateway-darwin-arm64": {
+      "name": "@fiberplane/mcp-gateway-darwin-arm64",
+      "version": "0.3.3",
+    },
     "packages/server": {
       "name": "@fiberplane/mcp-gateway-server",
-      "version": "0.1.0",
+      "version": "0.2.0-next.0",
       "dependencies": {
         "@fiberplane/mcp-gateway-core": "workspace:*",
         "@fiberplane/mcp-gateway-types": "workspace:*",
@@ -63,7 +80,7 @@
     },
     "packages/types": {
       "name": "@fiberplane/mcp-gateway-types",
-      "version": "0.1.0",
+      "version": "0.2.0-next.0",
       "dependencies": {
         "zod": "^4.1.11",
       },
@@ -150,9 +167,13 @@
 
     "@dimforge/rapier2d-simd-compat": ["@dimforge/rapier2d-simd-compat@0.17.3", "", {}, "sha512-bijvwWz6NHsNj5e5i1vtd3dU2pDhthSaTUZSh14DUGGKJfw8eMnlWZsxwHBxB/a3AXVNDjL9abuHw1k9FGR+jg=="],
 
-    "@fiberplane/mcp-gateway": ["@fiberplane/mcp-gateway@workspace:packages/mcp-gateway"],
+    "@fiberplane/mcp-gateway": ["@fiberplane/mcp-gateway@workspace:packages/cli"],
+
+    "@fiberplane/mcp-gateway-cli": ["@fiberplane/mcp-gateway-cli@workspace:packages/mcp-gateway"],
 
     "@fiberplane/mcp-gateway-core": ["@fiberplane/mcp-gateway-core@workspace:packages/core"],
+
+    "@fiberplane/mcp-gateway-darwin-arm64": ["@fiberplane/mcp-gateway-darwin-arm64@workspace:packages/mcp-gateway-darwin-arm64"],
 
     "@fiberplane/mcp-gateway-server": ["@fiberplane/mcp-gateway-server@workspace:packages/server"],
 
