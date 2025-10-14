@@ -1,4 +1,4 @@
-import type { LogEntry } from "../../types";
+import type { LogEntry } from "@fiberplane/mcp-gateway-types";
 
 // Format request-specific details
 export function formatRequestDetails(log: LogEntry): string {

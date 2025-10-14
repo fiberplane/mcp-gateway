@@ -1,5 +1,4 @@
-import { logger } from "../logger.js";
-import { getStorageRoot, loadRegistry } from "../storage.js";
+import { logger, getStorageRoot, loadRegistry } from "@fiberplane/mcp-gateway-core";
 import { createApp } from "./create-server.js";
 
 // Re-export createApp

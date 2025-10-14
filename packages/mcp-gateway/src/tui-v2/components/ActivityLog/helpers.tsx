@@ -1,4 +1,4 @@
-import type { LogEntry } from "../../../types";
+import type { LogEntry } from "@fiberplane/mcp-gateway-types";
 import type { Color, Theme } from "../../colors";
 import { type Column, truncateText } from "../ui/Table";
 

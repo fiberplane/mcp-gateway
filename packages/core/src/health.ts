@@ -1,5 +1,4 @@
-import { emitRegistryUpdate } from "./events.js";
-import type { Registry, ServerHealth } from "./registry.js";
+import type { Registry, ServerHealth } from "@fiberplane/mcp-gateway-types";
 
 export async function checkServerHealth(url: string): Promise<ServerHealth> {
   try {
@@ -54,9 +53,6 @@ export async function startHealthChecks(
     // Call custom update handler if provided (for TUI)
     if (onHealthUpdate) {
       onHealthUpdate(updates);
-    } else {
-      // Fallback for non-TUI usage
-      emitRegistryUpdate();
     }
   };
 

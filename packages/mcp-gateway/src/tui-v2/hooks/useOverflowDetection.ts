@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { logger } from "../../logger";
+import { logger } from "@fiberplane/mcp-gateway-core";
 
 /**
  * Hook to detect if content overflows by measuring in a hidden box

@@ -577,7 +577,9 @@ This refactoring creates the perfect foundation for that work! 🎉
 ## Notes and Considerations
 
 ### Import Path Conventions
-- All imports must use `.js` extensions (ESM requirement)
+- **Omit file extensions** in imports (using `"moduleResolution": "bundler"`)
+  - ✅ `import { foo } from "./foo"` (no extension)
+  - ❌ `import { foo } from "./foo.js"` (not needed with bundler mode)
 - Use `workspace:*` for internal package dependencies
 - Preserve existing external dependencies
 

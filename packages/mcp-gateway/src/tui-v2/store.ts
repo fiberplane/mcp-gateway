@@ -1,8 +1,7 @@
 import { create } from "zustand";
 import { emitRegistryUpdate } from "../events";
-import type { Registry, ServerHealth } from "@fiberplane/mcp-gateway-types";
-import { loadRegistry, saveRegistry } from "../storage";
-import type { LogEntry } from "@fiberplane/mcp-gateway-types";
+import type { Registry, ServerHealth, LogEntry } from "@fiberplane/mcp-gateway-types";
+import { loadRegistry, saveRegistry } from "@fiberplane/mcp-gateway-core";
 
 type ModalType =
   | "add-server"
@@ -172,7 +171,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set({ servers: [...servers, uiServer] });
 
     // Trigger immediate health check for the new server
-    const { checkServerHealth } = await import("../health.js");
+    const { checkServerHealth } = await import("@fiberplane/mcp-gateway-core");
     const health = await checkServerHealth(normalizedUrl);
     const lastHealthCheck = new Date().toISOString();
 

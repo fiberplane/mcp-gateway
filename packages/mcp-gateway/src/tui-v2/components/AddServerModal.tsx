@@ -1,6 +1,6 @@
 import { useKeyboard } from "@opentui/react";
 import { useCallback, useState } from "react";
-import { logger } from "../../logger.js";
+import { logger } from "@fiberplane/mcp-gateway-core";
 import { useCompactHeight } from "../hooks/useCompactHeight";
 import { useAppStore } from "../store";
 import { useTheme } from "../theme-context";

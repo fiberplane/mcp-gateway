@@ -14,27 +14,30 @@ import {
   createResponseCaptureRecord,
   getClientInfo,
   storeClientInfo,
-} from "../capture.js";
-import { emitLog, emitRegistryUpdate } from "../events.js";
-import { logger } from "../logger.js";
-import { getServer, type McpServer, type Registry } from "../registry.js";
-import {
-  type CaptureRecord,
-  clientInfoSchema,
-  generateCaptureFilename,
-  type JsonRpcRequest,
-  type JsonRpcResponse,
-  jsonRpcRequestSchema,
-  serverParamSchema,
-  sessionHeaderSchema,
-} from "../schemas.js";
-import {
+  logger,
+  getServer,
+  getStorageRoot,
+  saveRegistry,
   createSSEEventStream,
   isJsonRpcResponse,
   parseJsonRpcFromSSE,
-} from "../sse-parser.js";
-import { getStorageRoot, saveRegistry } from "../storage.js";
-import type { LogEntry } from "../types.js";
+} from "@fiberplane/mcp-gateway-core";
+import { emitLog, emitRegistryUpdate } from "../events.js";
+import type {
+  Registry,
+  CaptureRecord,
+  JsonRpcRequest,
+  JsonRpcResponse,
+  McpServer,
+  LogEntry,
+} from "@fiberplane/mcp-gateway-types";
+import {
+  clientInfoSchema,
+  generateCaptureFilename,
+  jsonRpcRequestSchema,
+  serverParamSchema,
+  sessionHeaderSchema,
+} from "@fiberplane/mcp-gateway-types";
 
 // Constant for sessionless (stateless) requests - used when no session ID is provided
 const SESSIONLESS_ID = "stateless";

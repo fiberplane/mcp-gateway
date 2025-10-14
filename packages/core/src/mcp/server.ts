@@ -2,9 +2,9 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { McpServer, RpcError, StreamableHttpTransport } from "mcp-lite";
 import { z } from "zod";
-import { logger } from "./logger.js";
-import { createCaptureTools } from "./mcp-tools/capture-tools.js";
-import { createServerTools } from "./mcp-tools/server-tools.js";
+import { logger } from "../logger";
+import { createCaptureTools } from "./tools/capture-tools";
+import { createServerTools } from "./tools/server-tools";
 import type { Registry } from "@fiberplane/mcp-gateway-types";
 
 /**

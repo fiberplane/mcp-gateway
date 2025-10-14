@@ -1,7 +1,7 @@
 import { constants } from "node:fs";
 import { access, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { logger } from "./logger.js";
+import { logger } from "../logger";
 import type {
   CaptureRecord,
   ClientInfo,
@@ -9,8 +9,8 @@ import type {
   JsonRpcResponse,
 } from "@fiberplane/mcp-gateway-types";
 import { captureRecordSchema, generateCaptureFilename } from "@fiberplane/mcp-gateway-types";
-import type { SSEEvent } from "./sse-parser.js";
-import { ensureServerCaptureDir } from "./storage.js";
+import type { SSEEvent } from "./sse-parser";
+import { ensureServerCaptureDir } from "../registry/storage";
 
 // In-memory storage for client info by session
 const sessionClientInfo = new Map<string, ClientInfo>();

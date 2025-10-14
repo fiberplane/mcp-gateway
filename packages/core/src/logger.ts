@@ -1,6 +1,6 @@
 import { appendFile, readdir, stat, unlink } from "node:fs/promises";
 import { join } from "node:path";
-import { ensureStorageDir } from "./storage.js";
+import { ensureStorageDir } from "./registry/storage";
 
 type LogLevel = "debug" | "info" | "warn" | "error";
 

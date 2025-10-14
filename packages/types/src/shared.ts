@@ -1,4 +1,4 @@
-import type { JsonRpcRequest, JsonRpcResponse } from "./schemas.js";
+import type { JsonRpcRequest, JsonRpcResponse } from "./schemas";
 
 // Context holds configuration and dependencies (read-only)
 export type Context = {

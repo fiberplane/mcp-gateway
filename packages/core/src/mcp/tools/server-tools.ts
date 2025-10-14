@@ -5,8 +5,8 @@ import {
   addServer as addServerToRegistry,
   getServer,
   removeServer as removeServerFromRegistry,
-} from "../registry.js";
-import { saveRegistry } from "../storage.js";
+} from "../../registry";
+import { saveRegistry } from "../../registry/storage";
 
 // Schema for adding a new server
 const AddServerSchema = z.object({

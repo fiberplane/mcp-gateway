@@ -2,9 +2,9 @@ import { constants } from "node:fs";
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { logger } from "./logger.js";
+import { logger } from "../logger";
 import type { Registry } from "@fiberplane/mcp-gateway-types";
-import { fromMcpJson, toMcpJson } from "./registry.js";
+import { fromMcpJson, toMcpJson } from "./index";
 
 // Get the storage root directory
 export function getStorageRoot(customDir?: string): string {
