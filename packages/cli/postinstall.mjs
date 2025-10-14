@@ -67,8 +67,9 @@ if (!binaryPath) {
     const parentDir = dirname(currentDir);
     if (parentDir === currentDir) break; // Reached filesystem root
 
-    // Check for bun.lockb (Bun workspace) or pnpm-workspace.yaml or lerna.json
+    // Check for bun.lock/bun.lockb (Bun workspace) or pnpm-workspace.yaml or lerna.json
     const hasWorkspaceMarker =
+      existsSync(join(parentDir, "bun.lock")) ||
       existsSync(join(parentDir, "bun.lockb")) ||
       existsSync(join(parentDir, "pnpm-workspace.yaml")) ||
       existsSync(join(parentDir, "lerna.json"));
