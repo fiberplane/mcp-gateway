@@ -7,10 +7,6 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": [
-    "test-mcp-server",
-    "@fiberplane/mcp-gateway-linux-x64",
-    "@fiberplane/mcp-gateway-darwin-arm64"
-  ],
+  "ignore": ["test-mcp-server"],
   "packages": ["packages/*"]
 }
