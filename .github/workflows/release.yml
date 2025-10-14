@@ -2,7 +2,7 @@ name: Release
 
 on:
   push:
-    branches: [main]
+    branches: [main, refactor-monorepo-phases]
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
@@ -106,6 +106,8 @@ jobs:
     name: Publish to npm
     needs: build-binaries
     runs-on: ubuntu-latest
+    # Only publish on main branch
+    if: github.ref == 'refs/heads/main'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
