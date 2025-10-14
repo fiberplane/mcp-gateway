@@ -6,7 +6,7 @@
  * to the appropriate platform-specific binary package.
  */
 
-import { existsSync, mkdirSync, symlinkSync, unlinkSync, chmodSync } from "node:fs";
+import { existsSync, mkdirSync, symlinkSync, copyFileSync, unlinkSync, chmodSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -111,7 +111,7 @@ if (!existsSync(binDir)) {
   mkdirSync(binDir, { recursive: true });
 }
 
-// Create symlink to the binary
+// Create symlink (Unix) or copy (Windows) to the binary
 const linkPath = join(binDir, `mcp-gateway${binaryExt}`);
 
 // Remove existing symlink/file if present
@@ -120,13 +120,17 @@ if (existsSync(linkPath)) {
 }
 
 try {
-  symlinkSync(binaryPath, linkPath);
-  // Make sure the binary is executable (Unix only)
-  if (platform !== "win32") {
+  if (platform === "win32") {
+    // Windows: Copy the binary instead of symlinking (doesn't require admin/dev mode)
+    copyFileSync(binaryPath, linkPath);
+  } else {
+    // Unix: Create symlink
+    symlinkSync(binaryPath, linkPath);
+    // Make sure the binary is executable
     chmodSync(binaryPath, 0o755);
   }
   console.log(`✓ MCP Gateway installed successfully for ${platform}-${arch}`);
 } catch (error) {
-  console.error(`❌ Failed to create symlink: ${error.message}`);
+  console.error(`❌ Failed to setup binary: ${error.message}`);
   process.exit(1);
 }
