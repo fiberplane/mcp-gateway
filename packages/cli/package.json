@@ -1,6 +1,6 @@
 {
   "name": "@fiberplane/mcp-gateway",
-  "version": "0.4.0-next.0",
+  "version": "0.4.0-next.1",
   "description": "Interactive CLI for managing MCP servers and running the gateway",
   "type": "module",
   "keywords": [
