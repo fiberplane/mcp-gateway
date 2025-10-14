@@ -75,6 +75,14 @@ if (!binaryPath) {
   process.exit(1);
 }
 
+// Ensure the binary is executable (npm may not preserve permissions)
+const { chmodSync } = require('fs');
+try {
+  chmodSync(binaryPath, 0o755);
+} catch (error) {
+  // Ignore chmod errors - may not have permission or be on Windows
+}
+
 // Execute the binary with all arguments
 try {
   execFileSync(binaryPath, process.argv.slice(2), {
@@ -89,8 +97,7 @@ try {
     console.error('The binary file does not have execute permissions.');
     console.error(`Binary location: ${binaryPath}`);
     console.error('');
-    console.error('This is a packaging issue. Please report at:');
-    console.error('https://github.com/fiberplane/mcp-gateway/issues');
+    console.error('Try running: chmod +x "${binaryPath}"');
     console.error('');
   }
   process.exit(error.status || 1);
