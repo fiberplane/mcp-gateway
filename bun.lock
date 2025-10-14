@@ -17,10 +17,9 @@
         "mcp-gateway": "./bin/mcp-gateway",
       },
       "optionalDependencies": {
-        "@fiberplane/mcp-gateway-darwin-arm64": "0.4.1-next.0",
-        "@fiberplane/mcp-gateway-darwin-x64": "0.4.1-next.0",
-        "@fiberplane/mcp-gateway-linux-x64": "0.4.1-next.0",
-        "@fiberplane/mcp-gateway-windows-x64": "0.4.1-next.0",
+        "@fiberplane/mcp-gateway-darwin-arm64": "workspace:*",
+        "@fiberplane/mcp-gateway-linux-x64": "workspace:*",
+        "@fiberplane/mcp-gateway-windows-x64": "workspace:*",
       },
     },
     "packages/core": {
@@ -64,10 +63,6 @@
     },
     "packages/mcp-gateway-darwin-arm64": {
       "name": "@fiberplane/mcp-gateway-darwin-arm64",
-      "version": "0.4.0-next.0",
-    },
-    "packages/mcp-gateway-darwin-x64": {
-      "name": "@fiberplane/mcp-gateway-darwin-x64",
       "version": "0.4.0-next.0",
     },
     "packages/mcp-gateway-linux-x64": {
@@ -186,8 +181,6 @@
     "@fiberplane/mcp-gateway-core": ["@fiberplane/mcp-gateway-core@workspace:packages/core"],
 
     "@fiberplane/mcp-gateway-darwin-arm64": ["@fiberplane/mcp-gateway-darwin-arm64@workspace:packages/mcp-gateway-darwin-arm64"],
-
-    "@fiberplane/mcp-gateway-darwin-x64": ["@fiberplane/mcp-gateway-darwin-x64@workspace:packages/mcp-gateway-darwin-x64"],
 
     "@fiberplane/mcp-gateway-linux-x64": ["@fiberplane/mcp-gateway-linux-x64@workspace:packages/mcp-gateway-linux-x64"],
 
