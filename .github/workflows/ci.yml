@@ -42,4 +42,4 @@ jobs:
         run: bun run lint
 
       - name: Build
-        run: bun run --filter @fiberplane/mcp-gateway build
+        run: bun run --filter @fiberplane/mcp-gateway-cli build
