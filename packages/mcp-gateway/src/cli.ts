@@ -46,12 +46,24 @@ Examples:
 }
 
 function getVersion(): string {
-  // Read version from package.json
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = dirname(__filename);
-  const packageJsonPath = join(__dirname, "../package.json");
-  const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
-  return packageJson.version;
+  // Check if BUILD_VERSION was defined at compile time
+  // @ts-expect-error - BUILD_VERSION is defined by --define flag during binary build
+  if (typeof BUILD_VERSION !== "undefined") {
+    // @ts-expect-error - BUILD_VERSION is defined by --define flag during binary build
+    return BUILD_VERSION;
+  }
+
+  // Try to read package.json (works in development)
+  try {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    const packageJsonPath = join(__dirname, "../package.json");
+    const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
+    return packageJson.version;
+  } catch {
+    // Last resort: return unknown
+    return "unknown";
+  }
 }
 
 function showVersion(): void {
@@ -270,5 +282,5 @@ if (
   process.argv[1] &&
   import.meta.url === pathToFileURL(process.argv[1]).href
 ) {
-  await runCli();
+  runCli();
 }
