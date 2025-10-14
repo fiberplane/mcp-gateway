@@ -1,0 +1,38 @@
+{
+  "name": "@fiberplane/mcp-gateway",
+  "version": "0.3.3",
+  "description": "Interactive CLI for managing MCP servers and running the gateway",
+  "type": "module",
+  "keywords": [
+    "mcp",
+    "gateway",
+    "proxy",
+    "llm",
+    "claude",
+    "model-context-protocol"
+  ],
+  "homepage": "https://github.com/fiberplane/mcp-gateway#readme",
+  "bugs": {
+    "url": "https://github.com/fiberplane/mcp-gateway/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fiberplane/mcp-gateway.git"
+  },
+  "license": "Apache-2.0",
+  "author": "Fiberplane <info@fiberplane.com>",
+  "bin": {
+    "mcp-gateway": "./bin/mcp-gateway"
+  },
+  "scripts": {
+    "postinstall": "node postinstall.mjs"
+  },
+  "optionalDependencies": {
+    "@fiberplane/mcp-gateway-darwin-arm64": "0.3.3",
+    "@fiberplane/mcp-gateway-darwin-x64": "0.3.3",
+    "@fiberplane/mcp-gateway-linux-x64": "0.3.3"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

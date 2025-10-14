@@ -1,5 +1,6 @@
 {
-  "name": "@fiberplane/mcp-gateway",
+  "name": "@fiberplane/mcp-gateway-cli",
+  "private": true,
   "type": "module",
   "version": "0.4.0",
   "homepage": "https://github.com/fiberplane/mcp-gateway",
