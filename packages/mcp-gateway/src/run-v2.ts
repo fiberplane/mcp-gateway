@@ -9,7 +9,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { serve } from "@hono/node-server";
 import { startHealthChecks, logger, getStorageRoot, loadRegistry } from "@fiberplane/mcp-gateway-core";
-import { createApp } from "./server/index.js";
+import { createApp } from "@fiberplane/mcp-gateway-server";
+import { emitLog, emitRegistryUpdate } from "./events.js";
 import { runOpenTUI } from "./tui-v2/App.js";
 import { useAppStore } from "./tui-v2/store.js";
 import type { Context } from "@fiberplane/mcp-gateway-types";
@@ -108,8 +109,11 @@ export async function runCli(): Promise<void> {
     // Load registry once and share it between server and CLI
     const registry = await loadRegistry(storageDir);
 
-    // Start HTTP server
-    const { app } = await createApp(registry, storageDir);
+    // Start HTTP server with event handlers for TUI
+    const { app } = await createApp(registry, storageDir, {
+      onLog: emitLog,
+      onRegistryUpdate: emitRegistryUpdate,
+    });
 
     // Start server and wait for it to be listening or error
     const server = serve({

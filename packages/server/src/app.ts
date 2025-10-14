@@ -1,14 +1,18 @@
 import { Hono } from "hono";
 import { logger as loggerMiddleware } from "hono/logger";
 import { logger, createMcpApp, getStorageRoot } from "@fiberplane/mcp-gateway-core";
-import type { Registry } from "@fiberplane/mcp-gateway-types";
-import { createOAuthRoutes } from "./create-oauth-routes.js";
-import { createProxyRoutes } from "./create-proxy-routes.js";
+import type { Registry, LogEntry } from "@fiberplane/mcp-gateway-types";
+import { createOAuthRoutes } from "./routes/oauth";
+import { createProxyRoutes } from "./routes/proxy";
 
 // Create main application
 export async function createApp(
   registry: Registry,
   storageDir?: string,
+  eventHandlers?: {
+    onLog?: (entry: LogEntry) => void;
+    onRegistryUpdate?: () => void;
+  },
 ): Promise<{ app: Hono; registry: Registry }> {
   const app = new Hono();
 
@@ -58,7 +62,7 @@ export async function createApp(
   app.route("/", oauthRoutes);
 
   // Mount the proxy routes for server connections
-  const proxyRoutes = await createProxyRoutes(registry, storage);
+  const proxyRoutes = await createProxyRoutes(registry, storage, eventHandlers);
   app.route("/servers", proxyRoutes);
   // Short alias for server connections
   app.route("/s", proxyRoutes);

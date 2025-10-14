@@ -22,7 +22,6 @@ import {
   isJsonRpcResponse,
   parseJsonRpcFromSSE,
 } from "@fiberplane/mcp-gateway-core";
-import { emitLog, emitRegistryUpdate } from "../events.js";
 import type {
   Registry,
   CaptureRecord,
@@ -125,7 +124,7 @@ async function updateServerActivity(
   server.lastActivity = new Date().toISOString();
   server.exchangeCount = server.exchangeCount + 1;
   await saveRegistry(storage, registry);
-  emitRegistryUpdate();
+  eventHandlers?.onRegistryUpdate?.();
 }
 
 // Helper: Handle session transition for initialize
@@ -186,7 +185,7 @@ function logRequest(
     request,
   };
 
-  emitLog(logEntry);
+  eventHandlers?.onLog?.(logEntry);
 }
 
 // Helper: Log response
@@ -214,8 +213,8 @@ function logResponse(
     response,
   };
 
-  // Emit log to TUI
-  emitLog(logEntry);
+  // Emit log to TUI (if handler provided)
+  eventHandlers?.onLog?.(logEntry);
 }
 
 // Helper: Capture authentication error with full response
@@ -287,6 +286,10 @@ async function captureAuthError(
 export async function createProxyRoutes(
   registry: Registry,
   storageDir?: string,
+  eventHandlers?: {
+    onLog?: (entry: LogEntry) => void;
+    onRegistryUpdate?: () => void;
+  },
 ): Promise<Hono> {
   const app = new Hono();
 
