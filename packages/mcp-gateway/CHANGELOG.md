@@ -1,5 +1,11 @@
 # @fiberplane/mcp-gateway
 
+## 0.4.0
+
+### Minor Changes
+
+- 6dd9560: Add new (terminal) UI experience
+
 ## 0.3.3
 
 ### Patch Changes
