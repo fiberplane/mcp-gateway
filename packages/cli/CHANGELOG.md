@@ -1,5 +1,13 @@
 # @fiberplane/mcp-gateway
 
+## 0.4.0-next.2
+
+### Patch Changes
+
+- Fix optionalDependencies using workspace: protocol in published package
+
+  Changesets doesn't replace workspace:\* in optionalDependencies, causing npm/bunx to fail. Now using explicit version numbers that will be kept in sync during releases.
+
 ## 0.4.0-next.1
 
 ### Patch Changes
