@@ -57,6 +57,12 @@ for (const path of possiblePaths) {
 }
 
 if (!binaryPath) {
+  // In CI or during builds, binaries might not exist yet - exit gracefully
+  if (process.env.CI || process.env.GITHUB_ACTIONS) {
+    console.log(`⏭️  Skipping binary setup in CI environment (binaries not yet built)`);
+    process.exit(0);
+  }
+
   console.error(`❌ Binary not found for ${platform}-${arch}`);
   console.error(`Searched in:`);
   for (const path of possiblePaths) {
