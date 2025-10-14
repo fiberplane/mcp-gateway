@@ -53,12 +53,18 @@ const binaryName = `mcp-gateway${binaryExt}`;
 debug("Looking for binary:", binaryName);
 debug("Platform package:", platformPackage);
 
+// Extract directory name without scope for monorepo paths
+// (npm packages use "@fiberplane/mcp-gateway-windows-x64" but monorepo dirs are "mcp-gateway-windows-x64")
+const platformDir = platformPackage.replace("@fiberplane/", "");
+
 // Possible locations for the binary package:
-// 1. In our own node_modules (when not hoisted)
-// 2. In parent node_modules (when hoisted - most common)
-// 3. Two levels up (when globally installed)
+// 1. In our own node_modules (when not hoisted) - uses full package name with scope
+// 2. In parent packages/ dir (monorepo) - uses directory name without scope
+// 3. In parent node_modules (when hoisted) - uses full package name with scope
+// 4. Two levels up (when globally installed) - uses full package name with scope
 const possiblePaths = [
   join(__dirname, "node_modules", platformPackage, binaryName),
+  join(__dirname, "..", platformDir, binaryName),
   join(__dirname, "..", platformPackage, binaryName),
   join(__dirname, "..", "..", platformPackage, binaryName),
 ];
