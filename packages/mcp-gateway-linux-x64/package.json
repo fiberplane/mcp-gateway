@@ -1,5 +1,8 @@
 {
   "name": "@fiberplane/mcp-gateway-linux-x64",
   "version": "0.4.0-next.0",
-  "description": "MCP Gateway binary for linux-x64 (placeholder - overwritten by build)"
+  "description": "MCP Gateway binary for linux-x64 (placeholder - overwritten by build)",
+  "bin": {
+    "mcp-gateway": "./mcp-gateway"
+  }
 }

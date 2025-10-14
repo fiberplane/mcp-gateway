@@ -66,14 +66,23 @@
     "packages/mcp-gateway-darwin-arm64": {
       "name": "@fiberplane/mcp-gateway-darwin-arm64",
       "version": "0.4.0-next.0",
+      "bin": {
+        "mcp-gateway": "./mcp-gateway",
+      },
     },
     "packages/mcp-gateway-linux-x64": {
       "name": "@fiberplane/mcp-gateway-linux-x64",
       "version": "0.4.0-next.0",
+      "bin": {
+        "mcp-gateway": "./mcp-gateway",
+      },
     },
     "packages/mcp-gateway-windows-x64": {
       "name": "@fiberplane/mcp-gateway-windows-x64",
       "version": "0.4.0-next.0",
+      "bin": {
+        "mcp-gateway": "./mcp-gateway.exe",
+      },
     },
     "packages/server": {
       "name": "@fiberplane/mcp-gateway-server",
