@@ -82,5 +82,16 @@ try {
     windowsHide: true,
   });
 } catch (error) {
+  // If the binary execution fails, show the error
+  if (error.code === 'EACCES') {
+    console.error('[ERROR] Binary is not executable');
+    console.error('');
+    console.error('The binary file does not have execute permissions.');
+    console.error(`Binary location: ${binaryPath}`);
+    console.error('');
+    console.error('This is a packaging issue. Please report at:');
+    console.error('https://github.com/fiberplane/mcp-gateway/issues');
+    console.error('');
+  }
   process.exit(error.status || 1);
 }

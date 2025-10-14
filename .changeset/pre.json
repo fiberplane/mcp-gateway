@@ -13,6 +13,7 @@
   "changesets": [
     "add-debug-output",
     "binary-distribution-preview",
+    "fix-binary-permissions",
     "fix-bunx-wrapper",
     "fix-workspace-protocol"
   ]
