@@ -11,4 +11,5 @@ await Bun.build({
   entrypoints,
   sourcemap: "inline",
   target: "node",
+  external: ["@opentui/*"],
 });
