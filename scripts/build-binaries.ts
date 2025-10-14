@@ -3,9 +3,9 @@ import { $ } from "bun";
 import { mkdir } from "fs/promises";
 import { join } from "path";
 
-// Read version from main package
-const mainPkg = await Bun.file("./packages/mcp-gateway/package.json").json();
-const VERSION = mainPkg.version;
+// Read version from CLI wrapper package (matches platform packages)
+const cliPkg = await Bun.file("./packages/cli/package.json").json();
+const VERSION = cliPkg.version;
 
 const ALL_PLATFORMS = [
 	{
