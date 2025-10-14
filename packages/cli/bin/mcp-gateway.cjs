@@ -2,26 +2,26 @@
 
 // Wrapper that executes the platform-specific binary
 // This allows bunx/npx to work without running postinstall first
+// Follows the pattern used by Biome and other binary-distribution packages
 
-const { execFileSync } = require('child_process');
-const { existsSync } = require('fs');
-const { join } = require('path');
-const path = require('path');
+const { spawnSync } = require('child_process');
 
 // Detect platform
 const platform = process.platform;
 const arch = process.arch;
 
-// Map to platform package names
-const platformPackages = {
-  'darwin-arm64': '@fiberplane/mcp-gateway-darwin-arm64',
-  'linux-x64': '@fiberplane/mcp-gateway-linux-x64',
+// Map to platform package binary paths
+const PLATFORMS = {
+  'darwin-arm64': '@fiberplane/mcp-gateway-darwin-arm64/mcp-gateway',
+  'darwin-x64': '@fiberplane/mcp-gateway-darwin-x64/mcp-gateway',
+  'linux-x64': '@fiberplane/mcp-gateway-linux-x64/mcp-gateway',
+  'win32-x64': '@fiberplane/mcp-gateway-windows-x64/mcp-gateway.exe',
 };
 
 const platformKey = `${platform}-${arch}`;
-const platformPackage = platformPackages[platformKey];
+const binaryPath = PLATFORMS[platformKey];
 
-if (!platformPackage) {
+if (!binaryPath) {
   if (platform === 'win32') {
     console.error('[ERROR] Windows support is temporarily unavailable in version 0.4.0+');
     console.error('');
@@ -31,43 +31,19 @@ if (!platformPackage) {
   }
 
   console.error(`[ERROR] Unsupported platform: ${platform}-${arch}`);
-  console.error(`Supported platforms: ${Object.keys(platformPackages).join(', ')}`);
+  console.error(`Supported platforms: ${Object.keys(PLATFORMS).join(', ')}`);
   process.exit(1);
 }
 
-// Find the binary (check multiple possible locations)
-const binaryName = platform === 'win32' ? 'mcp-gateway.exe' : 'mcp-gateway';
-
-// Extract package directory name (without scope) for workspace paths
-const platformDir = platformPackage.replace('@fiberplane/', '');
-
-const possiblePaths = [
-  // When installed via npm/bunx - in node_modules
-  path.join(__dirname, '..', 'node_modules', platformPackage, binaryName),
-  // When in workspace/monorepo - sibling packages directory
-  path.join(__dirname, '..', '..', platformDir, binaryName),
-  // When installed globally - platform package hoisted to parent
-  path.join(__dirname, '..', '..', platformPackage, binaryName),
-  // Alternative hoisting pattern
-  path.join(__dirname, '..', '..', '..', platformPackage, binaryName),
-];
-
-let binaryPath = null;
-for (const testPath of possiblePaths) {
-  if (existsSync(testPath)) {
-    binaryPath = testPath;
-    break;
-  }
-}
-
-if (!binaryPath) {
+// Use require.resolve to find the binary (handles all node_modules resolution patterns)
+let resolvedPath;
+try {
+  resolvedPath = require.resolve(binaryPath);
+} catch (error) {
   console.error(`[ERROR] Binary not found for ${platform}-${arch}`);
   console.error('');
   console.error('The platform-specific binary package may not be installed.');
-  console.error('Searched paths:');
-  for (const testPath of possiblePaths) {
-    console.error(`  - ${testPath} (exists: ${existsSync(testPath)})`);
-  }
+  console.error(`Expected package: ${binaryPath.split('/')[0]}`);
   console.error('');
   console.error('This usually means optional dependencies were not installed.');
   console.error('Try: npm install -g @fiberplane/mcp-gateway@next');
@@ -75,30 +51,19 @@ if (!binaryPath) {
   process.exit(1);
 }
 
-// Ensure the binary is executable (npm may not preserve permissions)
-const { chmodSync } = require('fs');
-try {
-  chmodSync(binaryPath, 0o755);
-} catch (error) {
-  // Ignore chmod errors - may not have permission or be on Windows
+// Execute the binary with all arguments
+const result = spawnSync(resolvedPath, process.argv.slice(2), {
+  stdio: 'inherit',
+  shell: false,
+  windowsHide: true,
+});
+
+if (result.error) {
+  console.error('[ERROR] Failed to execute binary');
+  console.error('');
+  console.error(result.error.message);
+  console.error('');
+  process.exit(1);
 }
 
-// Execute the binary with all arguments
-try {
-  execFileSync(binaryPath, process.argv.slice(2), {
-    stdio: 'inherit',
-    windowsHide: true,
-  });
-} catch (error) {
-  // If the binary execution fails, show the error
-  if (error.code === 'EACCES') {
-    console.error('[ERROR] Binary is not executable');
-    console.error('');
-    console.error('The binary file does not have execute permissions.');
-    console.error(`Binary location: ${binaryPath}`);
-    console.error('');
-    console.error('Try running: chmod +x "${binaryPath}"');
-    console.error('');
-  }
-  process.exit(error.status || 1);
-}
+process.exitCode = result.status;

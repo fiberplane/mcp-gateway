@@ -4,6 +4,6 @@
 "@fiberplane/mcp-gateway-linux-x64": patch
 ---
 
-Remove bin field from platform packages to fix npx execution
+Fix npx compatibility by following Biome's binary distribution pattern
 
-Platform packages should not have bin fields as this causes npx to try executing the binary directly instead of going through the wrapper script. Only the CLI wrapper package should declare the bin entry point.
+Refactored the wrapper script to use `require.resolve()` and `spawnSync()` instead of manual path resolution, following the industry-standard pattern used by Biome and other binary distribution packages. Platform packages no longer declare bin entries, which was causing npx to fail. The build script ensures binaries have correct execute permissions.
