@@ -32,16 +32,27 @@ const arch = process.arch;
 // Map to platform package names
 const platformMap = {
   "darwin-arm64": "@fiberplane/mcp-gateway-darwin-arm64",
-  "darwin-x64": "@fiberplane/mcp-gateway-darwin-x64",
   "linux-x64": "@fiberplane/mcp-gateway-linux-x64",
-  "win32-x64": "@fiberplane/mcp-gateway-windows-x64",
 };
 
 const platformKey = `${platform}-${arch}`;
 const platformPackage = platformMap[platformKey];
 
 if (!platformPackage) {
-  console.error(`❌ Unsupported platform: ${platform}-${arch}`);
+  // Special message for Windows users
+  if (platform === "win32") {
+    console.error(`[ERROR] Windows support is temporarily unavailable in version 0.4.0+`);
+    console.error(``);
+    console.error(`Windows builds are experiencing dependency issues during installation.`);
+    console.error(`We're working on a fix. In the meantime, you can:`);
+    console.error(``);
+    console.error(`  1. Use version 0.3.x: npm install -g @fiberplane/mcp-gateway@0.3`);
+    console.error(`  2. File an issue: https://github.com/fiberplane/mcp-gateway/issues`);
+    console.error(``);
+    process.exit(1);
+  }
+
+  console.error(`[ERROR] Unsupported platform: ${platform}-${arch}`);
   console.error(`Supported platforms: ${Object.keys(platformMap).join(", ")}`);
   process.exit(1);
 }
