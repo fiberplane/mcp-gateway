@@ -1,6 +1,6 @@
+import { logger } from "@fiberplane/mcp-gateway-core";
 import { useKeyboard } from "@opentui/react";
 import { useState } from "react";
-import { logger } from "@fiberplane/mcp-gateway-core";
 import { useAppStore } from "../store";
 import { useTheme } from "../theme-context";
 import { Modal } from "./Modal";

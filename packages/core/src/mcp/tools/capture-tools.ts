@@ -1,9 +1,9 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
+import type { CaptureRecord, Registry } from "@fiberplane/mcp-gateway-types";
 import type { McpServer } from "mcp-lite";
 import { z } from "zod";
 import { logger } from "../../logger";
-import type { Registry, CaptureRecord } from "@fiberplane/mcp-gateway-types";
 
 // =============================================================================
 // Types and Interfaces
@@ -177,7 +177,7 @@ async function findCaptureFiles(
 async function parseJsonlFile(filePath: string): Promise<CaptureRecord[]> {
   try {
     // Type assertion needed: Bun's readFile with "utf8" encoding returns string, not Buffer
-    const content = await readFile(filePath, "utf8") as unknown as string;
+    const content = (await readFile(filePath, "utf8")) as unknown as string;
     const lines = content
       .trim()
       .split("\n")

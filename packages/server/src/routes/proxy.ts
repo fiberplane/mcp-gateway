@@ -1,10 +1,5 @@
 import { rename } from "node:fs/promises";
 import { join } from "node:path";
-import { sValidator } from "@hono/standard-validator";
-import type { Context } from "hono";
-import { Hono } from "hono";
-import { proxy } from "hono/proxy";
-import type { z } from "zod";
 import {
   appendCapture,
   captureError,
@@ -12,23 +7,23 @@ import {
   captureSSEJsonRpc,
   createRequestCaptureRecord,
   createResponseCaptureRecord,
+  createSSEEventStream,
   getClientInfo,
-  storeClientInfo,
-  logger,
   getServer,
   getStorageRoot,
-  saveRegistry,
-  createSSEEventStream,
   isJsonRpcResponse,
+  logger,
   parseJsonRpcFromSSE,
+  saveRegistry,
+  storeClientInfo,
 } from "@fiberplane/mcp-gateway-core";
 import type {
-  Registry,
   CaptureRecord,
   JsonRpcRequest,
   JsonRpcResponse,
-  McpServer,
   LogEntry,
+  McpServer,
+  Registry,
 } from "@fiberplane/mcp-gateway-types";
 import {
   clientInfoSchema,
@@ -37,6 +32,11 @@ import {
   serverParamSchema,
   sessionHeaderSchema,
 } from "@fiberplane/mcp-gateway-types";
+import { sValidator } from "@hono/standard-validator";
+import type { Context } from "hono";
+import { Hono } from "hono";
+import { proxy } from "hono/proxy";
+import type { z } from "zod";
 
 // Constant for sessionless (stateless) requests - used when no session ID is provided
 const SESSIONLESS_ID = "stateless";
@@ -368,7 +368,15 @@ export async function createProxyRoutes(
           }
 
           // Log the 401 response (for TUI visibility)
-          logResponse(server, sessionId, jsonRpcRequest.method, 401, duration, undefined, eventHandlers?.onLog);
+          logResponse(
+            server,
+            sessionId,
+            jsonRpcRequest.method,
+            401,
+            duration,
+            undefined,
+            eventHandlers?.onLog,
+          );
 
           // Capture the 401 response with full details
           await captureAuthError(
@@ -395,7 +403,12 @@ export async function createProxyRoutes(
           // Handle SSE streaming response
 
           // Update server activity immediately for SSE
-          await updateServerActivity(storage, registry, server, eventHandlers?.onRegistryUpdate);
+          await updateServerActivity(
+            storage,
+            registry,
+            server,
+            eventHandlers?.onRegistryUpdate,
+          );
 
           if (!targetResponse.body) {
             throw new Error("SSE response has no body");
@@ -469,7 +482,12 @@ export async function createProxyRoutes(
         );
 
         // Update server activity
-        await updateServerActivity(storage, registry, server, eventHandlers?.onRegistryUpdate);
+        await updateServerActivity(
+          storage,
+          registry,
+          server,
+          eventHandlers?.onRegistryUpdate,
+        );
 
         // Create new response with the same data and headers
         // Remove auto-generated headers to avoid duplicates when Response constructor adds them

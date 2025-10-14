@@ -1,12 +1,12 @@
-import { $ } from "bun";
 import { existsSync } from "node:fs";
+import { $ } from "bun";
 
 await $`rm -rf dist`;
 
 // Determine entrypoints based on what exists
 const possibleEntrypoints = [
-  "./src/index.ts",    // Most packages
-  "./src/cli.ts",      // CLI package
+  "./src/index.ts", // Most packages
+  "./src/cli.ts", // CLI package
 ];
 
 const entrypoints = possibleEntrypoints.filter((entry) => existsSync(entry));
@@ -24,6 +24,19 @@ await Bun.build({
   entrypoints,
   sourcemap: "inline",
   target: "node",
+  external: [
+    // Mark @opentui packages as external (they have native modules)
+    "@opentui/*",
+    // Mark React and related packages as external (must be singleton)
+    "react",
+    "react-dom",
+    "react-reconciler",
+    "zustand",
+    // Mark workspace packages as external
+    "@fiberplane/mcp-gateway-types",
+    "@fiberplane/mcp-gateway-core",
+    "@fiberplane/mcp-gateway-server",
+  ],
 });
 
 // Generate TypeScript declaration files for publishing

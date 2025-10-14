@@ -1,7 +1,11 @@
+import {
+  createMcpApp,
+  getStorageRoot,
+  logger,
+} from "@fiberplane/mcp-gateway-core";
+import type { LogEntry, Registry } from "@fiberplane/mcp-gateway-types";
 import { Hono } from "hono";
 import { logger as loggerMiddleware } from "hono/logger";
-import { logger, createMcpApp, getStorageRoot } from "@fiberplane/mcp-gateway-core";
-import type { Registry, LogEntry } from "@fiberplane/mcp-gateway-types";
 import { createOAuthRoutes } from "./routes/oauth";
 import { createProxyRoutes } from "./routes/proxy";
 

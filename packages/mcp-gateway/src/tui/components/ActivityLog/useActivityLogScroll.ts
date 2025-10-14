@@ -1,5 +1,5 @@
-import { useEffect } from "react";
 import type { LogEntry } from "@fiberplane/mcp-gateway-types";
+import { useEffect } from "react";
 import { useAppStore } from "../../store";
 
 /**

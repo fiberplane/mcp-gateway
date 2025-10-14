@@ -1,5 +1,5 @@
-import { useKeyboard } from "@opentui/react";
 import type { LogEntry } from "@fiberplane/mcp-gateway-types";
+import { useKeyboard } from "@opentui/react";
 import { useAppStore } from "../../store";
 
 interface ScrollState {

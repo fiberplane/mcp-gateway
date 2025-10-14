@@ -1,6 +1,6 @@
+import type { Registry } from "@fiberplane/mcp-gateway-types";
 import type { McpServer } from "mcp-lite";
 import { z } from "zod";
-import type { Registry } from "@fiberplane/mcp-gateway-types";
 import {
   addServer as addServerToRegistry,
   getServer,

@@ -1,3 +1,3 @@
-export * from './schemas';
-export * from './shared';
-export * from './registry';
+export * from "./registry";
+export * from "./schemas";
+export * from "./shared";

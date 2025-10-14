@@ -15,12 +15,15 @@
     "typecheck": "bun run --filter '*' typecheck",
     "lint": "biome ci .",
     "format": "biome check --write .",
+    "check-circular": "madge --circular --extensions ts,tsx packages/*/src",
+    "deps-graph": "madge --image deps.svg --extensions ts,tsx packages/*/src",
     "changeset": "changeset",
     "release": "changeset publish"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.2.4",
     "@changesets/cli": "^2.27.9",
+    "madge": "^8.0.0",
     "typescript": "^5.7.2"
   }
 }

@@ -1,6 +1,6 @@
-import { render, useKeyboard } from "@opentui/react";
 import { logger } from "@fiberplane/mcp-gateway-core";
-import type { Registry, Context } from "@fiberplane/mcp-gateway-types";
+import type { Context, Registry } from "@fiberplane/mcp-gateway-types";
+import { render, useKeyboard } from "@opentui/react";
 import { ActivityLog } from "./components/ActivityLog";
 import { ActivityLogDetailModal } from "./components/ActivityLogDetailModal";
 import { AddServerModal } from "./components/AddServerModal";

@@ -1,7 +1,11 @@
+import { loadRegistry, saveRegistry } from "@fiberplane/mcp-gateway-core";
+import type {
+  LogEntry,
+  Registry,
+  ServerHealth,
+} from "@fiberplane/mcp-gateway-types";
 import { create } from "zustand";
 import { emitRegistryUpdate } from "../events";
-import type { Registry, ServerHealth, LogEntry } from "@fiberplane/mcp-gateway-types";
-import { loadRegistry, saveRegistry } from "@fiberplane/mcp-gateway-core";
 
 type ModalType =
   | "add-server"

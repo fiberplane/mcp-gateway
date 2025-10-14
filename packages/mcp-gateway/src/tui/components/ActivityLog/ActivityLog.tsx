@@ -1,6 +1,6 @@
+import type { LogEntry } from "@fiberplane/mcp-gateway-types";
 import { useTerminalDimensions } from "@opentui/react";
 import { useMemo, useRef } from "react";
-import type { LogEntry } from "@fiberplane/mcp-gateway-types";
 import { useHandler } from "../../hooks/useHandler";
 import { useAppStore } from "../../store";
 import { useTheme } from "../../theme-context";

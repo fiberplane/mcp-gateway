@@ -7,13 +7,18 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
-import { serve } from "@hono/node-server";
-import { startHealthChecks, logger, getStorageRoot, loadRegistry } from "@fiberplane/mcp-gateway-core";
+import {
+  getStorageRoot,
+  loadRegistry,
+  logger,
+  startHealthChecks,
+} from "@fiberplane/mcp-gateway-core";
 import { createApp } from "@fiberplane/mcp-gateway-server";
+import type { Context } from "@fiberplane/mcp-gateway-types";
+import { serve } from "@hono/node-server";
 import { emitLog, emitRegistryUpdate } from "./events.js";
 import { runOpenTUI } from "./tui/App.js";
 import { useAppStore } from "./tui/store.js";
-import type { Context } from "@fiberplane/mcp-gateway-types";
 
 function showHelp(): void {
   // biome-ignore lint/suspicious/noConsole: actually want to print to console

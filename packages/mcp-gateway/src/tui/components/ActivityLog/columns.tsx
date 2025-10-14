@@ -1,5 +1,5 @@
-import { useMemo } from "react";
 import type { LogEntry } from "@fiberplane/mcp-gateway-types";
+import { useMemo } from "react";
 import type { Theme } from "../../colors";
 import { formatRequestDetails, formatResponseDetails } from "../formatters";
 import type { Column } from "../ui/Table";

@@ -1,9 +1,10 @@
 import { constants } from "node:fs";
-import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import { access, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { logger } from "../logger";
 import type { Registry } from "@fiberplane/mcp-gateway-types";
+import { logger } from "../logger";
+import { ensureStorageDir } from "../utils/storage";
 import { fromMcpJson, toMcpJson } from "./index";
 
 // Get the storage root directory
@@ -15,16 +16,6 @@ export function getStorageRoot(customDir?: string): string {
       : join(process.cwd(), customDir);
   }
   return join(homedir(), ".mcp-gateway");
-}
-
-// Ensure storage directory exists
-export async function ensureStorageDir(storageDir: string): Promise<void> {
-  try {
-    // Use Node.js fs.mkdir with recursive option
-    await mkdir(storageDir, { recursive: true });
-  } catch (error) {
-    throw new Error(`Failed to create storage directory: ${error}`);
-  }
 }
 
 // Load registry from mcp.json using Node.js fs
@@ -40,7 +31,7 @@ export async function loadRegistry(storageDir: string): Promise<Registry> {
 
   try {
     // Type assertion needed: Bun's readFile with "utf8" encoding returns string, not Buffer
-    const content = await readFile(mcpPath, "utf8") as unknown as string;
+    const content = (await readFile(mcpPath, "utf8")) as unknown as string;
     const data = JSON.parse(content);
     return fromMcpJson(data);
   } catch (_error) {

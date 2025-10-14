@@ -1,8 +1,8 @@
+import { loadRegistry, logger } from "@fiberplane/mcp-gateway-core";
+import type { LogEntry } from "@fiberplane/mcp-gateway-types";
 import { useEffect } from "react";
 import type { Action } from "../../events";
 import { tuiEvents } from "../../events";
-import { logger, loadRegistry } from "@fiberplane/mcp-gateway-core";
-import type { LogEntry } from "@fiberplane/mcp-gateway-types";
 import { useAppStore } from "../store";
 
 /**

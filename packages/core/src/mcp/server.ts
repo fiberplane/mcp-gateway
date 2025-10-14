@@ -1,3 +1,4 @@
+import type { Registry } from "@fiberplane/mcp-gateway-types";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { McpServer, RpcError, StreamableHttpTransport } from "mcp-lite";
@@ -5,7 +6,6 @@ import { z } from "zod";
 import { logger } from "../logger";
 import { createCaptureTools } from "./tools/capture-tools";
 import { createServerTools } from "./tools/server-tools";
-import type { Registry } from "@fiberplane/mcp-gateway-types";
 
 /**
  * Creates an MCP server instance for the gateway with tools for server management

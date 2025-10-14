@@ -1,16 +1,19 @@
 import { constants } from "node:fs";
 import { access, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { logger } from "../logger";
 import type {
   CaptureRecord,
   ClientInfo,
   JsonRpcRequest,
   JsonRpcResponse,
 } from "@fiberplane/mcp-gateway-types";
-import { captureRecordSchema, generateCaptureFilename } from "@fiberplane/mcp-gateway-types";
-import type { SSEEvent } from "./sse-parser";
+import {
+  captureRecordSchema,
+  generateCaptureFilename,
+} from "@fiberplane/mcp-gateway-types";
+import { logger } from "../logger";
 import { ensureServerCaptureDir } from "../registry/storage";
+import type { SSEEvent } from "./sse-parser";
 
 // In-memory storage for client info by session
 const sessionClientInfo = new Map<string, ClientInfo>();
@@ -155,7 +158,7 @@ export async function appendCapture(
     try {
       await access(filePath, constants.F_OK);
       // Type assertion needed: Bun's readFile with "utf8" encoding returns string, not Buffer
-      existingContent = await readFile(filePath, "utf8") as unknown as string;
+      existingContent = (await readFile(filePath, "utf8")) as unknown as string;
     } catch {
       // File doesn't exist, start with empty content
     }
@@ -167,9 +170,9 @@ export async function appendCapture(
       error:
         error instanceof Error
           ? {
-            message: error.message,
-            stack: error.stack,
-          }
+              message: error.message,
+              stack: error.stack,
+            }
           : String(error),
       filePath,
     });

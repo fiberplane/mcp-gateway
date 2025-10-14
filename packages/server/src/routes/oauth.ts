@@ -1,9 +1,9 @@
-import { sValidator } from "@hono/standard-validator";
-import { Hono } from "hono";
-import { proxy } from "hono/proxy";
 import { getServer } from "@fiberplane/mcp-gateway-core";
 import type { Registry } from "@fiberplane/mcp-gateway-types";
 import { serverParamSchema } from "@fiberplane/mcp-gateway-types";
+import { sValidator } from "@hono/standard-validator";
+import { Hono } from "hono";
+import { proxy } from "hono/proxy";
 
 /**
  * Creates Hono app for proxying OAuth 2.0 and OpenID Connect discovery endpoints.
