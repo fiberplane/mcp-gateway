@@ -57,19 +57,37 @@ for (const path of possiblePaths) {
 }
 
 if (!binaryPath) {
-  // Check if we're in a workspace (dev) context by looking for workspace protocol in package.json
-  try {
-    const pkgJsonPath = join(__dirname, "package.json");
-    const pkgJson = JSON.parse(require("fs").readFileSync(pkgJsonPath, "utf-8"));
-    const optDeps = pkgJson.optionalDependencies || {};
-    const hasWorkspaceProtocol = Object.values(optDeps).some(v => typeof v === "string" && v.startsWith("workspace:"));
+  // Check if we're in a monorepo workspace by looking for workspace root markers
+  // This handles the case where binaries haven't been built yet during CI/dev
+  let currentDir = __dirname;
+  let isWorkspace = false;
 
-    if (hasWorkspaceProtocol) {
-      console.log(`⏭️  Skipping binary setup in workspace context (binaries not built yet)`);
-      process.exit(0);
+  // Walk up the directory tree looking for workspace markers
+  for (let i = 0; i < 5; i++) {
+    const parentDir = dirname(currentDir);
+    if (parentDir === currentDir) break; // Reached filesystem root
+
+    // Check for bun.lockb (Bun workspace) or pnpm-workspace.yaml or lerna.json
+    const hasWorkspaceMarker =
+      existsSync(join(parentDir, "bun.lockb")) ||
+      existsSync(join(parentDir, "pnpm-workspace.yaml")) ||
+      existsSync(join(parentDir, "lerna.json"));
+
+    if (hasWorkspaceMarker) {
+      // Also verify this looks like our monorepo by checking for packages dir
+      const hasPackagesDir = existsSync(join(parentDir, "packages"));
+      if (hasPackagesDir) {
+        isWorkspace = true;
+        break;
+      }
     }
-  } catch (e) {
-    // If we can't read package.json, continue to error
+
+    currentDir = parentDir;
+  }
+
+  if (isWorkspace) {
+    console.log(`⏭️  Skipping binary setup in workspace context (binaries not built yet)`);
+    process.exit(0);
   }
 
   console.error(`❌ Binary not found for ${platform}-${arch}`);
