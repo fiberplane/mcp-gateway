@@ -10,8 +10,5 @@
     "@fiberplane/mcp-gateway-types": "0.1.0",
     "@fiberplane/mcp-gateway-linux-x64": "0.4.0-next.0"
   },
-  "changesets": [
-    "binary-distribution-preview",
-    "fix-bunx-wrapper"
-  ]
+  "changesets": ["binary-distribution-preview", "fix-bunx-wrapper"]
 }
