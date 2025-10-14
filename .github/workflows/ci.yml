@@ -41,7 +41,7 @@ jobs:
       - name: Build
         run: bun run --filter @fiberplane/mcp-gateway build
 
-  pkg-pr-new:
+  publish-preview:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -62,4 +62,4 @@ jobs:
         run: bun run --filter @fiberplane/mcp-gateway build
 
       - name: Publish to pkg.pr.new
-        run: bunx pkg-pr-new publish --compact './packages/mcp-gateway'
+        run: bunx pkg-pr-new publish --bin --compact './packages/mcp-gateway'
