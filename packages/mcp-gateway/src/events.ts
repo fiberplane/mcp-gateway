@@ -1,5 +1,5 @@
 import { EventEmitter } from "node:events";
-import type { LogEntry } from "./state.js";
+import type { LogEntry } from "./types.js";
 
 // Central event bus for TUI events
 export const tuiEvents = new EventEmitter();

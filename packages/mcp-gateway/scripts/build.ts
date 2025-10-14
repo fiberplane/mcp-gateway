@@ -2,7 +2,7 @@ import { $ } from "bun";
 
 await $`rm -rf dist`;
 
-const entrypoints = ["./src/run.ts"];
+const entrypoints = ["./src/run-v2.ts"];
 
 await Bun.build({
   format: "esm",
