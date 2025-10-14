@@ -1,6 +1,6 @@
 import type { BoxProps } from "@opentui/react";
 import packageJson from "../../../package.json" with { type: "json" };
-import type { ServerHealth } from "../../registry";
+import type { ServerHealth } from "@fiberplane/mcp-gateway-types";
 import { useCompactHeight } from "../hooks/useCompactHeight";
 import type { UIServer } from "../store";
 import { useAppStore } from "../store";

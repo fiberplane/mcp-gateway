@@ -7,8 +7,8 @@ import type {
   ClientInfo,
   JsonRpcRequest,
   JsonRpcResponse,
-} from "./schemas.js";
-import { captureRecordSchema, generateCaptureFilename } from "./schemas.js";
+} from "@fiberplane/mcp-gateway-types";
+import { captureRecordSchema, generateCaptureFilename } from "@fiberplane/mcp-gateway-types";
 import type { SSEEvent } from "./sse-parser.js";
 import { ensureServerCaptureDir } from "./storage.js";
 

@@ -1,5 +1,5 @@
 import { EventEmitter } from "node:events";
-import type { LogEntry } from "./types.js";
+import type { LogEntry } from "@fiberplane/mcp-gateway-types";
 
 // Central event bus for TUI events
 export const tuiEvents = new EventEmitter();

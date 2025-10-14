@@ -3,7 +3,7 @@ import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { logger } from "./logger.js";
-import type { Registry } from "./registry.js";
+import type { Registry } from "@fiberplane/mcp-gateway-types";
 import { fromMcpJson, toMcpJson } from "./registry.js";
 
 // Get the storage root directory

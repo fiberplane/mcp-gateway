@@ -3,7 +3,7 @@ import { join } from "node:path";
 import type { McpServer } from "mcp-lite";
 import { z } from "zod";
 import { logger } from "../logger.js";
-import type { Registry } from "../registry.js";
+import type { Registry } from "@fiberplane/mcp-gateway-types";
 import type { CaptureRecord } from "../schemas.js";
 
 // =============================================================================

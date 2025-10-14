@@ -1,4 +1,4 @@
-import type { JsonRpcRequest, JsonRpcResponse } from "@fiberplane/mcp-gateway-types";
+import type { JsonRpcRequest, JsonRpcResponse } from "./schemas.js";
 
 // Context holds configuration and dependencies (read-only)
 export type Context = {

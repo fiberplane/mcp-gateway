@@ -14,7 +14,7 @@ import { createApp } from "./server/index.js";
 import { getStorageRoot, loadRegistry } from "./storage.js";
 import { runOpenTUI } from "./tui-v2/App.js";
 import { useAppStore } from "./tui-v2/store.js";
-import type { Context } from "./types.js";
+import type { Context } from "@fiberplane/mcp-gateway-types";
 
 function showHelp(): void {
   // biome-ignore lint/suspicious/noConsole: actually want to print to console

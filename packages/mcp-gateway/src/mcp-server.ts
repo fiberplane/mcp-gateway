@@ -5,7 +5,7 @@ import { z } from "zod";
 import { logger } from "./logger.js";
 import { createCaptureTools } from "./mcp-tools/capture-tools.js";
 import { createServerTools } from "./mcp-tools/server-tools.js";
-import type { Registry } from "./registry.js";
+import type { Registry } from "@fiberplane/mcp-gateway-types";
 
 /**
  * Creates an MCP server instance for the gateway with tools for server management

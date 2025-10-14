@@ -1,4 +1,4 @@
-import type { JsonRpcRequest, JsonRpcResponse } from "./schemas.js";
+import type { JsonRpcRequest, JsonRpcResponse } from "@fiberplane/mcp-gateway-types";
 
 interface SSEReadableStreamReadValue<T> {
   done: false;

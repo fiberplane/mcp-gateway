@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { logger as loggerMiddleware } from "hono/logger";
 import { logger } from "../logger.js";
 import { createMcpApp } from "../mcp-server.js";
-import type { Registry } from "../registry.js";
+import type { Registry } from "@fiberplane/mcp-gateway-types";
 import { getStorageRoot } from "../storage.js";
 import { createOAuthRoutes } from "./create-oauth-routes.js";
 import { createProxyRoutes } from "./create-proxy-routes.js";
