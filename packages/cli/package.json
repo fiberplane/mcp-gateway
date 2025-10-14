@@ -30,7 +30,8 @@
   "optionalDependencies": {
     "@fiberplane/mcp-gateway-darwin-arm64": "0.3.3",
     "@fiberplane/mcp-gateway-darwin-x64": "0.3.3",
-    "@fiberplane/mcp-gateway-linux-x64": "0.3.3"
+    "@fiberplane/mcp-gateway-linux-x64": "0.3.3",
+    "@fiberplane/mcp-gateway-windows-x64": "0.3.3"
   },
   "publishConfig": {
     "access": "public"

@@ -29,6 +29,13 @@ const ALL_PLATFORMS = [
 		cpu: "x64",
 		ext: "",
 	},
+	{
+		target: "bun-windows-x64",
+		name: "windows-x64",
+		os: "win32",
+		cpu: "x64",
+		ext: ".exe",
+	},
 ];
 
 // Detect current platform

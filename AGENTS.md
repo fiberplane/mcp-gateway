@@ -46,7 +46,8 @@ This is a Bun workspace monorepo containing the MCP Gateway project. The reposit
 │   │   └── postinstall.mjs      # Platform detection & binary setup
 │   ├── mcp-gateway-darwin-arm64/  # Binary package for macOS ARM64
 │   ├── mcp-gateway-darwin-x64/    # Binary package for macOS x64
-│   └── mcp-gateway-linux-x64/     # Binary package for Linux x64
+│   ├── mcp-gateway-linux-x64/     # Binary package for Linux x64
+│   └── mcp-gateway-windows-x64/   # Binary package for Windows x64
 ├── test-mcp-server/             # Test MCP server for validation
 │   ├── *.ts                     # Test server configurations
 │   └── package.json             # Test server dependencies
@@ -94,7 +95,7 @@ This is a Bun workspace monorepo containing the MCP Gateway project. The reposit
   - `@fiberplane/mcp-gateway-server` - HTTP API layer (Hono routes and middleware)
   - `@fiberplane/mcp-gateway-cli` (private) - CLI and TUI source code (orchestrates other packages)
   - `@fiberplane/mcp-gateway` (public) - Wrapper package for binary distribution
-  - `@fiberplane/mcp-gateway-*` (3 platform packages) - Compiled binaries for darwin-arm64, darwin-x64, linux-x64
+  - `@fiberplane/mcp-gateway-*` (4 platform packages) - Compiled binaries for darwin-arm64, darwin-x64, linux-x64, windows-x64
 - Use `--filter` flags for package-specific operations
 - Test MCP server is a separate workspace for testing proxy functionality
 - **Binary Distribution**: CLI is distributed as platform-specific compiled binaries, not source code
@@ -327,7 +328,8 @@ The CLI uses OpenTUI which has `bun:ffi` dependencies that **cannot be distribut
 └── Depends on platform-specific binary packages:
     ├── @fiberplane/mcp-gateway-darwin-arm64 (61MB binary)
     ├── @fiberplane/mcp-gateway-darwin-x64 (61MB binary)
-    └── @fiberplane/mcp-gateway-linux-x64 (61MB binary)
+    ├── @fiberplane/mcp-gateway-linux-x64 (61MB binary)
+    └── @fiberplane/mcp-gateway-windows-x64 (61MB binary)
 
 @fiberplane/mcp-gateway-cli (private)
 └── Source code for CLI (not published directly)
@@ -356,7 +358,7 @@ bun run build:binaries --all  # Will fail locally on most platforms
 - ✅ macOS ARM64 (darwin-arm64) - Apple Silicon
 - ✅ macOS x64 (darwin-x64) - Intel Macs
 - ✅ Linux x64 (linux-x64) - Most Linux distributions
-- ❌ Windows - Not yet supported (OpenTUI compatibility TBD)
+- ✅ Windows x64 (windows-x64) - Windows 10/11
 
 ### CI/CD Strategy
 

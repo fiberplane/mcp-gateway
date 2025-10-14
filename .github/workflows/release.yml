@@ -76,6 +76,8 @@ jobs:
             os: macos-13
           - platform: darwin-arm64
             os: macos-latest
+          - platform: windows-x64
+            os: windows-latest
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -133,6 +135,7 @@ jobs:
           mv packages/binary-linux-x64/* packages/mcp-gateway-linux-x64/
           mv packages/binary-darwin-x64/* packages/mcp-gateway-darwin-x64/
           mv packages/binary-darwin-arm64/* packages/mcp-gateway-darwin-arm64/
+          mv packages/binary-windows-x64/* packages/mcp-gateway-windows-x64/
           rm -rf packages/binary-*
 
       - name: Create Release Pull Request or Publish to npm

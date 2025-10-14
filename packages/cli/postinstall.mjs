@@ -22,6 +22,7 @@ const platformMap = {
   "darwin-arm64": "@fiberplane/mcp-gateway-darwin-arm64",
   "darwin-x64": "@fiberplane/mcp-gateway-darwin-x64",
   "linux-x64": "@fiberplane/mcp-gateway-linux-x64",
+  "win32-x64": "@fiberplane/mcp-gateway-windows-x64",
 };
 
 const platformKey = `${platform}-${arch}`;
@@ -34,11 +35,12 @@ if (!platformPackage) {
 }
 
 // Find the binary in node_modules
+const binaryExt = platform === "win32" ? ".exe" : "";
 const binaryPath = join(
   __dirname,
   "node_modules",
   platformPackage,
-  "mcp-gateway"
+  `mcp-gateway${binaryExt}`
 );
 
 if (!existsSync(binaryPath)) {
@@ -59,17 +61,19 @@ if (!existsSync(binDir)) {
 }
 
 // Create symlink to the binary
-const linkPath = join(binDir, "mcp-gateway");
+const linkPath = join(binDir, `mcp-gateway${binaryExt}`);
 
-// Remove existing symlink if present
+// Remove existing symlink/file if present
 if (existsSync(linkPath)) {
   unlinkSync(linkPath);
 }
 
 try {
   symlinkSync(binaryPath, linkPath);
-  // Make sure the binary is executable
-  chmodSync(binaryPath, 0o755);
+  // Make sure the binary is executable (Unix only)
+  if (platform !== "win32") {
+    chmodSync(binaryPath, 0o755);
+  }
   console.log(`✓ MCP Gateway installed successfully for ${platform}-${arch}`);
 } catch (error) {
   console.error(`❌ Failed to create symlink: ${error.message}`);

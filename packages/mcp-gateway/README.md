@@ -19,7 +19,7 @@ mcp-gateway
 
 Runs on port 3333 with an interactive TUI for server management. Configuration persists to `~/.mcp-gateway/mcp.json`.
 
-> **Note**: MCP Gateway is distributed as pre-compiled binaries for optimal performance and compatibility. Supports macOS (Intel & Apple Silicon) and Linux x64.
+> **Note**: MCP Gateway is distributed as pre-compiled binaries for optimal performance and compatibility. Supports macOS (Intel & Apple Silicon), Linux x64, and Windows x64.
 
 ## Adding MCP Servers
 
