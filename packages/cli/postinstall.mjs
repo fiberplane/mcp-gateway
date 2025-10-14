@@ -34,19 +34,36 @@ if (!platformPackage) {
   process.exit(1);
 }
 
-// Find the binary in node_modules
+// Find the binary in node_modules (check multiple locations due to hoisting)
 const binaryExt = platform === "win32" ? ".exe" : "";
-const binaryPath = join(
-  __dirname,
-  "node_modules",
-  platformPackage,
-  `mcp-gateway${binaryExt}`
-);
+const binaryName = `mcp-gateway${binaryExt}`;
 
-if (!existsSync(binaryPath)) {
-  console.error(`❌ Binary not found at ${binaryPath}`);
+// Possible locations for the binary package:
+// 1. In our own node_modules (when not hoisted)
+// 2. In parent node_modules (when hoisted - most common)
+// 3. Two levels up (when globally installed)
+const possiblePaths = [
+  join(__dirname, "node_modules", platformPackage, binaryName),
+  join(__dirname, "..", platformPackage, binaryName),
+  join(__dirname, "..", "..", platformPackage, binaryName),
+];
+
+let binaryPath = null;
+for (const path of possiblePaths) {
+  if (existsSync(path)) {
+    binaryPath = path;
+    break;
+  }
+}
+
+if (!binaryPath) {
+  console.error(`❌ Binary not found for ${platform}-${arch}`);
+  console.error(`Searched in:`);
+  for (const path of possiblePaths) {
+    console.error(`  - ${path}`);
+  }
   console.error(
-    `This may happen if optional dependencies were skipped during installation.`
+    `\nThis may happen if optional dependencies were skipped during installation.`
   );
   console.error(
     `Try reinstalling with: npm install --include=optional`
