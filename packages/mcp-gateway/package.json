@@ -20,7 +20,7 @@
   "scripts": {
     "dev": "LOG_LEVEL=debug bun run --watch src/run-v2.ts",
     "dev:server": "LOG_LEVEL=debug bun run src/server --watch",
-    "build": "bun run scripts/build.ts",
+    "build": "bun run ../../scripts/build.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "lint": "biome ci .",
@@ -48,6 +48,9 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@fiberplane/mcp-gateway-types": "workspace:*",
+    "@fiberplane/mcp-gateway-core": "workspace:*",
+    "@fiberplane/mcp-gateway-server": "workspace:*",
     "@hono/node-server": "^1.19.4",
     "@hono/standard-validator": "^0.1.5",
     "@opentui/core": "^0.1.26",

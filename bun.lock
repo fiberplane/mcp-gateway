@@ -9,6 +9,15 @@
         "typescript": "^5.7.2",
       },
     },
+    "packages/core": {
+      "name": "@fiberplane/mcp-gateway-core",
+      "version": "0.1.0",
+      "dependencies": {
+        "@fiberplane/mcp-gateway-types": "workspace:*",
+        "mcp-lite": "^0.8.1",
+        "zod": "^4.1.11",
+      },
+    },
     "packages/mcp-gateway": {
       "name": "@fiberplane/mcp-gateway",
       "version": "0.3.3",
@@ -16,6 +25,9 @@
         "mcp-gateway": "bin/cli.js",
       },
       "dependencies": {
+        "@fiberplane/mcp-gateway-core": "workspace:*",
+        "@fiberplane/mcp-gateway-server": "workspace:*",
+        "@fiberplane/mcp-gateway-types": "workspace:*",
         "@hono/node-server": "^1.19.4",
         "@hono/standard-validator": "^0.1.5",
         "@opentui/core": "^0.1.26",
@@ -33,6 +45,25 @@
         "@types/node": "^24.7.1",
         "@types/react": "^19.2.2",
         "typescript": "^5",
+      },
+    },
+    "packages/server": {
+      "name": "@fiberplane/mcp-gateway-server",
+      "version": "0.1.0",
+      "dependencies": {
+        "@fiberplane/mcp-gateway-core": "workspace:*",
+        "@fiberplane/mcp-gateway-types": "workspace:*",
+        "@hono/node-server": "^1.19.4",
+        "@hono/standard-validator": "^0.1.5",
+        "hono": "^4.9.8",
+        "zod": "^4.1.11",
+      },
+    },
+    "packages/types": {
+      "name": "@fiberplane/mcp-gateway-types",
+      "version": "0.1.0",
+      "dependencies": {
+        "zod": "^4.1.11",
       },
     },
     "test-mcp-server": {
@@ -108,6 +139,12 @@
     "@dimforge/rapier2d-simd-compat": ["@dimforge/rapier2d-simd-compat@0.17.3", "", {}, "sha512-bijvwWz6NHsNj5e5i1vtd3dU2pDhthSaTUZSh14DUGGKJfw8eMnlWZsxwHBxB/a3AXVNDjL9abuHw1k9FGR+jg=="],
 
     "@fiberplane/mcp-gateway": ["@fiberplane/mcp-gateway@workspace:packages/mcp-gateway"],
+
+    "@fiberplane/mcp-gateway-core": ["@fiberplane/mcp-gateway-core@workspace:packages/core"],
+
+    "@fiberplane/mcp-gateway-server": ["@fiberplane/mcp-gateway-server@workspace:packages/server"],
+
+    "@fiberplane/mcp-gateway-types": ["@fiberplane/mcp-gateway-types@workspace:packages/types"],
 
     "@hono/node-server": ["@hono/node-server@1.19.4", "", { "peerDependencies": { "hono": "^4" } }, "sha512-AWKQZ/YkHUBSHeL/5Ld8FWgUs6wFf4TxGYxqp9wLZxRdFuHBpXmgOq+CuDoL4vllkZLzovCf5HBJnypiy3EtHA=="],
 

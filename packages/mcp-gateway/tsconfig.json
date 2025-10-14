@@ -4,8 +4,14 @@
     "composite": true,
     "outDir": "dist",
     "rootDir": ".",
-    "jsxImportSource": "@opentui/react"
+    "jsxImportSource": "@opentui/react",
+    "noEmit": false
   },
   "include": ["src/**/*", "package.json"],
-  "exclude": ["bin/**/*", "dist", "node_modules", "tests/**/*"]
+  "exclude": ["bin/**/*", "dist", "node_modules", "tests/**/*"],
+  "references": [
+    { "path": "../types" },
+    { "path": "../core" },
+    { "path": "../server" }
+  ]
 }

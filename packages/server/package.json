@@ -1,0 +1,40 @@
+{
+  "name": "@fiberplane/mcp-gateway-server",
+  "type": "module",
+  "version": "0.1.0",
+  "description": "HTTP server for MCP Gateway",
+  "homepage": "https://github.com/fiberplane/mcp-gateway",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fiberplane/mcp-gateway.git"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "bun run ../../scripts/build.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/types/index.d.ts",
+        "import": "./dist/index.js"
+      }
+    }
+  },
+  "dependencies": {
+    "@fiberplane/mcp-gateway-types": "workspace:*",
+    "@fiberplane/mcp-gateway-core": "workspace:*",
+    "@hono/node-server": "^1.19.4",
+    "@hono/standard-validator": "^0.1.5",
+    "hono": "^4.9.8",
+    "zod": "^4.1.11"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "name": "@fiberplane/mcp-gateway-types",
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Shared types and schemas for MCP Gateway",
+  "homepage": "https://github.com/fiberplane/mcp-gateway",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fiberplane/mcp-gateway.git"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "bun run ../../scripts/build.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/types/index.d.ts",
+        "import": "./dist/index.js"
+      }
+    }
+  },
+  "dependencies": {
+    "zod": "^4.1.11"
+  }
+}
