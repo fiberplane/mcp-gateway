@@ -6,11 +6,20 @@ A local HTTP proxy for managing and debugging multiple Model Context Protocol (M
 
 ## Quick Start
 
+**Try it with npx:**
 ```bash
 npx @fiberplane/mcp-gateway
 ```
 
+**Install globally:**
+```bash
+npm install -g @fiberplane/mcp-gateway
+mcp-gateway
+```
+
 Runs on port 3333 with an interactive TUI for server management. Configuration persists to `~/.mcp-gateway/mcp.json`.
+
+> **Note**: MCP Gateway is distributed as pre-compiled binaries for optimal performance and compatibility. Supports macOS (Intel & Apple Silicon) and Linux x64.
 
 ## Adding MCP Servers
 
@@ -100,9 +109,23 @@ mcp-gateway --version
 
 ## Development
 
+This project uses a monorepo structure with the CLI source in `@fiberplane/mcp-gateway-cli`:
+
 ```bash
 # In monorepo root
 bun install
-bun run --filter @fiberplane/mcp-gateway build
-bun run --filter @fiberplane/mcp-gateway test
+
+# Run in development mode
+bun run dev
+
+# Build CLI package
+bun run build
+
+# Build platform binaries
+bun run build:binaries
+
+# Run tests
+bun run --filter @fiberplane/mcp-gateway-cli test
 ```
+
+See [AGENTS.md](../../AGENTS.md) for complete development documentation.
