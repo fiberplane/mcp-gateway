@@ -22,7 +22,7 @@
   "license": "Apache-2.0",
   "author": "Fiberplane <info@fiberplane.com>",
   "bin": {
-    "mcp-gateway": "./bin/mcp-gateway"
+    "mcp-gateway": "./bin/mcp-gateway.cjs"
   },
   "scripts": {
     "postinstall": "node postinstall.mjs"
