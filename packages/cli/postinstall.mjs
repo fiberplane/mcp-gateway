@@ -124,13 +124,13 @@ if (!binaryPath) {
   }
 
   if (isWorkspace) {
-    console.log(`⏭️  Skipping binary setup in workspace context (binaries not built yet)`);
+    console.log(`[SKIP] Skipping binary setup in workspace context (binaries not built yet)`);
     process.exit(0);
   }
 
   debug("Not in workspace, proceeding with error");
 
-  console.error(`❌ Binary not found for ${platform}-${arch}`);
+  console.error(`[ERROR] Binary not found for ${platform}-${arch}`);
   console.error(`Searched in:`);
   for (const path of possiblePaths) {
     console.error(`  - ${path}`);
@@ -176,9 +176,9 @@ try {
     chmodSync(binaryPath, 0o755);
     debug("Symlink successful");
   }
-  console.log(`✓ MCP Gateway installed successfully for ${platform}-${arch}`);
+  console.log(`[SUCCESS] MCP Gateway installed successfully for ${platform}-${arch}`);
 } catch (error) {
-  console.error(`❌ Failed to setup binary: ${error.message}`);
+  console.error(`[ERROR] Failed to setup binary: ${error.message}`);
   debug("Error stack:", error.stack);
   process.exit(1);
 }
