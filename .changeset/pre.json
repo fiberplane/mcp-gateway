@@ -16,6 +16,7 @@
     "chmod-binary",
     "fix-binary-permissions",
     "fix-bunx-wrapper",
-    "fix-workspace-protocol"
+    "fix-workspace-protocol",
+    "remove-bin-from-platform-packages"
   ]
 }

@@ -1,6 +1,6 @@
 {
   "name": "@fiberplane/mcp-gateway",
-  "version": "0.4.0-next.5",
+  "version": "0.4.0-next.6",
   "description": "Interactive CLI for managing MCP servers and running the gateway",
   "type": "module",
   "keywords": [
@@ -28,8 +28,8 @@
     "postinstall": "node postinstall.mjs"
   },
   "optionalDependencies": {
-    "@fiberplane/mcp-gateway-darwin-arm64": "0.4.0-next.4",
-    "@fiberplane/mcp-gateway-linux-x64": "0.4.0-next.4"
+    "@fiberplane/mcp-gateway-darwin-arm64": "0.4.0-next.6",
+    "@fiberplane/mcp-gateway-linux-x64": "0.4.0-next.6"
   },
   "publishConfig": {
     "access": "public"

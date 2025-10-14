@@ -1,5 +1,13 @@
 # @fiberplane/mcp-gateway-linux-x64
 
+## 0.4.0-next.5
+
+### Patch Changes
+
+- Remove bin field from platform packages to fix npx execution
+
+  Platform packages should not have bin fields as this causes npx to try executing the binary directly instead of going through the wrapper script. Only the CLI wrapper package should declare the bin entry point.
+
 ## 0.4.0-next.2
 
 ### Patch Changes
