@@ -39,7 +39,8 @@ export async function loadRegistry(storageDir: string): Promise<Registry> {
   }
 
   try {
-    const content = await readFile(mcpPath, "utf8");
+    // Type assertion needed: Bun's readFile with "utf8" encoding returns string, not Buffer
+    const content = await readFile(mcpPath, "utf8") as unknown as string;
     const data = JSON.parse(content);
     return fromMcpJson(data);
   } catch (_error) {

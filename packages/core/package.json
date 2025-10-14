@@ -19,7 +19,10 @@
     "test": "bun test"
   },
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
   },
   "publishConfig": {
     "access": "public",

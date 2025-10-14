@@ -120,11 +120,12 @@ async function updateServerActivity(
   storage: string,
   registry: Registry,
   server: McpServer,
+  onRegistryUpdate?: () => void,
 ): Promise<void> {
   server.lastActivity = new Date().toISOString();
   server.exchangeCount = server.exchangeCount + 1;
   await saveRegistry(storage, registry);
-  eventHandlers?.onRegistryUpdate?.();
+  onRegistryUpdate?.();
 }
 
 // Helper: Handle session transition for initialize
@@ -173,6 +174,7 @@ function logRequest(
   server: McpServer,
   sessionId: string,
   request: JsonRpcRequest,
+  onLog?: (entry: LogEntry) => void,
 ): void {
   const logEntry: LogEntry = {
     timestamp: new Date().toISOString(),
@@ -185,7 +187,7 @@ function logRequest(
     request,
   };
 
-  eventHandlers?.onLog?.(logEntry);
+  onLog?.(logEntry);
 }
 
 // Helper: Log response
@@ -196,6 +198,7 @@ function logResponse(
   httpStatus: number,
   duration: number,
   response?: JsonRpcResponse,
+  onLog?: (entry: LogEntry) => void,
 ): void {
   const errorMessage = response?.error
     ? `JSON-RPC ${response.error.code}: ${response.error.message}`
@@ -214,7 +217,7 @@ function logResponse(
   };
 
   // Emit log to TUI (if handler provided)
-  eventHandlers?.onLog?.(logEntry);
+  onLog?.(logEntry);
 }
 
 // Helper: Capture authentication error with full response
@@ -331,7 +334,7 @@ export async function createProxyRoutes(
       );
 
       // Log incoming request from client
-      logRequest(server, sessionId, jsonRpcRequest);
+      logRequest(server, sessionId, jsonRpcRequest, eventHandlers?.onLog);
 
       let response: JsonRpcResponse;
       let httpStatus = 200;
@@ -365,7 +368,7 @@ export async function createProxyRoutes(
           }
 
           // Log the 401 response (for TUI visibility)
-          logResponse(server, sessionId, jsonRpcRequest.method, 401, duration);
+          logResponse(server, sessionId, jsonRpcRequest.method, 401, duration, undefined, eventHandlers?.onLog);
 
           // Capture the 401 response with full details
           await captureAuthError(
@@ -392,7 +395,7 @@ export async function createProxyRoutes(
           // Handle SSE streaming response
 
           // Update server activity immediately for SSE
-          await updateServerActivity(storage, registry, server);
+          await updateServerActivity(storage, registry, server, eventHandlers?.onRegistryUpdate);
 
           if (!targetResponse.body) {
             throw new Error("SSE response has no body");
@@ -409,6 +412,7 @@ export async function createProxyRoutes(
             sessionId,
             jsonRpcRequest.method,
             jsonRpcRequest.id,
+            eventHandlers?.onLog,
           );
 
           // Return streaming response to client
@@ -461,10 +465,11 @@ export async function createProxyRoutes(
           httpStatus,
           duration,
           response,
+          eventHandlers?.onLog,
         );
 
         // Update server activity
-        await updateServerActivity(storage, registry, server);
+        await updateServerActivity(storage, registry, server, eventHandlers?.onRegistryUpdate);
 
         // Create new response with the same data and headers
         // Remove auto-generated headers to avoid duplicates when Response constructor adds them
@@ -497,6 +502,7 @@ export async function createProxyRoutes(
           httpStatus,
           duration,
           errorResponse,
+          eventHandlers?.onLog,
         );
 
         // Capture error
@@ -532,6 +538,7 @@ async function processSSECapture(
   sessionId: string,
   method: string,
   requestId?: string | number | null,
+  onLog?: (entry: LogEntry) => void,
 ): Promise<void> {
   try {
     const reader = stream.getReader();
@@ -578,6 +585,7 @@ async function processSSECapture(
               httpStatus,
               durationMs,
               jsonRpcMessage,
+              onLog,
             );
           }
         } else {

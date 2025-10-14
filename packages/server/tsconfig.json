@@ -6,9 +6,5 @@
     "rootDir": "./src",
     "noEmit": false
   },
-  "include": ["src/**/*"],
-  "references": [
-    { "path": "../types" },
-    { "path": "../core" }
-  ]
+  "include": ["src/**/*"]
 }

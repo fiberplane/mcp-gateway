@@ -18,7 +18,7 @@
   },
   "sideEffects": false,
   "scripts": {
-    "dev": "LOG_LEVEL=debug bun run --watch src/run-v2.ts",
+    "dev": "LOG_LEVEL=debug bun run --watch src/cli.ts",
     "dev:server": "LOG_LEVEL=debug bun run src/server --watch",
     "build": "bun run ../../scripts/build.ts",
     "test": "bun test",

@@ -176,11 +176,12 @@ async function findCaptureFiles(
  */
 async function parseJsonlFile(filePath: string): Promise<CaptureRecord[]> {
   try {
-    const content = await readFile(filePath, "utf8");
+    // Type assertion needed: Bun's readFile with "utf8" encoding returns string, not Buffer
+    const content = await readFile(filePath, "utf8") as unknown as string;
     const lines = content
       .trim()
       .split("\n")
-      .filter((line) => line.trim());
+      .filter((line: string) => line.trim());
     const records: CaptureRecord[] = [];
 
     for (const line of lines) {

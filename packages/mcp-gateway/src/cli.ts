@@ -11,8 +11,8 @@ import { serve } from "@hono/node-server";
 import { startHealthChecks, logger, getStorageRoot, loadRegistry } from "@fiberplane/mcp-gateway-core";
 import { createApp } from "@fiberplane/mcp-gateway-server";
 import { emitLog, emitRegistryUpdate } from "./events.js";
-import { runOpenTUI } from "./tui-v2/App.js";
-import { useAppStore } from "./tui-v2/store.js";
+import { runOpenTUI } from "./tui/App.js";
+import { useAppStore } from "./tui/store.js";
 import type { Context } from "@fiberplane/mcp-gateway-types";
 
 function showHelp(): void {

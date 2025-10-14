@@ -154,7 +154,8 @@ export async function appendCapture(
     let existingContent = "";
     try {
       await access(filePath, constants.F_OK);
-      existingContent = await readFile(filePath, "utf8");
+      // Type assertion needed: Bun's readFile with "utf8" encoding returns string, not Buffer
+      existingContent = await readFile(filePath, "utf8") as unknown as string;
     } catch {
       // File doesn't exist, start with empty content
     }
@@ -166,9 +167,9 @@ export async function appendCapture(
       error:
         error instanceof Error
           ? {
-              message: error.message,
-              stack: error.stack,
-            }
+            message: error.message,
+            stack: error.stack,
+          }
           : String(error),
       filePath,
     });

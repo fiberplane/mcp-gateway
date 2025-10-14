@@ -1,17 +1,11 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "composite": true,
     "outDir": "dist",
     "rootDir": ".",
     "jsxImportSource": "@opentui/react",
-    "noEmit": false
+    "noEmit": true
   },
   "include": ["src/**/*", "package.json"],
-  "exclude": ["bin/**/*", "dist", "node_modules", "tests/**/*"],
-  "references": [
-    { "path": "../types" },
-    { "path": "../core" },
-    { "path": "../server" }
-  ]
+  "exclude": ["bin/**/*", "dist", "node_modules", "tests/**/*"]
 }

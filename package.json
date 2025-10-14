@@ -10,6 +10,7 @@
     "dev": "bun run --filter @fiberplane/mcp-gateway dev",
     "build": "bun run --filter @fiberplane/mcp-gateway build",
     "build:types": "bun run --filter @fiberplane/mcp-gateway build:types",
+    "clean": "rm -rf packages/*/dist",
     "test": "bun test",
     "typecheck": "bun run --filter '*' typecheck",
     "lint": "biome ci .",
