@@ -1,5 +1,13 @@
 # @fiberplane/mcp-gateway
 
+## 0.4.0-next.3
+
+### Patch Changes
+
+- Add debug output to wrapper when binary not found
+
+  Show searched paths and existence checks to help diagnose installation issues.
+
 ## 0.4.0-next.2
 
 ### Patch Changes

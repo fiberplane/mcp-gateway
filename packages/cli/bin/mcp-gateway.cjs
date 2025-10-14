@@ -64,7 +64,13 @@ if (!binaryPath) {
   console.error(`[ERROR] Binary not found for ${platform}-${arch}`);
   console.error('');
   console.error('The platform-specific binary package may not be installed.');
-  console.error('Try reinstalling: npm install --force');
+  console.error('Searched paths:');
+  for (const testPath of possiblePaths) {
+    console.error(`  - ${testPath} (exists: ${existsSync(testPath)})`);
+  }
+  console.error('');
+  console.error('This usually means optional dependencies were not installed.');
+  console.error('Try: npm install -g @fiberplane/mcp-gateway@next');
   console.error('');
   process.exit(1);
 }
