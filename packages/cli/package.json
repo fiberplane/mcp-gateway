@@ -28,10 +28,10 @@
     "postinstall": "node postinstall.mjs"
   },
   "optionalDependencies": {
-    "@fiberplane/mcp-gateway-darwin-arm64": "0.4.1-next.0",
-    "@fiberplane/mcp-gateway-darwin-x64": "0.4.1-next.0",
-    "@fiberplane/mcp-gateway-linux-x64": "0.4.1-next.0",
-    "@fiberplane/mcp-gateway-windows-x64": "0.4.1-next.0"
+    "@fiberplane/mcp-gateway-darwin-arm64": "workspace:*",
+    "@fiberplane/mcp-gateway-darwin-x64": "workspace:*",
+    "@fiberplane/mcp-gateway-linux-x64": "workspace:*",
+    "@fiberplane/mcp-gateway-windows-x64": "workspace:*"
   },
   "publishConfig": {
     "access": "public"
