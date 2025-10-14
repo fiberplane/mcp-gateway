@@ -7,6 +7,6 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": ["test-mcp-server"],
+  "ignore": ["test-mcp-server", "@fiberplane/mcp-gateway"],
   "packages": ["packages/*"]
 }

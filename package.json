@@ -3,7 +3,10 @@
   "private": true,
   "type": "module",
   "workspaces": [
-    "packages/*",
+    "packages/types",
+    "packages/core",
+    "packages/server",
+    "packages/mcp-gateway",
     "test-mcp-server"
   ],
   "scripts": {
