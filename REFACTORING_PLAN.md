@@ -475,9 +475,11 @@ If you kept `packages/mcp-gateway/` temporarily:
 - All workspace commands work
 - Publishing dry-run succeeds
 
-### Phase 8: Comprehensive Testing
+### Phase 8: Comprehensive Testing (Optional)
 
 **Goal:** Verify everything works end-to-end.
+
+> **Note:** Most testing has been completed during Phases 1-7. This phase is for final comprehensive validation if needed.
 
 **Tests to run:**
 
@@ -506,9 +508,9 @@ If you kept `packages/mcp-gateway/` temporarily:
 
    # Built version
    cd packages/mcp-gateway
-   node bin/cli.js --help
-   node bin/cli.js --version
-   node bin/cli.js
+   bun bin/cli.js --help
+   bun bin/cli.js --version
+   bun bin/cli.js
    ```
 
 5. **Verify TUI works:**
@@ -521,6 +523,427 @@ If you kept `packages/mcp-gateway/` temporarily:
    - Package is still named `@fiberplane/mcp-gateway`
    - CLI command is still `mcp-gateway`
    - No API changes
+
+### Phase 9: Binary Distribution Strategy
+
+**Goal:** Fix Node.js compatibility by distributing platform-specific Bun binaries through npm.
+
+**Problem:** The current package requires Bun to run because OpenTUI uses Bun-specific APIs (`bun:ffi`). When users install with `npm install -g @fiberplane/mcp-gateway` and try to run with Node.js, it fails.
+
+**Solution:** Compile the application into standalone Bun binaries for each platform and distribute them as optional dependencies, following the pattern used by [opencode](https://github.com/sst/opencode) and [other binary-distributed packages](https://sentry.engineering/blog/publishing-binaries-on-npm).
+
+#### Architecture Overview
+
+```
+packages/
+├── mcp-gateway/                    # Source code (renamed to mcp-gateway-source)
+├── mcp-gateway-linux-x64/          # Platform binary (NEW)
+├── mcp-gateway-darwin-arm64/       # Platform binary (NEW)
+├── mcp-gateway-darwin-x64/         # Platform binary (NEW)
+└── cli/                            # Wrapper package (NEW) - becomes @fiberplane/mcp-gateway
+```
+
+**How it works:**
+1. User runs `npm install -g @fiberplane/mcp-gateway`
+2. npm installs the `cli` package (main package)
+3. npm reads `optionalDependencies` and installs only the matching platform binary
+4. Postinstall script detects platform and creates symlink to binary
+5. `mcp-gateway` command becomes available globally
+
+#### Step 1: Create Binary Build Script
+
+**File:** `scripts/build-binaries.ts`
+
+```typescript
+#!/usr/bin/env bun
+import { $ } from "bun";
+import { mkdir } from "fs/promises";
+import { join } from "path";
+
+// Read version from main package
+const mainPkg = await Bun.file("./packages/mcp-gateway/package.json").json();
+const VERSION = mainPkg.version;
+
+const PLATFORMS = [
+  { target: "bun-linux-x64", name: "linux-x64", os: "linux", cpu: "x64", ext: "" },
+  { target: "bun-darwin-arm64", name: "darwin-arm64", os: "darwin", cpu: "arm64", ext: "" },
+  { target: "bun-darwin-x64", name: "darwin-x64", os: "darwin", cpu: "x64", ext: "" },
+];
+
+console.log(`Building binaries v${VERSION} for ${PLATFORMS.length} platforms...\n`);
+
+for (const platform of PLATFORMS) {
+  console.log(`📦 Building for ${platform.name}...`);
+
+  const pkgDir = `./packages/mcp-gateway-${platform.name}`;
+  await mkdir(pkgDir, { recursive: true });
+
+  // Compile binary
+  await $`bun build --compile \
+    --target=${platform.target} \
+    --minify \
+    --bytecode \
+    ./packages/mcp-gateway/src/cli.ts \
+    --outfile ${pkgDir}/mcp-gateway${platform.ext}`;
+
+  // Make executable
+  if (platform.ext === "") {
+    await $`chmod +x ${pkgDir}/mcp-gateway`;
+  }
+
+  // Create package.json
+  const pkgJson = {
+    name: `@fiberplane/mcp-gateway-${platform.name}`,
+    version: VERSION,
+    description: `MCP Gateway binary for ${platform.os}-${platform.cpu}`,
+    os: [platform.os],
+    cpu: [platform.cpu],
+    files: [`mcp-gateway${platform.ext}`],
+    publishConfig: {
+      access: "public"
+    }
+  };
+
+  await Bun.write(
+    join(pkgDir, "package.json"),
+    JSON.stringify(pkgJson, null, 2)
+  );
+
+  console.log(`✓ Built ${platform.name}\n`);
+}
+
+console.log("✅ All binaries built successfully!");
+```
+
+**Usage:** `bun run scripts/build-binaries.ts`
+
+**Validation:**
+- Binaries created in `packages/mcp-gateway-{platform}/`
+- Each has valid `package.json` with correct `os` and `cpu` fields
+- Binaries are executable: `./packages/mcp-gateway-darwin-arm64/mcp-gateway --version`
+
+#### Step 2: Create CLI Wrapper Package
+
+**File:** `packages/cli/package.json`
+
+```json
+{
+  "name": "@fiberplane/mcp-gateway",
+  "version": "0.4.1",
+  "description": "Local HTTP proxy for managing and debugging Model Context Protocol servers",
+  "type": "module",
+  "bin": {
+    "mcp-gateway": "./bin/mcp-gateway"
+  },
+  "scripts": {
+    "postinstall": "node postinstall.mjs"
+  },
+  "optionalDependencies": {
+    "@fiberplane/mcp-gateway-linux-x64": "0.4.1",
+    "@fiberplane/mcp-gateway-darwin-arm64": "0.4.1",
+    "@fiberplane/mcp-gateway-darwin-x64": "0.4.1"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "homepage": "https://github.com/fiberplane/mcp-gateway",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fiberplane/mcp-gateway.git"
+  },
+  "keywords": ["mcp", "model-context-protocol", "proxy", "gateway"],
+  "license": "MIT"
+}
+```
+
+**File:** `packages/cli/postinstall.mjs`
+
+```javascript
+#!/usr/bin/env node
+import { existsSync, mkdirSync, symlinkSync, chmodSync, copyFileSync, unlinkSync } from "fs";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// Platform detection
+const PLATFORM_MAP = {
+  "linux-x64": "linux-x64",
+  "darwin-x64": "darwin-x64",
+  "darwin-arm64": "darwin-arm64",
+};
+
+const platform = `${process.platform}-${process.arch}`;
+const platformKey = PLATFORM_MAP[platform];
+
+if (!platformKey) {
+  console.error(`❌ Unsupported platform: ${platform}`);
+  console.error(`   Supported platforms: ${Object.keys(PLATFORM_MAP).join(", ")}`);
+  process.exit(1);
+}
+
+// Find binary
+const binaryName = "mcp-gateway";
+const pkgName = `@fiberplane/mcp-gateway-${platformKey}`;
+const binaryPath = join(__dirname, "node_modules", pkgName, binaryName);
+
+if (!existsSync(binaryPath)) {
+  console.error(`❌ Could not find binary for ${platform}`);
+  console.error(`   Expected at: ${binaryPath}`);
+  console.error(`   Package ${pkgName} may not have been installed.`);
+  process.exit(1);
+}
+
+// Create bin directory
+const binDir = join(__dirname, "bin");
+mkdirSync(binDir, { recursive: true });
+
+const binPath = join(binDir, "mcp-gateway");
+
+// Remove existing symlink/file
+if (existsSync(binPath)) {
+  unlinkSync(binPath);
+}
+
+// Create symlink
+try {
+  symlinkSync(binaryPath, binPath);
+  chmodSync(binPath, 0o755);
+  console.log(`✓ Installed mcp-gateway binary for ${platform}`);
+} catch (error) {
+  console.error(`❌ Failed to create binary symlink: ${error.message}`);
+  process.exit(1);
+}
+```
+
+**Validation:**
+- `cd packages/cli && npm install` runs postinstall successfully
+- Symlink created at `packages/cli/bin/mcp-gateway`
+- Binary works: `packages/cli/bin/mcp-gateway --version`
+
+#### Step 3: Rename Source Package
+
+**Actions:**
+1. Rename `packages/mcp-gateway/` package name to `@fiberplane/mcp-gateway-source`
+2. Update all internal workspace references
+3. Update build scripts to reference new name
+4. The new `packages/cli/` becomes the public `@fiberplane/mcp-gateway`
+
+**Package structure after:**
+```
+packages/
+├── types/                          # @fiberplane/mcp-gateway-types
+├── core/                           # @fiberplane/mcp-gateway-core
+├── server/                         # @fiberplane/mcp-gateway-server
+├── mcp-gateway/                    # @fiberplane/mcp-gateway-source (renamed)
+├── mcp-gateway-linux-x64/          # @fiberplane/mcp-gateway-linux-x64
+├── mcp-gateway-darwin-arm64/       # @fiberplane/mcp-gateway-darwin-arm64
+├── mcp-gateway-darwin-x64/         # @fiberplane/mcp-gateway-darwin-x64
+└── cli/                            # @fiberplane/mcp-gateway (main)
+```
+
+**Validation:**
+- No naming conflicts
+- `bun run --filter @fiberplane/mcp-gateway-source build` works
+- Source package not published (dev only)
+
+#### Step 4: Update CI/CD Workflows
+
+**File:** `.github/workflows/release.yml`
+
+Add steps to build and publish binaries:
+
+```yaml
+- name: Build library packages
+  run: |
+    bun run --filter @fiberplane/mcp-gateway-types build
+    bun run --filter @fiberplane/mcp-gateway-core build
+    bun run --filter @fiberplane/mcp-gateway-server build
+    bun run --filter @fiberplane/mcp-gateway-source build
+
+- name: Build binaries
+  run: bun run scripts/build-binaries.ts
+
+- name: Publish library packages
+  run: |
+    cd packages/types && npm publish --access public
+    cd packages/core && npm publish --access public
+    cd packages/server && npm publish --access public
+
+- name: Publish platform binaries
+  run: |
+    for dir in packages/mcp-gateway-*/; do
+      if [ -f "$dir/package.json" ]; then
+        echo "Publishing $(basename $dir)..."
+        cd "$dir"
+        npm publish --access public
+        cd ../..
+      fi
+    done
+  env:
+    NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+- name: Publish CLI wrapper
+  run: |
+    cd packages/cli
+    npm publish --access public
+  env:
+    NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+```
+
+**Add binary testing:**
+
+```yaml
+test-binaries:
+  needs: build
+  strategy:
+    matrix:
+      os: [ubuntu-latest, macos-13, macos-14]
+  runs-on: ${{ matrix.os }}
+  steps:
+    - uses: actions/checkout@v4
+    - uses: oven-sh/setup-bun@v2
+    - run: bun install
+    - run: bun run scripts/build-binaries.ts
+    - name: Test binary
+      run: |
+        BINARY=$(ls packages/mcp-gateway-*/mcp-gateway)
+        $BINARY --version
+        $BINARY --help
+```
+
+#### Step 5: Update Documentation
+
+**CLAUDE.md additions:**
+
+```markdown
+## Binary Distribution
+
+### Building Binaries
+
+Generate platform-specific binaries:
+```bash
+bun run scripts/build-binaries.ts
+```
+
+This creates:
+- `packages/mcp-gateway-linux-x64/mcp-gateway`
+- `packages/mcp-gateway-darwin-arm64/mcp-gateway`
+- `packages/mcp-gateway-darwin-x64/mcp-gateway`
+
+Each binary includes the full Bun runtime (~90-100MB).
+
+### Platform Support
+
+✅ **Supported:**
+- Linux x64
+- macOS ARM64 (Apple Silicon)
+- macOS x64 (Intel)
+
+🔜 **Future:**
+- Windows x64
+- Linux ARM64
+
+### Testing Binaries
+
+```bash
+# Build binaries
+bun run scripts/build-binaries.ts
+
+# Test specific platform
+./packages/mcp-gateway-darwin-arm64/mcp-gateway --version
+
+# Test CLI wrapper with npm link
+cd packages/cli
+npm link
+mcp-gateway --version
+```
+```
+
+**README.md updates:**
+
+```markdown
+## Installation
+
+Install globally via npm (works with Node.js):
+
+```bash
+npm install -g @fiberplane/mcp-gateway
+```
+
+Or use npx:
+
+```bash
+npx @fiberplane/mcp-gateway
+```
+
+### Platform Support
+
+| Platform | Support |
+|----------|---------|
+| Linux x64 | ✅ |
+| macOS ARM64 (Apple Silicon) | ✅ |
+| macOS x64 (Intel) | ✅ |
+| Windows x64 | 🔜 Coming soon |
+| Linux ARM64 | 🔜 Coming soon |
+
+## Development
+
+Requires Bun for development:
+
+```bash
+git clone https://github.com/fiberplane/mcp-gateway
+cd mcp-gateway
+bun install
+bun run dev
+```
+```
+
+#### Benefits
+
+**For Users:**
+- ✅ Works with `npm`/`npx` without Bun installed
+- ✅ Fast startup (no transpilation)
+- ✅ Small download (only one platform, ~100MB)
+- ✅ No runtime dependencies
+
+**For Development:**
+- ✅ Cross-platform builds from single CI job
+- ✅ Simple release process
+- ✅ Version sync across all packages
+- ✅ Fits naturally into monorepo
+
+#### Trade-offs
+
+- ⚠️ Binary size: ~90-100MB per platform (includes Bun runtime)
+- ⚠️ Build time: ~2-3 minutes for all platforms
+- ⚠️ Multiple packages: 4 packages to publish (3 binaries + wrapper)
+- ⚠️ Requires Bun for development/CI (not end users)
+
+#### Rollout Plan
+
+**Phase 1: Beta Testing**
+- Publish as `@fiberplane/mcp-gateway@next`
+- Test with community
+- Monitor platform compatibility
+- Gather feedback
+
+**Phase 2: Production**
+- Promote to `@fiberplane/mcp-gateway@latest`
+- Announce on GitHub/Discord
+- Monitor download stats per platform
+
+**Phase 3: Expansion**
+- Add Windows support
+- Add ARM Linux support
+- Optimize binary size if needed
+
+**Validation:**
+- Local binary builds work on all platforms
+- CLI wrapper installs correctly
+- `npm install -g @fiberplane/mcp-gateway` works with Node.js
+- Binaries run on target platforms
+- CI/CD publishes all packages correctly
 
 ## Rollback Plan
 
