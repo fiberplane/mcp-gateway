@@ -591,7 +591,7 @@ async function processSSECapture(
           );
 
           // Log response to TUI if it's a response (even if capture failed)
-          if (isResponse && "result" in jsonRpcMessage) {
+          if (isResponse) {
             const method = record?.method ?? "unknown";
             const durationMs = record?.metadata.durationMs ?? 0;
             const httpStatus = record?.metadata.httpStatus ?? 200;
