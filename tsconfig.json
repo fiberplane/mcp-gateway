@@ -5,7 +5,7 @@
     "module": "Preserve",
     "moduleDetection": "force",
     "jsx": "react-jsx",
-    "jsxImportSource": "hono/jsx",
+    "jsxImportSource": "react/jsx",
     "allowJs": true,
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
@@ -27,7 +27,7 @@
     { "path": "./packages/types" },
     { "path": "./packages/core" },
     { "path": "./packages/server" },
-    { "path": "./packages/mcp-gateway" },
+    { "path": "./packages/cli" },
 
     // Development packages
     { "path": "./test-mcp-server" }

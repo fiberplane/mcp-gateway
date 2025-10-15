@@ -1,5 +1,6 @@
 {
   "name": "@fiberplane/mcp-gateway-server",
+  "private": true,
   "type": "module",
   "version": "0.2.0-next.0",
   "description": "HTTP server for MCP Gateway",

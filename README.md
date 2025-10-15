@@ -1,1 +1,1 @@
-./packages/mcp-gateway/README.md
+./packages/cli/README.md
