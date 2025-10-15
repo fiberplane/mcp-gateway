@@ -2,7 +2,7 @@ name: Release
 
 on:
   push:
-    branches: [main, refactor-monorepo-phases]
+    branches: [main]
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
@@ -155,8 +155,7 @@ jobs:
     runs-on: ubuntu-latest
     # Run on main (when NOT a version commit) or refactor branch
     if: |
-      (github.ref == 'refs/heads/main' && !startsWith(github.event.head_commit.message, 'Version and publish packages')) ||
-      github.ref == 'refs/heads/refactor-monorepo-phases'
+      (github.ref == 'refs/heads/main' && !startsWith(github.event.head_commit.message, 'Version and publish packages'))
     steps:
       - name: Checkout
         uses: actions/checkout@v4
