@@ -1,5 +1,11 @@
 # @fiberplane/mcp-gateway-darwin-arm64
 
+## 0.4.1
+
+### Patch Changes
+
+- dc6585c: Patch bump to ensure all fixes are included.
+
 ## 0.4.0
 
 ### Minor Changes
