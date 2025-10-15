@@ -2,7 +2,7 @@
   "name": "@fiberplane/mcp-gateway-cli",
   "private": true,
   "type": "module",
-  "version": "0.4.1-next.0",
+  "version": "0.0.0-dev",
   "homepage": "https://github.com/fiberplane/mcp-gateway",
   "repository": {
     "type": "git",

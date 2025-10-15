@@ -3,9 +3,7 @@
  * This is identical to run.ts but uses the new OpenTUI interface
  */
 
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import {
   getStorageRoot,
@@ -19,6 +17,7 @@ import { serve } from "@hono/node-server";
 import { emitLog, emitRegistryUpdate } from "./events.js";
 import { runOpenTUI } from "./tui/App.js";
 import { useAppStore } from "./tui/store.js";
+import { getVersion } from "./utils/version.js";
 
 function showHelp(): void {
   // biome-ignore lint/suspicious/noConsole: actually want to print to console
@@ -43,27 +42,6 @@ Examples:
   mcp-gateway --help
   mcp-gateway --version
 `);
-}
-
-function getVersion(): string {
-  // Check if BUILD_VERSION was defined at compile time
-  // @ts-expect-error - BUILD_VERSION is defined by --define flag during binary build
-  if (typeof BUILD_VERSION !== "undefined") {
-    // @ts-expect-error - BUILD_VERSION is defined by --define flag during binary build
-    return BUILD_VERSION;
-  }
-
-  // Try to read package.json (works in development)
-  try {
-    const __filename = fileURLToPath(import.meta.url);
-    const __dirname = dirname(__filename);
-    const packageJsonPath = join(__dirname, "../package.json");
-    const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
-    return packageJson.version;
-  } catch {
-    // Last resort: return unknown
-    return "unknown";
-  }
 }
 
 function showVersion(): void {
