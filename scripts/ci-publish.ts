@@ -7,7 +7,11 @@ const packagesDir = join(import.meta.dir, "../packages");
 const packages = readdirSync(packagesDir);
 const isSnapshot = process.env.SNAPSHOT === "true";
 
-console.log(isSnapshot ? "📦 Publishing snapshot packages...\n" : "📦 Publishing packages...\n");
+console.log(
+  isSnapshot
+    ? "📦 Publishing snapshot packages...\n"
+    : "📦 Publishing packages...\n",
+);
 
 let publishedCount = 0;
 let skippedCount = 0;
@@ -60,7 +64,7 @@ for (const pkgName of packages) {
   }
 }
 
-console.log(`\n📊 ${isSnapshot ? 'Snapshot ' : ''}Summary:`);
+console.log(`\n📊 ${isSnapshot ? "Snapshot " : ""}Summary:`);
 console.log(`   Published: ${publishedCount}`);
 console.log(`   Skipped: ${skippedCount}`);
 console.log(`   Failed: ${failedCount}\n`);
