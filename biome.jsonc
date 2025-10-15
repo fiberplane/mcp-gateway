@@ -24,6 +24,9 @@
       }
     }
   },
+  "assist": {
+    "enabled": true
+  },
   "overrides": [
     {
       "includes": [

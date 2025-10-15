@@ -1,10 +1,10 @@
 import type { ServerHealth } from "@fiberplane/mcp-gateway-types";
 import type { BoxProps } from "@opentui/react";
+import { getVersion } from "../../utils/version";
 import { useCompactHeight } from "../hooks/useCompactHeight";
 import type { UIServer } from "../store";
 import { useAppStore } from "../store";
 import { useTheme } from "../theme-context";
-import { getVersion } from "../../utils/version";
 
 export function Header() {
   const theme = useTheme();
