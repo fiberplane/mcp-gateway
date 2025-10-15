@@ -19,7 +19,9 @@
     "check-circular": "madge --circular --extensions ts,tsx packages/*/src",
     "deps-graph": "madge --image deps.svg --extensions ts,tsx packages/*/src",
     "changeset": "changeset",
-    "release": "changeset publish"
+    "release": "changeset publish",
+    "ci:version": "changeset version && bun update",
+    "ci:publish": "bun run scripts/ci-publish.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.2.4",
