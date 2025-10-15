@@ -43,24 +43,13 @@ for (const pkgName of packages) {
     console.log(`✅ Published ${pkgJson.name}\n`);
     publishedCount++;
   } catch (error: unknown) {
-    // Check if it's a 403/already published error vs authentication error
     const err = error as { stderr?: { toString(): string }; message?: string };
     const errorOutput = err?.stderr?.toString() || err?.message || "";
 
-    if (
-      errorOutput.includes("cannot publish over") ||
-      errorOutput.includes(
-        "You cannot publish over the previously published versions",
-      )
-    ) {
-      console.log(`⏭️  Skipped ${pkgName} (already published)\n`);
-      skippedCount++;
-    } else {
-      console.error(`❌ Failed to publish ${pkgName}:`);
-      console.error(errorOutput);
-      console.error("");
-      failedCount++;
-    }
+    console.error(`❌ Failed to publish ${pkgName}:`);
+    console.error(errorOutput);
+    console.error("");
+    failedCount++;
   }
 }
 

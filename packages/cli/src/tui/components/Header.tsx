@@ -1,6 +1,6 @@
 import type { ServerHealth } from "@fiberplane/mcp-gateway-types";
 import type { BoxProps } from "@opentui/react";
-import packageJson from "../../../package.json" with { type: "json" };
+import { getVersion } from "../../utils/version";
 import { useCompactHeight } from "../hooks/useCompactHeight";
 import type { UIServer } from "../store";
 import { useAppStore } from "../store";
@@ -23,7 +23,7 @@ export function Header() {
         }}
       >
         <text fg={theme.brand}>
-          <strong>Fiberplane</strong> MCP Gateway v{packageJson.version}
+          <strong>Fiberplane</strong> MCP Gateway v{getVersion()}
         </text>
       </box>
 
