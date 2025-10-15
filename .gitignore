@@ -47,3 +47,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # Auto-generated files
 packages/mcp-gateway/src/version.ts
+
+# Binary packages (compiled executables)
+packages/mcp-gateway-*/mcp-gateway
+packages/mcp-gateway-*/mcp-gateway.exe
