@@ -8,6 +8,10 @@ const packages = readdirSync(packagesDir);
 
 console.log("📦 Publishing packages...\n");
 
+let publishedCount = 0;
+let skippedCount = 0;
+let failedCount = 0;
+
 for (const pkgName of packages) {
   const pkgPath = join(packagesDir, pkgName);
   const pkgJsonPath = join(pkgPath, "package.json");
@@ -17,15 +21,42 @@ for (const pkgName of packages) {
 
     if (pkgJson.private) {
       console.log(`⏭️  Skipped ${pkgName} (private)`);
+      skippedCount++;
       continue;
     }
 
     console.log(`📤 Publishing ${pkgJson.name}@${pkgJson.version}...`);
+
+    // Use bun publish - it respects NPM_CONFIG_TOKEN env variable
     await $`cd ${pkgPath} && bun publish`;
+
     console.log(`✅ Published ${pkgJson.name}\n`);
-  } catch (_error) {
-    console.log(`⚠️  Skipped ${pkgName} (already published or error)\n`);
+    publishedCount++;
+  } catch (error: unknown) {
+    // Check if it's a 403/already published error vs authentication error
+    const err = error as { stderr?: { toString(): string }; message?: string };
+    const errorOutput = err?.stderr?.toString() || err?.message || "";
+
+    if (errorOutput.includes("cannot publish over") || errorOutput.includes("You cannot publish over the previously published versions")) {
+      console.log(`⏭️  Skipped ${pkgName} (already published)\n`);
+      skippedCount++;
+    } else {
+      console.error(`❌ Failed to publish ${pkgName}:`);
+      console.error(errorOutput);
+      console.error("");
+      failedCount++;
+    }
   }
+}
+
+console.log("\n📊 Summary:");
+console.log(`   Published: ${publishedCount}`);
+console.log(`   Skipped: ${skippedCount}`);
+console.log(`   Failed: ${failedCount}\n`);
+
+if (failedCount > 0) {
+  console.error("❌ Some packages failed to publish");
+  process.exit(1);
 }
 
 console.log("🏷️  Creating git tags...");
