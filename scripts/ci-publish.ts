@@ -37,7 +37,12 @@ for (const pkgName of packages) {
     const err = error as { stderr?: { toString(): string }; message?: string };
     const errorOutput = err?.stderr?.toString() || err?.message || "";
 
-    if (errorOutput.includes("cannot publish over") || errorOutput.includes("You cannot publish over the previously published versions")) {
+    if (
+      errorOutput.includes("cannot publish over") ||
+      errorOutput.includes(
+        "You cannot publish over the previously published versions",
+      )
+    ) {
       console.log(`⏭️  Skipped ${pkgName} (already published)\n`);
       skippedCount++;
     } else {
