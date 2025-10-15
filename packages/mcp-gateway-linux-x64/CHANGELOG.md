@@ -1,5 +1,11 @@
 # @fiberplane/mcp-gateway-linux-x64
 
+## 0.4.2
+
+### Patch Changes
+
+- c8c1709: Small patch bump to ensure the correct version is reflected.
+
 ## 0.4.1
 
 ### Patch Changes
