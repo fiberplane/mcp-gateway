@@ -49,7 +49,7 @@ async function main() {
   const bunxWorks = await testCommand("bunx", version);
   const npxWorks = await testCommand("npx", version);
 
-  console.log("\n" + "=".repeat(50));
+  console.log(`\n${"=".repeat(50)}`);
   console.log("Summary:");
   console.log(`  bunx: ${bunxWorks ? "✅ PASS" : "❌ FAIL"}`);
   console.log(`  npx:  ${npxWorks ? "✅ PASS" : "❌ FAIL"}`);
