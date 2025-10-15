@@ -14,7 +14,7 @@
     },
     "packages/cli": {
       "name": "@fiberplane/mcp-gateway-cli",
-      "version": "0.4.1-next.0",
+      "version": "0.0.0-dev",
       "bin": {
         "mcp-gateway": "bin/cli.js",
       },
@@ -53,7 +53,7 @@
     },
     "packages/mcp-gateway": {
       "name": "@fiberplane/mcp-gateway",
-      "version": "0.4.1",
+      "version": "0.4.2",
       "bin": {
         "mcp-gateway": "./bin/mcp-gateway.cjs",
       },
@@ -64,11 +64,11 @@
     },
     "packages/mcp-gateway-darwin-arm64": {
       "name": "@fiberplane/mcp-gateway-darwin-arm64",
-      "version": "0.4.1",
+      "version": "0.4.2",
     },
     "packages/mcp-gateway-linux-x64": {
       "name": "@fiberplane/mcp-gateway-linux-x64",
-      "version": "0.4.1",
+      "version": "0.4.2",
     },
     "packages/server": {
       "name": "@fiberplane/mcp-gateway-server",
