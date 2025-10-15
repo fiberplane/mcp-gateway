@@ -1,0 +1,17 @@
+{
+  "name": "@fiberplane/mcp-gateway-darwin-arm64",
+  "version": "0.4.0-next.8",
+  "description": "MCP Gateway binary for darwin-arm64",
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "files": [
+    "mcp-gateway"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

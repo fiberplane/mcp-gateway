@@ -26,7 +26,11 @@
   },
   "overrides": [
     {
-      "includes": ["test-mcp-server/**/*.ts", "test-mcp-server/**/*.tsx"],
+      "includes": [
+        "test-mcp-server/**/*.ts",
+        "test-mcp-server/**/*.tsx",
+        "**/scripts/**/*.ts"
+      ],
       "linter": {
         "rules": {
           "suspicious": {

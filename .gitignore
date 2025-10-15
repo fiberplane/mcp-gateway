@@ -44,3 +44,6 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # Test storage
 .test-storage
+
+# Auto-generated files
+packages/mcp-gateway/src/version.ts

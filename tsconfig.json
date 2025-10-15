@@ -5,7 +5,7 @@
     "module": "Preserve",
     "moduleDetection": "force",
     "jsx": "react-jsx",
-    "jsxImportSource": "hono/jsx",
+    "jsxImportSource": "react/jsx",
     "allowJs": true,
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
@@ -23,13 +23,13 @@
     "noPropertyAccessFromIndexSignature": false
   },
   "references": [
-    // Published packages
-    { "path": "./packages/mcp-gateway" },
+    // Published packages (in dependency order)
+    { "path": "./packages/types" },
+    { "path": "./packages/core" },
+    { "path": "./packages/server" },
+    { "path": "./packages/cli" },
 
     // Development packages
     { "path": "./test-mcp-server" }
-
-    // Add new packages here:
-    // { "path": "./packages/new-package" }
   ]
 }
