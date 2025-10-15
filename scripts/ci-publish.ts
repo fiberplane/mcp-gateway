@@ -5,8 +5,9 @@ import { $ } from "bun";
 
 const packagesDir = join(import.meta.dir, "../packages");
 const packages = readdirSync(packagesDir);
+const isSnapshot = process.env.SNAPSHOT === "true";
 
-console.log("📦 Publishing packages...\n");
+console.log(isSnapshot ? "📦 Publishing snapshot packages...\n" : "📦 Publishing packages...\n");
 
 let publishedCount = 0;
 let skippedCount = 0;
@@ -28,7 +29,12 @@ for (const pkgName of packages) {
     console.log(`📤 Publishing ${pkgJson.name}@${pkgJson.version}...`);
 
     // Use bun publish - it respects NPM_CONFIG_TOKEN env variable
-    await $`cd ${pkgPath} && bun publish`;
+    // Add --tag next for snapshot releases
+    if (isSnapshot) {
+      await $`cd ${pkgPath} && bun publish --tag next`;
+    } else {
+      await $`cd ${pkgPath} && bun publish`;
+    }
 
     console.log(`✅ Published ${pkgJson.name}\n`);
     publishedCount++;
@@ -54,7 +60,7 @@ for (const pkgName of packages) {
   }
 }
 
-console.log("\n📊 Summary:");
+console.log(`\n📊 ${isSnapshot ? 'Snapshot ' : ''}Summary:`);
 console.log(`   Published: ${publishedCount}`);
 console.log(`   Skipped: ${skippedCount}`);
 console.log(`   Failed: ${failedCount}\n`);
@@ -64,6 +70,10 @@ if (failedCount > 0) {
   process.exit(1);
 }
 
-console.log("🏷️  Creating git tags...");
-await $`changeset tag`;
+// Only create git tags for normal releases, not snapshots
+if (!isSnapshot) {
+  console.log("🏷️  Creating git tags...");
+  await $`changeset tag`;
+}
+
 console.log("✨ Done!");

@@ -97,13 +97,12 @@ jobs:
           path: packages/mcp-gateway-${{ matrix.platform }}/
           retention-days: 1
 
-  # Publish all packages to npm
-  publish:
-    name: Publish to npm
+  # Create version PR or publish normal release
+  release:
+    name: Release via Changesets
     needs: build-binaries
     runs-on: ubuntu-latest
-    # Publish on main or when in prerelease mode on refactor branch
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/refactor-monorepo-phases'
+    if: github.ref == 'refs/heads/main'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -148,4 +147,55 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
-          # NPM_CONFIG_PROVENANCE: true
+
+  # Publish snapshot releases
+  snapshot:
+    name: Publish snapshot
+    needs: build-binaries
+    runs-on: ubuntu-latest
+    # Run on main (when NOT a version commit) or refactor branch
+    if: |
+      (github.ref == 'refs/heads/main' && !startsWith(github.event.head_commit.message, 'Version and publish packages')) ||
+      github.ref == 'refs/heads/refactor-monorepo-phases'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: "https://registry.npmjs.org"
+          always-auth: true
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Download all binary artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: packages/
+
+      - name: Restore binary artifacts to correct locations
+        run: |
+          mv packages/binary-linux-x64/* packages/mcp-gateway-linux-x64/
+          mv packages/binary-darwin-arm64/* packages/mcp-gateway-darwin-arm64/
+          rm -rf packages/binary-*
+
+      - name: Create snapshot versions
+        run: |
+          bun changeset version --snapshot
+          bun update
+
+      - name: Publish snapshot to npm
+        run: bun run ci:publish
+        env:
+          SNAPSHOT: true
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
