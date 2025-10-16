@@ -5,7 +5,7 @@ import type {
   ServerInfo,
   SessionInfo,
 } from "@fiberplane/mcp-gateway-types";
-import { and, count, desc, eq, gt, gte, like, lt, lte, sql } from "drizzle-orm";
+import { and, count, desc, eq, gt, like, lt, sql } from "drizzle-orm";
 import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
 import type * as schema from "./schema.js";
 import { type Log, logs, type NewLog } from "./schema.js";
