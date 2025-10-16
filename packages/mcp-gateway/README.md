@@ -109,7 +109,7 @@ mcp-gateway --version
 
 ## Development
 
-This project uses a monorepo structure with the CLI source in `@fiberplane/mcp-gateway-cli`:
+This project uses a monorepo structure with the CLI source in `@fiberplane/mcp-gateway-cli`. The `@fiberplane/mcp-gateway` functions as the entry point to run the right platform binary which bundles in the `@fiberplane/mcp-gateway-cli` package.
 
 ```bash
 # In monorepo root
