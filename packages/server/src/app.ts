@@ -10,6 +10,7 @@ import {
 import type { LogEntry, Registry } from "@fiberplane/mcp-gateway-types";
 import { Hono } from "hono";
 import { logger as loggerMiddleware } from "hono/logger";
+import { serveStatic } from "hono/bun";
 import { createOAuthRoutes } from "./routes/oauth";
 import { createProxyRoutes } from "./routes/proxy";
 
@@ -88,6 +89,29 @@ export async function createApp(
   app.route("/gateway", gatewayMcp);
   // Short alias for gateway's own MCP server
   app.route("/g", gatewayMcp);
+
+  // Serve web UI static files for paths that don't match API/server routes
+  // The serveStatic middleware will only serve files that exist in the public directory
+  app.use(
+    "*",
+    serveStatic({
+      root: "./dist",
+      path: "public",
+    }),
+  );
+
+  // Fallback to index.html for SPA client-side routing (for non-API paths)
+  app.get("*", async (c) => {
+    const indexPath = "./dist/public/index.html";
+    try {
+      const file = Bun.file(indexPath);
+      const html = await file.text();
+      return c.html(html);
+    } catch {
+      // If index.html doesn't exist, return 404
+      return c.text("Web UI not available", 404);
+    }
+  });
 
   return { app, registry };
 }

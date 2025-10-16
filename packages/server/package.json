@@ -11,11 +11,13 @@
   },
   "files": [
     "dist",
+    "public",
     "README.md"
   ],
   "sideEffects": false,
   "scripts": {
-    "build": "bun run ../../scripts/build.ts",
+    "build": "bun run ../../scripts/build.ts && bun run postbuild",
+    "postbuild": "mkdir -p dist/public && cp -r ../web/dist/* dist/public/",
     "typecheck": "tsc --noEmit"
   },
   "exports": {
@@ -37,6 +39,7 @@
     "@fiberplane/mcp-gateway-types": "workspace:*",
     "@fiberplane/mcp-gateway-core": "workspace:*",
     "@fiberplane/mcp-gateway-api": "workspace:*",
+    "@fiberplane/mcp-gateway-web": "workspace:*",
     "@hono/node-server": "^1.19.4",
     "@hono/standard-validator": "^0.1.5",
     "hono": "^4.9.8",
