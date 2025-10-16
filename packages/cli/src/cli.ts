@@ -61,11 +61,14 @@ Options:
                                (default: 3333)
   --storage-dir <path>          Storage directory for registry and captures
                                (default: ~/.mcp-gateway)
+  --no-tui                      Run in headless mode without terminal UI
+                               (default: false, auto-detects TTY)
 
 Examples:
   mcp-gateway
   mcp-gateway --port 8080
   mcp-gateway --storage-dir /tmp/mcp-data
+  mcp-gateway --no-tui
   mcp-gateway --help
   mcp-gateway --version
 `);
@@ -99,6 +102,10 @@ export async function runCli(): Promise<void> {
         "storage-dir": {
           type: "string",
           default: undefined,
+        },
+        "no-tui": {
+          type: "boolean",
+          default: false,
         },
       },
       allowPositionals: false,
@@ -232,8 +239,8 @@ export async function runCli(): Promise<void> {
       },
     };
 
-    // Start TUI only if running in a TTY
-    if (process.stdin.isTTY) {
+    // Start TUI only if running in a TTY and --no-tui flag is not set
+    if (process.stdin.isTTY && !values["no-tui"]) {
       // Listen for registry updates and reload into HTTP server's registry
       const { tuiEvents } = await import("./events.js");
       tuiEvents.on("action", async (action) => {
@@ -254,9 +261,12 @@ export async function runCli(): Promise<void> {
       logger.info("Starting UI", { version: getVersion() });
       await runOpenTUI(context, registry);
     } else {
+      const reason = !process.stdin.isTTY
+        ? "no TTY detected"
+        : "--no-tui flag set";
       // biome-ignore lint/suspicious/noConsole: actually want to print to console
       console.log(
-        "Running in headless mode (no TTY detected). Server will run until terminated.",
+        `Running in headless mode (${reason}). Server will run until terminated.`,
       );
       // Keep process alive and handle signals
       process.on("SIGTERM", async () => {
