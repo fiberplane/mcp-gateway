@@ -20,8 +20,9 @@ const dbCache = new Map<string, BunSQLiteDatabase<typeof schema>>();
  */
 export function getDb(storageDir: string): BunSQLiteDatabase<typeof schema> {
   // Return cached connection if exists
-  if (dbCache.has(storageDir)) {
-    return dbCache.get(storageDir)!;
+  const cached = dbCache.get(storageDir);
+  if (cached) {
+    return cached;
   }
 
   // Create new connection
