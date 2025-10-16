@@ -45,6 +45,7 @@ The CLI package orchestrates this server with the API package and Web UI.
 
 ```typescript
 import { createApp } from "@fiberplane/mcp-gateway-server";
+import { createMcpApp, logger } from "@fiberplane/mcp-gateway-core";
 import type { Registry } from "@fiberplane/mcp-gateway-types";
 
 const registry: Registry = {
@@ -57,14 +58,14 @@ const registry: Registry = {
   ],
 };
 
-const { app } = await createApp(
+const { app } = await createApp({
   registry,
-  "~/.mcp-gateway", // optional storage directory
-  {
-    onLog: (entry) => console.log(entry), // optional log handler
-    onRegistryUpdate: () => console.log("Registry updated"), // optional
-  }
-);
+  storageDir: "~/.mcp-gateway",
+  createMcpApp,
+  logger,
+  onLog: (entry) => console.log(entry),
+  onRegistryUpdate: () => console.log("Registry updated"),
+});
 
 // Start server
 Bun.serve({
@@ -80,10 +81,18 @@ The server can be mounted as a sub-app:
 ```typescript
 import { createApp as createServerApp } from "@fiberplane/mcp-gateway-server";
 import { createApp as createApiApp } from "@fiberplane/mcp-gateway-api";
+import { createMcpApp, logger, queryLogs, getServers, getSessions } from "@fiberplane/mcp-gateway-core";
 import { Hono } from "hono";
 
-// Create MCP protocol server
-const { app: serverApp } = await createServerApp(registry, storageDir);
+// Create MCP protocol server with dependency injection
+const { app: serverApp } = await createServerApp({
+  registry,
+  storageDir,
+  createMcpApp,
+  logger,
+  onLog: (entry) => console.log(entry),
+  onRegistryUpdate: () => console.log("Registry updated"),
+});
 
 // Create complete application
 const app = new Hono();
@@ -149,24 +158,31 @@ curl http://localhost:3333/
 curl http://localhost:3333/status
 ```
 
-## Event Handlers
+## Dependency Injection
 
-The server accepts optional event handlers for integration:
+The server uses dependency injection for flexibility and testability:
 
 ```typescript
-const { app } = await createApp(registry, storageDir, {
-  onLog: (entry) => {
-    // Called for each request/response
+const { app } = await createApp({
+  registry,                    // Registry with server configurations
+  storageDir,                  // Storage directory (absolute path)
+  createMcpApp,                // Factory for creating gateway MCP server
+  logger,                      // Logger instance for request logging
+  onLog: (entry) => {          // Optional: Called for each request/response
     console.log(`${entry.method} - ${entry.httpStatus}`);
   },
-  onRegistryUpdate: () => {
-    // Called when servers are added/removed
+  onRegistryUpdate: () => {    // Optional: Called when servers are modified
     console.log("Registry changed");
   },
 });
 ```
 
-These are used by the CLI to update the TUI in real-time.
+This pattern allows:
+- **Reusability**: Server can be embedded in other applications
+- **Testability**: Dependencies can be mocked in tests
+- **Flexibility**: Different implementations for different environments
+
+These handlers are used by the CLI to update the TUI in real-time.
 
 ## Dependencies
 

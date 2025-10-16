@@ -1,13 +1,19 @@
-import {
-  createMcpApp,
-  getStorageRoot,
-  logger,
-} from "@fiberplane/mcp-gateway-core";
 import type { LogEntry, Registry } from "@fiberplane/mcp-gateway-types";
-import { Hono } from "hono";
+import type { Hono } from "hono";
+import { Hono as HonoApp } from "hono";
 import { logger as loggerMiddleware } from "hono/logger";
 import { createOAuthRoutes } from "./routes/oauth";
 import { createProxyRoutes } from "./routes/proxy";
+
+/**
+ * Logger interface for dependency injection
+ */
+export interface Logger {
+  debug(message: string, context?: Record<string, unknown>): void;
+  info(message: string, context?: Record<string, unknown>): void;
+  warn(message: string, context?: Record<string, unknown>): void;
+  error(message: string, context?: Record<string, unknown>): void;
+}
 
 /**
  * Create MCP Gateway HTTP server
@@ -21,15 +27,23 @@ import { createProxyRoutes } from "./routes/proxy";
  * Note: This does NOT include the query API or Web UI - those should be
  * mounted separately by the CLI package for observability/management.
  */
-export async function createApp(
-  registry: Registry,
-  storageDir?: string,
-  eventHandlers?: {
-    onLog?: (entry: LogEntry) => void;
-    onRegistryUpdate?: () => void;
-  },
-): Promise<{ app: Hono; registry: Registry }> {
-  const app = new Hono();
+export async function createApp(options: {
+  registry: Registry;
+  storageDir: string;
+  createMcpApp: (registry: Registry, storage: string) => Hono;
+  logger: Logger;
+  onLog?: (entry: LogEntry) => void;
+  onRegistryUpdate?: () => void;
+}): Promise<{ app: Hono; registry: Registry }> {
+  const {
+    registry,
+    storageDir,
+    createMcpApp,
+    logger,
+    onLog,
+    onRegistryUpdate,
+  } = options;
+  const app = new HonoApp();
 
   // Custom Hono logger middleware to log to our log files
   app.use(
@@ -41,9 +55,6 @@ export async function createApp(
       }
     }),
   );
-
-  // Determine storage directory
-  const storage = getStorageRoot(storageDir);
 
   // Health check endpoint
   app.get("/", (c) => {
@@ -67,7 +78,7 @@ export async function createApp(
           exchangeCount: s.exchangeCount,
         })),
       },
-      storage: storage,
+      storage: storageDir,
     });
   });
 
@@ -77,13 +88,18 @@ export async function createApp(
   app.route("/", oauthRoutes);
 
   // Mount the proxy routes for server connections
-  const proxyRoutes = await createProxyRoutes(registry, storage, eventHandlers);
+  const proxyRoutes = await createProxyRoutes({
+    registry,
+    storageDir,
+    onLog,
+    onRegistryUpdate,
+  });
   app.route("/servers", proxyRoutes);
   // Short alias for server connections
   app.route("/s", proxyRoutes);
 
   // Mount the gateway's own MCP server at canonical path
-  const gatewayMcp = createMcpApp(registry, storage);
+  const gatewayMcp = createMcpApp(registry, storageDir);
   app.route("/gateway", gatewayMcp);
   // Short alias for gateway's own MCP server
   app.route("/g", gatewayMcp);

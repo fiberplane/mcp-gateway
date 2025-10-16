@@ -10,7 +10,6 @@ import {
   createSSEEventStream,
   getClientInfo,
   getServer,
-  getStorageRoot,
   isJsonRpcResponse,
   logger,
   parseJsonRpcFromSSE,
@@ -286,18 +285,14 @@ async function captureAuthError(
  *
  * This can be mounted at `/servers` or `/s` (short alias route) in the main server
  */
-export async function createProxyRoutes(
-  registry: Registry,
-  storageDir?: string,
-  eventHandlers?: {
-    onLog?: (entry: LogEntry) => void;
-    onRegistryUpdate?: () => void;
-  },
-): Promise<Hono> {
+export async function createProxyRoutes(options: {
+  registry: Registry;
+  storageDir: string;
+  onLog?: (entry: LogEntry) => void;
+  onRegistryUpdate?: () => void;
+}): Promise<Hono> {
+  const { registry, storageDir, onLog, onRegistryUpdate } = options;
   const app = new Hono();
-
-  // Determine storage directory
-  const storage = getStorageRoot(storageDir);
 
   // Canonical proxy route for server connections
   app.post(
@@ -329,12 +324,12 @@ export async function createProxyRoutes(
         jsonRpcRequest,
       );
       const requestCaptureFilename = await appendCapture(
-        storage,
+        storageDir,
         requestRecord,
       );
 
       // Log incoming request from client
-      logRequest(server, sessionId, jsonRpcRequest, eventHandlers?.onLog);
+      logRequest(server, sessionId, jsonRpcRequest, onLog);
 
       let response: JsonRpcResponse;
       let httpStatus = 200;
@@ -375,12 +370,12 @@ export async function createProxyRoutes(
             401,
             duration,
             undefined,
-            eventHandlers?.onLog,
+            onLog,
           );
 
           // Capture the 401 response with full details
           await captureAuthError(
-            storage,
+            storageDir,
             server.name,
             sessionId,
             jsonRpcRequest,
@@ -404,10 +399,10 @@ export async function createProxyRoutes(
 
           // Update server activity immediately for SSE
           await updateServerActivity(
-            storage,
+            storageDir,
             registry,
             server,
-            eventHandlers?.onRegistryUpdate,
+            onRegistryUpdate,
           );
 
           if (!targetResponse.body) {
@@ -420,12 +415,12 @@ export async function createProxyRoutes(
           // Start background capture processing
           processSSECapture(
             streamForCapture,
-            storage,
+            storageDir,
             server,
             sessionId,
             jsonRpcRequest.method,
             jsonRpcRequest.id,
-            eventHandlers?.onLog,
+            onLog,
           );
 
           // Return streaming response to client
@@ -457,12 +452,12 @@ export async function createProxyRoutes(
             httpStatus,
             jsonRpcRequest.method,
           );
-          await appendCapture(storage, responseRecord);
+          await appendCapture(storageDir, responseRecord);
         }
 
         // Handle initialize → session transition
         await handleSessionTransition(
-          storage,
+          storageDir,
           server,
           targetResponse,
           sessionId,
@@ -478,15 +473,15 @@ export async function createProxyRoutes(
           httpStatus,
           duration,
           response,
-          eventHandlers?.onLog,
+          onLog,
         );
 
         // Update server activity
         await updateServerActivity(
-          storage,
+          storageDir,
           registry,
           server,
-          eventHandlers?.onRegistryUpdate,
+          onRegistryUpdate,
         );
 
         // Create new response with the same data and headers
@@ -520,12 +515,12 @@ export async function createProxyRoutes(
           httpStatus,
           duration,
           errorResponse,
-          eventHandlers?.onLog,
+          onLog,
         );
 
         // Capture error
         await captureError(
-          storage,
+          storageDir,
           server.name,
           sessionId,
           jsonRpcRequest,

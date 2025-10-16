@@ -9,6 +9,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { createApp as createApiApp } from "@fiberplane/mcp-gateway-api";
 import {
+  createMcpApp,
   getServers,
   getSessions,
   getStorageRoot,
@@ -145,7 +146,11 @@ export async function runCli(): Promise<void> {
     const registry = await loadRegistry(storageDir);
 
     // Create MCP protocol server (proxy, OAuth, gateway MCP server)
-    const { app: serverApp } = await createServerApp(registry, storageDir, {
+    const { app: serverApp } = await createServerApp({
+      registry,
+      storageDir,
+      createMcpApp,
+      logger,
       onLog: emitLog,
       onRegistryUpdate: emitRegistryUpdate,
     });
