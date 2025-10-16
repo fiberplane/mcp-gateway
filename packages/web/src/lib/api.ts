@@ -60,9 +60,16 @@ class APIClient {
   }): Promise<LogQueryResult> {
     const url = new URL(`${this.baseURL}/logs`, window.location.origin);
 
+    // Map frontend parameter names to API parameter names
+    const paramMapping: Record<string, string> = {
+      serverName: "server",
+      sessionId: "session",
+    };
+
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined) {
-        url.searchParams.append(key, String(value));
+        const apiKey = paramMapping[key] || key;
+        url.searchParams.append(apiKey, String(value));
       }
     }
 
@@ -90,7 +97,7 @@ class APIClient {
   async getSessions(serverName?: string): Promise<{ sessions: SessionInfo[] }> {
     const url = new URL(`${this.baseURL}/sessions`, window.location.origin);
     if (serverName) {
-      url.searchParams.append("serverName", serverName);
+      url.searchParams.append("server", serverName);
     }
 
     const response = await fetch(url.toString());
