@@ -1,55 +1,14 @@
 import { eq, and, desc, like, gte, lte, count, sql } from "drizzle-orm";
 import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
-import type { CaptureRecord } from "@fiberplane/mcp-gateway-types";
+import type {
+	CaptureRecord,
+	LogQueryOptions,
+	LogQueryResult,
+	ServerInfo,
+	SessionInfo,
+} from "@fiberplane/mcp-gateway-types";
 import { logs, type NewLog, type Log } from "./schema.js";
 import type * as schema from "./schema.js";
-
-/**
- * Query options for log filtering and pagination
- */
-export interface LogQueryOptions {
-	serverName?: string;
-	sessionId?: string;
-	method?: string;
-	after?: string; // ISO timestamp
-	before?: string; // ISO timestamp
-	limit?: number;
-	order?: "asc" | "desc";
-}
-
-/**
- * Paginated query result
- */
-export interface LogQueryResult {
-	data: CaptureRecord[];
-	pagination: {
-		count: number;
-		limit: number;
-		hasMore: boolean;
-		oldestTimestamp: string | null;
-		newestTimestamp: string | null;
-	};
-}
-
-/**
- * Server aggregation info
- */
-export interface ServerInfo {
-	name: string;
-	logCount: number;
-	sessionCount: number;
-}
-
-/**
- * Session aggregation info
- */
-export interface SessionInfo {
-	sessionId: string;
-	serverName: string;
-	logCount: number;
-	startTime: string;
-	endTime: string;
-}
 
 /**
  * Insert a new log entry into the database

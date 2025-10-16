@@ -2,7 +2,10 @@ import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import type { CaptureRecord } from "@fiberplane/mcp-gateway-types";
+import type {
+	CaptureRecord,
+	LogQueryOptions,
+} from "@fiberplane/mcp-gateway-types";
 import { getDb } from "./db.js";
 import { ensureMigrations, resetMigrationState } from "./migrations.js";
 import {
@@ -10,7 +13,6 @@ import {
 	queryLogs,
 	getServers,
 	getSessions,
-	type LogQueryOptions,
 } from "./storage.js";
 
 // Test data factory

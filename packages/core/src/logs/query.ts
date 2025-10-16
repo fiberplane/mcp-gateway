@@ -4,11 +4,13 @@ import {
 	queryLogs as queryLogsInternal,
 	getServers as getServersInternal,
 	getSessions as getSessionsInternal,
-	type LogQueryOptions,
-	type LogQueryResult,
-	type ServerInfo,
-	type SessionInfo,
 } from "./storage.js";
+import type {
+	LogQueryOptions,
+	LogQueryResult,
+	ServerInfo,
+	SessionInfo,
+} from "@fiberplane/mcp-gateway-types";
 
 // Re-export types for consumers
 export type {

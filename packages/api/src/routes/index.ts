@@ -6,7 +6,7 @@ import type {
 	LogQueryResult,
 	ServerInfo,
 	SessionInfo,
-} from "@fiberplane/mcp-gateway-core";
+} from "@fiberplane/mcp-gateway-types";
 
 /**
  * Query parameters schema for GET /logs

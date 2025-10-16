@@ -1,10 +1,13 @@
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { CaptureRecord } from "@fiberplane/mcp-gateway-types";
+import type {
+	CaptureRecord,
+	LogQueryOptions,
+} from "@fiberplane/mcp-gateway-types";
 import { logger } from "../logger";
 import { getDb } from "./db.js";
 import { ensureMigrations } from "./migrations.js";
-import { queryLogs, type LogQueryOptions } from "./storage.js";
+import { queryLogs } from "./storage.js";
 
 /**
  * Export statistics
