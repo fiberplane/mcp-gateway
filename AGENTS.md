@@ -40,6 +40,16 @@ This is a Bun workspace monorepo containing the MCP Gateway project. The reposit
 │   │   ├── package.json         # Server package configuration
 │   │   ├── tsconfig.json
 │   │   └── README.md            # Server documentation
+│   ├── web/                     # @fiberplane/mcp-gateway-web
+│   │   ├── src/                 # React web UI
+│   │   │   ├── components/      # React components
+│   │   │   ├── lib/             # API client and utilities
+│   │   │   ├── App.tsx          # Main application
+│   │   │   └── main.tsx         # Entry point
+│   │   ├── public/              # Static assets (gitignored)
+│   │   ├── package.json         # Web package configuration
+│   │   ├── tsconfig.json
+│   │   └── vite.config.ts       # Vite configuration
 │   ├── mcp-gateway/             # @fiberplane/mcp-gateway-cli (private)
 │   │   ├── src/                 # CLI orchestration & TUI
 │   │   │   ├── tui/             # Terminal UI components
@@ -88,6 +98,8 @@ This is a Bun workspace monorepo containing the MCP Gateway project. The reposit
 - `bun run --filter @fiberplane/mcp-gateway-core build` - Build core package
 - `bun run --filter @fiberplane/mcp-gateway-api build` - Build API package
 - `bun run --filter @fiberplane/mcp-gateway-server build` - Build server package
+- `bun run --filter @fiberplane/mcp-gateway-web build` - Build web UI
+- `bun run --filter @fiberplane/mcp-gateway-web dev` - Dev mode for web UI (Vite dev server)
 - `bun run --filter @fiberplane/mcp-gateway-cli build` - Build CLI package
 - `bun run --filter @fiberplane/mcp-gateway-cli dev` - Dev mode for CLI
 - `bun run --filter test-mcp-server dev` - Run test MCP server
@@ -100,11 +112,12 @@ This is a Bun workspace monorepo containing the MCP Gateway project. The reposit
 
 ### 1. Workspace Structure
 - This is a **Bun workspace** - always use `bun` commands, not npm/yarn
-- **Eight packages** with clear boundaries:
+- **Nine packages** with clear boundaries:
   - `@fiberplane/mcp-gateway-types` - Pure types and Zod schemas (no runtime deps)
   - `@fiberplane/mcp-gateway-core` - Business logic (registry, capture, logs, health, logger, MCP server)
   - `@fiberplane/mcp-gateway-api` - REST API for querying logs (uses dependency injection)
   - `@fiberplane/mcp-gateway-server` - HTTP server with proxy functionality (orchestrates API, proxy, OAuth)
+  - `@fiberplane/mcp-gateway-web` - React-based web UI for browsing logs (uses API)
   - `@fiberplane/mcp-gateway-cli` (private) - CLI and TUI source code (orchestrates other packages)
   - `@fiberplane/mcp-gateway` (public) - Wrapper package for binary distribution
   - `@fiberplane/mcp-gateway-*` (4 platform packages) - Compiled binaries for darwin-arm64, darwin-x64, linux-x64, windows-x64
@@ -115,6 +128,7 @@ This is a Bun workspace monorepo containing the MCP Gateway project. The reposit
 ### 2. Package Dependencies
 ```
 types (no deps) → core (types) → api (core types only) → server (core, api) → cli (all packages)
+                                                       ↘ web (api client) ↗
 ```
 - **No circular dependencies** - enforced by `madge` in CI
 - **API uses dependency injection** - Only imports types from core, query functions passed at runtime
@@ -125,8 +139,9 @@ types (no deps) → core (types) → api (core types only) → server (core, api
 ### 3. Build System
 - **Shared build script** at `scripts/build.ts` referenced by all packages
 - Each package has its own build configuration
-- TypeScript declaration files generated only for library packages (not CLI)
-- Build order matters: types → core → api → server → cli
+- TypeScript declaration files generated only for library packages (not CLI or web)
+- Web package uses Vite for building React app
+- Build order matters: types → core → api → server/web → cli
 
 ### 4. TypeScript Configuration
 - **Development mode**: Uses source `.ts` files directly (no build required for typechecking)
@@ -146,7 +161,7 @@ types (no deps) → core (types) → api (core types only) → server (core, api
 ### 6. CI/CD Integration
 - GitHub Actions updated for monorepo structure
 - **Circular dependency check** runs in CI before typecheck
-- CI builds all packages: types → core → api → server → cli
+- CI builds all packages: types → core → api → server → web → cli
 - Changesets configured for independent versioning
 - Changesets ignores `test-mcp-server`, tracks `packages/*`
 - Publishing is automated via changesets action
@@ -182,6 +197,12 @@ bun add <package-name>
 **To server package:**
 ```bash
 cd packages/server
+bun add <package-name>
+```
+
+**To web package:**
+```bash
+cd packages/web
 bun add <package-name>
 ```
 
@@ -308,23 +329,25 @@ This repository was migrated from a single-package structure to a monorepo. See 
 
 ## Development Workflow
 
-1. **Making changes**: Work in appropriate package directory (`packages/types/`, `packages/core/`, `packages/server/`, or `packages/mcp-gateway/`)
+1. **Making changes**: Work in appropriate package directory (`packages/types/`, `packages/core/`, `packages/api/`, `packages/server/`, `packages/web/`, or `packages/mcp-gateway/`)
 2. **Testing**: Use test MCP server in `test-mcp-server/` directory
-3. **Type checking**: Run `bun run typecheck` (works without building packages)
-4. **Circular deps**: Check with `bun run check-circular` before committing
-5. **Building**: Build packages in dependency order (or use filtered commands)
-6. **Committing**: Use conventional commit messages
-7. **Releasing**: Use changesets workflow for versioning and publishing
+3. **Web UI development**: Run `bun run --filter @fiberplane/mcp-gateway-web dev` to start Vite dev server with hot reload
+4. **Type checking**: Run `bun run typecheck` (works without building packages)
+5. **Circular deps**: Check with `bun run check-circular` before committing
+6. **Building**: Build packages in dependency order (or use filtered commands)
+7. **Committing**: Use conventional commit messages
+8. **Releasing**: Use changesets workflow for versioning and publishing
 
 ## Package Structure Benefits
 
 The refactored monorepo structure provides:
-- ✅ **Clear separation of concerns** - Types, core logic, query API, HTTP proxy, and CLI are independent
+- ✅ **Clear separation of concerns** - Types, core logic, query API, HTTP proxy, web UI, and CLI are independent
 - ✅ **Better testability** - Each package can be tested in isolation
-- ✅ **Reusability** - API and server packages can be embedded in other applications
+- ✅ **Reusability** - API, server, and web packages can be embedded in other applications
 - ✅ **Dependency injection** - API package uses DI for flexibility and testing
 - ✅ **Independent versioning** - Packages can be versioned and released independently
 - ✅ **No circular dependencies** - Enforced by CI checks with madge
+- ✅ **Multiple UIs** - Both TUI (terminal) and web UI share the same API backend
 
 ## Binary Distribution
 
@@ -386,13 +409,49 @@ Use GitHub Actions matrix builds:
 - Wrapper package published with references to binary packages
 - All packages synchronized to same version
 
+## Web UI
+
+The gateway includes a React-based web UI (`@fiberplane/mcp-gateway-web`) for browsing captured logs.
+
+### Features
+- **Log browsing** - View all captured MCP traffic with filtering by server and session
+- **Real-time updates** - Automatically polls for new logs
+- **Log details** - Expand individual logs to view full request/response JSON
+- **Export functionality** - Export selected or all logs as JSON
+- **Responsive design** - Works on desktop and mobile browsers
+
+### Development
+```bash
+# Start web UI dev server (with hot reload)
+bun run --filter @fiberplane/mcp-gateway-web dev
+
+# Build for production
+bun run --filter @fiberplane/mcp-gateway-web build
+```
+
+### Integration with CLI
+The CLI automatically builds and serves the web UI at `/ui` when started:
+```bash
+mcp-gateway
+# Web UI available at: http://localhost:3333/ui
+```
+
+### Technology Stack
+- **React 19** - UI framework
+- **TypeScript** - Type safety
+- **Vite** - Build tool and dev server
+- **TanStack Query** - Data fetching and caching
+- **TanStack Router** - Client-side routing
+- **Tailwind CSS** - Styling
+- **Radix UI** - Accessible component primitives
+
 ## Future Enhancements
 
 The monorepo structure enables:
-- Web UI package using React + TanStack Router
-- REST API endpoints for non-MCP clients
 - Standalone server deployment (without CLI/TUI)
-- Shared UI component library
+- Shared UI component library between TUI and web
+- Additional export formats (CSV, Excel, etc.)
+- Real-time WebSocket updates (instead of polling)
 - Multiple distribution formats (ESM, CJS, bundled)
 
 ---
