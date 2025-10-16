@@ -50,7 +50,7 @@ function SortHeader({
       <Icon
         className={`w-4 h-4 ${isActive ? "text-foreground" : "text - muted - foreground"}`}
       />
-    </button >
+    </button>
   );
 }
 
@@ -219,8 +219,9 @@ export function LogTable({
             <Fragment key={logKey}>
               <tr
                 key={logKey}
-                className={`hover:bg-muted/50 transition-colors ${isExpanded ? "bg-blue-50/50" : ""
-                  }`}
+                className={`hover:bg-muted/50 transition-colors ${
+                  isExpanded ? "bg-blue-50/50" : ""
+                }`}
               >
                 {/* biome-ignore lint/a11y/useKeyWithClickEvents: Checkbox cell stops propagation */}
                 <td className="p-3" onClick={(e) => e.stopPropagation()}>
