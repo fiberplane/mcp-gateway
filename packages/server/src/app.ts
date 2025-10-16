@@ -9,8 +9,8 @@ import {
 } from "@fiberplane/mcp-gateway-core";
 import type { LogEntry, Registry } from "@fiberplane/mcp-gateway-types";
 import { Hono } from "hono";
-import { logger as loggerMiddleware } from "hono/logger";
 import { serveStatic } from "hono/bun";
+import { logger as loggerMiddleware } from "hono/logger";
 import { createOAuthRoutes } from "./routes/oauth";
 import { createProxyRoutes } from "./routes/proxy";
 
@@ -93,18 +93,31 @@ export async function createApp(
   // Short alias for gateway's own MCP server
   app.route("/g", gatewayMcp);
 
-  // Serve web UI static files if publicDir is provided
+  // Serve web UI static files under /ui if publicDir is provided
   if (options?.publicDir) {
-    // Serve static files for paths that don't match API/server routes
+    // Serve static files under /ui prefix
     app.use(
-      "*",
+      "/ui/*",
       serveStatic({
         root: options.publicDir,
+        rewriteRequestPath: (path) => path.replace(/^\/ui/, ""),
       }),
     );
 
-    // Fallback to index.html for SPA client-side routing (for non-API paths)
-    app.get("*", async (c) => {
+    // Serve index.html for /ui root
+    app.get("/ui", async (c) => {
+      const indexPath = `${options.publicDir}/index.html`;
+      try {
+        const file = Bun.file(indexPath);
+        const html = await file.text();
+        return c.html(html);
+      } catch {
+        return c.text("Web UI not available", 404);
+      }
+    });
+
+    // Fallback to index.html for SPA client-side routing under /ui
+    app.get("/ui/*", async (c) => {
       const indexPath = `${options.publicDir}/index.html`;
       try {
         const file = Bun.file(indexPath);

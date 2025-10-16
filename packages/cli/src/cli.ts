@@ -3,7 +3,9 @@
  * This is identical to run.ts but uses the new OpenTUI interface
  */
 
-import { pathToFileURL } from "node:url";
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import {
   getStorageRoot,
@@ -18,6 +20,31 @@ import { emitLog, emitRegistryUpdate } from "./events.js";
 import { runOpenTUI } from "./tui/App.js";
 import { useAppStore } from "./tui/store.js";
 import { getVersion } from "./utils/version.js";
+
+/**
+ * Find the public directory containing web UI assets.
+ * In development: packages/cli/public/
+ * In binary: relative to the executable
+ */
+function findPublicDir(): string | undefined {
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+
+  // Try relative to the CLI source directory (development)
+  const devPublicDir = join(__dirname, "..", "public");
+  if (existsSync(devPublicDir)) {
+    return devPublicDir;
+  }
+
+  // Try relative to the executable (binary)
+  const binaryPublicDir = join(process.execPath, "..", "public");
+  if (existsSync(binaryPublicDir)) {
+    return binaryPublicDir;
+  }
+
+  // Web UI not available
+  return undefined;
+}
 
 function showHelp(): void {
   // biome-ignore lint/suspicious/noConsole: actually want to print to console
@@ -104,11 +131,21 @@ export async function runCli(): Promise<void> {
     // Load registry once and share it between server and CLI
     const registry = await loadRegistry(storageDir);
 
+    // Find public directory for web UI
+    const publicDir = findPublicDir();
+
     // Start HTTP server with event handlers for TUI
-    const { app } = await createApp(registry, storageDir, {
-      onLog: emitLog,
-      onRegistryUpdate: emitRegistryUpdate,
-    });
+    const { app } = await createApp(
+      registry,
+      storageDir,
+      {
+        onLog: emitLog,
+        onRegistryUpdate: emitRegistryUpdate,
+      },
+      {
+        publicDir,
+      },
+    );
 
     // Start server and wait for it to be listening or error
     const server = serve({
