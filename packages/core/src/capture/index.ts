@@ -1,6 +1,3 @@
-import { constants } from "node:fs";
-import { access, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
 import type {
   CaptureRecord,
   ClientInfo,
@@ -12,7 +9,6 @@ import {
   generateCaptureFilename,
 } from "@fiberplane/mcp-gateway-types";
 import { logger } from "../logger";
-import { ensureServerCaptureDir } from "../registry/storage";
 import type { SSEEvent } from "./sse-parser";
 
 // In-memory storage for client info by session
@@ -136,50 +132,31 @@ export async function appendCapture(
   storageDir: string,
   record: CaptureRecord,
 ): Promise<string> {
-  // Generate filename (one per session)
-  let filePath: string = "unknown";
+  const filename = generateCaptureFilename(
+    record.metadata.serverName,
+    record.metadata.sessionId,
+  );
 
-  try {
-    const filename = generateCaptureFilename(
-      record.metadata.serverName,
-      record.metadata.sessionId,
-    );
+  // Use storage manager to write to all backends
+  const { getStorageManager } = await import("./storage-manager.js");
+  const storageManager = getStorageManager();
 
-    filePath = join(storageDir, record.metadata.serverName, filename);
+  // Initialize storage manager if needed (lazy initialization)
+  if (storageManager.getBackendNames().length === 0) {
+    const { JsonlStorageBackend } = await import("./backends/jsonl-backend.js");
+    const { SqliteStorageBackend } = await import("./backends/sqlite-backend.js");
 
-    // Ensure server capture directory exists
-    await ensureServerCaptureDir(storageDir, record.metadata.serverName);
+    // Register both backends
+    storageManager.registerBackend(new JsonlStorageBackend());
+    storageManager.registerBackend(new SqliteStorageBackend());
 
-    // Append JSONL record to file
-    const jsonLine = `${JSON.stringify(record)}\n`;
-
-    // Use Node.js fs to append content
-    let existingContent = "";
-    try {
-      await access(filePath, constants.F_OK);
-      // Type assertion needed: Bun's readFile with "utf8" encoding returns string, not Buffer
-      existingContent = (await readFile(filePath, "utf8")) as unknown as string;
-    } catch {
-      // File doesn't exist, start with empty content
-    }
-
-    await writeFile(filePath, existingContent + jsonLine, "utf8");
-    return filename;
-  } catch (error) {
-    logger.error("Failed to append capture record", {
-      error:
-        error instanceof Error
-          ? {
-              message: error.message,
-              stack: error.stack,
-            }
-          : String(error),
-      filePath,
-    });
-    throw new Error(
-      `Capture storage failed: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    await storageManager.initialize(storageDir);
   }
+
+  // Write to all registered backends (throws if any fail)
+  await storageManager.write(record);
+
+  return filename;
 }
 
 // Error handling for failed requests
