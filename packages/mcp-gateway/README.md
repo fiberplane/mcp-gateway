@@ -70,11 +70,33 @@ Runs on port 3333 with an interactive TUI for server management. Configuration p
 - `Enter` - View server configuration
 - `d` - Delete selected server
 
+## Web UI
+
+Access the web interface at `http://localhost:3333/ui` to browse captured logs with a modern React-based UI.
+
+### Features
+- **Log Browsing** - View all captured MCP traffic in a sortable table
+- **Server & Session Filtering** - Filter logs by server name or session ID
+- **Real-time Updates** - Automatically refreshes to show new logs
+- **Log Details** - Expand individual logs to view full request/response JSON
+- **Export** - Download selected logs or all logs as JSON
+
+### Quick Start
+1. Start the gateway: `mcp-gateway`
+2. Generate some traffic (make requests to your MCP servers)
+3. Open `http://localhost:3333/ui` in your browser
+4. Use the dropdowns to filter by server or session
+5. Click any log row to see full details
+
+The web UI uses the same API endpoints (`/api/logs`, `/api/servers`, `/api/sessions`) that are available for programmatic access.
+
 ## Features
 
 **Request routing**: Route requests to different MCP servers by name (e.g., `/servers/weather/mcp`, `/servers/database/mcp`)
 
 **Traffic capture**: All requests/responses logged to `~/.mcp-gateway/captures/:serverName/:sessionId.jsonl` with timing metrics and error states
+
+**Web UI**: Browse and analyze captured logs in your browser at `http://localhost:3333/ui` - includes filtering, search, and JSON export
 
 **Health monitoring**: Periodic health checks with status indicators in TUI
 

@@ -142,6 +142,43 @@ The API package only depends on:
 - `zod` - Schema validation
 - `@hono/standard-validator` - Request validation middleware
 
+## Integration with Web UI
+
+The API is consumed by the `@fiberplane/mcp-gateway-web` package, which provides a React-based interface for browsing logs.
+
+### In Production
+
+The server package (`@fiberplane/mcp-gateway-server`) integrates both the API and web UI:
+
+```typescript
+import { createApp } from "@fiberplane/mcp-gateway-server";
+
+const { app } = await createApp(registry, storageDir, eventHandlers, {
+  publicDir: "./public", // Web UI static files
+});
+
+// API mounted at /api/*
+// Web UI served at /ui/*
+```
+
+### In Development
+
+For web UI development, run both the API and web dev server:
+
+```bash
+# Terminal 1: API server
+bun run --filter @fiberplane/mcp-gateway-api dev
+
+# Terminal 2: Web UI dev server (with Vite HMR)
+bun run --filter @fiberplane/mcp-gateway-web dev
+```
+
+The web UI dev server proxies API requests to `http://localhost:3333/api`.
+
+### CORS Configuration
+
+The API includes CORS middleware for development to allow connections from the Vite dev server (port 5173).
+
 ## Development
 
 ```bash
@@ -157,6 +194,12 @@ bun run lint
 # Format
 bun run format
 ```
+
+## See Also
+
+- [@fiberplane/mcp-gateway-web](../web) - Web UI for browsing logs
+- [@fiberplane/mcp-gateway-server](../server) - HTTP server with proxy
+- [@fiberplane/mcp-gateway-core](../core) - Core business logic
 
 ## License
 
