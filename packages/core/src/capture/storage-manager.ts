@@ -10,6 +10,7 @@ import type { StorageBackend, StorageWriteResult } from "./storage-backend.js";
  */
 export class StorageManager {
   private backends: Map<string, StorageBackend> = new Map();
+  // biome-ignore lint/correctness/noUnusedPrivateClassMembers: storageDir is set in initialize() method
   private storageDir: string | null = null;
   private initialized = false;
 
