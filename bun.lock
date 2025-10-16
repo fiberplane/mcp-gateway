@@ -29,6 +29,7 @@
         "mcp-gateway": "bin/cli.js",
       },
       "dependencies": {
+        "@fiberplane/mcp-gateway-api": "workspace:*",
         "@fiberplane/mcp-gateway-core": "workspace:*",
         "@fiberplane/mcp-gateway-server": "workspace:*",
         "@fiberplane/mcp-gateway-types": "workspace:*",
@@ -89,7 +90,6 @@
       "name": "@fiberplane/mcp-gateway-server",
       "version": "0.2.0-next.0",
       "dependencies": {
-        "@fiberplane/mcp-gateway-api": "workspace:*",
         "@fiberplane/mcp-gateway-core": "workspace:*",
         "@fiberplane/mcp-gateway-types": "workspace:*",
         "@hono/node-server": "^1.19.4",

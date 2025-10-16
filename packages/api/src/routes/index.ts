@@ -81,7 +81,41 @@ export function createApiRoutes(
 
     const result = await queries.queryLogs(storageDir, options);
 
-    return c.json(result);
+    // Transform CaptureRecords into separate request/response LogEntry records
+    const logEntries = result.data.flatMap((record) => {
+      const entries = [];
+
+      // Add request entry if present
+      if (record.request) {
+        entries.push({
+          timestamp: record.timestamp,
+          method: record.method,
+          id: record.id,
+          direction: "request" as const,
+          metadata: record.metadata,
+          request: record.request,
+        });
+      }
+
+      // Add response entry if present
+      if (record.response) {
+        entries.push({
+          timestamp: record.timestamp,
+          method: record.method,
+          id: record.id,
+          direction: "response" as const,
+          metadata: record.metadata,
+          response: record.response,
+        });
+      }
+
+      return entries;
+    });
+
+    return c.json({
+      data: logEntries,
+      pagination: result.pagination,
+    });
   });
 
   /**

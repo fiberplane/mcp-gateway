@@ -1,32 +1,43 @@
 # @fiberplane/mcp-gateway-server
 
-HTTP server for MCP Gateway with proxy functionality.
+MCP protocol HTTP server for MCP Gateway.
 
 ## Overview
 
-This package provides the main HTTP server for the MCP Gateway. Its primary focus is **proxying MCP traffic** between clients and MCP servers, with additional support for OAuth flows and the gateway's own MCP server implementation.
+This package provides the HTTP server focused on **MCP protocol handling**:
+- Proxying MCP traffic between clients and upstream servers
+- OAuth 2.0 authentication/authorization for MCP servers
+- Gateway's own MCP server for querying the gateway via MCP protocol
+- Health and status endpoints
 
-The server captures all proxied traffic and stores it for later analysis via the API package.
+**Note**: This package does NOT include the query API or Web UI. Those are mounted separately by the CLI package for observability and management.
 
 ## Features
 
-- **MCP Proxy** - Forward requests to registered MCP servers with traffic capture
-- **OAuth Support** - Handle OAuth 2.0 authorization flows for MCP servers
-- **Gateway MCP Server** - Expose the gateway's own MCP tools and resources
-- **API Integration** - Mount the query API for log access
-- **Session Management** - Track client sessions and store client info
-- **Health Endpoints** - Monitor gateway status and registered servers
+- **MCP Proxy** - Forward MCP requests to registered servers with traffic capture
+- **OAuth Support** - Handle OAuth 2.0 authorization flows
+- **Gateway MCP Server** - Query the gateway itself via MCP protocol
+- **Session Management** - Track client sessions across requests
+- **Health Endpoints** - Monitor gateway and server status
+- **Traffic Capture** - Record all proxied traffic for analysis
 
 ## Architecture
 
-The server orchestrates multiple route handlers:
+The server package focuses solely on MCP protocol handling:
 
-1. **Proxy Routes** (`/servers/:name`) - Forward MCP requests to upstream servers
-2. **OAuth Routes** (`/.well-known/*`, `/oauth/*`) - Handle OAuth discovery and flows
-3. **API Routes** (`/api/*`) - Expose log query endpoints (from `@fiberplane/mcp-gateway-api`)
-4. **Gateway Routes** (`/gateway`, `/g`) - Serve the gateway's own MCP server
+```
+Server Package (MCP Protocol Layer)
+├── Proxy Routes (/servers/:name/mcp)
+│   └── Forward requests to upstream MCP servers
+├── OAuth Routes (/.well-known/*, /oauth/*)
+│   └── Handle OAuth discovery and authorization
+├── Gateway MCP Server (/gateway, /g)
+│   └── Expose gateway tools via MCP protocol
+└── Health Endpoints (/, /status)
+    └── Operational monitoring
+```
 
-All proxied traffic is captured and stored via the core package's capture system.
+The CLI package orchestrates this server with the API package and Web UI.
 
 ## Usage
 
@@ -46,7 +57,7 @@ const registry: Registry = {
   ],
 };
 
-const { app, registry: updatedRegistry } = await createApp(
+const { app } = await createApp(
   registry,
   "~/.mcp-gateway", // optional storage directory
   {
@@ -62,23 +73,71 @@ Bun.serve({
 });
 ```
 
+### Mounting in a Larger Application
+
+The server can be mounted as a sub-app:
+
+```typescript
+import { createApp as createServerApp } from "@fiberplane/mcp-gateway-server";
+import { createApp as createApiApp } from "@fiberplane/mcp-gateway-api";
+import { Hono } from "hono";
+
+// Create MCP protocol server
+const { app: serverApp } = await createServerApp(registry, storageDir);
+
+// Create complete application
+const app = new Hono();
+
+// Mount MCP protocol server
+app.route("/", serverApp);
+
+// Mount query API (separate package)
+const apiApp = createApiApp(storageDir, { queryLogs, getServers, getSessions });
+app.route("/api", apiApp);
+
+// Serve
+Bun.serve({ fetch: app.fetch, port: 3333 });
+```
+
+## Endpoints
+
 ### Proxy Endpoints
 
-#### HTTP Proxy (Stateless)
+#### POST /servers/:name/mcp
+
+Forward JSON-RPC MCP requests to upstream servers.
 
 ```bash
-# POST requests to /servers/:name
-curl -X POST http://localhost:3333/servers/demo \
+curl -X POST http://localhost:3333/servers/demo/mcp \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{...}}'
 ```
 
-#### SSE Proxy (Stateful)
+#### GET /servers/:name/mcp (SSE)
+
+Establish Server-Sent Events connection for streaming.
 
 ```bash
-# GET requests to /servers/:name for SSE connections
-curl -N http://localhost:3333/servers/demo
+curl -N -H "Accept: text/event-stream" \
+  http://localhost:3333/servers/demo/mcp
 ```
+
+### Gateway MCP Server
+
+#### POST /gateway (or /g)
+
+Query the gateway itself via MCP protocol.
+
+```bash
+curl -X POST http://localhost:3333/gateway \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+```
+
+### OAuth Endpoints
+
+- `GET /.well-known/mcp-servers` - OAuth discovery
+- OAuth authorization flows at `/oauth/*`
 
 ### Health & Status
 
@@ -86,16 +145,39 @@ curl -N http://localhost:3333/servers/demo
 # Health check
 curl http://localhost:3333/
 
-# Detailed status
+# Detailed status (servers, storage)
 curl http://localhost:3333/status
 ```
 
+## Event Handlers
+
+The server accepts optional event handlers for integration:
+
+```typescript
+const { app } = await createApp(registry, storageDir, {
+  onLog: (entry) => {
+    // Called for each request/response
+    console.log(`${entry.method} - ${entry.httpStatus}`);
+  },
+  onRegistryUpdate: () => {
+    // Called when servers are added/removed
+    console.log("Registry changed");
+  },
+});
+```
+
+These are used by the CLI to update the TUI in real-time.
+
 ## Dependencies
 
-- `@fiberplane/mcp-gateway-core` - Core business logic
-- `@fiberplane/mcp-gateway-api` - Query API
+- `@fiberplane/mcp-gateway-core` - Core business logic (registry, capture, queries)
+- `@fiberplane/mcp-gateway-types` - TypeScript types
 - `hono` - Web framework
-- `@hono/node-server` - Node.js adapter for Hono
+- `@hono/node-server` - Node.js adapter
+- `@hono/standard-validator` - Request validation
+- `zod` - Schema validation
+
+**Note**: Does NOT depend on `@fiberplane/mcp-gateway-api` - that's mounted by the CLI.
 
 ## Development
 
@@ -107,11 +189,26 @@ bun run build
 bun run typecheck
 ```
 
+## Package Structure
+
+This package is part of the MCP Gateway monorepo:
+
+```
+types → core → api → server → cli
+```
+
+- **types** - Type definitions
+- **core** - Business logic (registry, capture, storage)
+- **api** - Query API (mounted separately by CLI)
+- **server** - MCP protocol server (this package)
+- **cli** - CLI orchestrator (mounts server + API + Web UI)
+
 ## See Also
 
-- [@fiberplane/mcp-gateway-api](../api) - Query API for accessing logs
+- [@fiberplane/mcp-gateway-api](../api) - Query API for log analysis
 - [@fiberplane/mcp-gateway-core](../core) - Core business logic
-- [@fiberplane/mcp-gateway-cli](../mcp-gateway) - CLI with TUI
+- [@fiberplane/mcp-gateway-cli](../cli) - CLI with TUI
+- [@fiberplane/mcp-gateway-web](../web) - Web UI
 
 ## License
 

@@ -112,13 +112,13 @@ This is a Bun workspace monorepo containing the MCP Gateway project. The reposit
 
 ### 1. Workspace Structure
 - This is a **Bun workspace** - always use `bun` commands, not npm/yarn
-- **Nine packages** with clear boundaries:
+- Several packages with clear boundaries:
   - `@fiberplane/mcp-gateway-types` - Pure types and Zod schemas (no runtime deps)
   - `@fiberplane/mcp-gateway-core` - Business logic (registry, capture, logs, health, logger, MCP server)
   - `@fiberplane/mcp-gateway-api` - REST API for querying logs (uses dependency injection)
-  - `@fiberplane/mcp-gateway-server` - HTTP server with proxy functionality (orchestrates API, proxy, OAuth)
-  - `@fiberplane/mcp-gateway-web` - React-based web UI for browsing logs (uses API)
-  - `@fiberplane/mcp-gateway-cli` (private) - CLI and TUI source code (orchestrates other packages)
+  - `@fiberplane/mcp-gateway-server` - MCP protocol HTTP server (proxy, OAuth, gateway MCP server)
+  - `@fiberplane/mcp-gateway-web` - React-based web UI for browsing logs (relies on the REST API)
+  - `@fiberplane/mcp-gateway-cli` (private) - CLI orchestrator (mounts server + API + web UI + TUI)
   - `@fiberplane/mcp-gateway` (public) - Wrapper package for binary distribution
   - `@fiberplane/mcp-gateway-*` (4 platform packages) - Compiled binaries for darwin-arm64, darwin-x64, linux-x64, windows-x64
 - Use `--filter` flags for package-specific operations
@@ -127,11 +127,14 @@ This is a Bun workspace monorepo containing the MCP Gateway project. The reposit
 
 ### 2. Package Dependencies
 ```
-types (no deps) → core (types) → api (core types only) → server (core, api) → cli (all packages)
-                                                       ↘ web (api client) ↗
+types (no deps) → core (types) → api (core types only, DI) → cli (orchestrates all)
+                                ↘ server (core, MCP protocol) ↗
+                                ↘ web (api client) ↗
 ```
 - **No circular dependencies** - enforced by `madge` in CI
-- **API uses dependency injection** - Only imports types from core, query functions passed at runtime
+- **API uses dependency injection** - query functions passed at runtime
+- **Server focuses on MCP protocol** - proxy, OAuth, gateway MCP server only
+- **CLI orchestrates everything** - mounts server, API, web UI, and runs TUI
 - During development, packages use `workspace:*` protocol
 - During publishing, `workspace:*` is replaced with actual version ranges
 - All packages are published to npm independently
@@ -341,10 +344,11 @@ This repository was migrated from a single-package structure to a monorepo. See 
 ## Package Structure Benefits
 
 The refactored monorepo structure provides:
-- ✅ **Clear separation of concerns** - Types, core logic, query API, HTTP proxy, web UI, and CLI are independent
+- ✅ **Clear separation of concerns** - Types, core logic, query API, MCP protocol server, web UI, and CLI orchestrator are independent
 - ✅ **Better testability** - Each package can be tested in isolation
-- ✅ **Reusability** - API, server, and web packages can be embedded in other applications
+- ✅ **Reusability** - API and server packages can be embedded in other applications
 - ✅ **Dependency injection** - API package uses DI for flexibility and testing
+- ✅ **Focused responsibilities** - Server handles MCP protocol, CLI handles orchestration
 - ✅ **Independent versioning** - Packages can be versioned and released independently
 - ✅ **No circular dependencies** - Enforced by CI checks with madge
 - ✅ **Multiple UIs** - Both TUI (terminal) and web UI share the same API backend

@@ -7,15 +7,21 @@ import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
+import { createApp as createApiApp } from "@fiberplane/mcp-gateway-api";
 import {
+  getServers,
+  getSessions,
   getStorageRoot,
   loadRegistry,
   logger,
+  queryLogs,
   startHealthChecks,
 } from "@fiberplane/mcp-gateway-core";
-import { createApp } from "@fiberplane/mcp-gateway-server";
+import { createApp as createServerApp } from "@fiberplane/mcp-gateway-server";
 import type { Context } from "@fiberplane/mcp-gateway-types";
 import { serve } from "@hono/node-server";
+import { Hono } from "hono";
+import { serveStatic } from "hono/bun";
 import { emitLog, emitRegistryUpdate } from "./events.js";
 import { runOpenTUI } from "./tui/App.js";
 import { useAppStore } from "./tui/store.js";
@@ -138,21 +144,62 @@ export async function runCli(): Promise<void> {
     // Load registry once and share it between server and CLI
     const registry = await loadRegistry(storageDir);
 
-    // Find public directory for web UI
-    const publicDir = findPublicDir();
+    // Create MCP protocol server (proxy, OAuth, gateway MCP server)
+    const { app: serverApp } = await createServerApp(registry, storageDir, {
+      onLog: emitLog,
+      onRegistryUpdate: emitRegistryUpdate,
+    });
 
-    // Start HTTP server with event handlers for TUI
-    const { app } = await createApp(
-      registry,
-      storageDir,
-      {
-        onLog: emitLog,
-        onRegistryUpdate: emitRegistryUpdate,
-      },
-      {
-        publicDir,
-      },
-    );
+    // Create main application that orchestrates everything
+    const app = new Hono();
+
+    // Mount the MCP protocol server
+    app.route("/", serverApp);
+
+    // Mount API for observability (query logs, servers, sessions)
+    const apiApp = createApiApp(storageDir, {
+      queryLogs,
+      getServers,
+      getSessions,
+    });
+    app.route("/api", apiApp);
+
+    // Serve Web UI for management
+    const publicDir = findPublicDir();
+    if (publicDir) {
+      // Serve static files under /ui prefix
+      app.use(
+        "/ui/*",
+        serveStatic({
+          root: publicDir,
+          rewriteRequestPath: (path) => path.replace(/^\/ui/, ""),
+        }),
+      );
+
+      // Serve index.html for /ui root
+      app.get("/ui", async (c) => {
+        const indexPath = `${publicDir}/index.html`;
+        try {
+          const file = Bun.file(indexPath);
+          const html = await file.text();
+          return c.html(html);
+        } catch {
+          return c.text("Web UI not available", 404);
+        }
+      });
+
+      // Fallback to index.html for SPA client-side routing under /ui
+      app.get("/ui/*", async (c) => {
+        const indexPath = `${publicDir}/index.html`;
+        try {
+          const file = Bun.file(indexPath);
+          const html = await file.text();
+          return c.html(html);
+        } catch {
+          return c.text("Web UI not available", 404);
+        }
+      });
+    }
 
     // Start server and wait for it to be listening or error
     const server = serve({

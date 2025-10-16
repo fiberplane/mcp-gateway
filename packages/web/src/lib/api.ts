@@ -5,6 +5,7 @@ export interface LogEntry {
   timestamp: string;
   method: string;
   id: string | number | null;
+  direction: "request" | "response";
   metadata: {
     serverName: string;
     sessionId: string;

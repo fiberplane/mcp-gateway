@@ -53,6 +53,7 @@
   "dependencies": {
     "@fiberplane/mcp-gateway-types": "workspace:*",
     "@fiberplane/mcp-gateway-core": "workspace:*",
+    "@fiberplane/mcp-gateway-api": "workspace:*",
     "@fiberplane/mcp-gateway-server": "workspace:*",
     "@fiberplane/mcp-gateway-web": "workspace:*",
     "@hono/node-server": "^1.19.4",

@@ -1,29 +1,32 @@
-import { createApp as createApiApp } from "@fiberplane/mcp-gateway-api";
 import {
   createMcpApp,
-  getServers,
-  getSessions,
   getStorageRoot,
   logger,
-  queryLogs,
 } from "@fiberplane/mcp-gateway-core";
 import type { LogEntry, Registry } from "@fiberplane/mcp-gateway-types";
 import { Hono } from "hono";
-import { serveStatic } from "hono/bun";
 import { logger as loggerMiddleware } from "hono/logger";
 import { createOAuthRoutes } from "./routes/oauth";
 import { createProxyRoutes } from "./routes/proxy";
 
-// Create main application
+/**
+ * Create MCP Gateway HTTP server
+ *
+ * This creates a Hono app focused on MCP protocol handling:
+ * - Proxy routes for forwarding MCP requests to upstream servers
+ * - OAuth routes for MCP authentication/authorization
+ * - Gateway's own MCP server for querying the gateway via MCP protocol
+ * - Health check endpoint
+ *
+ * Note: This does NOT include the query API or Web UI - those should be
+ * mounted separately by the CLI package for observability/management.
+ */
 export async function createApp(
   registry: Registry,
   storageDir?: string,
   eventHandlers?: {
     onLog?: (entry: LogEntry) => void;
     onRegistryUpdate?: () => void;
-  },
-  options?: {
-    publicDir?: string; // Path to web UI static files
   },
 ): Promise<{ app: Hono; registry: Registry }> {
   const app = new Hono();
@@ -68,14 +71,6 @@ export async function createApp(
     });
   });
 
-  // Mount API routes for querying logs
-  const apiApp = createApiApp(storage, {
-    queryLogs,
-    getServers,
-    getSessions,
-  });
-  app.route("/api", apiApp);
-
   // Mount OAuth discovery and registration routes
   // These need to be mounted BEFORE the proxy routes to handle .well-known paths
   const oauthRoutes = await createOAuthRoutes(registry);
@@ -92,43 +87,6 @@ export async function createApp(
   app.route("/gateway", gatewayMcp);
   // Short alias for gateway's own MCP server
   app.route("/g", gatewayMcp);
-
-  // Serve web UI static files under /ui if publicDir is provided
-  if (options?.publicDir) {
-    // Serve static files under /ui prefix
-    app.use(
-      "/ui/*",
-      serveStatic({
-        root: options.publicDir,
-        rewriteRequestPath: (path) => path.replace(/^\/ui/, ""),
-      }),
-    );
-
-    // Serve index.html for /ui root
-    app.get("/ui", async (c) => {
-      const indexPath = `${options.publicDir}/index.html`;
-      try {
-        const file = Bun.file(indexPath);
-        const html = await file.text();
-        return c.html(html);
-      } catch {
-        return c.text("Web UI not available", 404);
-      }
-    });
-
-    // Fallback to index.html for SPA client-side routing under /ui
-    app.get("/ui/*", async (c) => {
-      const indexPath = `${options.publicDir}/index.html`;
-      try {
-        const file = Bun.file(indexPath);
-        const html = await file.text();
-        return c.html(html);
-      } catch {
-        // If index.html doesn't exist, return 404
-        return c.text("Web UI not available", 404);
-      }
-    });
-  }
 
   return { app, registry };
 }
