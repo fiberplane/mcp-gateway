@@ -54,27 +54,28 @@ export function SessionFilter({
   const uniqueSessions = groupedSessions ? Object.values(groupedSessions) : [];
 
   return (
-    <div>
-      <label htmlFor={id}>
-        Session:{" "}
-        <select
-          id={id}
-          value={value || ""}
-          onChange={handleChange}
-          disabled={isLoading}
-        >
-          <option value="">All sessions</option>
-          {uniqueSessions.map((session) => (
-            <option key={session.sessionId} value={session.sessionId}>
-              {session.sessionId.slice(0, 8)}... ({session.logCount} logs
-              {!serverName && session.serverCount > 1
-                ? ` across ${session.serverCount} servers`
-                : ""}
-              )
-            </option>
-          ))}
-        </select>
+    <div className="flex items-center gap-2">
+      <label htmlFor={id} className="text-sm font-medium text-foreground">
+        Session:
       </label>
+      <select
+        id={id}
+        value={value || ""}
+        onChange={handleChange}
+        disabled={isLoading}
+        className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <option value="">All sessions</option>
+        {uniqueSessions.map((session) => (
+          <option key={session.sessionId} value={session.sessionId}>
+            {session.sessionId.slice(0, 8)}... ({session.logCount} logs
+            {!serverName && session.serverCount > 1
+              ? ` across ${session.serverCount} servers`
+              : ""}
+            )
+          </option>
+        ))}
+      </select>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { useHandler } from "../lib/use-handler";
+import { Button } from "./ui/button";
 
 interface PaginationProps {
   hasMore: boolean;
@@ -20,24 +21,15 @@ export function Pagination({
   }
 
   return (
-    <div
-      style={{
-        marginTop: "20px",
-        textAlign: "center",
-      }}
-    >
-      <button
+    <div className="mt-5 text-center">
+      <Button
         type="button"
         onClick={handleClick}
         disabled={isLoading}
-        style={{
-          padding: "10px 24px",
-          fontSize: "14px",
-          fontWeight: 500,
-        }}
+        variant="outline"
       >
         {isLoading ? "Loading..." : "Load More"}
-      </button>
+      </Button>
     </div>
   );
 }

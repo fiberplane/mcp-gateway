@@ -14,6 +14,7 @@ function App() {
   const [sessionId, setSessionId] = useState<string | undefined>();
   const [oldestTimestamp, setOldestTimestamp] = useState<string | undefined>();
   const [allLogs, setAllLogs] = useState<LogEntry[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["logs", serverName, sessionId, oldestTimestamp],
@@ -43,6 +44,11 @@ function App() {
   // Display logs - just use allLogs directly
   const logs = allLogs;
 
+  // Helper function to generate unique log keys
+  const getLogKey = (log: LogEntry) => {
+    return `${log.timestamp}-${log.metadata.sessionId}-${log.id}`;
+  };
+
   const handleLoadMore = useHandler(() => {
     if (data?.pagination.oldestTimestamp) {
       setOldestTimestamp(data.pagination.oldestTimestamp);
@@ -54,97 +60,59 @@ function App() {
     setSessionId(undefined); // Reset session when server changes
     setOldestTimestamp(undefined);
     setAllLogs([]);
+    setSelectedIds(new Set()); // Reset selection
   });
 
   const handleSessionChange = useHandler((value: string | undefined) => {
     setSessionId(value);
     setOldestTimestamp(undefined);
     setAllLogs([]);
+    setSelectedIds(new Set()); // Reset selection
   });
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#f5f5f5",
-      }}
-    >
-      <header
-        style={{
-          background: "white",
-          padding: "20px 24px",
-          borderBottom: "1px solid #eee",
-        }}
-      >
-        <h1
-          style={{
-            fontSize: "24px",
-            fontWeight: 600,
-            margin: 0,
-          }}
-        >
+    <div className="min-h-screen bg-background">
+      <header className="bg-card border-b border-border px-6 py-5">
+        <h1 className="text-2xl font-semibold text-foreground">
           MCP Gateway Logs
         </h1>
       </header>
 
-      <main
-        style={{
-          maxWidth: "1400px",
-          margin: "0 auto",
-          padding: "24px",
-        }}
-      >
-        <div
-          style={{
-            marginBottom: "20px",
-            display: "flex",
-            gap: "12px",
-            alignItems: "center",
-            flexWrap: "wrap",
-          }}
-        >
+      <main className="max-w-7xl mx-auto px-6 py-6">
+        <div className="mb-5 flex gap-3 items-center flex-wrap">
           <ServerFilter value={serverName} onChange={handleServerChange} />
           <SessionFilter
             serverName={serverName}
             value={sessionId}
             onChange={handleSessionChange}
           />
-          <div style={{ marginLeft: "auto" }}>
-            <ExportButton serverName={serverName} sessionId={sessionId} />
+          <div className="ml-auto">
+            <ExportButton
+              logs={logs}
+              selectedIds={selectedIds}
+              getLogKey={getLogKey}
+            />
           </div>
         </div>
 
         {error && (
-          <div
-            style={{
-              padding: "16px",
-              background: "#fee",
-              border: "1px solid #fcc",
-              borderRadius: "4px",
-              color: "#c00",
-              marginBottom: "20px",
-            }}
-          >
+          <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive mb-5">
             Error: {String(error)}
           </div>
         )}
 
         {isLoading && !oldestTimestamp ? (
-          <div
-            style={{
-              padding: "40px",
-              textAlign: "center",
-              color: "#666",
-              background: "white",
-              borderRadius: "8px",
-            }}
-          >
+          <div className="p-10 text-center text-muted-foreground bg-card rounded-lg">
             Loading logs...
           </div>
         ) : (
           <>
-            <div style={{ background: "white", borderRadius: "8px" }}>
-              <LogTable logs={logs} />
+            <div className="bg-card rounded-lg overflow-hidden border border-border">
+              <LogTable
+                logs={logs}
+                selectedIds={selectedIds}
+                onSelectionChange={setSelectedIds}
+              />
             </div>
             <Pagination
               hasMore={data?.pagination.hasMore || false}

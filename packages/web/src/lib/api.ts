@@ -99,25 +99,6 @@ class APIClient {
     }
     return response.json();
   }
-
-  /**
-   * Get export URL for downloading logs as JSONL
-   */
-  getExportUrl(params: {
-    serverName?: string;
-    sessionId?: string;
-    method?: string;
-  }): string {
-    const url = new URL(`${this.baseURL}/logs/export`, window.location.origin);
-
-    for (const [key, value] of Object.entries(params)) {
-      if (value !== undefined) {
-        url.searchParams.append(key, String(value));
-      }
-    }
-
-    return url.toString();
-  }
 }
 
 /**

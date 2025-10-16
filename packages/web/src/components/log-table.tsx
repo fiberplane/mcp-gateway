@@ -1,13 +1,24 @@
 import { format } from "date-fns";
+import { ArrowUpDown, Check, Copy } from "lucide-react";
 import { Fragment, useState } from "react";
 import type { LogEntry } from "../lib/api";
+import { getMethodBadgeVariant } from "../lib/badge-color";
 import { useHandler } from "../lib/use-handler";
+import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
+import { Checkbox } from "./ui/checkbox";
 
 interface LogTableProps {
   logs: LogEntry[];
+  selectedIds: Set<string>;
+  onSelectionChange: (selectedIds: Set<string>) => void;
 }
 
-export function LogTable({ logs }: LogTableProps) {
+export function LogTable({
+  logs,
+  selectedIds,
+  onSelectionChange,
+}: LogTableProps) {
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
 
   const getLogKey = (log: LogEntry) => {
@@ -20,34 +31,80 @@ export function LogTable({ logs }: LogTableProps) {
     setExpandedKey((current) => (current === key ? null : key));
   });
 
+  const handleSelectAll = useHandler((checked: boolean) => {
+    if (checked) {
+      const allIds = new Set(logs.map(getLogKey));
+      onSelectionChange(allIds);
+    } else {
+      onSelectionChange(new Set());
+    }
+  });
+
+  const handleSelectRow = useHandler((logKey: string, checked: boolean) => {
+    const newSelection = new Set(selectedIds);
+    if (checked) {
+      newSelection.add(logKey);
+    } else {
+      newSelection.delete(logKey);
+    }
+    onSelectionChange(newSelection);
+  });
+
+  const allSelected =
+    logs.length > 0 && logs.every((log) => selectedIds.has(getLogKey(log)));
+
   if (logs.length === 0) {
     return (
-      <div
-        style={{
-          padding: "40px",
-          textAlign: "center",
-          color: "#666",
-          background: "white",
-          borderRadius: "8px",
-        }}
-      >
+      <div className="p-10 text-center text-muted-foreground bg-card rounded-lg">
         No logs found
       </div>
     );
   }
 
   return (
-    <table>
-      <thead>
+    <table className="w-full border-collapse">
+      <thead className="border-b border-border">
         <tr>
-          <th>Timestamp</th>
-          <th>Server</th>
-          <th>Session</th>
-          <th>Method</th>
-          <th>Duration</th>
+          <th className="w-12 p-3">
+            <Checkbox
+              checked={allSelected}
+              onCheckedChange={handleSelectAll}
+              aria-label="Select all"
+            />
+          </th>
+          <th className="text-left p-3 text-sm font-semibold text-foreground">
+            <div className="flex items-center gap-1">
+              Timestamp
+              <ArrowUpDown className="w-4 h-4 text-muted-foreground" />
+            </div>
+          </th>
+          <th className="text-left p-3 text-sm font-semibold text-foreground">
+            <div className="flex items-center gap-1">
+              Server
+              <ArrowUpDown className="w-4 h-4 text-muted-foreground" />
+            </div>
+          </th>
+          <th className="text-left p-3 text-sm font-semibold text-foreground">
+            <div className="flex items-center gap-1">
+              Session
+              <ArrowUpDown className="w-4 h-4 text-muted-foreground" />
+            </div>
+          </th>
+          <th className="text-left p-3 text-sm font-semibold text-foreground">
+            <div className="flex items-center gap-1">
+              Method
+              <ArrowUpDown className="w-4 h-4 text-muted-foreground" />
+            </div>
+          </th>
+          <th className="text-left p-3 text-sm font-semibold text-foreground">
+            <div className="flex items-center gap-1">
+              Duration
+              <ArrowUpDown className="w-4 h-4 text-muted-foreground" />
+            </div>
+          </th>
         </tr>
       </thead>
-      <tbody>
+      <tbody className="divide-y divide-border">
         {logs.map((log) => {
           const logKey = getLogKey(log);
           const isExpanded = expandedKey === logKey;
@@ -56,48 +113,55 @@ export function LogTable({ logs }: LogTableProps) {
             <Fragment key={logKey}>
               <tr
                 key={logKey}
-                onClick={() => handleRowClick(log)}
-                style={{
-                  cursor: "pointer",
-                  background: isExpanded ? "#f0f7ff" : undefined,
-                }}
+                className={`hover:bg-muted/50 transition-colors ${
+                  isExpanded ? "bg-blue-50/50" : ""
+                }`}
               >
-                <td style={{ fontFamily: "monospace", fontSize: "13px" }}>
+                <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                  <Checkbox
+                    checked={selectedIds.has(logKey)}
+                    onCheckedChange={(checked) =>
+                      handleSelectRow(logKey, checked as boolean)
+                    }
+                    aria-label={`Select log ${logKey}`}
+                  />
+                </td>
+                <td
+                  className="p-3 font-mono text-sm text-foreground cursor-pointer"
+                  onClick={() => handleRowClick(log)}
+                >
                   {format(new Date(log.timestamp), "HH:mm:ss.SSS")}
                 </td>
-                <td>{log.metadata.serverName}</td>
                 <td
-                  style={{
-                    fontFamily: "monospace",
-                    fontSize: "12px",
-                    color: "#666",
-                  }}
+                  className="p-3 text-sm text-foreground cursor-pointer"
+                  onClick={() => handleRowClick(log)}
+                >
+                  {log.metadata.serverName}
+                </td>
+                <td
+                  className="p-3 font-mono text-xs text-muted-foreground cursor-pointer"
+                  onClick={() => handleRowClick(log)}
                 >
                   {log.metadata.sessionId.slice(0, 8)}...
                 </td>
-                <td>
-                  <code
-                    style={{
-                      background: "#f0f0f0",
-                      padding: "2px 6px",
-                      borderRadius: "3px",
-                      fontSize: "13px",
-                    }}
-                  >
+                <td
+                  className="p-3 cursor-pointer"
+                  onClick={() => handleRowClick(log)}
+                >
+                  <Badge variant={getMethodBadgeVariant(log.method)}>
                     {log.method}
-                  </code>
+                  </Badge>
                 </td>
-                <td style={{ color: "#666" }}>{log.metadata.durationMs}ms</td>
+                <td
+                  className="p-3 text-sm text-muted-foreground cursor-pointer"
+                  onClick={() => handleRowClick(log)}
+                >
+                  {log.metadata.durationMs}ms
+                </td>
               </tr>
               {isExpanded && (
                 <tr key={`${logKey}-details`}>
-                  <td
-                    colSpan={5}
-                    style={{
-                      padding: "20px",
-                      background: "#fafafa",
-                    }}
-                  >
+                  <td colSpan={6} className="p-5 bg-muted/30">
                     <LogDetails log={log} />
                   </td>
                 </tr>
@@ -126,59 +190,59 @@ function LogDetails({ log }: LogDetailsProps) {
   );
 
   return (
-    <div style={{ display: "flex", gap: "20px" }}>
+    <div className="flex gap-5">
       {log.request ? (
-        <div style={{ flex: 1 }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              marginBottom: "10px",
-            }}
-          >
-            <h4 style={{ fontSize: "14px", fontWeight: 600 }}>Request</h4>
-            <button
+        <div className="flex-1">
+          <div className="flex justify-between items-center mb-2.5">
+            <h4 className="text-sm font-semibold text-foreground">Request</h4>
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={() => copyToClipboard(log.request, "request")}
             >
-              {copied === "request" ? "✓ Copied" : "Copy"}
-            </button>
+              {copied === "request" ? (
+                <>
+                  <Check className="w-4 h-4 mr-1" />
+                  Copied
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4 mr-1" />
+                  Copy
+                </>
+              )}
+            </Button>
           </div>
-          <pre
-            style={{
-              background: "white",
-              border: "1px solid #eee",
-              maxHeight: "400px",
-            }}
-          >
+          <pre className="bg-card border border-border rounded-md p-4 overflow-auto max-h-96 text-xs font-mono">
             {JSON.stringify(log.request, null, 2)}
           </pre>
         </div>
       ) : null}
       {log.response ? (
-        <div style={{ flex: 1 }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              marginBottom: "10px",
-            }}
-          >
-            <h4 style={{ fontSize: "14px", fontWeight: 600 }}>Response</h4>
-            <button
+        <div className="flex-1">
+          <div className="flex justify-between items-center mb-2.5">
+            <h4 className="text-sm font-semibold text-foreground">Response</h4>
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={() => copyToClipboard(log.response, "response")}
             >
-              {copied === "response" ? "✓ Copied" : "Copy"}
-            </button>
+              {copied === "response" ? (
+                <>
+                  <Check className="w-4 h-4 mr-1" />
+                  Copied
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4 mr-1" />
+                  Copy
+                </>
+              )}
+            </Button>
           </div>
-          <pre
-            style={{
-              background: "white",
-              border: "1px solid #eee",
-              maxHeight: "400px",
-            }}
-          >
+          <pre className="bg-card border border-border rounded-md p-4 overflow-auto max-h-96 text-xs font-mono">
             {JSON.stringify(log.response, null, 2)}
           </pre>
         </div>
