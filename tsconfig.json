@@ -28,9 +28,9 @@
     { "path": "./packages/core" },
     { "path": "./packages/api" },
     { "path": "./packages/server" },
-    { "path": "./packages/cli" },
+    { "path": "./packages/cli" }
 
-    // Development packages
-    { "path": "./test-mcp-server" }
+    // Web UI (built separately by Vite, not part of tsc build)
+    // Test server (development only, not published)
   ]
 }

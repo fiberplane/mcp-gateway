@@ -1,0 +1,126 @@
+/**
+ * Types matching the API responses
+ */
+export interface LogEntry {
+  timestamp: string;
+  method: string;
+  id: string | number | null;
+  metadata: {
+    serverName: string;
+    sessionId: string;
+    durationMs: number;
+    httpStatus: number;
+  };
+  request?: unknown;
+  response?: unknown;
+}
+
+export interface LogQueryResult {
+  data: LogEntry[];
+  pagination: {
+    count: number;
+    limit: number;
+    hasMore: boolean;
+    oldestTimestamp: string | null;
+    newestTimestamp: string | null;
+  };
+}
+
+export interface ServerInfo {
+  name: string;
+  logCount: number;
+  sessionCount: number;
+}
+
+export interface SessionInfo {
+  sessionId: string;
+  serverName: string;
+  logCount: number;
+  startTime: string;
+  endTime: string;
+}
+
+/**
+ * API Client for MCP Gateway logs
+ */
+class APIClient {
+  private baseURL = "/api";
+
+  /**
+   * Get logs with optional filters
+   */
+  async getLogs(params: {
+    serverName?: string;
+    sessionId?: string;
+    method?: string;
+    after?: string;
+    before?: string;
+    limit?: number;
+    order?: "asc" | "desc";
+  }): Promise<LogQueryResult> {
+    const url = new URL(`${this.baseURL}/logs`, window.location.origin);
+
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined) {
+        url.searchParams.append(key, String(value));
+      }
+    }
+
+    const response = await fetch(url.toString());
+    if (!response.ok) {
+      throw new Error(`Failed to fetch logs: ${response.statusText}`);
+    }
+    return response.json();
+  }
+
+  /**
+   * Get list of servers with aggregations
+   */
+  async getServers(): Promise<{ servers: ServerInfo[] }> {
+    const response = await fetch(`${this.baseURL}/servers`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch servers: ${response.statusText}`);
+    }
+    return response.json();
+  }
+
+  /**
+   * Get list of sessions with aggregations
+   */
+  async getSessions(serverName?: string): Promise<{ sessions: SessionInfo[] }> {
+    const url = new URL(`${this.baseURL}/sessions`, window.location.origin);
+    if (serverName) {
+      url.searchParams.append("serverName", serverName);
+    }
+
+    const response = await fetch(url.toString());
+    if (!response.ok) {
+      throw new Error(`Failed to fetch sessions: ${response.statusText}`);
+    }
+    return response.json();
+  }
+
+  /**
+   * Get export URL for downloading logs as JSONL
+   */
+  getExportUrl(params: {
+    serverName?: string;
+    sessionId?: string;
+    method?: string;
+  }): string {
+    const url = new URL(`${this.baseURL}/logs/export`, window.location.origin);
+
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined) {
+        url.searchParams.append(key, String(value));
+      }
+    }
+
+    return url.toString();
+  }
+}
+
+/**
+ * Singleton API client instance
+ */
+export const api = new APIClient();

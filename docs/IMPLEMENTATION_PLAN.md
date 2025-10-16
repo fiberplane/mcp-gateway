@@ -4,9 +4,104 @@
 
 This document provides a step-by-step implementation plan for adding Web UI capabilities to the MCP Gateway project. Each phase includes specific tasks and validation steps to ensure correctness.
 
+## ✅ COMPLETED PHASES (January 2025)
+
+### Phase 1: SQLite Storage Backend - COMPLETED ✅
+
+**Status:** Implemented with SQLite instead of JSONL file reading
+
+**What was actually built:**
+- SQLite database with Drizzle ORM
+- Schema migrations system
+- Query functions: `queryLogs()`, `getServers()`, `getSessions()`
+- Cursor-based pagination using `after`/`before` timestamps
+- Composable backend architecture (SQLite + JSONL backends)
+- Fixed pagination bug (changed from `gte`/`lte` to `gt`/`lt`)
+
+**Key files created:**
+- `packages/core/src/logs/storage.ts` - Query implementation
+- `packages/core/src/logs/db.ts` - Database connection
+- `packages/core/src/logs/schema.ts` - Drizzle schema
+- `packages/core/src/logs/migrations.ts` - Migration system
+- `packages/core/src/logs/query.ts` - Public API
+
 ---
 
-## Phase 1: Core Package Extensions
+### Phase 2: API Package - COMPLETED ✅
+
+**Status:** Created with dependency injection pattern
+
+**What was built:**
+- `@fiberplane/mcp-gateway-api` package
+- Hono HTTP server with routes
+- Dependency injection for query functions
+- Endpoints: `/api/logs`, `/api/servers`, `/api/sessions`, `/api/logs/export`
+- Zod validation
+- Dev server script
+- Added biome-ignore comments for console.log statements
+
+**Key files created:**
+- `packages/api/src/app.ts` - App factory
+- `packages/api/src/routes/index.ts` - Route handlers
+- `packages/api/src/dev.ts` - Dev server
+- `packages/api/package.json` - Package config
+
+---
+
+### Phase 3: Web UI Package - COMPLETED ✅
+
+**Status:** MVP built with all core features
+
+**What was built:**
+- `@fiberplane/mcp-gateway-web` package
+- Vite + React + TypeScript
+- TanStack Query with 1s polling
+- Basic CSS (no Tailwind)
+- Server and session filter dropdowns
+- Log table with inline expand/collapse
+- Export button (JSONL)
+- "Load More" cursor-based pagination
+- Quality scripts (lint, format, typecheck)
+
+**Bug fixes applied:**
+- Fixed infinite re-render loop (moved state updates to useEffect)
+- Fixed duplicate React keys in LogTable (composite key: timestamp-sessionId-id)
+- Fixed duplicate React keys in SessionFilter (grouped by sessionId)
+- Fixed pagination duplicates (changed gte/lte to gt/lt in core)
+- Added useId() for accessibility
+
+**Key files created:**
+- `packages/web/src/App.tsx` - Main app
+- `packages/web/src/components/log-table.tsx` - Table component
+- `packages/web/src/components/server-filter.tsx` - Server dropdown
+- `packages/web/src/components/session-filter.tsx` - Session dropdown
+- `packages/web/src/components/export-button.tsx` - Export functionality
+- `packages/web/src/components/pagination.tsx` - Load more button
+- `packages/web/package.json` - Package config with quality scripts
+
+---
+
+## ❌ REMAINING PHASES (Not Started)
+
+### Phase 4: CLI Integration - TODO
+
+Add `--ui` flag to start web server from CLI.
+
+### Phase 5: Testing & Polish - TODO
+
+Integration tests, E2E tests, accessibility audit.
+
+### Phase 6: Documentation - TODO
+
+Update all documentation.
+
+### Phase 7: Release - TODO
+
+Publish packages to npm.
+
+---
+
+## Phase 1: Core Package Extensions [SUPERSEDED - See Completed Phases Above]
 
 Add log reading and querying capabilities to the core package.
 

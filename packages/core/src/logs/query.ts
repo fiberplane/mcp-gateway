@@ -1,24 +1,19 @@
+import type {
+  LogQueryOptions,
+  LogQueryResult,
+  ServerInfo,
+  SessionInfo,
+} from "@fiberplane/mcp-gateway-types";
 import { getDb } from "./db.js";
 import { ensureMigrations } from "./migrations.js";
 import {
-	queryLogs as queryLogsInternal,
-	getServers as getServersInternal,
-	getSessions as getSessionsInternal,
+  getServers as getServersInternal,
+  getSessions as getSessionsInternal,
+  queryLogs as queryLogsInternal,
 } from "./storage.js";
-import type {
-	LogQueryOptions,
-	LogQueryResult,
-	ServerInfo,
-	SessionInfo,
-} from "@fiberplane/mcp-gateway-types";
 
 // Re-export types for consumers
-export type {
-	LogQueryOptions,
-	LogQueryResult,
-	ServerInfo,
-	SessionInfo,
-};
+export type { LogQueryOptions, LogQueryResult, ServerInfo, SessionInfo };
 
 /**
  * Query logs with filters and pagination
@@ -30,12 +25,12 @@ export type {
  * @returns Paginated log results
  */
 export async function queryLogs(
-	storageDir: string,
-	options: LogQueryOptions = {},
+  storageDir: string,
+  options: LogQueryOptions = {},
 ): Promise<LogQueryResult> {
-	const db = getDb(storageDir);
-	await ensureMigrations(db);
-	return queryLogsInternal(db, options);
+  const db = getDb(storageDir);
+  await ensureMigrations(db);
+  return queryLogsInternal(db, options);
 }
 
 /**
@@ -47,9 +42,9 @@ export async function queryLogs(
  * @returns Server information list
  */
 export async function getServers(storageDir: string): Promise<ServerInfo[]> {
-	const db = getDb(storageDir);
-	await ensureMigrations(db);
-	return getServersInternal(db);
+  const db = getDb(storageDir);
+  await ensureMigrations(db);
+  return getServersInternal(db);
 }
 
 /**
@@ -62,10 +57,10 @@ export async function getServers(storageDir: string): Promise<ServerInfo[]> {
  * @returns Session information list
  */
 export async function getSessions(
-	storageDir: string,
-	serverName?: string,
+  storageDir: string,
+  serverName?: string,
 ): Promise<SessionInfo[]> {
-	const db = getDb(storageDir);
-	await ensureMigrations(db);
-	return getSessionsInternal(db, serverName);
+  const db = getDb(storageDir);
+  await ensureMigrations(db);
+  return getSessionsInternal(db, serverName);
 }

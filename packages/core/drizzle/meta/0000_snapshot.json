@@ -90,31 +90,22 @@
       "indexes": {
         "idx_timestamp": {
           "name": "idx_timestamp",
-          "columns": [
-            "timestamp"
-          ],
+          "columns": ["timestamp"],
           "isUnique": false
         },
         "idx_server_name": {
           "name": "idx_server_name",
-          "columns": [
-            "server_name"
-          ],
+          "columns": ["server_name"],
           "isUnique": false
         },
         "idx_session_id": {
           "name": "idx_session_id",
-          "columns": [
-            "session_id"
-          ],
+          "columns": ["session_id"],
           "isUnique": false
         },
         "idx_server_session": {
           "name": "idx_server_session",
-          "columns": [
-            "server_name",
-            "session_id"
-          ],
+          "columns": ["server_name", "session_id"],
           "isUnique": false
         }
       },

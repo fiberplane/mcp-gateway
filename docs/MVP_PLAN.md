@@ -73,9 +73,101 @@ View and export captured MCP logs in a web browser with basic filtering.
 
 ---
 
-## Implementation Plan
+## Implementation Status
 
-### Phase 1: Core Package (1 day)
+### ✅ Phase 1: SQLite Storage Backend (COMPLETED)
+
+**Completed:** January 2025
+
+Instead of the originally planned JSONL file approach, we implemented a more robust SQLite-based solution:
+
+**Actual Implementation:**
+- Created SQLite schema with migrations (`packages/core/src/logs/schema.ts`)
+- Implemented storage backend interface with SQLite and JSONL backends
+- Added `queryLogs()`, `getServers()`, `getSessions()` functions using SQL
+- Cursor-based pagination using `after`/`before` timestamps
+- Fixed pagination to use `gt`/`lt` instead of `gte`/`lte` to avoid duplicates
+
+**Key Files:**
+- `packages/core/src/logs/storage.ts` - Query functions
+- `packages/core/src/logs/db.ts` - Database connection
+- `packages/core/src/logs/migrations.ts` - Schema migrations
+- `packages/core/src/logs/schema.ts` - Drizzle schema
+
+---
+
+### ✅ Phase 2: API Package (COMPLETED)
+
+**Completed:** January 2025
+
+Created REST API with dependency injection pattern:
+
+**Implementation:**
+- Hono app with CORS and error handling
+- Routes: `/api/logs`, `/api/servers`, `/api/sessions`, `/api/logs/export`
+- Uses dependency injection - query functions passed at runtime
+- Zod validation for query parameters
+- Export functionality for JSONL format
+- Dev server for local testing
+
+**Key Files:**
+- `packages/api/src/app.ts` - App factory with DI
+- `packages/api/src/routes/index.ts` - Route handlers
+- `packages/api/src/dev.ts` - Development server
+
+---
+
+### ✅ Phase 3: Web UI MVP (COMPLETED)
+
+**Completed:** January 2025
+
+React-based web interface with all MVP features:
+
+**Implementation:**
+- Vite + React + TypeScript setup
+- TanStack Query with 1-second polling
+- Basic CSS styling (no Tailwind)
+- Server and session filters with dropdowns
+- Log table with expand/collapse inline details
+- Export button for JSONL download
+- "Load More" button for pagination (cursor-based)
+- Fixed infinite re-render bug in state management
+- Fixed duplicate React keys by using composite keys
+- Fixed session filter to deduplicate across servers
+- Added `useId()` for accessibility
+
+**Key Components:**
+- `packages/web/src/App.tsx` - Main app with filters
+- `packages/web/src/components/log-table.tsx` - Table with expand
+- `packages/web/src/components/server-filter.tsx` - Server dropdown
+- `packages/web/src/components/session-filter.tsx` - Session dropdown
+- `packages/web/src/components/export-button.tsx` - JSONL export
+- `packages/web/src/components/pagination.tsx` - Load more button
+
+**Bug Fixes:**
+- Fixed infinite render loop by moving state updates to useEffect
+- Fixed duplicate keys in LogTable using `timestamp-sessionId-id` composite
+- Fixed duplicate keys in SessionFilter by grouping sessions by sessionId
+- Fixed pagination duplicate entries by using `gt`/`lt` instead of `gte`/`lte`
+- Added quality scripts (lint, format, typecheck) to both web and API packages
+
+---
+
+### ❌ Phase 4: CLI Integration (NOT STARTED)
+
+Still planned - will add `--ui` flag to start web server.
+
+---
+
+### ❌ Phase 5: Testing & Documentation (NOT STARTED)
+
+Still planned - comprehensive testing and docs.
+
+---
+
+## Implementation Plan (Original - Kept for Reference)
+
+### Phase 1: Core Package (1 day) [SUPERSEDED BY SQLITE IMPLEMENTATION]
 
 #### Step 1.1: Create Log Reader
 

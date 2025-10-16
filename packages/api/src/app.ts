@@ -33,5 +33,5 @@ import { createApiRoutes, type QueryFunctions } from "./routes/index.js";
  * ```
  */
 export function createApp(storageDir: string, queries: QueryFunctions): Hono {
-	return createApiRoutes(storageDir, queries);
+  return createApiRoutes(storageDir, queries);
 }

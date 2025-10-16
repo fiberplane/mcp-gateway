@@ -144,7 +144,9 @@ export async function appendCapture(
   // Initialize storage manager if needed (lazy initialization)
   if (storageManager.getBackendNames().length === 0) {
     const { JsonlStorageBackend } = await import("./backends/jsonl-backend.js");
-    const { SqliteStorageBackend } = await import("./backends/sqlite-backend.js");
+    const { SqliteStorageBackend } = await import(
+      "./backends/sqlite-backend.js"
+    );
 
     // Register both backends
     storageManager.registerBackend(new JsonlStorageBackend());
