@@ -26,6 +26,7 @@
     // Published packages (in dependency order)
     { "path": "./packages/types" },
     { "path": "./packages/core" },
+    { "path": "./packages/api" },
     { "path": "./packages/server" },
     { "path": "./packages/cli" },
 

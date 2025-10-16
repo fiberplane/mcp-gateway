@@ -17,19 +17,29 @@ This is a Bun workspace monorepo containing the MCP Gateway project. The reposit
 │   │   ├── src/                 # Core business logic
 │   │   │   ├── registry/        # Registry operations
 │   │   │   ├── capture/         # MCP traffic capture
+│   │   │   ├── logs/            # Log storage and queries
 │   │   │   ├── mcp/             # MCP server & tools
 │   │   │   ├── utils/           # Shared utilities
 │   │   │   ├── logger.ts        # Logging infrastructure
 │   │   │   └── health.ts        # Health checks
 │   │   ├── package.json         # Core package configuration
 │   │   └── tsconfig.json
+│   ├── api/                     # @fiberplane/mcp-gateway-api
+│   │   ├── src/                 # REST API for querying logs
+│   │   │   ├── routes/          # API route handlers
+│   │   │   ├── app.ts           # API app factory
+│   │   │   └── index.ts         # Public exports
+│   │   ├── package.json         # API package configuration
+│   │   ├── tsconfig.json
+│   │   └── README.md            # API documentation
 │   ├── server/                  # @fiberplane/mcp-gateway-server
-│   │   ├── src/                 # HTTP server routes
-│   │   │   ├── routes/          # API routes (proxy, oauth)
+│   │   ├── src/                 # HTTP server with proxy
+│   │   │   ├── routes/          # Proxy and OAuth routes
 │   │   │   ├── app.ts           # Hono application factory
 │   │   │   └── index.ts         # Public exports
 │   │   ├── package.json         # Server package configuration
-│   │   └── tsconfig.json
+│   │   ├── tsconfig.json
+│   │   └── README.md            # Server documentation
 │   ├── mcp-gateway/             # @fiberplane/mcp-gateway-cli (private)
 │   │   ├── src/                 # CLI orchestration & TUI
 │   │   │   ├── tui/             # Terminal UI components
@@ -76,6 +86,7 @@ This is a Bun workspace monorepo containing the MCP Gateway project. The reposit
 ### Package-Specific Commands
 - `bun run --filter @fiberplane/mcp-gateway-types build` - Build types package
 - `bun run --filter @fiberplane/mcp-gateway-core build` - Build core package
+- `bun run --filter @fiberplane/mcp-gateway-api build` - Build API package
 - `bun run --filter @fiberplane/mcp-gateway-server build` - Build server package
 - `bun run --filter @fiberplane/mcp-gateway-cli build` - Build CLI package
 - `bun run --filter @fiberplane/mcp-gateway-cli dev` - Dev mode for CLI
@@ -89,10 +100,11 @@ This is a Bun workspace monorepo containing the MCP Gateway project. The reposit
 
 ### 1. Workspace Structure
 - This is a **Bun workspace** - always use `bun` commands, not npm/yarn
-- **Seven packages** with clear boundaries:
+- **Eight packages** with clear boundaries:
   - `@fiberplane/mcp-gateway-types` - Pure types and Zod schemas (no runtime deps)
-  - `@fiberplane/mcp-gateway-core` - Business logic (registry, capture, health, logger, MCP server)
-  - `@fiberplane/mcp-gateway-server` - HTTP API layer (Hono routes and middleware)
+  - `@fiberplane/mcp-gateway-core` - Business logic (registry, capture, logs, health, logger, MCP server)
+  - `@fiberplane/mcp-gateway-api` - REST API for querying logs (uses dependency injection)
+  - `@fiberplane/mcp-gateway-server` - HTTP server with proxy functionality (orchestrates API, proxy, OAuth)
   - `@fiberplane/mcp-gateway-cli` (private) - CLI and TUI source code (orchestrates other packages)
   - `@fiberplane/mcp-gateway` (public) - Wrapper package for binary distribution
   - `@fiberplane/mcp-gateway-*` (4 platform packages) - Compiled binaries for darwin-arm64, darwin-x64, linux-x64, windows-x64
@@ -102,11 +114,10 @@ This is a Bun workspace monorepo containing the MCP Gateway project. The reposit
 
 ### 2. Package Dependencies
 ```
-types (no deps) → core (types) → server (core, types)
-                                    ↓
-                                   cli (all packages)
+types (no deps) → core (types) → api (core types only) → server (core, api) → cli (all packages)
 ```
 - **No circular dependencies** - enforced by `madge` in CI
+- **API uses dependency injection** - Only imports types from core, query functions passed at runtime
 - During development, packages use `workspace:*` protocol
 - During publishing, `workspace:*` is replaced with actual version ranges
 - All packages are published to npm independently
@@ -115,7 +126,7 @@ types (no deps) → core (types) → server (core, types)
 - **Shared build script** at `scripts/build.ts` referenced by all packages
 - Each package has its own build configuration
 - TypeScript declaration files generated only for library packages (not CLI)
-- Build order matters: types → core → server → cli
+- Build order matters: types → core → api → server → cli
 
 ### 4. TypeScript Configuration
 - **Development mode**: Uses source `.ts` files directly (no build required for typechecking)
@@ -135,7 +146,7 @@ types (no deps) → core (types) → server (core, types)
 ### 6. CI/CD Integration
 - GitHub Actions updated for monorepo structure
 - **Circular dependency check** runs in CI before typecheck
-- CI builds all packages: types → core → server → cli
+- CI builds all packages: types → core → api → server → cli
 - Changesets configured for independent versioning
 - Changesets ignores `test-mcp-server`, tracks `packages/*`
 - Publishing is automated via changesets action
@@ -159,6 +170,12 @@ bun add <package-name>
 **To core package:**
 ```bash
 cd packages/core
+bun add <package-name>
+```
+
+**To API package:**
+```bash
+cd packages/api
 bun add <package-name>
 ```
 
@@ -302,9 +319,10 @@ This repository was migrated from a single-package structure to a monorepo. See 
 ## Package Structure Benefits
 
 The refactored monorepo structure provides:
-- ✅ **Clear separation of concerns** - Types, core logic, HTTP layer, and CLI are independent
+- ✅ **Clear separation of concerns** - Types, core logic, query API, HTTP proxy, and CLI are independent
 - ✅ **Better testability** - Each package can be tested in isolation
-- ✅ **Reusability** - Server package can be embedded in other applications
+- ✅ **Reusability** - API and server packages can be embedded in other applications
+- ✅ **Dependency injection** - API package uses DI for flexibility and testing
 - ✅ **Independent versioning** - Packages can be versioned and released independently
 - ✅ **No circular dependencies** - Enforced by CI checks with madge
 

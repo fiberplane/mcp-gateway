@@ -1,15 +1,15 @@
 import { Hono } from "hono";
 import { sValidator } from "@hono/standard-validator";
 import { z } from "zod";
-import {
-	queryLogs,
-	getServers,
-	getSessions,
-	type LogQueryOptions,
+import type {
+	LogQueryOptions,
+	LogQueryResult,
+	ServerInfo,
+	SessionInfo,
 } from "@fiberplane/mcp-gateway-core";
 
 /**
- * Query parameters schema for GET /api/logs
+ * Query parameters schema for GET /logs
  */
 const logsQuerySchema = z.object({
 	server: z.string().optional(),
@@ -22,28 +22,47 @@ const logsQuerySchema = z.object({
 });
 
 /**
- * Query parameters schema for GET /api/sessions
+ * Query parameters schema for GET /sessions
  */
 const sessionsQuerySchema = z.object({
 	server: z.string().optional(),
 });
 
 /**
+ * Query functions interface for dependency injection
+ */
+export interface QueryFunctions {
+	queryLogs: (
+		storageDir: string,
+		options?: LogQueryOptions,
+	) => Promise<LogQueryResult>;
+	getServers: (storageDir: string) => Promise<ServerInfo[]>;
+	getSessions: (
+		storageDir: string,
+		serverName?: string,
+	) => Promise<SessionInfo[]>;
+}
+
+/**
  * Create API routes for querying logs
  *
  * Routes:
- * - GET /api/logs - Query logs with filters and pagination
- * - GET /api/servers - List servers with aggregated stats
- * - GET /api/sessions - List sessions with aggregated stats
+ * - GET /logs - Query logs with filters and pagination
+ * - GET /servers - List servers with aggregated stats
+ * - GET /sessions - List sessions with aggregated stats
  *
  * @param storageDir - Storage directory path
+ * @param queries - Query functions to use for data access
  * @returns Hono app with API routes
  */
-export function createApiRoutes(storageDir: string): Hono {
+export function createApiRoutes(
+	storageDir: string,
+	queries: QueryFunctions,
+): Hono {
 	const app = new Hono();
 
 	/**
-	 * GET /api/logs
+	 * GET /logs
 	 *
 	 * Query logs with optional filters and pagination
 	 */
@@ -60,24 +79,24 @@ export function createApiRoutes(storageDir: string): Hono {
 			order: query.order,
 		};
 
-		const result = await queryLogs(storageDir, options);
+		const result = await queries.queryLogs(storageDir, options);
 
 		return c.json(result);
 	});
 
 	/**
-	 * GET /api/servers
+	 * GET /servers
 	 *
 	 * List all servers with log counts and session counts
 	 */
 	app.get("/servers", async (c) => {
-		const servers = await getServers(storageDir);
+		const servers = await queries.getServers(storageDir);
 
 		return c.json({ servers });
 	});
 
 	/**
-	 * GET /api/sessions
+	 * GET /sessions
 	 *
 	 * List all sessions with log counts and time ranges
 	 * Optionally filter by server name
@@ -85,7 +104,7 @@ export function createApiRoutes(storageDir: string): Hono {
 	app.get("/sessions", sValidator("query", sessionsQuerySchema), async (c) => {
 		const query = c.req.valid("query") as z.infer<typeof sessionsQuerySchema>;
 
-		const sessions = await getSessions(storageDir, query.server);
+		const sessions = await queries.getSessions(storageDir, query.server);
 
 		return c.json({ sessions });
 	});
