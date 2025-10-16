@@ -5,9 +5,9 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { McpServer, StreamableHttpTransport } from "mcp-lite";
-import type { Registry } from "../../src/registry.js";
-import { createApp } from "../../src/server/index.js";
-import { saveRegistry } from "../../src/storage.js";
+import type { Registry } from "@fiberplane/mcp-gateway-types";
+import { saveRegistry } from "@fiberplane/mcp-gateway-core";
+import { createApp } from "@fiberplane/mcp-gateway-server";
 
 // JSON-RPC response type
 interface JsonRpcResponse {

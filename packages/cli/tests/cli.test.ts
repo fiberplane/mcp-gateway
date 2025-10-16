@@ -2,8 +2,7 @@ import { afterEach, beforeEach, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { addServer, isValidUrl, removeServer } from "../src/registry.js";
-import { loadRegistry, saveRegistry } from "../src/storage.js";
+import { addServer, isValidUrl, removeServer, loadRegistry, saveRegistry } from "@fiberplane/mcp-gateway-core";
 
 let tempDir: string;
 
@@ -154,7 +153,7 @@ test("loadRegistry handles invalid JSON gracefully", async () => {
 
 // CLI integration tests
 test("CLI shows help when --help flag is used", async () => {
-  const proc = Bun.spawn(["bun", "run", "./src/run-v2.ts", "--help"], {
+  const proc = Bun.spawn(["bun", "run", "./src/cli.ts", "--help"], {
     stdout: "pipe",
     cwd: `${import.meta.dir}/..`,
   });
@@ -169,7 +168,7 @@ test("CLI shows help when --help flag is used", async () => {
 });
 
 test("CLI shows version when --version flag is used", async () => {
-  const proc = Bun.spawn(["bun", "run", "./src/run-v2.ts", "--version"], {
+  const proc = Bun.spawn(["bun", "run", "./src/cli.ts", "--version"], {
     stdout: "pipe",
     cwd: `${import.meta.dir}/..`,
   });
@@ -184,7 +183,7 @@ test("CLI shows version when --version flag is used", async () => {
 // Headless mode tests (non-TTY environment)
 test("Headless mode: CLI runs without TUI when stdin is not a TTY", async () => {
   const proc = Bun.spawn(
-    ["bun", "run", "./src/run-v2.ts", "--storage-dir", tempDir],
+    ["bun", "run", "./src/cli.ts", "--storage-dir", tempDir],
     {
       stdin: "pipe",
       stdout: "pipe",
@@ -238,7 +237,7 @@ test.skip("Headless mode: CLI server responds to SIGTERM gracefully", async () =
   await new Promise((resolve) => setTimeout(resolve, 1000));
 
   const proc = Bun.spawn(
-    ["bun", "run", "./src/run-v2.ts", "--storage-dir", tempDir],
+    ["bun", "run", "./src/cli.ts", "--storage-dir", tempDir],
     {
       stdin: "pipe",
       stdout: "pipe",
