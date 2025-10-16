@@ -6,6 +6,7 @@ import {
 import type { LogEntry, Registry } from "@fiberplane/mcp-gateway-types";
 import { Hono } from "hono";
 import { logger as loggerMiddleware } from "hono/logger";
+import { createApiRoutes } from "./routes/api";
 import { createOAuthRoutes } from "./routes/oauth";
 import { createProxyRoutes } from "./routes/proxy";
 
@@ -59,6 +60,10 @@ export async function createApp(
       storage: storage,
     });
   });
+
+  // Mount API routes for querying logs
+  const apiRoutes = createApiRoutes(storage);
+  app.route("/api", apiRoutes);
 
   // Mount OAuth discovery and registration routes
   // These need to be mounted BEFORE the proxy routes to handle .well-known paths

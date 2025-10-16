@@ -10,6 +10,14 @@ import {
 	type SessionInfo,
 } from "./storage.js";
 
+// Re-export types for consumers
+export type {
+	LogQueryOptions,
+	LogQueryResult,
+	ServerInfo,
+	SessionInfo,
+};
+
 /**
  * Query logs with filters and pagination
  *
