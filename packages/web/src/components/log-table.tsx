@@ -4,6 +4,7 @@ import { Fragment, useState } from "react";
 import type { LogEntry } from "../lib/api";
 import { getMethodBadgeVariant } from "../lib/badge-color";
 import { useHandler } from "../lib/use-handler";
+import { getLogKey } from "../lib/utils";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
@@ -20,11 +21,6 @@ export function LogTable({
   onSelectionChange,
 }: LogTableProps) {
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
-
-  const getLogKey = (log: LogEntry) => {
-    // Create a unique key from timestamp + sessionId + id
-    return `${log.timestamp}-${log.metadata.sessionId}-${log.id}`;
-  };
 
   const handleRowClick = useHandler((log: LogEntry) => {
     const key = getLogKey(log);

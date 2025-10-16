@@ -8,6 +8,7 @@ import { SessionFilter } from "./components/session-filter";
 import type { LogEntry } from "./lib/api";
 import { api } from "./lib/api";
 import { useHandler } from "./lib/use-handler";
+import { getLogKey } from "./lib/utils";
 
 function App() {
   const [serverName, setServerName] = useState<string | undefined>();
@@ -29,6 +30,7 @@ function App() {
   });
 
   // Update accumulated logs when data changes
+  // biome-ignore lint/correctness/useExhaustiveDependencies: oldestTimestamp is read but intentionally excluded to avoid re-rendering on pagination
   useEffect(() => {
     if (!data) return;
 
@@ -39,15 +41,7 @@ function App() {
       // Loading more - append new logs
       setAllLogs((prev) => [...prev, ...data.data]);
     }
-  }, [data, oldestTimestamp]);
-
-  // Display logs - just use allLogs directly
-  const logs = allLogs;
-
-  // Helper function to generate unique log keys
-  const getLogKey = (log: LogEntry) => {
-    return `${log.timestamp}-${log.metadata.sessionId}-${log.id}`;
-  };
+  }, [data]);
 
   const handleLoadMore = useHandler(() => {
     if (data?.pagination.oldestTimestamp) {
@@ -88,7 +82,7 @@ function App() {
           />
           <div className="ml-auto">
             <ExportButton
-              logs={logs}
+              logs={allLogs}
               selectedIds={selectedIds}
               getLogKey={getLogKey}
             />
@@ -109,7 +103,7 @@ function App() {
           <>
             <div className="bg-card rounded-lg overflow-hidden border border-border">
               <LogTable
-                logs={logs}
+                logs={allLogs}
                 selectedIds={selectedIds}
                 onSelectionChange={setSelectedIds}
               />
