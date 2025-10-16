@@ -22,6 +22,9 @@ export async function createApp(
     onLog?: (entry: LogEntry) => void;
     onRegistryUpdate?: () => void;
   },
+  options?: {
+    publicDir?: string; // Path to web UI static files
+  },
 ): Promise<{ app: Hono; registry: Registry }> {
   const app = new Hono();
 
@@ -90,28 +93,29 @@ export async function createApp(
   // Short alias for gateway's own MCP server
   app.route("/g", gatewayMcp);
 
-  // Serve web UI static files for paths that don't match API/server routes
-  // The serveStatic middleware will only serve files that exist in the public directory
-  app.use(
-    "*",
-    serveStatic({
-      root: "./dist",
-      path: "public",
-    }),
-  );
+  // Serve web UI static files if publicDir is provided
+  if (options?.publicDir) {
+    // Serve static files for paths that don't match API/server routes
+    app.use(
+      "*",
+      serveStatic({
+        root: options.publicDir,
+      }),
+    );
 
-  // Fallback to index.html for SPA client-side routing (for non-API paths)
-  app.get("*", async (c) => {
-    const indexPath = "./dist/public/index.html";
-    try {
-      const file = Bun.file(indexPath);
-      const html = await file.text();
-      return c.html(html);
-    } catch {
-      // If index.html doesn't exist, return 404
-      return c.text("Web UI not available", 404);
-    }
-  });
+    // Fallback to index.html for SPA client-side routing (for non-API paths)
+    app.get("*", async (c) => {
+      const indexPath = `${options.publicDir}/index.html`;
+      try {
+        const file = Bun.file(indexPath);
+        const html = await file.text();
+        return c.html(html);
+      } catch {
+        // If index.html doesn't exist, return 404
+        return c.text("Web UI not available", 404);
+      }
+    });
+  }
 
   return { app, registry };
 }

@@ -117,6 +117,7 @@ export function LogTable({
                   isExpanded ? "bg-blue-50/50" : ""
                 }`}
               >
+                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Checkbox cell stops propagation */}
                 <td className="p-3" onClick={(e) => e.stopPropagation()}>
                   <Checkbox
                     checked={selectedIds.has(logKey)}
@@ -126,24 +127,28 @@ export function LogTable({
                     aria-label={`Select log ${logKey}`}
                   />
                 </td>
+                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Table row click for expand/collapse, keyboard nav to be added */}
                 <td
                   className="p-3 font-mono text-sm text-foreground cursor-pointer"
                   onClick={() => handleRowClick(log)}
                 >
                   {format(new Date(log.timestamp), "HH:mm:ss.SSS")}
                 </td>
+                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Table row click for expand/collapse, keyboard nav to be added */}
                 <td
                   className="p-3 text-sm text-foreground cursor-pointer"
                   onClick={() => handleRowClick(log)}
                 >
                   {log.metadata.serverName}
                 </td>
+                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Table row click for expand/collapse, keyboard nav to be added */}
                 <td
                   className="p-3 font-mono text-xs text-muted-foreground cursor-pointer"
                   onClick={() => handleRowClick(log)}
                 >
                   {log.metadata.sessionId.slice(0, 8)}...
                 </td>
+                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Table row click for expand/collapse, keyboard nav to be added */}
                 <td
                   className="p-3 cursor-pointer"
                   onClick={() => handleRowClick(log)}
@@ -152,6 +157,7 @@ export function LogTable({
                     {log.method}
                   </Badge>
                 </td>
+                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Table row click for expand/collapse, keyboard nav to be added */}
                 <td
                   className="p-3 text-sm text-muted-foreground cursor-pointer"
                   onClick={() => handleRowClick(log)}
