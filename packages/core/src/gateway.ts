@@ -102,6 +102,30 @@ export interface Gateway {
   };
 
   /**
+   * Log query operations for retrieving captured traffic
+   */
+  logs: {
+    /**
+     * Query logs with filtering and pagination
+     */
+    query(
+      options?: import("@fiberplane/mcp-gateway-types").LogQueryOptions,
+    ): Promise<import("@fiberplane/mcp-gateway-types").LogQueryResult>;
+
+    /**
+     * Get server aggregations
+     */
+    getServers(): Promise<import("@fiberplane/mcp-gateway-types").ServerInfo[]>;
+
+    /**
+     * Get session aggregations
+     */
+    getSessions(
+      serverName?: string,
+    ): Promise<import("@fiberplane/mcp-gateway-types").SessionInfo[]>;
+  };
+
+  /**
    * Health check operations for monitoring server availability
    */
   health: {
@@ -463,6 +487,13 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
       get: (sessionId: string) => clientInfoStore.get(sessionId),
       clear: (sessionId: string) => clientInfoStore.clear(sessionId),
       getActiveSessions: () => clientInfoStore.getActiveSessions(),
+    },
+
+    logs: {
+      query: async (options?) => await storageManager.queryLogs(options),
+      getServers: async () => await storageManager.getServers(),
+      getSessions: async (serverName?) =>
+        await storageManager.getSessions(serverName),
     },
 
     health: {

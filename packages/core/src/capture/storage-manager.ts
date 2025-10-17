@@ -1,4 +1,10 @@
-import type { CaptureRecord } from "@fiberplane/mcp-gateway-types";
+import type {
+  CaptureRecord,
+  LogQueryOptions,
+  LogQueryResult,
+  ServerInfo,
+  SessionInfo,
+} from "@fiberplane/mcp-gateway-types";
 import { logger } from "../logger";
 import type { StorageBackend, StorageWriteResult } from "./storage-backend.js";
 
@@ -87,6 +93,77 @@ export class StorageManager {
 
     await Promise.all(writePromises);
     return results;
+  }
+
+  /**
+   * Query logs from the first available backend
+   *
+   * Note: Currently delegates to the first registered backend.
+   * In practice, this will be the SQLite backend.
+   *
+   * @param options - Query options (filters, pagination, sorting)
+   * @returns Paginated query result
+   */
+  async queryLogs(options?: LogQueryOptions): Promise<LogQueryResult> {
+    if (!this.initialized) {
+      throw new Error(
+        "Storage manager not initialized. Call initialize() first.",
+      );
+    }
+
+    const backend = this.backends.values().next().value as
+      | StorageBackend
+      | undefined;
+    if (!backend) {
+      throw new Error("No storage backends registered");
+    }
+
+    return await backend.queryLogs(options);
+  }
+
+  /**
+   * Get server aggregations from the first available backend
+   *
+   * @returns List of server aggregation info
+   */
+  async getServers(): Promise<ServerInfo[]> {
+    if (!this.initialized) {
+      throw new Error(
+        "Storage manager not initialized. Call initialize() first.",
+      );
+    }
+
+    const backend = this.backends.values().next().value as
+      | StorageBackend
+      | undefined;
+    if (!backend) {
+      throw new Error("No storage backends registered");
+    }
+
+    return await backend.getServers();
+  }
+
+  /**
+   * Get session aggregations from the first available backend
+   *
+   * @param serverName - Optional server filter
+   * @returns List of session aggregation info
+   */
+  async getSessions(serverName?: string): Promise<SessionInfo[]> {
+    if (!this.initialized) {
+      throw new Error(
+        "Storage manager not initialized. Call initialize() first.",
+      );
+    }
+
+    const backend = this.backends.values().next().value as
+      | StorageBackend
+      | undefined;
+    if (!backend) {
+      throw new Error("No storage backends registered");
+    }
+
+    return await backend.getSessions(serverName);
   }
 
   /**

@@ -14,11 +14,13 @@ import { createServerTools } from "./tools/server-tools";
  *
  * @param registry - The gateway's server registry
  * @param storageDir - Directory where captures are stored
+ * @param gateway - Gateway instance for accessing query operations
  * @returns MCP server instance with configured tools
  */
 export function createMcpServer(
   registry: Registry,
   storageDir: string,
+  gateway: import("../gateway.js").Gateway,
 ): McpServer {
   // Create MCP server with Zod schema adapter for validation
   const mcp = new McpServer({
@@ -60,8 +62,8 @@ export function createMcpServer(
   // Register server management tools
   createServerTools(mcp, registry, storageDir);
 
-  // Register capture analysis tools (only search_records)
-  createCaptureTools(mcp, registry, storageDir);
+  // Register capture analysis tools (search_records with SQLite queries)
+  createCaptureTools(mcp, registry, gateway);
 
   // Set up custom error handler
   mcp.onError((error, ctx) => {
@@ -118,10 +120,15 @@ export function createMcpServer(
  *
  * @param registry - The gateway's server registry
  * @param storageDir - Directory where captures are stored
+ * @param gateway - Gateway instance for accessing query operations
  * @returns Hono app configured to serve the MCP server
  */
-export function createMcpApp(registry: Registry, storageDir: string): Hono {
-  const mcp = createMcpServer(registry, storageDir);
+export function createMcpApp(
+  registry: Registry,
+  storageDir: string,
+  gateway: import("../gateway.js").Gateway,
+): Hono {
+  const mcp = createMcpServer(registry, storageDir, gateway);
 
   // Create HTTP transport for the MCP server
   const transport = new StreamableHttpTransport();

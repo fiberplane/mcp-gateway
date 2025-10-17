@@ -1,6 +1,12 @@
 import { Database } from "bun:sqlite";
 import { join } from "node:path";
-import type { CaptureRecord } from "@fiberplane/mcp-gateway-types";
+import type {
+  CaptureRecord,
+  LogQueryOptions,
+  LogQueryResult,
+  ServerInfo,
+  SessionInfo,
+} from "@fiberplane/mcp-gateway-types";
 import { type BunSQLiteDatabase, drizzle } from "drizzle-orm/bun-sqlite";
 import { logger } from "../../logger";
 import * as schema from "../../logs/schema.js";
@@ -92,6 +98,66 @@ export class SqliteStorageBackend implements StorageBackend {
           reason: String(error),
         },
       };
+    }
+  }
+
+  async queryLogs(options: LogQueryOptions = {}): Promise<LogQueryResult> {
+    if (!this.db || !this.initialized) {
+      logger.debug("SQLite backend not ready, returning empty result");
+      return {
+        data: [],
+        pagination: {
+          count: 0,
+          limit: options.limit || 100,
+          hasMore: false,
+          oldestTimestamp: null,
+          newestTimestamp: null,
+        },
+      };
+    }
+
+    try {
+      const { queryLogs } = await import("../../logs/storage.js");
+      return await queryLogs(this.db, options);
+    } catch (error) {
+      logger.error("SQLite queryLogs failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
+
+  async getServers(): Promise<ServerInfo[]> {
+    if (!this.db || !this.initialized) {
+      logger.debug("SQLite backend not ready, returning empty servers");
+      return [];
+    }
+
+    try {
+      const { getServers } = await import("../../logs/storage.js");
+      return await getServers(this.db);
+    } catch (error) {
+      logger.error("SQLite getServers failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
+
+  async getSessions(serverName?: string): Promise<SessionInfo[]> {
+    if (!this.db || !this.initialized) {
+      logger.debug("SQLite backend not ready, returning empty sessions");
+      return [];
+    }
+
+    try {
+      const { getSessions } = await import("../../logs/storage.js");
+      return await getSessions(this.db, serverName);
+    } catch (error) {
+      logger.error("SQLite getSessions failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
     }
   }
 

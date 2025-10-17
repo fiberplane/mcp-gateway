@@ -13,12 +13,9 @@ import {
   createMcpApp,
   createRequestCaptureRecord,
   createResponseCaptureRecord,
-  getServers,
-  getSessions,
   getStorageRoot,
   loadRegistry,
   logger,
-  queryLogs,
   saveRegistry,
 } from "@fiberplane/mcp-gateway-core";
 import {
@@ -240,6 +237,7 @@ export async function runCli(): Promise<void> {
       logger,
       proxyDependencies,
       getServer: (registry, name) => gateway.registry.getServer(registry, name),
+      gateway,
       onLog: emitLog,
       onRegistryUpdate: emitRegistryUpdate,
     });
@@ -251,10 +249,12 @@ export async function runCli(): Promise<void> {
     app.route("/", serverApp);
 
     // Mount API for observability (query logs, servers, sessions)
+    // Wrap Gateway methods to match API's expected signature (storageDir is ignored since Gateway already knows it)
     const apiApp = createApiApp(storageDir, {
-      queryLogs,
-      getServers,
-      getSessions,
+      queryLogs: (_storageDir, options) => gateway.logs.query(options),
+      getServers: (_storageDir) => gateway.logs.getServers(),
+      getSessions: (_storageDir, serverName) =>
+        gateway.logs.getSessions(serverName),
     });
     app.route("/api", apiApp);
 

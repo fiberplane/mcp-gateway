@@ -1,10 +1,21 @@
-import type { CaptureRecord } from "@fiberplane/mcp-gateway-types";
+import type {
+  CaptureRecord,
+  LogQueryOptions,
+  LogQueryResult,
+  ServerInfo,
+  SessionInfo,
+} from "@fiberplane/mcp-gateway-types";
 
 /**
  * Storage backend interface
  *
  * Allows different storage implementations (JSONL, SQLite, etc.)
  * to be used independently or combined.
+ *
+ * This is a full CRUD interface:
+ * - write() for creating/updating records
+ * - query() for reading/filtering records
+ * - close() for cleanup
  */
 export interface StorageBackend {
   /**
@@ -25,6 +36,29 @@ export interface StorageBackend {
    * @returns Metadata about what was stored (optional)
    */
   write(record: CaptureRecord): Promise<StorageWriteResult>;
+
+  /**
+   * Query logs with filtering and pagination
+   *
+   * @param options - Query options (filters, pagination, sorting)
+   * @returns Paginated query result with logs and metadata
+   */
+  queryLogs(options?: LogQueryOptions): Promise<LogQueryResult>;
+
+  /**
+   * Get server aggregations (name, log count, session count)
+   *
+   * @returns List of server aggregation info
+   */
+  getServers(): Promise<ServerInfo[]>;
+
+  /**
+   * Get session aggregations (session ID, server, log count, time range)
+   *
+   * @param serverName - Optional server filter
+   * @returns List of session aggregation info
+   */
+  getSessions(serverName?: string): Promise<SessionInfo[]>;
 
   /**
    * Close/cleanup the storage backend
