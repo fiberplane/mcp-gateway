@@ -5,12 +5,14 @@ interface PaginationProps {
   hasMore: boolean;
   onLoadMore: () => void;
   isLoading?: boolean;
+  label?: string;
 }
 
 export function Pagination({
   hasMore,
   onLoadMore,
   isLoading,
+  label = "Load More",
 }: PaginationProps) {
   const handleClick = useHandler(() => {
     onLoadMore();
@@ -28,7 +30,7 @@ export function Pagination({
         disabled={isLoading}
         variant="outline"
       >
-        {isLoading ? "Loading..." : "Load More"}
+        {isLoading ? "Loading..." : label}
       </Button>
     </div>
   );

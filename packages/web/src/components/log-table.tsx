@@ -236,6 +236,7 @@ export function LogTable({
                 {/* biome-ignore lint/a11y/useKeyWithClickEvents: Table row click for expand/collapse, keyboard nav to be added */}
                 <td
                   className="p-3 font-mono text-sm text-foreground cursor-pointer"
+                  title={log.timestamp}
                   onClick={() => handleRowClick(log)}
                 >
                   {format(new Date(log.timestamp), "HH:mm:ss.SSS")}

@@ -1,11 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { ExportButton } from "./components/export-button";
 import { LogTable } from "./components/log-table";
 import { Pagination } from "./components/pagination";
 import { ServerFilter } from "./components/server-filter";
 import { SessionFilter } from "./components/session-filter";
-import type { LogEntry } from "./lib/api";
+import { StreamingToggle } from "./components/streaming-toggle";
 import { api } from "./lib/api";
 import { useHandler } from "./lib/use-handler";
 import { getLogKey } from "./lib/utils";
@@ -13,55 +13,61 @@ import { getLogKey } from "./lib/utils";
 function App() {
   const [serverName, setServerName] = useState<string | undefined>();
   const [sessionId, setSessionId] = useState<string | undefined>();
-  const [oldestTimestamp, setOldestTimestamp] = useState<string | undefined>();
-  const [allLogs, setAllLogs] = useState<LogEntry[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["logs", serverName, sessionId, oldestTimestamp],
-    queryFn: () =>
+  // Streaming: ON = auto-refresh with new logs, OFF = manual load more
+  const [isStreaming, setIsStreaming] = useState(true);
+
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    error,
+  } = useInfiniteQuery({
+    queryKey: ["logs", serverName, sessionId],
+    queryFn: async ({ pageParam }) =>
       api.getLogs({
         serverName,
         sessionId,
-        limit: 100,
-        before: oldestTimestamp,
-        order: "desc",
+        limit: 10,
+        before: pageParam,
+        order: "desc", // Always descending - newest first
       }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => {
+      // Paginate backwards (load older logs)
+      if (lastPage.pagination.hasMore && lastPage.pagination.oldestTimestamp) {
+        return lastPage.pagination.oldestTimestamp;
+      }
+      return undefined;
+    },
+    // Conditional polling - only when streaming is on
+    refetchInterval: isStreaming ? 5000 : false,
+    refetchIntervalInBackground: false, // Only poll when tab is active
   });
 
-  // Update accumulated logs when data changes
-  // biome-ignore lint/correctness/useExhaustiveDependencies: oldestTimestamp is read but intentionally excluded to avoid re-rendering on pagination
-  useEffect(() => {
-    if (!data) return;
-
-    if (!oldestTimestamp) {
-      // Fresh query - replace all logs
-      setAllLogs(data.data);
-    } else {
-      // Loading more - append new logs
-      setAllLogs((prev) => [...prev, ...data.data]);
-    }
-  }, [data]);
+  // Flatten all pages into single array for display
+  const allLogs = data?.pages.flatMap((page) => page.data) ?? [];
 
   const handleLoadMore = useHandler(() => {
-    if (data?.pagination.oldestTimestamp) {
-      setOldestTimestamp(data.pagination.oldestTimestamp);
-    }
+    fetchNextPage();
   });
 
   const handleServerChange = useHandler((value: string | undefined) => {
     setServerName(value);
     setSessionId(undefined); // Reset session when server changes
-    setOldestTimestamp(undefined);
-    setAllLogs([]);
     setSelectedIds(new Set()); // Reset selection
   });
 
   const handleSessionChange = useHandler((value: string | undefined) => {
     setSessionId(value);
-    setOldestTimestamp(undefined);
-    setAllLogs([]);
     setSelectedIds(new Set()); // Reset selection
+  });
+
+  const handleStreamingToggle = useHandler((enabled: boolean) => {
+    setIsStreaming(enabled);
   });
 
   return (
@@ -80,6 +86,10 @@ function App() {
             value={sessionId}
             onChange={handleSessionChange}
           />
+          <StreamingToggle
+            isStreaming={isStreaming}
+            onToggle={handleStreamingToggle}
+          />
           <div className="ml-auto">
             <ExportButton
               logs={allLogs}
@@ -95,23 +105,25 @@ function App() {
           </div>
         )}
 
-        {isLoading && !oldestTimestamp ? (
+        {isLoading ? (
           <div className="p-10 text-center text-muted-foreground bg-card rounded-lg">
             Loading logs...
           </div>
         ) : (
           <>
-            <div className="bg-card rounded-lg overflow-hidden border border-border">
+            <div className="bg-card rounded-lg overflow-auto border border-border max-h-[calc(100vh-16rem)]">
               <LogTable
                 logs={allLogs}
                 selectedIds={selectedIds}
                 onSelectionChange={setSelectedIds}
               />
             </div>
+
+            {/* Load More button at bottom */}
             <Pagination
-              hasMore={data?.pagination.hasMore || false}
+              hasMore={hasNextPage || false}
               onLoadMore={handleLoadMore}
-              isLoading={isLoading}
+              isLoading={isFetchingNextPage}
             />
           </>
         )}
