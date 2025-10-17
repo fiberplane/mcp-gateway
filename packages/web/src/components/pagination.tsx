@@ -28,7 +28,7 @@ export function Pagination({
         type="button"
         onClick={handleClick}
         disabled={isLoading}
-        variant="outline"
+        variant="default"
       >
         {isLoading ? "Loading..." : label}
       </Button>

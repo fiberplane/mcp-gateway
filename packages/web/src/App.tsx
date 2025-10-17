@@ -31,7 +31,7 @@ function App() {
       api.getLogs({
         serverName,
         sessionId,
-        limit: 10,
+        limit: 100,
         before: pageParam,
         order: "desc", // Always descending - newest first
       }),
