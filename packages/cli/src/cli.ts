@@ -257,87 +257,139 @@ export async function runCli(): Promise<void> {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MCP Gateway</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    * {
       margin: 0;
       padding: 0;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Inter", system-ui, -apple-system, sans-serif;
+      background: #ffffff;
+      color: #000000;
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
+      padding: 16px;
     }
+
     .container {
-      text-align: center;
-      background: white;
-      padding: 48px;
-      border-radius: 12px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
       max-width: 500px;
+      text-align: center;
     }
+
+    .header {
+      margin-bottom: 40px;
+    }
+
     h1 {
-      margin: 0 0 12px 0;
-      font-size: 32px;
-      color: #222;
+      font-size: 36px;
+      font-weight: 700;
+      color: #272624;
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
     }
+
     .version {
-      color: #999;
-      font-size: 14px;
+      display: inline-block;
+      background: #f9fafb;
+      color: #6b7280;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 4px 12px;
+      border-radius: 4px;
+      border: 1px solid #e5e7eb;
+      margin-bottom: 24px;
+    }
+
+    p {
+      font-size: 15px;
+      line-height: 1.6;
+      color: #6b7280;
       margin-bottom: 32px;
     }
-    p {
-      margin: 0 0 24px 0;
-      color: #666;
-      font-size: 16px;
-      line-height: 1.5;
-    }
+
     .button {
       display: inline-block;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 12px 32px;
+      background: #272624;
+      color: #ffffff;
+      padding: 12px 28px;
       border-radius: 6px;
       text-decoration: none;
       font-weight: 500;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
-    }
-    .info {
-      margin-top: 32px;
-      padding-top: 24px;
-      border-top: 1px solid #eee;
       font-size: 14px;
-      color: #999;
+      transition: all 0.2s;
+      border: 1px solid #272624;
+      cursor: pointer;
     }
+
+    .button:hover {
+      background: #1a1817;
+      border-color: #1a1817;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(39, 38, 36, 0.15);
+    }
+
+    .endpoints-section {
+      margin-top: 40px;
+      padding-top: 40px;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    .endpoints-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #272624;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 16px;
+    }
+
     .endpoints {
-      text-align: left;
-      background: #f8f9fa;
-      padding: 12px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
       border-radius: 6px;
-      margin-top: 12px;
-      font-family: 'Monaco', 'Menlo', monospace;
+      padding: 16px;
+      text-align: left;
+      font-family: "Roboto Mono", Consolas, monospace;
       font-size: 12px;
-      line-height: 1.6;
+      line-height: 1.8;
+      color: #6b7280;
+    }
+
+    .endpoint-item {
+      padding: 4px 0;
+    }
+
+    .endpoint-method {
+      color: #8b5cf6;
+      font-weight: 600;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>MCP Gateway</h1>
-    <div class="version">v${version}</div>
-    <p>Welcome to the MCP Gateway! Access the web interface to view and analyze captured MCP traffic.</p>
+    <div class="header">
+      <h1>MCP Gateway</h1>
+      <div class="version">v${version}</div>
+    </div>
+
+    <p>Access the web interface to view and analyze all captured MCP traffic and interactions.</p>
+
     <a href="/ui" class="button">Open Web UI</a>
-    <div class="info">
-      <strong>Available Endpoints:</strong>
+
+    <div class="endpoints-section">
+      <div class="endpoints-title">Available Endpoints</div>
       <div class="endpoints">
-        GET /api/logs - Query logs<br>
-        GET /api/servers - List servers<br>
-        GET /api/sessions - List sessions<br>
-        GET /ui - Web interface
+        <div class="endpoint-item"><span class="endpoint-method">GET</span> /api/logs - Query captured logs</div>
+        <div class="endpoint-item"><span class="endpoint-method">GET</span> /api/servers - List MCP servers</div>
+        <div class="endpoint-item"><span class="endpoint-method">GET</span> /api/sessions - List sessions</div>
+        <div class="endpoint-item"><span class="endpoint-method">GET</span> /ui - Web interface</div>
       </div>
     </div>
   </div>
