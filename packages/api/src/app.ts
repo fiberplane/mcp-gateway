@@ -3,6 +3,13 @@ import type { Hono } from "hono";
 import { createApiRoutes, type QueryFunctions } from "./routes/index.js";
 
 /**
+ * Logger interface for dependency injection
+ */
+export interface Logger {
+  error(message: string, context?: Record<string, unknown>): void;
+}
+
+/**
  * Create a standalone API server for querying MCP Gateway logs
  *
  * This creates a Hono app that can be mounted at any path or run standalone.
@@ -11,34 +18,25 @@ import { createApiRoutes, type QueryFunctions } from "./routes/index.js";
  * - GET /servers - List servers with aggregated stats
  * - GET /sessions - List sessions with aggregated stats
  *
- * @param storageDir - Path to the MCP Gateway storage directory
- * @param queries - Query functions for data access (injected dependency)
- * @returns Hono app with API routes
+ * @param storageDir - Path to the MCP Gateway storage directory (passed to query functions)
+ * @param queries - Query functions for data access (dependency injected)
+ * @param logger - Logger instance for error logging (dependency injected)
+ * @returns Hono app with mounted API routes
  *
  * @example
- * ```typescript
- * import { createApp } from "@fiberplane/mcp-gateway-api";
- * import { queryLogs, getServers, getSessions } from "@fiberplane/mcp-gateway-core";
- *
- * const apiApp = createApp("~/.mcp-gateway", {
- *   queryLogs,
- *   getServers,
- *   getSessions,
- * });
- *
- * // Mount in another Hono app
- * mainApp.route("/api", apiApp);
- *
- * // Or run standalone
- * Bun.serve({ fetch: apiApp.fetch, port: 3000 });
- * ```
+ * See the CLI package (packages/cli/src/cli.ts) for a complete integration example
+ * that shows how to wire the Gateway instance into the API's query functions.
  */
-export function createApp(storageDir: string, queries: QueryFunctions): Hono {
+export function createApp(
+  storageDir: string,
+  queries: QueryFunctions,
+  logger: Logger,
+): Hono {
   const app = createApiRoutes(storageDir, queries);
 
   // Add global error handler for consistent error responses
   app.onError((err, c) => {
-    console.error("API error", {
+    logger.error("API error", {
       error: String(err),
       path: c.req.path,
       method: c.req.method,

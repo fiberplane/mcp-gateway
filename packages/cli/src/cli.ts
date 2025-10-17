@@ -250,12 +250,16 @@ export async function runCli(): Promise<void> {
 
     // Mount API for observability (query logs, servers, sessions)
     // Wrap Gateway methods to match API's expected signature (storageDir is ignored since Gateway already knows it)
-    const apiApp = createApiApp(storageDir, {
-      queryLogs: (_storageDir, options) => gateway.logs.query(options),
-      getServers: (_storageDir) => gateway.logs.getServers(),
-      getSessions: (_storageDir, serverName) =>
-        gateway.logs.getSessions(serverName),
-    });
+    const apiApp = createApiApp(
+      storageDir,
+      {
+        queryLogs: (_storageDir, options) => gateway.logs.query(options),
+        getServers: (_storageDir) => gateway.logs.getServers(),
+        getSessions: (_storageDir, serverName) =>
+          gateway.logs.getSessions(serverName),
+      },
+      logger,
+    );
     app.route("/api", apiApp);
 
     // Serve Web UI for management
