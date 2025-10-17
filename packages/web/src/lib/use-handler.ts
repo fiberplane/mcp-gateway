@@ -1,6 +1,6 @@
 import { useCallback, useRef } from "react";
 
-const noDeps: Array<void> = [];
+const noDeps: [] = [];
 
 type MemoizedHandler<Handler extends (...args: Array<unknown>) => unknown> = (
   ...args: Parameters<Handler>

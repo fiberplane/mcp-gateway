@@ -23,7 +23,6 @@ This package provides a modern web interface for viewing captured MCP traffic. T
 - **TypeScript** - Full type safety
 - **Vite** - Build tool and dev server with HMR
 - **TanStack Query** - Data fetching, caching, and synchronization
-- **TanStack Router** - Type-safe client-side routing
 - **Tailwind CSS** - Utility-first styling
 - **Radix UI** - Accessible component primitives
 - **date-fns** - Date formatting utilities
@@ -153,7 +152,6 @@ Child Components (display & interaction)
 
 - **Server State** - TanStack Query manages API data, caching, and polling
 - **Local State** - React `useState` for filters, selection, and UI state
-- **URL State** - TanStack Router for filter persistence (future)
 
 ## API Client
 

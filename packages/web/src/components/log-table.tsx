@@ -48,7 +48,7 @@ function SortHeader({
     >
       {children}
       <Icon
-        className={`w-4 h-4 ${isActive ? "text-foreground" : "text - muted - foreground"}`}
+        className={`w-4 h-4 ${isActive ? "text-foreground" : "text-muted-foreground"}`}
       />
     </button>
   );
