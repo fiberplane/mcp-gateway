@@ -1,10 +1,7 @@
 ---
 "@fiberplane/mcp-gateway": minor
-"@fiberplane/mcp-gateway-cli": minor
-"@fiberplane/mcp-gateway-server": minor
 "@fiberplane/mcp-gateway-api": minor
-"@fiberplane/mcp-gateway-core": minor
-"@fiberplane/mcp-gateway-types": minor
+"@fiberplane/mcp-gateway-web": minor
 ---
 
 Add web UI MVP with SQLite storage, query API, and interactive log viewer
@@ -40,6 +37,13 @@ This release introduces a comprehensive web-based user interface for viewing and
 - Serve web UI at `http://localhost:3333/ui` by default
 - Mount query API at `/api` endpoint
 - Fixed session and server filtering parameter names
+- Beautiful landing page at root (/) with web design system styling
+- Landing page includes version badge, welcome message, "Open Web UI" button, and API endpoints reference
+
+**Code Quality:**
+- Removed JSONL storage backend and references for SQLite-only architecture
+- Fixed Biome linter warnings for optional chaining and unused parameters
+- Cleaned up unused imports and deprecated functions
 
 **Developer Experience:**
 - Comprehensive documentation for web UI architecture and implementation
