@@ -2,15 +2,15 @@
 
 ## Overview
 
-REST API for querying and analyzing captured MCP traffic logs. Built with Hono, served on localhost for local development.
+REST API for querying MCP traffic logs captured by the gateway. Built with Hono, mounted at `/api` in the main gateway server.
 
-**Base URL:** `http://localhost:3000/api`
+**Base URL:** `http://localhost:3333/api` (when running locally)
 
 ## Data Models
 
 ### CaptureRecord
 
-Represents a single MCP interaction (already defined in `@fiberplane/mcp-gateway-types`):
+Represents a single MCP interaction:
 
 ```typescript
 interface CaptureRecord {
@@ -23,84 +23,108 @@ interface CaptureRecord {
     durationMs: number;        // Request duration in milliseconds
     httpStatus: number;        // HTTP status code
     client?: ClientInfo;       // Client information
-    sseEventId?: string;       // SSE event ID (if applicable)
-    sseEventType?: string;     // SSE event type (if applicable)
   };
   request?: JsonRpcRequest;    // Request payload
   response?: JsonRpcResponse;  // Response payload
-  sseEvent?: SSEEvent;         // SSE event data
 }
 ```
 
 ### LogEntry (API Response)
 
-Extended version with computed fields for UI:
+Combined request/response representation:
 
 ```typescript
-interface LogEntry extends CaptureRecord {
-  // Computed fields
-  direction: 'request' | 'response' | 'notification' | 'sse';
-  sender: string;              // Client name or server name
-  receiver: string;            // Server name or client name
-  hasError: boolean;           // Whether response contains error
-  tokens?: {                   // Token usage (if available)
-    input?: number;
-    output?: number;
-    total?: number;
+interface LogEntry {
+  timestamp: string;
+  method: string;
+  id: string | number | null;
+  direction: 'request' | 'response';
+  metadata: {
+    serverName: string;
+    sessionId: string;
+    durationMs: number;
+    httpStatus: number;
+    client?: ClientInfo;
   };
+  request?: JsonRpcRequest;    // For request direction
+  response?: JsonRpcResponse;  // For response direction
 }
 ```
 
-### Query Parameters
+### Server Info
 
 ```typescript
-interface LogQueryParams {
-  // Pagination
-  page?: number;              // Page number (1-indexed), default: 1
-  limit?: number;             // Items per page, default: 50, max: 1000
+interface ServerInfo {
+  name: string;                // Server identifier
+  logCount: number;            // Total log entries
+  sessionCount: number;        // Number of unique sessions
+  firstSeen: string;           // ISO timestamp
+  lastSeen: string;            // ISO timestamp
+}
+```
 
-  // Filtering
-  serverName?: string;        // Filter by server name
-  sessionId?: string;         // Filter by session ID
-  method?: string;            // Filter by method name
-  search?: string;            // Full-text search in request/response
-  hasError?: boolean;         // Filter by error presence
-  minDuration?: number;       // Minimum duration in ms
-  maxDuration?: number;       // Maximum duration in ms
-  startTime?: string;         // ISO timestamp - logs after this time
-  endTime?: string;           // ISO timestamp - logs before this time
+### Session Info
 
-  // Sorting
-  sortBy?: 'timestamp' | 'duration' | 'method' | 'server';
-  sortOrder?: 'asc' | 'desc'; // Default: 'desc' for timestamp
+```typescript
+interface SessionInfo {
+  sessionId: string;
+  serverName: string;
+  logCount: number;
+  client?: ClientInfo;
+  startTime: string;           // ISO timestamp
+  endTime: string;             // ISO timestamp
+  methods: string[];           // Methods used in session
+  hasErrors: boolean;
+}
+```
+
+### Query Options
+
+Supported filters for `/logs` endpoint:
+
+```typescript
+interface LogQueryOptions {
+  serverName?: string;         // Filter by server name (exact match)
+  sessionId?: string;          // Filter by session ID (exact match)
+  method?: string;             // Filter by JSON-RPC method (partial match)
+  after?: string;              // ISO timestamp - logs after this time
+  before?: string;             // ISO timestamp - logs before this time
+  limit?: number;              // Max results to return (default: 100, max: 1000)
+  order?: 'asc' | 'desc';     // Sort order by timestamp (default: 'desc')
 }
 ```
 
 ### Paginated Response
 
 ```typescript
-interface PaginatedResponse<T> {
-  data: T[];
+interface QueryResult {
+  data: LogEntry[];
   pagination: {
-    page: number;
-    limit: number;
-    total: number;          // Total number of items
-    totalPages: number;     // Total number of pages
-    hasNext: boolean;
-    hasPrev: boolean;
+    count: number;             // Number of items in this result
+    limit: number;             // Query limit
+    hasMore: boolean;          // Whether more results exist
+    oldestTimestamp: string | null;  // Oldest timestamp in results
+    newestTimestamp: string | null;  // Newest timestamp in results
   };
 }
 ```
 
 ## Endpoints
 
-### 1. List Logs
+### 1. Query Logs
 
-Retrieve paginated, filtered list of log entries.
+Retrieve logs with optional filtering and sorting.
 
 **Endpoint:** `GET /api/logs`
 
-**Query Parameters:** See `LogQueryParams` above
+**Query Parameters:**
+- `server` - Filter by server name (optional)
+- `session` - Filter by session ID (optional)
+- `method` - Filter by method name (optional)
+- `after` - ISO timestamp filter (optional)
+- `before` - ISO timestamp filter (optional)
+- `limit` - Results limit, max 1000 (optional, default: 100)
+- `order` - 'asc' or 'desc' (optional, default: 'desc')
 
 **Response:** `200 OK`
 
@@ -112,9 +136,6 @@ Retrieve paginated, filtered list of log entries.
       "method": "tools/call",
       "id": "req-123",
       "direction": "request",
-      "sender": "claude-code",
-      "receiver": "figma-server",
-      "hasError": false,
       "metadata": {
         "serverName": "figma-server",
         "sessionId": "6b33fe88",
@@ -129,22 +150,33 @@ Retrieve paginated, filtered list of log entries.
         "jsonrpc": "2.0",
         "id": "req-123",
         "method": "tools/call",
-        "params": { ... }
+        "params": { }
+      }
+    },
+    {
+      "timestamp": "2025-01-15T10:30:00.250Z",
+      "method": "tools/call",
+      "id": "req-123",
+      "direction": "response",
+      "metadata": {
+        "serverName": "figma-server",
+        "sessionId": "6b33fe88",
+        "durationMs": 329,
+        "httpStatus": 200
       },
-      "tokens": {
-        "input": 1500,
-        "output": 300,
-        "total": 1800
+      "response": {
+        "jsonrpc": "2.0",
+        "id": "req-123",
+        "result": { }
       }
     }
   ],
   "pagination": {
-    "page": 1,
-    "limit": 50,
-    "total": 243,
-    "totalPages": 5,
-    "hasNext": true,
-    "hasPrev": false
+    "count": 2,
+    "limit": 100,
+    "hasMore": false,
+    "oldestTimestamp": "2025-01-15T10:30:00.000Z",
+    "newestTimestamp": "2025-01-15T10:30:00.250Z"
   }
 }
 ```
@@ -152,70 +184,25 @@ Retrieve paginated, filtered list of log entries.
 **Example Requests:**
 
 ```bash
-# Get first page
+# Get all logs
 GET /api/logs
 
 # Filter by server
-GET /api/logs?serverName=figma-server
+GET /api/logs?server=figma-server
 
 # Filter by session and method
-GET /api/logs?sessionId=6b33fe88&method=tools/call
+GET /api/logs?session=6b33fe88&method=tools/call
 
-# Search in request/response
-GET /api/logs?search=screenshot
+# Filter by time range (older logs first)
+GET /api/logs?after=2025-01-15T00:00:00Z&before=2025-01-15T23:59:59Z&order=asc
 
-# Filter by time range
-GET /api/logs?startTime=2025-01-15T00:00:00Z&endTime=2025-01-15T23:59:59Z
-
-# Filter by duration (slow requests)
-GET /api/logs?minDuration=1000
-
-# Sort by duration
-GET /api/logs?sortBy=duration&sortOrder=desc
-
-# Pagination
-GET /api/logs?page=2&limit=100
+# With custom limit
+GET /api/logs?limit=50
 ```
 
-### 2. Get Single Log Entry
+### 2. List Servers
 
-Retrieve detailed information for a specific log entry.
-
-**Endpoint:** `GET /api/logs/:id`
-
-**Path Parameters:**
-- `id` - Composite ID: `{sessionId}:{timestamp}:{jsonrpcId}`
-
-**Response:** `200 OK`
-
-```json
-{
-  "timestamp": "2025-01-15T10:30:00.000Z",
-  "method": "tools/call",
-  "id": "req-123",
-  "direction": "request",
-  "sender": "claude-code",
-  "receiver": "figma-server",
-  "hasError": false,
-  "metadata": { ... },
-  "request": { ... },
-  "response": { ... },
-  "tokens": { ... }
-}
-```
-
-**Error Response:** `404 Not Found`
-
-```json
-{
-  "error": "Log entry not found",
-  "id": "session123:2025-01-15T10:30:00.000Z:req-123"
-}
-```
-
-### 3. List Servers
-
-Get list of all MCP servers with captured logs.
+Get list of all servers with captured logs.
 
 **Endpoint:** `GET /api/servers`
 
@@ -226,7 +213,6 @@ Get list of all MCP servers with captured logs.
   "servers": [
     {
       "name": "figma-server",
-      "displayName": "Figma Server",
       "logCount": 150,
       "sessionCount": 3,
       "firstSeen": "2025-01-15T08:00:00.000Z",
@@ -234,7 +220,6 @@ Get list of all MCP servers with captured logs.
     },
     {
       "name": "notion-server",
-      "displayName": "Notion Server",
       "logCount": 89,
       "sessionCount": 2,
       "firstSeen": "2025-01-15T09:00:00.000Z",
@@ -244,14 +229,14 @@ Get list of all MCP servers with captured logs.
 }
 ```
 
-### 4. List Sessions
+### 3. List Sessions
 
-Get list of all sessions, optionally filtered by server.
+Get list of sessions, optionally filtered by server.
 
 **Endpoint:** `GET /api/sessions`
 
 **Query Parameters:**
-- `serverName` (optional) - Filter sessions by server
+- `server` - Filter sessions by server name (optional)
 
 **Response:** `200 OK`
 
@@ -275,211 +260,56 @@ Get list of all sessions, optionally filtered by server.
 }
 ```
 
-### 5. Get Statistics
-
-Get aggregated statistics across logs.
-
-**Endpoint:** `GET /api/stats`
-
-**Query Parameters:** Same filters as `/api/logs` (serverName, sessionId, etc.)
-
-**Response:** `200 OK`
-
-```json
-{
-  "overview": {
-    "totalLogs": 243,
-    "totalSessions": 5,
-    "totalServers": 3,
-    "timeRange": {
-      "start": "2025-01-15T08:00:00.000Z",
-      "end": "2025-01-15T12:00:00.000Z"
-    }
-  },
-  "byServer": [
-    {
-      "serverName": "figma-server",
-      "count": 150,
-      "avgDuration": 329,
-      "errorRate": 0.02
-    }
-  ],
-  "byMethod": [
-    {
-      "method": "tools/call",
-      "count": 89,
-      "avgDuration": 450,
-      "errorRate": 0.01
-    }
-  ],
-  "performance": {
-    "avgDuration": 380,
-    "p50Duration": 320,
-    "p95Duration": 850,
-    "p99Duration": 1200
-  },
-  "tokens": {
-    "totalInput": 45000,
-    "totalOutput": 12000,
-    "total": 57000
-  }
-}
-```
-
-### 6. Export Logs
-
-Export filtered logs in various formats.
-
-**Endpoint:** `GET /api/logs/export`
-
-**Query Parameters:**
-- All filter parameters from `/api/logs`
-- `format` - Export format: `json` | `jsonl` | `csv`
-
-**Response:** `200 OK`
-- Content-Type: `application/json`, `application/x-ndjson`, or `text/csv`
-- Content-Disposition: `attachment; filename="mcp-logs-{timestamp}.{ext}"`
-
-**Example:**
-
-```bash
-GET /api/logs/export?serverName=figma-server&format=json
-```
-
-### 7. Health Check
-
-Simple health check endpoint.
-
-**Endpoint:** `GET /api/health`
-
-**Response:** `200 OK`
-
-```json
-{
-  "status": "ok",
-  "version": "1.0.0",
-  "storageDir": "~/.mcp-gateway/capture",
-  "availableServers": 3,
-  "totalLogs": 243
-}
-```
-
 ## Error Responses
 
 All error responses follow this format:
 
 ```json
 {
-  "error": "Error message",
-  "code": "ERROR_CODE",
-  "details": { /* optional additional details */ }
+  "error": {
+    "code": "INTERNAL_ERROR",
+    "message": "Error description"
+  }
 }
 ```
 
-**Common HTTP Status Codes:**
+**HTTP Status Codes:**
 - `400 Bad Request` - Invalid query parameters
 - `404 Not Found` - Resource not found
 - `500 Internal Server Error` - Server error
-- `503 Service Unavailable` - Storage directory not accessible
-
-## CORS Configuration
-
-**Development:**
-- Allow origin: `http://localhost:5173` (Vite dev server)
-- Allow credentials: true
-- Allow methods: GET, POST, OPTIONS
-- Allow headers: Content-Type, Authorization
-
-**Production:**
-- No CORS (API and UI served from same origin)
-
-## Rate Limiting
-
-**Development:** No rate limiting
-
-**Future Production:**
-- 100 requests per minute per IP
-- 1000 requests per hour per IP
+- `503 Service Unavailable` - Storage not accessible
 
 ## Validation
 
-All query parameters are validated using Zod schemas:
+Query parameters are validated using Zod schemas:
 
 ```typescript
-// Example: Log query validation
-const logQuerySchema = z.object({
-  page: z.coerce.number().int().positive().default(1),
-  limit: z.coerce.number().int().positive().max(1000).default(50),
-  serverName: z.string().optional(),
-  sessionId: z.string().optional(),
+const logsQuerySchema = z.object({
+  server: z.string().optional(),
+  session: z.string().optional(),
   method: z.string().optional(),
-  search: z.string().optional(),
-  hasError: z.coerce.boolean().optional(),
-  minDuration: z.coerce.number().nonnegative().optional(),
-  maxDuration: z.coerce.number().nonnegative().optional(),
-  startTime: z.string().datetime().optional(),
-  endTime: z.string().datetime().optional(),
-  sortBy: z.enum(['timestamp', 'duration', 'method', 'server']).default('timestamp'),
-  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+  after: z.string().datetime().optional(),
+  before: z.string().datetime().optional(),
+  limit: z.coerce.number().int().positive().max(1000).optional(),
+  order: z.enum(['asc', 'desc']).optional(),
 });
 ```
 
 Invalid parameters return `400 Bad Request` with validation errors.
 
-## Caching Strategy
+## Implementation Notes
 
-**Server-side:**
-- No caching (always read from disk for latest data)
-- Future: Add in-memory cache with TTL
+### Storage Backend
+- Logs are stored in SQLite database
+- Queries use Drizzle ORM for type-safe data access
+- All queries are read-only through this API
 
-**Client-side (via TanStack Query):**
-- Cache logs for 30 seconds
-- Stale-while-revalidate strategy
-- Infinite scroll uses cursor-based pagination
-- Invalidate cache on filter change
+### Pagination
+- Uses cursor-based pagination with `hasMore` flag
+- Includes `oldestTimestamp` and `newestTimestamp` for range queries
+- Results are sorted by timestamp
 
-## WebSocket Support (Future)
-
-**Endpoint:** `ws://localhost:3000/api/logs/stream`
-
-**Protocol:**
-```json
-// Client subscribes to filters
-{
-  "type": "subscribe",
-  "filters": {
-    "serverName": "figma-server"
-  }
-}
-
-// Server sends new logs as they arrive
-{
-  "type": "log",
-  "data": { /* LogEntry */ }
-}
-
-// Client unsubscribes
-{
-  "type": "unsubscribe"
-}
-```
-
-## Performance Considerations
-
-1. **File Reading:**
-   - Read JSONL files line-by-line
-   - Parse only required fields initially
-   - Full parse on-demand for detail view
-
-2. **Filtering:**
-   - Apply filters during file reading (don't load all into memory)
-   - Use streaming for large result sets
-
-3. **Pagination:**
-   - Implement true pagination (don't load all results)
-   - Consider cursor-based pagination for large datasets
-
-4. **Indexing (Future):**
-   - Build in-memory index on server start
-   - Index by: timestamp, server, session, method
-   - Rebuild index when new files detected
+### Performance
+- Queries run directly against SQLite for efficiency
+- No in-memory caching at API layer
+- Limit enforced at database level
