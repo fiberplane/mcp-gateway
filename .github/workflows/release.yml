@@ -64,8 +64,8 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile --verbose
 
-      - name: Build packages
-        run: bun run build
+      - name: Build web and CLI packages
+        run: bun run --filter @fiberplane/mcp-gateway-web build && bun run --filter @fiberplane/mcp-gateway-cli build
 
       - name: Build binary for ${{ matrix.platform }}
         run: bun run build:binaries
