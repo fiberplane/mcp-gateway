@@ -2,7 +2,13 @@ import { afterEach, beforeEach, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { addServer, isValidUrl, removeServer, loadRegistry, saveRegistry } from "@fiberplane/mcp-gateway-core";
+import {
+  addServer,
+  isValidUrl,
+  loadRegistry,
+  removeServer,
+  saveRegistry,
+} from "@fiberplane/mcp-gateway-core";
 
 let tempDir: string;
 

@@ -4,9 +4,13 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { Registry } from "@fiberplane/mcp-gateway-types";
-import { saveRegistry, createSSEEventStream, type SSEEvent } from "@fiberplane/mcp-gateway-core";
+import {
+  createSSEEventStream,
+  type SSEEvent,
+  saveRegistry,
+} from "@fiberplane/mcp-gateway-core";
 import { createApp } from "@fiberplane/mcp-gateway-server";
+import type { Registry } from "@fiberplane/mcp-gateway-types";
 
 // Real SSE server for testing
 function createSSEServer(port: number): { url: string; stop: () => void } {

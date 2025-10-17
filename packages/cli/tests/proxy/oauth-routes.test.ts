@@ -4,9 +4,9 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { Registry } from "@fiberplane/mcp-gateway-types";
 import { saveRegistry } from "@fiberplane/mcp-gateway-core";
 import { createApp } from "@fiberplane/mcp-gateway-server";
+import type { Registry } from "@fiberplane/mcp-gateway-types";
 
 describe("OAuth Routes Integration Tests", () => {
   let storageDir: string;
