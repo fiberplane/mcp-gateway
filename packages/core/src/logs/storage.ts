@@ -7,6 +7,7 @@ import type {
 } from "@fiberplane/mcp-gateway-types";
 import { and, count, desc, eq, gt, like, lt, sql } from "drizzle-orm";
 import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
+import { logger } from "../logger.js";
 import type * as schema from "./schema.js";
 import { type Log, logs, type NewLog } from "./schema.js";
 
@@ -153,6 +154,24 @@ export async function getSessions(
 }
 
 /**
+ * Safely parse JSON from database, handling corruption gracefully
+ */
+function safeJsonParse<T = unknown>(json: string | null): T | undefined {
+  if (!json) return undefined;
+
+  try {
+    return JSON.parse(json) as T;
+  } catch (error) {
+    // Log warning but don't crash - corrupted data shouldn't break queries
+    logger.warn("Failed to parse JSON from database", {
+      jsonPreview: json.substring(0, 100),
+      error: String(error),
+    });
+    return undefined;
+  }
+}
+
+/**
  * Convert database row to CaptureRecord
  */
 function rowToRecord(row: Log): CaptureRecord {
@@ -166,7 +185,7 @@ function rowToRecord(row: Log): CaptureRecord {
       durationMs: row.durationMs || 0,
       httpStatus: row.httpStatus || 0,
     },
-    request: row.requestJson ? JSON.parse(row.requestJson) : undefined,
-    response: row.responseJson ? JSON.parse(row.responseJson) : undefined,
+    request: safeJsonParse(row.requestJson),
+    response: safeJsonParse(row.responseJson),
   };
 }

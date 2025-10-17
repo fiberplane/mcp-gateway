@@ -1,6 +1,17 @@
 import type { CaptureRecord } from "./schemas.js";
 
 /**
+ * Standard API error response
+ */
+export interface ApiError {
+  error: {
+    code: string;
+    message: string;
+    details?: unknown;
+  };
+}
+
+/**
  * Query options for log filtering and pagination
  */
 export interface LogQueryOptions {

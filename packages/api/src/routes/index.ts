@@ -11,15 +11,29 @@ import { z } from "zod";
 /**
  * Query parameters schema for GET /logs
  */
-const logsQuerySchema = z.object({
-  server: z.string().optional(),
-  session: z.string().optional(),
-  method: z.string().optional(),
-  after: z.string().datetime().optional(),
-  before: z.string().datetime().optional(),
-  limit: z.coerce.number().int().positive().max(1000).optional(),
-  order: z.enum(["asc", "desc"]).optional(),
-});
+const logsQuerySchema = z
+  .object({
+    server: z.string().optional(),
+    session: z.string().optional(),
+    method: z.string().optional(),
+    after: z.string().datetime().optional(),
+    before: z.string().datetime().optional(),
+    limit: z.coerce.number().int().positive().max(1000).optional(),
+    order: z.enum(["asc", "desc"]).optional(),
+  })
+  .refine(
+    (data) => {
+      // Validate that after timestamp is before the before timestamp
+      if (data.after && data.before) {
+        return new Date(data.after) < new Date(data.before);
+      }
+      return true;
+    },
+    {
+      message: "after timestamp must be before before timestamp",
+      path: ["after"],
+    },
+  );
 
 /**
  * Query parameters schema for GET /sessions

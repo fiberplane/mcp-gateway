@@ -301,6 +301,17 @@ interface LogDetailsProps {
 function LogDetails({ log }: LogDetailsProps) {
   const [copied, setCopied] = useState<"request" | "response" | null>(null);
 
+  // Memoize formatted JSON to avoid re-stringifying on every render
+  const formattedRequest = useMemo(
+    () => (log.request ? JSON.stringify(log.request, null, 2) : null),
+    [log.request],
+  );
+
+  const formattedResponse = useMemo(
+    () => (log.response ? JSON.stringify(log.response, null, 2) : null),
+    [log.response],
+  );
+
   const copyToClipboard = useHandler(
     (data: unknown, type: "request" | "response") => {
       navigator.clipboard.writeText(JSON.stringify(data, null, 2));
@@ -311,7 +322,7 @@ function LogDetails({ log }: LogDetailsProps) {
 
   return (
     <div className="flex gap-5">
-      {log.request ? (
+      {formattedRequest ? (
         <div className="flex-1">
           <div className="flex justify-between items-center mb-2.5">
             <h4 className="text-sm font-semibold text-foreground">Request</h4>
@@ -335,11 +346,11 @@ function LogDetails({ log }: LogDetailsProps) {
             </Button>
           </div>
           <pre className="bg-card border border-border rounded-md p-4 overflow-auto max-h-96 text-xs font-mono">
-            {JSON.stringify(log.request, null, 2)}
+            {formattedRequest}
           </pre>
         </div>
       ) : null}
-      {log.response ? (
+      {formattedResponse ? (
         <div className="flex-1">
           <div className="flex justify-between items-center mb-2.5">
             <h4 className="text-sm font-semibold text-foreground">Response</h4>
@@ -363,7 +374,7 @@ function LogDetails({ log }: LogDetailsProps) {
             </Button>
           </div>
           <pre className="bg-card border border-border rounded-md p-4 overflow-auto max-h-96 text-xs font-mono">
-            {JSON.stringify(log.response, null, 2)}
+            {formattedResponse}
           </pre>
         </div>
       ) : null}

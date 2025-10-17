@@ -1,3 +1,4 @@
+import type { ApiError } from "@fiberplane/mcp-gateway-types";
 import type { Hono } from "hono";
 import { createApiRoutes, type QueryFunctions } from "./routes/index.js";
 
@@ -33,5 +34,26 @@ import { createApiRoutes, type QueryFunctions } from "./routes/index.js";
  * ```
  */
 export function createApp(storageDir: string, queries: QueryFunctions): Hono {
-  return createApiRoutes(storageDir, queries);
+  const app = createApiRoutes(storageDir, queries);
+
+  // Add global error handler for consistent error responses
+  app.onError((err, c) => {
+    console.error("API error", {
+      error: String(err),
+      path: c.req.path,
+      method: c.req.method,
+    });
+
+    return c.json<ApiError>(
+      {
+        error: {
+          code: "INTERNAL_ERROR",
+          message: err.message || "An error occurred",
+        },
+      },
+      500,
+    );
+  });
+
+  return app;
 }

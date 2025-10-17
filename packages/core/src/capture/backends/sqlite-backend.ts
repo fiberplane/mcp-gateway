@@ -41,26 +41,43 @@ export class SqliteStorageBackend implements StorageBackend {
   }
 
   async write(record: CaptureRecord): Promise<StorageWriteResult> {
-    if (!this.storageDir) {
-      throw new Error("SQLite backend not initialized");
+    if (!this.storageDir || !this.initialized) {
+      logger.debug("SQLite backend not ready, skipping write");
+      return {
+        metadata: {
+          skipped: true,
+          reason: "Backend not initialized",
+        },
+      };
     }
 
-    if (!this.initialized) {
-      throw new Error("SQLite backend initialization failed");
+    try {
+      // Lazy import to avoid circular dependencies
+      const { getDb } = await import("../../logs/db.js");
+      const { insertLog } = await import("../../logs/storage.js");
+
+      const db = getDb(this.storageDir);
+      await insertLog(db, record);
+
+      return {
+        metadata: {
+          database: `${this.storageDir}/logs.db`,
+        },
+      };
+    } catch (error) {
+      logger.error("SQLite write failed", {
+        error: error instanceof Error ? error.message : String(error),
+        serverName: record.metadata.serverName,
+      });
+
+      // Don't throw - allow JSONL backend to succeed
+      return {
+        metadata: {
+          error: true,
+          reason: String(error),
+        },
+      };
     }
-
-    // Lazy import to avoid circular dependencies
-    const { getDb } = await import("../../logs/db.js");
-    const { insertLog } = await import("../../logs/storage.js");
-
-    const db = getDb(this.storageDir);
-    await insertLog(db, record);
-
-    return {
-      metadata: {
-        database: `${this.storageDir}/logs.db`,
-      },
-    };
   }
 
   async close(): Promise<void> {

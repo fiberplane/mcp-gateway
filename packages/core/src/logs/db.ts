@@ -28,6 +28,17 @@ export function getDb(storageDir: string): BunSQLiteDatabase<typeof schema> {
   // Create new connection
   const dbPath = join(storageDir, "logs.db");
   const sqlite = new Database(dbPath, { create: true });
+
+  // Enable WAL mode for better concurrency (multiple readers, single writer)
+  // WAL (Write-Ahead Logging) allows concurrent reads while writes are happening
+  sqlite.exec("PRAGMA journal_mode = WAL;");
+
+  // Set busy timeout to 5 seconds to wait for locks instead of failing immediately
+  sqlite.exec("PRAGMA busy_timeout = 5000;");
+
+  // Use NORMAL synchronous mode for better performance (WAL provides safety)
+  sqlite.exec("PRAGMA synchronous = NORMAL;");
+
   const db = drizzle(sqlite, { schema });
 
   // Cache and return
