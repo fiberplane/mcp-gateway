@@ -14,7 +14,7 @@
     },
     "packages/api": {
       "name": "@fiberplane/mcp-gateway-api",
-      "version": "0.2.0-next.0",
+      "version": "0.2.0",
       "dependencies": {
         "@fiberplane/mcp-gateway-types": "workspace:*",
         "@hono/standard-validator": "^0.1.5",
@@ -69,7 +69,7 @@
     },
     "packages/mcp-gateway": {
       "name": "@fiberplane/mcp-gateway",
-      "version": "0.4.2",
+      "version": "0.5.0",
       "bin": {
         "mcp-gateway": "./bin/mcp-gateway.cjs",
       },
@@ -100,7 +100,7 @@
     },
     "packages/types": {
       "name": "@fiberplane/mcp-gateway-types",
-      "version": "0.2.0-next.0",
+      "version": "0.2.0",
       "dependencies": {
         "zod": "^4.1.11",
       },
