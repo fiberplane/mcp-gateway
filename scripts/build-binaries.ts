@@ -75,6 +75,11 @@ mcp-gateway.exe
   const publicDest = join(pkgDir, "public");
   await $`cp -r ${publicSrc} ${publicDest}`;
 
+  // Copy drizzle migrations folder
+  const drizzleSrc = "./packages/core/drizzle";
+  const drizzleDest = join(pkgDir, "drizzle");
+  await $`cp -r ${drizzleSrc} ${drizzleDest}`;
+
   // Create package.json
   const pkgJson = {
     name: `@fiberplane/mcp-gateway-${platform.name}`,
@@ -82,7 +87,7 @@ mcp-gateway.exe
     description: `MCP Gateway binary for ${platform.os}-${platform.cpu}`,
     os: [platform.os],
     cpu: [platform.cpu],
-    files: [`mcp-gateway${platform.ext}`, "public"],
+    files: [`mcp-gateway${platform.ext}`, "public", "drizzle"],
     publishConfig: {
       access: "public",
     },

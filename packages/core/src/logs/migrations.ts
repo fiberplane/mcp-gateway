@@ -15,6 +15,12 @@ let migrationPromise: Promise<void> | null = null;
  * Works in both development and production builds
  */
 function getMigrationsFolder(): string {
+  // Try binary location first (next to executable)
+  const binaryDrizzleDir = join(process.execPath, "..", "drizzle");
+  if (Bun.file(join(binaryDrizzleDir, "meta", "_journal.json")).size > 0) {
+    return binaryDrizzleDir;
+  }
+
   // In development: packages/core/src/logs/migrations.ts
   // Migrations are in: packages/core/drizzle
   const currentFile = fileURLToPath(import.meta.url);
