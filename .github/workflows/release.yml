@@ -41,6 +41,7 @@ jobs:
         run: |
           bun run --filter @fiberplane/mcp-gateway-types build
           bun run --filter @fiberplane/mcp-gateway-core build
+          bun run --filter @fiberplane/mcp-gateway-api build
           bun run --filter @fiberplane/mcp-gateway-server build
 
   # Build CLI source package
@@ -59,6 +60,9 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
+
+      - name: Build web package
+        run: bun run --filter @fiberplane/mcp-gateway-web build
 
       - name: Build CLI package
         run: bun run --filter @fiberplane/mcp-gateway-cli build
