@@ -9,7 +9,9 @@
     "arm64"
   ],
   "files": [
-    "mcp-gateway"
+    "mcp-gateway",
+    "public",
+    "drizzle"
   ],
   "publishConfig": {
     "access": "public"

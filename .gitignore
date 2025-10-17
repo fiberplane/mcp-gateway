@@ -51,3 +51,5 @@ packages/mcp-gateway/src/version.ts
 # Binary packages (compiled executables)
 packages/mcp-gateway-*/mcp-gateway
 packages/mcp-gateway-*/mcp-gateway.exe
+packages/mcp-gateway-*/public
+packages/mcp-gateway-*/drizzle
