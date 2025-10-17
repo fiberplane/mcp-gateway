@@ -2,7 +2,7 @@
   "name": "@fiberplane/mcp-gateway-api",
   "private": false,
   "type": "module",
-  "version": "0.2.0-next.0",
+  "version": "0.2.0",
   "description": "REST API for querying MCP Gateway logs",
   "homepage": "https://github.com/fiberplane/mcp-gateway",
   "repository": {
