@@ -20,7 +20,6 @@ import {
   logger,
   queryLogs,
   saveRegistry,
-  startHealthChecks,
 } from "@fiberplane/mcp-gateway-core";
 import {
   createApp as createServerApp,
@@ -305,29 +304,24 @@ export async function runCli(): Promise<void> {
     logger.info("MCP Gateway server started", { port });
 
     // Start health checks with callback to update store
-    const stopHealthChecks = await startHealthChecks(
-      registry,
-      30000,
-      (updates) => {
-        const updateServerHealth = useAppStore.getState().updateServerHealth;
-        // Update UI state for each health check result
-        for (const update of updates) {
-          updateServerHealth(
-            update.name,
-            update.health,
-            update.lastHealthCheck,
-          );
-        }
-      },
-    );
+    await gateway.health.start(registry, 30000, (updates) => {
+      const updateServerHealth = useAppStore.getState().updateServerHealth;
+      // Update UI state for each health check result
+      for (const update of updates) {
+        updateServerHealth(
+          update.name,
+          update.health,
+          update.lastHealthCheck,
+        );
+      }
+    });
 
     // Create context for TUI
     const context: Context = {
       storageDir,
       port,
       onExit: async () => {
-        stopHealthChecks();
-        await gateway.close(); // Close Gateway connections
+        await gateway.close(); // Close Gateway connections (includes stopping health checks)
         return new Promise<void>((resolve) => {
           server.close(() => {
             resolve();

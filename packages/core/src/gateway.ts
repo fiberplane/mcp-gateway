@@ -5,6 +5,7 @@ import type {
 	JsonRpcResponse,
 	McpServer,
 	Registry,
+	ServerHealth,
 } from "@fiberplane/mcp-gateway-types";
 import { JsonlStorageBackend } from "./capture/backends/jsonl-backend.js";
 import { SqliteStorageBackend } from "./capture/backends/sqlite-backend.js";
@@ -102,6 +103,48 @@ export interface Gateway {
 	};
 
 	/**
+	 * Health check operations for monitoring server availability
+	 */
+	health: {
+		/**
+		 * Start periodic health checks
+		 * @param registry - Registry containing servers to check
+		 * @param intervalMs - Check interval in milliseconds (default 30000)
+		 * @param onUpdate - Optional callback called with health updates
+		 */
+		start(
+			registry: Registry,
+			intervalMs?: number,
+			onUpdate?: (
+				updates: Array<{
+					name: string;
+					health: ServerHealth;
+					lastHealthCheck: string;
+				}>,
+			) => void,
+		): Promise<void>;
+
+		/**
+		 * Stop periodic health checks
+		 */
+		stop(): void;
+
+		/**
+		 * Manually trigger a health check for all servers
+		 * @param registry - Registry containing servers to check
+		 */
+		check(
+			registry: Registry,
+		): Promise<
+			Array<{
+				name: string;
+				health: ServerHealth;
+				lastHealthCheck: string;
+			}>
+		>;
+	};
+
+	/**
 	 * Close all connections and clean up resources
 	 */
 	close(): Promise<void>;
@@ -170,6 +213,108 @@ class RequestTracker {
 	}
 }
 
+// Manage health check lifecycle (scoped to Gateway instance)
+class HealthCheckManager {
+	private timer: ReturnType<typeof setInterval> | null = null;
+	private onUpdate:
+		| ((
+				updates: Array<{
+					name: string;
+					health: ServerHealth;
+					lastHealthCheck: string;
+				}>,
+		  ) => void)
+		| null = null;
+
+	async checkServerHealth(url: string): Promise<ServerHealth> {
+		try {
+			// Try OPTIONS first (lightweight), fallback to HEAD
+			const response = await fetch(url, {
+				method: "OPTIONS",
+				signal: AbortSignal.timeout(5000), // 5s timeout
+			});
+
+			// 2xx, 3xx, 4xx all mean server is responding
+			// Only 5xx or network errors mean "down"
+			if (response.status < 500) {
+				return "up";
+			}
+
+			return "down";
+		} catch (_error) {
+			// Network errors, timeouts, DNS failures = down
+			return "down";
+		}
+	}
+
+	async check(
+		registry: Registry,
+	): Promise<
+		Array<{ name: string; health: ServerHealth; lastHealthCheck: string }>
+	> {
+		const updates = await Promise.all(
+			registry.servers.map(async (server) => {
+				const health = await this.checkServerHealth(server.url);
+				const lastHealthCheck = new Date().toISOString();
+
+				// Update the registry object for non-TUI usage
+				server.health = health;
+				server.lastHealthCheck = lastHealthCheck;
+
+				return {
+					name: server.name,
+					health,
+					lastHealthCheck,
+				};
+			}),
+		);
+
+		// Call custom update handler if provided (for TUI)
+		if (this.onUpdate) {
+			this.onUpdate(updates);
+		}
+
+		return updates;
+	}
+
+	async start(
+		registry: Registry,
+		intervalMs = 30000,
+		onUpdate?: (
+			updates: Array<{
+				name: string;
+				health: ServerHealth;
+				lastHealthCheck: string;
+			}>,
+		) => void,
+	): Promise<void> {
+		// Stop any existing health checks
+		this.stop();
+
+		// Store the update callback
+		this.onUpdate = onUpdate || null;
+
+		// Initial check (await to ensure it completes before returning)
+		await this.check(registry);
+
+		// Periodic checks
+		this.timer = setInterval(() => {
+			this.check(registry).catch((error) => {
+				// Log error but don't stop health checks
+				console.error("Health check failed:", error);
+			});
+		}, intervalMs);
+	}
+
+	stop(): void {
+		if (this.timer) {
+			clearInterval(this.timer);
+			this.timer = null;
+		}
+		this.onUpdate = null;
+	}
+}
+
 /**
  * Create a scoped Gateway instance
  *
@@ -209,6 +354,9 @@ export async function createGateway(
 
 	// Create scoped request tracker
 	const requestTracker = new RequestTracker();
+
+	// Create scoped health check manager
+	const healthCheckManager = new HealthCheckManager();
 
 	// Import capture functions dynamically to avoid circular dependencies
 	const captureModule = await import("./capture/index.js");
@@ -323,7 +471,30 @@ export async function createGateway(
 			getActiveSessions: () => clientInfoStore.getActiveSessions(),
 		},
 
+		health: {
+			start: async (
+				registry: Registry,
+				intervalMs?: number,
+				onUpdate?: (
+					updates: Array<{
+						name: string;
+						health: ServerHealth;
+						lastHealthCheck: string;
+					}>,
+				) => void,
+			) => {
+				await healthCheckManager.start(registry, intervalMs, onUpdate);
+			},
+			stop: () => {
+				healthCheckManager.stop();
+			},
+			check: async (registry: Registry) => {
+				return await healthCheckManager.check(registry);
+			},
+		},
+
 		close: async () => {
+			healthCheckManager.stop();
 			await storageManager.close();
 		},
 	};
