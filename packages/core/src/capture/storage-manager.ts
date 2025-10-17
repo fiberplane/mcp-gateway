@@ -123,23 +123,3 @@ export class StorageManager {
     return Array.from(this.backends.keys());
   }
 }
-
-// Global storage manager instance
-let globalStorageManager: StorageManager | null = null;
-
-/**
- * Get or create the global storage manager
- */
-export function getStorageManager(): StorageManager {
-  if (!globalStorageManager) {
-    globalStorageManager = new StorageManager();
-  }
-  return globalStorageManager;
-}
-
-/**
- * Reset the global storage manager (for testing)
- */
-export function resetStorageManager(): void {
-  globalStorageManager = null;
-}

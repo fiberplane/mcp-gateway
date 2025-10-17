@@ -1,5 +1,4 @@
-import { getServer } from "@fiberplane/mcp-gateway-core";
-import type { Registry } from "@fiberplane/mcp-gateway-types";
+import type { McpServer, Registry } from "@fiberplane/mcp-gateway-types";
 import { serverParamSchema } from "@fiberplane/mcp-gateway-types";
 import { sValidator } from "@hono/standard-validator";
 import { Hono } from "hono";
@@ -15,7 +14,10 @@ import { proxy } from "hono/proxy";
  * - /.well-known/openid-configuration
  * - /register (OAuth Dynamic Client Registration)
  */
-export async function createOAuthRoutes(registry: Registry): Promise<Hono> {
+export async function createOAuthRoutes(
+  registry: Registry,
+  getServer: (registry: Registry, name: string) => McpServer | undefined,
+): Promise<Hono> {
   const app = new Hono();
 
   // Helper to extract base URL from MCP server URL

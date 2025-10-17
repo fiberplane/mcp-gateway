@@ -4,7 +4,11 @@ import { type BunSQLiteDatabase, drizzle } from "drizzle-orm/bun-sqlite";
 import * as schema from "./schema.js";
 
 /**
- * Database connection cache
+ * Database connection cache for query operations
+ *
+ * NOTE: This cache is used by query.ts, export.ts, and recovery.ts for read operations.
+ * The capture/write path (SqliteStorageBackend) owns its own connection and does NOT use this cache.
+ *
  * Key: storage directory path
  * Value: Drizzle database instance
  */
@@ -14,6 +18,9 @@ const dbCache = new Map<string, BunSQLiteDatabase<typeof schema>>();
  * Get or create a Drizzle database connection for the given storage directory.
  *
  * Uses singleton pattern - one connection per storage directory.
+ *
+ * NOTE: This is used by query/export/recovery operations, NOT by the capture path.
+ * SqliteStorageBackend owns its own connection for write operations.
  *
  * @param storageDir - Path to storage directory (e.g., ~/.mcp-gateway/capture)
  * @returns Drizzle database instance

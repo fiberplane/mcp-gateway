@@ -1,9 +1,9 @@
-import type { LogEntry, Registry } from "@fiberplane/mcp-gateway-types";
+import type { LogEntry, McpServer, Registry } from "@fiberplane/mcp-gateway-types";
 import type { Hono } from "hono";
 import { Hono as HonoApp } from "hono";
 import { logger as loggerMiddleware } from "hono/logger";
 import { createOAuthRoutes } from "./routes/oauth";
-import { createProxyRoutes } from "./routes/proxy";
+import { createProxyRoutes, type ProxyDependencies } from "./routes/proxy";
 
 /**
  * Logger interface for dependency injection
@@ -32,6 +32,8 @@ export async function createApp(options: {
   storageDir: string;
   createMcpApp: (registry: Registry, storage: string) => Hono;
   logger: Logger;
+  proxyDependencies: ProxyDependencies;
+  getServer: (registry: Registry, name: string) => McpServer | undefined;
   onLog?: (entry: LogEntry) => void;
   onRegistryUpdate?: () => void;
 }): Promise<{ app: Hono; registry: Registry }> {
@@ -40,6 +42,8 @@ export async function createApp(options: {
     storageDir,
     createMcpApp,
     logger,
+    proxyDependencies,
+    getServer,
     onLog,
     onRegistryUpdate,
   } = options;
@@ -84,13 +88,14 @@ export async function createApp(options: {
 
   // Mount OAuth discovery and registration routes
   // These need to be mounted BEFORE the proxy routes to handle .well-known paths
-  const oauthRoutes = await createOAuthRoutes(registry);
+  const oauthRoutes = await createOAuthRoutes(registry, getServer);
   app.route("/", oauthRoutes);
 
   // Mount the proxy routes for server connections
   const proxyRoutes = await createProxyRoutes({
     registry,
     storageDir,
+    dependencies: proxyDependencies,
     onLog,
     onRegistryUpdate,
   });

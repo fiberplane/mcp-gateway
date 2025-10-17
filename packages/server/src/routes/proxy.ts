@@ -1,23 +1,14 @@
 import { rename } from "node:fs/promises";
 import { join } from "node:path";
 import {
-  appendCapture,
-  captureError,
-  captureSSEEvent,
-  captureSSEJsonRpc,
-  createRequestCaptureRecord,
-  createResponseCaptureRecord,
   createSSEEventStream,
-  getClientInfo,
-  getServer,
   isJsonRpcResponse,
   logger,
   parseJsonRpcFromSSE,
-  saveRegistry,
-  storeClientInfo,
 } from "@fiberplane/mcp-gateway-core";
 import type {
   CaptureRecord,
+  ClientInfo,
   JsonRpcRequest,
   JsonRpcResponse,
   LogEntry,
@@ -39,6 +30,73 @@ import type { z } from "zod";
 
 // Constant for sessionless (stateless) requests - used when no session ID is provided
 const SESSIONLESS_ID = "stateless";
+
+/**
+ * Dependency injection callbacks for proxy routes
+ *
+ * These callbacks decouple the server package from core package,
+ * allowing the CLI to wire in Gateway methods at runtime.
+ */
+export interface ProxyDependencies {
+  /** Create a request capture record */
+  createRequestRecord: (
+    serverName: string,
+    sessionId: string,
+    request: JsonRpcRequest,
+  ) => CaptureRecord;
+
+  /** Create a response capture record */
+  createResponseRecord: (
+    serverName: string,
+    sessionId: string,
+    response: JsonRpcResponse,
+    httpStatus: number,
+    method: string,
+  ) => CaptureRecord;
+
+  /** Append a capture record to storage */
+  appendRecord: (record: CaptureRecord) => Promise<void>;
+
+  /** Capture an error response */
+  captureErrorResponse: (
+    serverName: string,
+    sessionId: string,
+    request: JsonRpcRequest,
+    error: { code: number; message: string; data?: unknown },
+    httpStatus: number,
+    durationMs: number,
+  ) => Promise<void>;
+
+  /** Capture an SSE event */
+  captureSSEEventData: (
+    serverName: string,
+    sessionId: string,
+    sseEvent: { id?: string; event?: string; data?: string; retry?: number },
+    method?: string,
+    requestId?: string | number | null,
+  ) => Promise<void>;
+
+  /** Capture JSON-RPC message from SSE */
+  captureSSEJsonRpcMessage: (
+    serverName: string,
+    sessionId: string,
+    jsonRpcMessage: JsonRpcRequest | JsonRpcResponse,
+    sseEvent: { id?: string; event?: string; data?: string; retry?: number },
+    isResponse?: boolean,
+  ) => Promise<CaptureRecord | null>;
+
+  /** Store client info for a session */
+  storeClientInfoForSession: (sessionId: string, info: ClientInfo) => void;
+
+  /** Get client info for a session */
+  getClientInfoForSession: (sessionId: string) => ClientInfo | undefined;
+
+  /** Get a server from the registry */
+  getServerFromRegistry: (registry: Registry, name: string) => McpServer | undefined;
+
+  /** Save the registry to storage */
+  saveRegistryToStorage: (storage: string, registry: Registry) => Promise<void>;
+}
 
 // Headers that are automatically managed by fetch/proxy and should not be manually set
 const AUTO_HEADERS = ["content-length", "transfer-encoding", "connection"];
@@ -97,13 +155,14 @@ function buildProxyHeaders(
 function handleInitializeClientInfo(
   sessionId: string,
   jsonRpcRequest: JsonRpcRequest,
+  deps: ProxyDependencies,
 ): void {
   if (jsonRpcRequest.method === "initialize" && jsonRpcRequest.params) {
     const params = jsonRpcRequest.params as Record<string, unknown>;
     if (params.clientInfo) {
       const clientResult = clientInfoSchema.safeParse(params.clientInfo);
       if (clientResult.success) {
-        storeClientInfo(sessionId, clientResult.data);
+        deps.storeClientInfoForSession(sessionId, clientResult.data);
       }
     }
   }
@@ -119,11 +178,12 @@ async function updateServerActivity(
   storage: string,
   registry: Registry,
   server: McpServer,
+  deps: ProxyDependencies,
   onRegistryUpdate?: () => void,
 ): Promise<void> {
   server.lastActivity = new Date().toISOString();
   server.exchangeCount = server.exchangeCount + 1;
-  await saveRegistry(storage, registry);
+  await deps.saveRegistryToStorage(storage, registry);
   onRegistryUpdate?.();
 }
 
@@ -135,6 +195,7 @@ async function handleSessionTransition(
   sessionId: string,
   jsonRpcRequest: JsonRpcRequest,
   requestCaptureFilename: string,
+  deps: ProxyDependencies,
 ): Promise<void> {
   if (jsonRpcRequest.method !== "initialize" || sessionId !== SESSIONLESS_ID) {
     return;
@@ -146,9 +207,9 @@ async function handleSessionTransition(
 
   if (responseSessionId) {
     // Copy client info to new session
-    const clientInfo = getClientInfo(sessionId);
+    const clientInfo = deps.getClientInfoForSession(sessionId);
     if (clientInfo) {
-      storeClientInfo(responseSessionId, clientInfo);
+      deps.storeClientInfoForSession(responseSessionId, clientInfo);
     }
 
     // Rename capture file to use new session ID
@@ -221,14 +282,14 @@ function logResponse(
 
 // Helper: Capture authentication error with full response
 async function captureAuthError(
-  storage: string,
   serverName: string,
   sessionId: string,
   request: JsonRpcRequest,
   responseBody: string,
   httpStatus: number,
+  deps: ProxyDependencies,
 ): Promise<void> {
-  const clientInfo = getClientInfo(sessionId);
+  const clientInfo = deps.getClientInfoForSession(sessionId);
 
   // Try to parse response body as JSON-RPC error
   let response: JsonRpcResponse | undefined;
@@ -273,7 +334,7 @@ async function captureAuthError(
     response,
   };
 
-  await appendCapture(storage, record);
+  await deps.appendRecord(record);
 }
 
 /**
@@ -288,10 +349,11 @@ async function captureAuthError(
 export async function createProxyRoutes(options: {
   registry: Registry;
   storageDir: string;
+  dependencies: ProxyDependencies;
   onLog?: (entry: LogEntry) => void;
   onRegistryUpdate?: () => void;
 }): Promise<Hono> {
-  const { registry, storageDir, onLog, onRegistryUpdate } = options;
+  const { registry, storageDir, dependencies: deps, onLog, onRegistryUpdate } = options;
   const app = new Hono();
 
   // Canonical proxy route for server connections
@@ -308,7 +370,7 @@ export async function createProxyRoutes(options: {
       const jsonRpcRequest = c.req.valid("json");
 
       // Find server in registry
-      const server = getServer(registry, serverName);
+      const server = deps.getServerFromRegistry(registry, serverName);
       if (!server) {
         return c.notFound();
       }
@@ -318,14 +380,15 @@ export async function createProxyRoutes(options: {
       const sessionId = extractSessionId(validatedHeaders);
 
       // Capture request immediately (before forwarding)
-      const requestRecord = createRequestCaptureRecord(
+      const requestRecord = deps.createRequestRecord(
         server.name,
         sessionId,
         jsonRpcRequest,
       );
-      const requestCaptureFilename = await appendCapture(
-        storageDir,
-        requestRecord,
+      await deps.appendRecord(requestRecord);
+      const requestCaptureFilename = generateCaptureFilename(
+        server.name,
+        sessionId,
       );
 
       // Log incoming request from client
@@ -336,7 +399,7 @@ export async function createProxyRoutes(options: {
 
       try {
         // Handle initialize method - store client info
-        handleInitializeClientInfo(sessionId, jsonRpcRequest);
+        handleInitializeClientInfo(sessionId, jsonRpcRequest, deps);
 
         // Forward request to target MCP server using Hono proxy helper
         const proxyHeaders = buildProxyHeaders(c, server);
@@ -375,12 +438,12 @@ export async function createProxyRoutes(options: {
 
           // Capture the 401 response with full details
           await captureAuthError(
-            storageDir,
             server.name,
             sessionId,
             jsonRpcRequest,
             responseText,
             401,
+            deps,
           );
 
           return new Response(responseText, {
@@ -402,6 +465,7 @@ export async function createProxyRoutes(options: {
             storageDir,
             registry,
             server,
+            deps,
             onRegistryUpdate,
           );
 
@@ -415,11 +479,11 @@ export async function createProxyRoutes(options: {
           // Start background capture processing
           processSSECapture(
             streamForCapture,
-            storageDir,
             server,
             sessionId,
             jsonRpcRequest.method,
             jsonRpcRequest.id,
+            deps,
             onLog,
           );
 
@@ -445,14 +509,14 @@ export async function createProxyRoutes(options: {
 
         // Capture response (only if request expected one - has id)
         if (jsonRpcRequest.id != null) {
-          const responseRecord = createResponseCaptureRecord(
+          const responseRecord = deps.createResponseRecord(
             server.name,
             sessionId,
             response,
             httpStatus,
             jsonRpcRequest.method,
           );
-          await appendCapture(storageDir, responseRecord);
+          await deps.appendRecord(responseRecord);
         }
 
         // Handle initialize → session transition
@@ -463,6 +527,7 @@ export async function createProxyRoutes(options: {
           sessionId,
           jsonRpcRequest,
           requestCaptureFilename,
+          deps,
         );
 
         // Log response
@@ -481,6 +546,7 @@ export async function createProxyRoutes(options: {
           storageDir,
           registry,
           server,
+          deps,
           onRegistryUpdate,
         );
 
@@ -519,8 +585,7 @@ export async function createProxyRoutes(options: {
         );
 
         // Capture error
-        await captureError(
-          storageDir,
+        await deps.captureErrorResponse(
           server.name,
           sessionId,
           jsonRpcRequest,
@@ -546,11 +611,11 @@ export async function createProxyRoutes(options: {
 // Background processing of SSE stream for capture
 async function processSSECapture(
   stream: ReadableStream<Uint8Array>,
-  storageDir: string,
   server: McpServer,
   sessionId: string,
   method: string,
-  requestId?: string | number | null,
+  requestId: string | number | null | undefined,
+  deps: ProxyDependencies,
   onLog?: (entry: LogEntry) => void,
 ): Promise<void> {
   try {
@@ -576,8 +641,7 @@ async function processSSECapture(
         if (jsonRpcMessage) {
           // Capture as JSON-RPC message
           const isResponse = isJsonRpcResponse(jsonRpcMessage);
-          const record = await captureSSEJsonRpc(
-            storageDir,
+          const record = await deps.captureSSEJsonRpcMessage(
             server.name,
             sessionId,
             jsonRpcMessage,
@@ -603,8 +667,7 @@ async function processSSECapture(
           }
         } else {
           // Capture as raw SSE event
-          await captureSSEEvent(
-            storageDir,
+          await deps.captureSSEEventData(
             server.name,
             sessionId,
             sseEvent,
@@ -614,8 +677,7 @@ async function processSSECapture(
         }
       } else {
         // Capture events without data
-        await captureSSEEvent(
-          storageDir,
+        await deps.captureSSEEventData(
           server.name,
           sessionId,
           sseEvent,

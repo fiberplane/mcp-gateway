@@ -9,16 +9,23 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { createApp as createApiApp } from "@fiberplane/mcp-gateway-api";
 import {
+  createGateway,
   createMcpApp,
+  createRequestCaptureRecord,
+  createResponseCaptureRecord,
   getServers,
   getSessions,
   getStorageRoot,
   loadRegistry,
   logger,
   queryLogs,
+  saveRegistry,
   startHealthChecks,
 } from "@fiberplane/mcp-gateway-core";
-import { createApp as createServerApp } from "@fiberplane/mcp-gateway-server";
+import {
+  createApp as createServerApp,
+  type ProxyDependencies,
+} from "@fiberplane/mcp-gateway-server";
 import type { Context } from "@fiberplane/mcp-gateway-types";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
@@ -145,12 +152,49 @@ export async function runCli(): Promise<void> {
     // Load registry once and share it between server and CLI
     const registry = await loadRegistry(storageDir);
 
+    // Create Gateway instance with scoped storage and state
+    const gateway = await createGateway({ storageDir });
+
+    // Wire Gateway methods into ProxyDependencies for server
+    const proxyDependencies: ProxyDependencies = {
+      createRequestRecord: (serverName, sessionId, request) =>
+        createRequestCaptureRecord(
+          serverName,
+          sessionId,
+          request,
+          gateway.clientInfo.get(sessionId),
+        ),
+      createResponseRecord: (serverName, sessionId, response, httpStatus, method) =>
+        createResponseCaptureRecord(
+          serverName,
+          sessionId,
+          response,
+          httpStatus,
+          method,
+          gateway.clientInfo.get(sessionId),
+        ),
+      appendRecord: (record) => gateway.capture.append(record),
+      captureErrorResponse: (serverName, sessionId, request, error, httpStatus, durationMs) =>
+        gateway.capture.error(serverName, sessionId, request, error, httpStatus, durationMs),
+      captureSSEEventData: (serverName, sessionId, sseEvent, method, requestId) =>
+        gateway.capture.sseEvent(serverName, sessionId, sseEvent, method, requestId),
+      captureSSEJsonRpcMessage: (serverName, sessionId, jsonRpcMessage, sseEvent, isResponse) =>
+        gateway.capture.sseJsonRpc(serverName, sessionId, jsonRpcMessage, sseEvent, isResponse),
+      storeClientInfoForSession: (sessionId, info) =>
+        gateway.clientInfo.store(sessionId, info),
+      getClientInfoForSession: (sessionId) => gateway.clientInfo.get(sessionId),
+      getServerFromRegistry: (registry, name) => gateway.registry.getServer(registry, name),
+      saveRegistryToStorage: (storage, registry) => saveRegistry(storage, registry),
+    };
+
     // Create MCP protocol server (proxy, OAuth, gateway MCP server)
     const { app: serverApp } = await createServerApp({
       registry,
       storageDir,
       createMcpApp,
       logger,
+      proxyDependencies,
+      getServer: (registry, name) => gateway.registry.getServer(registry, name),
       onLog: emitLog,
       onRegistryUpdate: emitRegistryUpdate,
     });
@@ -281,8 +325,9 @@ export async function runCli(): Promise<void> {
     const context: Context = {
       storageDir,
       port,
-      onExit: () => {
+      onExit: async () => {
         stopHealthChecks();
+        await gateway.close(); // Close Gateway connections
         return new Promise<void>((resolve) => {
           server.close(() => {
             resolve();

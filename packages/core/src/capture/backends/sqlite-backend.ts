@@ -1,28 +1,46 @@
 import type { CaptureRecord } from "@fiberplane/mcp-gateway-types";
+import { Database } from "bun:sqlite";
+import { type BunSQLiteDatabase, drizzle } from "drizzle-orm/bun-sqlite";
+import { join } from "node:path";
 import { logger } from "../../logger";
 import type { StorageBackend, StorageWriteResult } from "../storage-backend.js";
+import * as schema from "../../logs/schema.js";
 
 /**
  * SQLite storage backend
  *
  * Writes capture records to SQLite database for fast querying
- * Lazily imports database modules to avoid circular dependencies
+ * Each instance owns its own DB connection (no global cache)
  */
 export class SqliteStorageBackend implements StorageBackend {
   readonly name = "sqlite";
   private storageDir: string | null = null;
+  private db: BunSQLiteDatabase<typeof schema> | null = null;
+  private sqlite: Database | null = null;
   private initialized = false;
 
   async initialize(storageDir: string): Promise<void> {
     this.storageDir = storageDir;
 
     try {
-      // Lazy import to avoid circular dependencies
-      const { getDb } = await import("../../logs/db.js");
-      const { ensureMigrations } = await import("../../logs/migrations.js");
+      // Create DB connection (owned by this instance, not global cache)
+      const dbPath = join(storageDir, "logs.db");
+      this.sqlite = new Database(dbPath, { create: true });
 
-      const db = getDb(storageDir);
-      await ensureMigrations(db);
+      // Enable WAL mode for better concurrency (multiple readers, single writer)
+      this.sqlite.exec("PRAGMA journal_mode = WAL;");
+
+      // Set busy timeout to 5 seconds to wait for locks instead of failing immediately
+      this.sqlite.exec("PRAGMA busy_timeout = 5000;");
+
+      // Use NORMAL synchronous mode for better performance (WAL provides safety)
+      this.sqlite.exec("PRAGMA synchronous = NORMAL;");
+
+      this.db = drizzle(this.sqlite, { schema });
+
+      // Run migrations
+      const { ensureMigrations } = await import("../../logs/migrations.js");
+      await ensureMigrations(this.db);
 
       this.initialized = true;
       logger.debug("SQLite backend initialized", { storageDir });
@@ -41,7 +59,7 @@ export class SqliteStorageBackend implements StorageBackend {
   }
 
   async write(record: CaptureRecord): Promise<StorageWriteResult> {
-    if (!this.storageDir || !this.initialized) {
+    if (!this.db || !this.initialized) {
       logger.debug("SQLite backend not ready, skipping write");
       return {
         metadata: {
@@ -52,12 +70,9 @@ export class SqliteStorageBackend implements StorageBackend {
     }
 
     try {
-      // Lazy import to avoid circular dependencies
-      const { getDb } = await import("../../logs/db.js");
+      // Use owned DB connection
       const { insertLog } = await import("../../logs/storage.js");
-
-      const db = getDb(this.storageDir);
-      await insertLog(db, record);
+      await insertLog(this.db, record);
 
       return {
         metadata: {
@@ -81,7 +96,18 @@ export class SqliteStorageBackend implements StorageBackend {
   }
 
   async close(): Promise<void> {
-    // SQLite connections are managed by the db module
-    logger.debug("SQLite backend closed");
+    if (this.sqlite) {
+      try {
+        this.sqlite.close();
+        this.db = null;
+        this.sqlite = null;
+        this.initialized = false;
+        logger.debug("SQLite backend closed", { storageDir: this.storageDir });
+      } catch (error) {
+        logger.warn("Error closing SQLite connection", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
   }
 }
