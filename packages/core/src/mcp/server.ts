@@ -5,6 +5,7 @@ import { McpServer, RpcError, StreamableHttpTransport } from "mcp-lite";
 import { z } from "zod";
 import { logger } from "../logger";
 import { createCaptureTools } from "./tools/capture-tools";
+import { createOptimizationTools } from "./tools/optimization-tools";
 import { createServerTools } from "./tools/server-tools";
 
 /**
@@ -62,6 +63,9 @@ export function createMcpServer(
 
   // Register capture analysis tools (only search_records)
   createCaptureTools(mcp, registry, storageDir);
+
+  // Register optimization tools
+  createOptimizationTools(mcp, registry, storageDir);
 
   // Set up custom error handler
   mcp.onError((error, ctx) => {
