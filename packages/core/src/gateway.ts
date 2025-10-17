@@ -7,7 +7,6 @@ import type {
   Registry,
   ServerHealth,
 } from "@fiberplane/mcp-gateway-types";
-import { JsonlStorageBackend } from "./capture/backends/jsonl-backend.js";
 import { SqliteStorageBackend } from "./capture/backends/sqlite-backend.js";
 import type { SSEEvent } from "./capture/sse-parser.js";
 import { StorageManager } from "./capture/storage-manager.js";
@@ -341,7 +340,6 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
 
   // Create scoped storage manager (not global)
   const storageManager = new StorageManager();
-  storageManager.registerBackend(new JsonlStorageBackend());
   storageManager.registerBackend(new SqliteStorageBackend());
   await storageManager.initialize(storageDir);
 
