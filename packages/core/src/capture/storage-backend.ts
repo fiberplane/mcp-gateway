@@ -9,8 +9,8 @@ import type {
 /**
  * Storage backend interface
  *
- * Allows different storage implementations (JSONL, SQLite, etc.)
- * to be used independently or combined.
+ * Allows different storage implementations (currently SQLite)
+ * to be used for persisting MCP traffic captures.
  *
  * This is a full CRUD interface:
  * - write() for creating/updating records

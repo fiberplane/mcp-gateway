@@ -245,6 +245,108 @@ export async function runCli(): Promise<void> {
     // Create main application that orchestrates everything
     const app = new Hono();
 
+    // Add landing page at root if web UI is available
+    const publicDir = findPublicDir();
+    if (publicDir) {
+      app.get("/", (c) => {
+        const version = getVersion();
+        return c.html(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MCP Gateway</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      text-align: center;
+      background: white;
+      padding: 48px;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 500px;
+    }
+    h1 {
+      margin: 0 0 12px 0;
+      font-size: 32px;
+      color: #222;
+    }
+    .version {
+      color: #999;
+      font-size: 14px;
+      margin-bottom: 32px;
+    }
+    p {
+      margin: 0 0 24px 0;
+      color: #666;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+    .button {
+      display: inline-block;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 12px 32px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 500;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+    .info {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid #eee;
+      font-size: 14px;
+      color: #999;
+    }
+    .endpoints {
+      text-align: left;
+      background: #f8f9fa;
+      padding: 12px;
+      border-radius: 6px;
+      margin-top: 12px;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>MCP Gateway</h1>
+    <div class="version">v${version}</div>
+    <p>Welcome to the MCP Gateway! Access the web interface to view and analyze captured MCP traffic.</p>
+    <a href="/ui" class="button">Open Web UI</a>
+    <div class="info">
+      <strong>Available Endpoints:</strong>
+      <div class="endpoints">
+        GET /api/logs - Query logs<br>
+        GET /api/servers - List servers<br>
+        GET /api/sessions - List sessions<br>
+        GET /ui - Web interface
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+        `);
+      });
+    }
+
     // Mount the MCP protocol server
     app.route("/", serverApp);
 
@@ -262,8 +364,7 @@ export async function runCli(): Promise<void> {
     );
     app.route("/api", apiApp);
 
-    // Serve Web UI for management
-    const publicDir = findPublicDir();
+    // Serve Web UI for management (if available)
     if (publicDir) {
       // Serve static files under /ui prefix
       app.use(

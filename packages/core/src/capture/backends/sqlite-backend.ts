@@ -91,7 +91,7 @@ export class SqliteStorageBackend implements StorageBackend {
         serverName: record.metadata.serverName,
       });
 
-      // Don't throw - allow JSONL backend to succeed
+      // Don't throw - write failures shouldn't crash the gateway
       return {
         metadata: {
           error: true,

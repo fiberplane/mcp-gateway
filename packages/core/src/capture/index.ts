@@ -4,10 +4,7 @@ import type {
   JsonRpcRequest,
   JsonRpcResponse,
 } from "@fiberplane/mcp-gateway-types";
-import {
-  captureRecordSchema,
-  generateCaptureFilename,
-} from "@fiberplane/mcp-gateway-types";
+import { captureRecordSchema } from "@fiberplane/mcp-gateway-types";
 import { logger } from "../logger";
 import type { SSEEvent } from "./sse-parser";
 
@@ -112,7 +109,7 @@ export function createResponseCaptureRecord(
   // Calculate duration and cleanup if we tracked the request
   let durationMs = 0;
   if (response.id != null) {
-    if (requestTracker && requestTracker.hasRequest(response.id)) {
+    if (requestTracker?.hasRequest(response.id)) {
       durationMs = requestTracker.calculateDuration(response.id);
     } else if (requestStartTimes.has(response.id)) {
       const startTime = requestStartTimes.get(response.id);
@@ -155,8 +152,8 @@ export function createResponseCaptureRecord(
  * This function will be removed in a future version.
  */
 export async function appendCapture(
-  storageDir: string,
-  record: CaptureRecord,
+  _storageDir: string,
+  _record: CaptureRecord,
 ): Promise<string> {
   throw new Error(
     "appendCapture() is deprecated. Use Gateway.capture.append() instead. " +
@@ -171,13 +168,13 @@ export async function appendCapture(
  * This function will be removed in a future version.
  */
 export async function captureError(
-  storageDir: string,
-  serverName: string,
-  sessionId: string,
-  request: JsonRpcRequest,
-  error: { code: number; message: string; data?: unknown },
-  httpStatus: number,
-  durationMs: number,
+  _storageDir: string,
+  _serverName: string,
+  _sessionId: string,
+  _request: JsonRpcRequest,
+  _error: { code: number; message: string; data?: unknown },
+  _httpStatus: number,
+  _durationMs: number,
 ): Promise<void> {
   throw new Error(
     "captureError() is deprecated. Use Gateway.capture.error() instead. " +
@@ -274,7 +271,7 @@ export function createSSEJsonRpcCaptureRecord(
   // Calculate duration and cleanup for responses
   let durationMs = 0;
   if (isResponse && jsonRpcMessage.id != null) {
-    if (requestTracker && requestTracker.hasRequest(jsonRpcMessage.id)) {
+    if (requestTracker?.hasRequest(jsonRpcMessage.id)) {
       durationMs = requestTracker.calculateDuration(jsonRpcMessage.id);
     } else if (requestStartTimes.has(jsonRpcMessage.id)) {
       const startTime = requestStartTimes.get(jsonRpcMessage.id);
@@ -330,12 +327,12 @@ export function createSSEJsonRpcCaptureRecord(
  * This function will be removed in a future version.
  */
 export async function captureSSEEvent(
-  storageDir: string,
-  serverName: string,
-  sessionId: string,
-  sseEvent: SSEEvent,
-  method?: string,
-  requestId?: string | number | null,
+  _storageDir: string,
+  _serverName: string,
+  _sessionId: string,
+  _sseEvent: SSEEvent,
+  _method?: string,
+  _requestId?: string | number | null,
 ): Promise<void> {
   throw new Error(
     "captureSSEEvent() is deprecated. Use Gateway.capture.sseEvent() instead. " +
@@ -350,12 +347,12 @@ export async function captureSSEEvent(
  * This function will be removed in a future version.
  */
 export async function captureSSEJsonRpc(
-  storageDir: string,
-  serverName: string,
-  sessionId: string,
-  jsonRpcMessage: JsonRpcRequest | JsonRpcResponse,
-  sseEvent: SSEEvent,
-  isResponse: boolean = false,
+  _storageDir: string,
+  _serverName: string,
+  _sessionId: string,
+  _jsonRpcMessage: JsonRpcRequest | JsonRpcResponse,
+  _sseEvent: SSEEvent,
+  _isResponse: boolean = false,
 ): Promise<CaptureRecord | null> {
   throw new Error(
     "captureSSEJsonRpc() is deprecated. Use Gateway.capture.sseJsonRpc() instead. " +

@@ -1,5 +1,3 @@
-import { rename } from "node:fs/promises";
-import { join } from "node:path";
 import {
   createSSEEventStream,
   isJsonRpcResponse,
@@ -17,7 +15,6 @@ import type {
 } from "@fiberplane/mcp-gateway-types";
 import {
   clientInfoSchema,
-  generateCaptureFilename,
   jsonRpcRequestSchema,
   serverParamSchema,
   sessionHeaderSchema,
@@ -191,13 +188,14 @@ async function updateServerActivity(
 }
 
 // Helper: Handle session transition for initialize
+// When an initialize request moves from stateless to a new session ID,
+// copy over the client info to the new session
 async function handleSessionTransition(
-  storage: string,
-  server: McpServer,
+  _storage: string,
+  _server: McpServer,
   targetResponse: Response,
   sessionId: string,
   jsonRpcRequest: JsonRpcRequest,
-  requestCaptureFilename: string,
   deps: ProxyDependencies,
 ): Promise<void> {
   if (jsonRpcRequest.method !== "initialize" || sessionId !== SESSIONLESS_ID) {
@@ -213,21 +211,6 @@ async function handleSessionTransition(
     const clientInfo = deps.getClientInfoForSession(sessionId);
     if (clientInfo) {
       deps.storeClientInfoForSession(responseSessionId, clientInfo);
-    }
-
-    // Rename capture file to use new session ID
-    const newFilename = generateCaptureFilename(server.name, responseSessionId);
-    const oldPath = join(storage, server.name, requestCaptureFilename);
-    const newPath = join(storage, server.name, newFilename);
-
-    try {
-      await rename(oldPath, newPath);
-    } catch (error) {
-      logger.warn("Failed to rename capture file", {
-        error: String(error),
-        oldPath,
-        newPath,
-      });
     }
   }
 }
@@ -395,10 +378,6 @@ export async function createProxyRoutes(options: {
         jsonRpcRequest,
       );
       await deps.appendRecord(requestRecord);
-      const requestCaptureFilename = generateCaptureFilename(
-        server.name,
-        sessionId,
-      );
 
       // Log incoming request from client
       logRequest(server, sessionId, jsonRpcRequest, onLog);
@@ -535,7 +514,6 @@ export async function createProxyRoutes(options: {
           targetResponse,
           sessionId,
           jsonRpcRequest,
-          requestCaptureFilename,
           deps,
         );
 

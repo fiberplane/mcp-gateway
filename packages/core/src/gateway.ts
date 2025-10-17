@@ -322,6 +322,7 @@ class HealthCheckManager {
     this.timer = setInterval(() => {
       this.check(registry).catch((error) => {
         // Log error but don't stop health checks
+        // biome-ignore lint/suspicious/noConsole: Needed to log background health check errors
         console.error("Health check failed:", error);
       });
     }, intervalMs);

@@ -3,8 +3,8 @@ import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 /**
  * SQLite table schema for MCP log entries
  *
- * This table stores captured MCP traffic for fast querying.
- * JSONL files remain as the source of truth for backup/recovery.
+ * This table stores all captured MCP traffic (requests, responses, errors, SSE events)
+ * for fast querying and analysis.
  */
 export const logs = sqliteTable(
   "logs",
