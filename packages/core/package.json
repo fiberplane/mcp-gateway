@@ -16,8 +16,10 @@
   "sideEffects": false,
   "scripts": {
     "build": "bun run ../../scripts/build.ts",
+    "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "test": "bun test"
+    "lint": "biome ci .",
+    "format": "biome check --write ."
   },
   "exports": {
     ".": {
@@ -36,8 +38,12 @@
   },
   "dependencies": {
     "@fiberplane/mcp-gateway-types": "workspace:*",
+    "drizzle-orm": "^0.44.6",
     "hono": "^4.9.8",
     "mcp-lite": "^0.8.1",
     "zod": "^4.1.11"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.5"
   }
 }

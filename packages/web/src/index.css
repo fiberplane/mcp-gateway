@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+@theme {
+  /* Background colors */
+  --color-background: #ffffff;
+  --color-card: #ffffff;
+  --color-muted: #f9fafb;
+  --color-primary: #272624;
+
+  /* Badge colors (intent-based) */
+  --color-badge-info: #dddbff;     /* purple - for tools/* */
+  --color-badge-success: #dcfce7;  /* green - for initialize */
+  --color-badge-warning: #fef3c7;  /* yellow - for resources/*, notifications/* */
+  --color-badge-error: #fee2e2;    /* red - for errors */
+
+  /* Foreground colors */
+  --color-foreground: #000000;
+  --color-primary-foreground: #ffffff;
+  --color-muted-foreground: #6b7280;
+
+  /* Border colors */
+  --color-border: #e5e7eb;
+  --color-input: #e5e7eb;
+  --color-ring: #1e293b;
+
+  /* Shadcn compatibility */
+  --color-secondary: #f9fafb;
+  --color-secondary-foreground: #1e293b;
+  --color-accent: #f9fafb;
+  --color-accent-foreground: #1e293b;
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #ffffff;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #1e293b;
+  --color-card-foreground: #1e293b;
+
+  /* Border radius */
+  --radius: 0.5rem;
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  /* Font families */
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "Roboto Mono", Consolas, monospace;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+}

@@ -1,18 +1,11 @@
-import { constants } from "node:fs";
-import { access, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
 import type {
   CaptureRecord,
   ClientInfo,
   JsonRpcRequest,
   JsonRpcResponse,
 } from "@fiberplane/mcp-gateway-types";
-import {
-  captureRecordSchema,
-  generateCaptureFilename,
-} from "@fiberplane/mcp-gateway-types";
+import { captureRecordSchema } from "@fiberplane/mcp-gateway-types";
 import { logger } from "../logger";
-import { ensureServerCaptureDir } from "../registry/storage";
 import type { SSEEvent } from "./sse-parser";
 
 // In-memory storage for client info by session
@@ -49,18 +42,32 @@ export function getActiveSessions(): string[] {
   );
 }
 
+// Helper interface for request tracking (used by Gateway)
+export interface RequestTracker {
+  trackRequest(id: string | number, method: string): void;
+  calculateDuration(id: string | number): number;
+  getMethod(id: string | number): string | undefined;
+  hasRequest(id: string | number): boolean;
+}
+
 // Create capture record for request only
 export function createRequestCaptureRecord(
   serverName: string,
   sessionId: string,
   request: JsonRpcRequest,
+  clientInfo?: ClientInfo,
+  requestTracker?: RequestTracker,
 ): CaptureRecord {
-  const clientInfo = getClientInfo(sessionId);
+  const client = clientInfo ?? getClientInfo(sessionId);
 
   // Store start time and method if request expects response (has id)
   if (request.id != null) {
-    requestStartTimes.set(request.id, Date.now());
-    requestMethods.set(request.id, request.method);
+    if (requestTracker) {
+      requestTracker.trackRequest(request.id, request.method);
+    } else {
+      requestStartTimes.set(request.id, Date.now());
+      requestMethods.set(request.id, request.method);
+    }
   }
 
   const record: CaptureRecord = {
@@ -72,7 +79,7 @@ export function createRequestCaptureRecord(
       sessionId,
       durationMs: 0, // Unknown at request time
       httpStatus: 0, // Unknown at request time
-      client: clientInfo,
+      client,
     },
     request,
   };
@@ -94,17 +101,23 @@ export function createResponseCaptureRecord(
   response: JsonRpcResponse,
   httpStatus: number,
   method: string,
+  clientInfo?: ClientInfo,
+  requestTracker?: RequestTracker,
 ): CaptureRecord {
-  const clientInfo = getClientInfo(sessionId);
+  const client = clientInfo ?? getClientInfo(sessionId);
 
   // Calculate duration and cleanup if we tracked the request
   let durationMs = 0;
-  if (response.id != null && requestStartTimes.has(response.id)) {
-    const startTime = requestStartTimes.get(response.id);
-    if (startTime !== undefined) {
-      durationMs = Date.now() - startTime;
-      requestStartTimes.delete(response.id);
-      requestMethods.delete(response.id);
+  if (response.id != null) {
+    if (requestTracker?.hasRequest(response.id)) {
+      durationMs = requestTracker.calculateDuration(response.id);
+    } else if (requestStartTimes.has(response.id)) {
+      const startTime = requestStartTimes.get(response.id);
+      if (startTime !== undefined) {
+        durationMs = Date.now() - startTime;
+        requestStartTimes.delete(response.id);
+        requestMethods.delete(response.id);
+      }
     }
   }
 
@@ -117,7 +130,7 @@ export function createResponseCaptureRecord(
       sessionId,
       durationMs,
       httpStatus,
-      client: clientInfo,
+      client,
     },
     response,
   };
@@ -132,89 +145,41 @@ export function createResponseCaptureRecord(
   return record;
 }
 
+/**
+ * @deprecated This function uses global state and is deprecated.
+ * Use Gateway.capture.append() instead.
+ *
+ * This function will be removed in a future version.
+ */
 export async function appendCapture(
-  storageDir: string,
-  record: CaptureRecord,
+  _storageDir: string,
+  _record: CaptureRecord,
 ): Promise<string> {
-  // Generate filename (one per session)
-  let filePath: string = "unknown";
-
-  try {
-    const filename = generateCaptureFilename(
-      record.metadata.serverName,
-      record.metadata.sessionId,
-    );
-
-    filePath = join(storageDir, record.metadata.serverName, filename);
-
-    // Ensure server capture directory exists
-    await ensureServerCaptureDir(storageDir, record.metadata.serverName);
-
-    // Append JSONL record to file
-    const jsonLine = `${JSON.stringify(record)}\n`;
-
-    // Use Node.js fs to append content
-    let existingContent = "";
-    try {
-      await access(filePath, constants.F_OK);
-      // Type assertion needed: Bun's readFile with "utf8" encoding returns string, not Buffer
-      existingContent = (await readFile(filePath, "utf8")) as unknown as string;
-    } catch {
-      // File doesn't exist, start with empty content
-    }
-
-    await writeFile(filePath, existingContent + jsonLine, "utf8");
-    return filename;
-  } catch (error) {
-    logger.error("Failed to append capture record", {
-      error:
-        error instanceof Error
-          ? {
-              message: error.message,
-              stack: error.stack,
-            }
-          : String(error),
-      filePath,
-    });
-    throw new Error(
-      `Capture storage failed: ${error instanceof Error ? error.message : String(error)}`,
-    );
-  }
+  throw new Error(
+    "appendCapture() is deprecated. Use Gateway.capture.append() instead. " +
+      "Create a Gateway instance via createGateway() and use its capture methods.",
+  );
 }
 
-// Error handling for failed requests
+/**
+ * @deprecated This function uses global state and is deprecated.
+ * Use Gateway.capture.error() instead.
+ *
+ * This function will be removed in a future version.
+ */
 export async function captureError(
-  storageDir: string,
-  serverName: string,
-  sessionId: string,
-  request: JsonRpcRequest,
-  error: { code: number; message: string; data?: unknown },
-  httpStatus: number,
-  durationMs: number,
+  _storageDir: string,
+  _serverName: string,
+  _sessionId: string,
+  _request: JsonRpcRequest,
+  _error: { code: number; message: string; data?: unknown },
+  _httpStatus: number,
+  _durationMs: number,
 ): Promise<void> {
-  // Only capture error response if request expected a response
-  if (request.id == null) {
-    return; // Notification errors aren't sent back
-  }
-
-  const errorResponse: JsonRpcResponse = {
-    jsonrpc: "2.0",
-    id: request.id,
-    error,
-  };
-
-  const record = createResponseCaptureRecord(
-    serverName,
-    sessionId,
-    errorResponse,
-    httpStatus,
-    request.method,
+  throw new Error(
+    "captureError() is deprecated. Use Gateway.capture.error() instead. " +
+      "Create a Gateway instance via createGateway() and use its capture methods.",
   );
-
-  // Override the calculated duration with the provided one
-  record.metadata.durationMs = durationMs;
-
-  await appendCapture(storageDir, record);
 }
 
 // Create capture record for SSE event
@@ -224,8 +189,9 @@ export function createSSEEventCaptureRecord(
   sseEvent: SSEEvent,
   method?: string,
   requestId?: string | number | null,
+  clientInfo?: ClientInfo,
 ): CaptureRecord {
-  const clientInfo = getClientInfo(sessionId);
+  const client = clientInfo ?? getClientInfo(sessionId);
 
   const record: CaptureRecord = {
     timestamp: new Date().toISOString(),
@@ -236,7 +202,7 @@ export function createSSEEventCaptureRecord(
       sessionId,
       durationMs: 0, // SSE events don't have request/response timing
       httpStatus: 200, // SSE events are part of successful streaming response
-      client: clientInfo,
+      client,
       sseEventId: sseEvent.id,
       sseEventType: sseEvent.event,
     },
@@ -260,11 +226,15 @@ export function createSSEEventCaptureRecord(
 
 function resolveJsonRpcMethod(
   jsonRpcMessage: JsonRpcRequest | JsonRpcResponse,
+  requestTracker?: RequestTracker,
 ): string {
   if ("method" in jsonRpcMessage) {
     return jsonRpcMessage.method;
   }
   if (jsonRpcMessage.id != null) {
+    if (requestTracker) {
+      return requestTracker.getMethod(jsonRpcMessage.id) ?? "unknown";
+    }
     return requestMethods.get(jsonRpcMessage.id) ?? "unknown";
   }
   return "unknown";
@@ -277,23 +247,33 @@ export function createSSEJsonRpcCaptureRecord(
   jsonRpcMessage: JsonRpcRequest | JsonRpcResponse,
   sseEvent: SSEEvent,
   isResponse: boolean = false,
+  clientInfo?: ClientInfo,
+  requestTracker?: RequestTracker,
 ): CaptureRecord {
-  const clientInfo = getClientInfo(sessionId);
+  const client = clientInfo ?? getClientInfo(sessionId);
 
-  const method = resolveJsonRpcMethod(jsonRpcMessage);
+  const method = resolveJsonRpcMethod(jsonRpcMessage, requestTracker);
 
   // Store start time and method for requests
   if (!isResponse && jsonRpcMessage.id != null) {
-    requestStartTimes.set(jsonRpcMessage.id, Date.now());
-    if ("method" in jsonRpcMessage) {
-      requestMethods.set(jsonRpcMessage.id, jsonRpcMessage.method);
+    if (requestTracker) {
+      if ("method" in jsonRpcMessage) {
+        requestTracker.trackRequest(jsonRpcMessage.id, jsonRpcMessage.method);
+      }
+    } else {
+      requestStartTimes.set(jsonRpcMessage.id, Date.now());
+      if ("method" in jsonRpcMessage) {
+        requestMethods.set(jsonRpcMessage.id, jsonRpcMessage.method);
+      }
     }
   }
 
   // Calculate duration and cleanup for responses
   let durationMs = 0;
   if (isResponse && jsonRpcMessage.id != null) {
-    if (requestStartTimes.has(jsonRpcMessage.id)) {
+    if (requestTracker?.hasRequest(jsonRpcMessage.id)) {
+      durationMs = requestTracker.calculateDuration(jsonRpcMessage.id);
+    } else if (requestStartTimes.has(jsonRpcMessage.id)) {
       const startTime = requestStartTimes.get(jsonRpcMessage.id);
       if (startTime !== undefined) {
         durationMs = Date.now() - startTime;
@@ -312,7 +292,7 @@ export function createSSEJsonRpcCaptureRecord(
       sessionId,
       durationMs,
       httpStatus: 200,
-      client: clientInfo,
+      client,
       sseEventId: sseEvent.id,
       sseEventType: sseEvent.event,
     },
@@ -340,52 +320,42 @@ export function createSSEJsonRpcCaptureRecord(
   return record;
 }
 
-// Capture SSE event (wrapper for appendCapture)
+/**
+ * @deprecated This function uses global state and is deprecated.
+ * Use Gateway.capture.sseEvent() instead.
+ *
+ * This function will be removed in a future version.
+ */
 export async function captureSSEEvent(
-  storageDir: string,
-  serverName: string,
-  sessionId: string,
-  sseEvent: SSEEvent,
-  method?: string,
-  requestId?: string | number | null,
+  _storageDir: string,
+  _serverName: string,
+  _sessionId: string,
+  _sseEvent: SSEEvent,
+  _method?: string,
+  _requestId?: string | number | null,
 ): Promise<void> {
-  try {
-    const record = createSSEEventCaptureRecord(
-      serverName,
-      sessionId,
-      sseEvent,
-      method,
-      requestId,
-    );
-    await appendCapture(storageDir, record);
-  } catch (error) {
-    logger.error("Failed to capture SSE event", { error: String(error) });
-    // Don't throw - SSE capture failures shouldn't break streaming
-  }
+  throw new Error(
+    "captureSSEEvent() is deprecated. Use Gateway.capture.sseEvent() instead. " +
+      "Create a Gateway instance via createGateway() and use its capture methods.",
+  );
 }
 
-// Capture JSON-RPC message from SSE
+/**
+ * @deprecated This function uses global state and is deprecated.
+ * Use Gateway.capture.sseJsonRpc() instead.
+ *
+ * This function will be removed in a future version.
+ */
 export async function captureSSEJsonRpc(
-  storageDir: string,
-  serverName: string,
-  sessionId: string,
-  jsonRpcMessage: JsonRpcRequest | JsonRpcResponse,
-  sseEvent: SSEEvent,
-  isResponse: boolean = false,
+  _storageDir: string,
+  _serverName: string,
+  _sessionId: string,
+  _jsonRpcMessage: JsonRpcRequest | JsonRpcResponse,
+  _sseEvent: SSEEvent,
+  _isResponse: boolean = false,
 ): Promise<CaptureRecord | null> {
-  try {
-    const record = createSSEJsonRpcCaptureRecord(
-      serverName,
-      sessionId,
-      jsonRpcMessage,
-      sseEvent,
-      isResponse,
-    );
-    await appendCapture(storageDir, record);
-    return record;
-  } catch (error) {
-    logger.error("Failed to capture SSE JSON-RPC", { error: String(error) });
-    // Don't throw - SSE capture failures shouldn't break streaming
-    return null;
-  }
+  throw new Error(
+    "captureSSEJsonRpc() is deprecated. Use Gateway.capture.sseJsonRpc() instead. " +
+      "Create a Gateway instance via createGateway() and use its capture methods.",
+  );
 }

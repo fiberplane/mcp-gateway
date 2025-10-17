@@ -39,7 +39,7 @@ export const captureMetadataSchema = z.object({
   sseEventType: z.string().optional(), // For SSE events
 });
 
-// Capture record for JSONL storage
+// Capture record stored in SQLite database
 export const captureRecordSchema = z.object({
   timestamp: z.string(), // ISO 8601 UTC
   method: z.string(), // JSON-RPC method
@@ -60,31 +60,6 @@ export const captureRecordSchema = z.object({
 // Sanitize string for filesystem use
 export function sanitizeForFilename(str: string): string {
   return str.replace(/[^a-zA-Z0-9]/g, "_");
-}
-
-// In-memory cache to track when sessions started
-const sessionStartTimes = new Map<string, string>();
-
-// Generate session filename (one file per session with start timestamp)
-export function generateCaptureFilename(
-  serverName: string,
-  sessionId: string,
-): string {
-  const sanitizedServerName = sanitizeForFilename(serverName);
-  const sanitizedSessionId = sanitizeForFilename(sessionId);
-
-  // Use cached start time for both regular sessions and stateless requests
-  const sessionKey = `${serverName}-${sessionId}`;
-  if (!sessionStartTimes.has(sessionKey)) {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    sessionStartTimes.set(sessionKey, timestamp);
-  }
-
-  const sessionStartTime = sessionStartTimes.get(sessionKey);
-  if (!sessionStartTime) {
-    throw new Error(`Session start time not found for ${sessionKey}`);
-  }
-  return `${sessionStartTime}-${sanitizedServerName}-${sanitizedSessionId}.jsonl`;
 }
 
 // Route parameter validation
