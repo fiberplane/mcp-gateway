@@ -1,10 +1,10 @@
-import type { CaptureRecord } from "@fiberplane/mcp-gateway-types";
 import { Database } from "bun:sqlite";
-import { type BunSQLiteDatabase, drizzle } from "drizzle-orm/bun-sqlite";
 import { join } from "node:path";
+import type { CaptureRecord } from "@fiberplane/mcp-gateway-types";
+import { type BunSQLiteDatabase, drizzle } from "drizzle-orm/bun-sqlite";
 import { logger } from "../../logger";
-import type { StorageBackend, StorageWriteResult } from "../storage-backend.js";
 import * as schema from "../../logs/schema.js";
+import type { StorageBackend, StorageWriteResult } from "../storage-backend.js";
 
 /**
  * SQLite storage backend

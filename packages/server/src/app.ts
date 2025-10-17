@@ -1,4 +1,8 @@
-import type { LogEntry, McpServer, Registry } from "@fiberplane/mcp-gateway-types";
+import type {
+  LogEntry,
+  McpServer,
+  Registry,
+} from "@fiberplane/mcp-gateway-types";
 import type { Hono } from "hono";
 import { Hono as HonoApp } from "hono";
 import { logger as loggerMiddleware } from "hono/logger";

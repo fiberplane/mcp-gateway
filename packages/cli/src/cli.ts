@@ -163,7 +163,13 @@ export async function runCli(): Promise<void> {
           request,
           gateway.clientInfo.get(sessionId),
         ),
-      createResponseRecord: (serverName, sessionId, response, httpStatus, method) =>
+      createResponseRecord: (
+        serverName,
+        sessionId,
+        response,
+        httpStatus,
+        method,
+      ) =>
         createResponseCaptureRecord(
           serverName,
           sessionId,
@@ -173,17 +179,57 @@ export async function runCli(): Promise<void> {
           gateway.clientInfo.get(sessionId),
         ),
       appendRecord: (record) => gateway.capture.append(record),
-      captureErrorResponse: (serverName, sessionId, request, error, httpStatus, durationMs) =>
-        gateway.capture.error(serverName, sessionId, request, error, httpStatus, durationMs),
-      captureSSEEventData: (serverName, sessionId, sseEvent, method, requestId) =>
-        gateway.capture.sseEvent(serverName, sessionId, sseEvent, method, requestId),
-      captureSSEJsonRpcMessage: (serverName, sessionId, jsonRpcMessage, sseEvent, isResponse) =>
-        gateway.capture.sseJsonRpc(serverName, sessionId, jsonRpcMessage, sseEvent, isResponse),
+      captureErrorResponse: (
+        serverName,
+        sessionId,
+        request,
+        error,
+        httpStatus,
+        durationMs,
+      ) =>
+        gateway.capture.error(
+          serverName,
+          sessionId,
+          request,
+          error,
+          httpStatus,
+          durationMs,
+        ),
+      captureSSEEventData: (
+        serverName,
+        sessionId,
+        sseEvent,
+        method,
+        requestId,
+      ) =>
+        gateway.capture.sseEvent(
+          serverName,
+          sessionId,
+          sseEvent,
+          method,
+          requestId,
+        ),
+      captureSSEJsonRpcMessage: (
+        serverName,
+        sessionId,
+        jsonRpcMessage,
+        sseEvent,
+        isResponse,
+      ) =>
+        gateway.capture.sseJsonRpc(
+          serverName,
+          sessionId,
+          jsonRpcMessage,
+          sseEvent,
+          isResponse,
+        ),
       storeClientInfoForSession: (sessionId, info) =>
         gateway.clientInfo.store(sessionId, info),
       getClientInfoForSession: (sessionId) => gateway.clientInfo.get(sessionId),
-      getServerFromRegistry: (registry, name) => gateway.registry.getServer(registry, name),
-      saveRegistryToStorage: (storage, registry) => saveRegistry(storage, registry),
+      getServerFromRegistry: (registry, name) =>
+        gateway.registry.getServer(registry, name),
+      saveRegistryToStorage: (storage, registry) =>
+        saveRegistry(storage, registry),
     };
 
     // Create MCP protocol server (proxy, OAuth, gateway MCP server)
@@ -308,11 +354,7 @@ export async function runCli(): Promise<void> {
       const updateServerHealth = useAppStore.getState().updateServerHealth;
       // Update UI state for each health check result
       for (const update of updates) {
-        updateServerHealth(
-          update.name,
-          update.health,
-          update.lastHealthCheck,
-        );
+        updateServerHealth(update.name, update.health, update.lastHealthCheck);
       }
     });
 

@@ -92,7 +92,10 @@ export interface ProxyDependencies {
   getClientInfoForSession: (sessionId: string) => ClientInfo | undefined;
 
   /** Get a server from the registry */
-  getServerFromRegistry: (registry: Registry, name: string) => McpServer | undefined;
+  getServerFromRegistry: (
+    registry: Registry,
+    name: string,
+  ) => McpServer | undefined;
 
   /** Save the registry to storage */
   saveRegistryToStorage: (storage: string, registry: Registry) => Promise<void>;
@@ -353,7 +356,13 @@ export async function createProxyRoutes(options: {
   onLog?: (entry: LogEntry) => void;
   onRegistryUpdate?: () => void;
 }): Promise<Hono> {
-  const { registry, storageDir, dependencies: deps, onLog, onRegistryUpdate } = options;
+  const {
+    registry,
+    storageDir,
+    dependencies: deps,
+    onLog,
+    onRegistryUpdate,
+  } = options;
   const app = new Hono();
 
   // Canonical proxy route for server connections
