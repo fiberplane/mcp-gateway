@@ -10,7 +10,7 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { logger } from "../src/logger.js";
+import { logger } from "@fiberplane/mcp-gateway-core";
 
 let tempDir: string;
 
@@ -96,7 +96,7 @@ describe("Logger Initialization", () => {
 });
 
 describe("Log Level Filtering", () => {
-  test.serial("should skip debug logs when minLevel is info", async () => {
+  test("should skip debug logs when minLevel is info", async () => {
     await logger.initialize(tempDir);
 
     logger.debug("This should not be written");
@@ -118,7 +118,7 @@ describe("Log Level Filtering", () => {
     expect(entry.message).toBe("This should be written");
   });
 
-  test.serial("should write all logs when minLevel is debug", async () => {
+  test("should write all logs when minLevel is debug", async () => {
     // Create a fresh temp directory for this test
     const testTempDir = await mkdtemp(join(tmpdir(), "mcp-logger-debug-test-"));
     try {
@@ -151,42 +151,37 @@ describe("Log Level Filtering", () => {
     }
   });
 
-  test.serial(
-    "should only write warn and error when minLevel is warn",
-    async () => {
-      const testTempDir = await mkdtemp(
-        join(tmpdir(), "mcp-logger-warn-test-"),
-      );
-      try {
-        process.env.LOG_LEVEL = "warn";
-        await logger.initialize(testTempDir);
+  test("should only write warn and error when minLevel is warn", async () => {
+    const testTempDir = await mkdtemp(join(tmpdir(), "mcp-logger-warn-test-"));
+    try {
+      process.env.LOG_LEVEL = "warn";
+      await logger.initialize(testTempDir);
 
-        logger.debug("Debug message");
-        await new Promise((resolve) => setTimeout(resolve, 50));
-        logger.info("Info message");
-        await new Promise((resolve) => setTimeout(resolve, 50));
-        logger.warn("Warn message");
-        await new Promise((resolve) => setTimeout(resolve, 50));
-        logger.error("Error message");
+      logger.debug("Debug message");
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      logger.info("Info message");
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      logger.warn("Warn message");
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      logger.error("Error message");
 
-        // Wait for async file writes
-        await new Promise((resolve) => setTimeout(resolve, 100));
+      // Wait for async file writes
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
-        const logsDir = join(testTempDir, "logs");
-        const files = await readdir(logsDir);
-        const logContent = await readFile(join(logsDir, files[0]!), "utf-8");
-        const lines = logContent.trim().split("\n");
+      const logsDir = join(testTempDir, "logs");
+      const files = await readdir(logsDir);
+      const logContent = await readFile(join(logsDir, files[0]!), "utf-8");
+      const lines = logContent.trim().split("\n");
 
-        expect(lines.length).toBe(2);
-        expect(JSON.parse(lines[0]!).level).toBe("warn");
-        expect(JSON.parse(lines[1]!).level).toBe("error");
-      } finally {
-        await rm(testTempDir, { recursive: true, force: true });
-      }
-    },
-  );
+      expect(lines.length).toBe(2);
+      expect(JSON.parse(lines[0]!).level).toBe("warn");
+      expect(JSON.parse(lines[1]!).level).toBe("error");
+    } finally {
+      await rm(testTempDir, { recursive: true, force: true });
+    }
+  });
 
-  test.serial("should only write error when minLevel is error", async () => {
+  test("should only write error when minLevel is error", async () => {
     process.env.LOG_LEVEL = "error";
     await logger.initialize(tempDir);
 
@@ -209,7 +204,7 @@ describe("Log Level Filtering", () => {
 });
 
 describe("Log Writing", () => {
-  test.serial("should write log entries as JSON lines", async () => {
+  test("should write log entries as JSON lines", async () => {
     await logger.initialize(tempDir);
 
     logger.info("Test message");
@@ -234,7 +229,7 @@ describe("Log Writing", () => {
     expect(entry.message).toBe("Test message");
   });
 
-  test.serial("should include context object when provided", async () => {
+  test("should include context object when provided", async () => {
     await logger.initialize(tempDir);
 
     logger.info("Test with context", { userId: "123", action: "login" });
@@ -250,26 +245,23 @@ describe("Log Writing", () => {
     expect(entry.context).toEqual({ userId: "123", action: "login" });
   });
 
-  test.serial(
-    "should not include context field when context is empty",
-    async () => {
-      await logger.initialize(tempDir);
+  test("should not include context field when context is empty", async () => {
+    await logger.initialize(tempDir);
 
-      logger.info("Test without context");
+    logger.info("Test without context");
 
-      // Wait for async file writes
-      await new Promise((resolve) => setTimeout(resolve, 100));
+    // Wait for async file writes
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
-      const logsDir = join(tempDir, "logs");
-      const files = await readdir(logsDir);
-      const logContent = await readFile(join(logsDir, files[0]!), "utf-8");
-      const entry = JSON.parse(logContent.trim());
+    const logsDir = join(tempDir, "logs");
+    const files = await readdir(logsDir);
+    const logContent = await readFile(join(logsDir, files[0]!), "utf-8");
+    const entry = JSON.parse(logContent.trim());
 
-      expect(entry).not.toHaveProperty("context");
-    },
-  );
+    expect(entry).not.toHaveProperty("context");
+  });
 
-  test.serial("should write timestamp in ISO 8601 format", async () => {
+  test("should write timestamp in ISO 8601 format", async () => {
     await logger.initialize(tempDir);
 
     logger.info("Test timestamp");
@@ -288,7 +280,7 @@ describe("Log Writing", () => {
     );
   });
 
-  test.serial("should append multiple log entries to same file", async () => {
+  test("should append multiple log entries to same file", async () => {
     // Create a fresh temp directory for this test
     const testTempDir = await mkdtemp(
       join(tmpdir(), "mcp-logger-append-test-"),
@@ -323,28 +315,25 @@ describe("Log Writing", () => {
 });
 
 describe("Daily Log Rotation", () => {
-  test.serial(
-    "should create log file with current date in filename",
-    async () => {
-      await logger.initialize(tempDir);
+  test("should create log file with current date in filename", async () => {
+    await logger.initialize(tempDir);
 
-      logger.info("Test message");
+    logger.info("Test message");
 
-      // Wait for async file writes
-      await new Promise((resolve) => setTimeout(resolve, 100));
+    // Wait for async file writes
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
-      const logsDir = join(tempDir, "logs");
-      const files = await readdir(logsDir);
+    const logsDir = join(tempDir, "logs");
+    const files = await readdir(logsDir);
 
-      const today = new Date();
-      const year = today.getFullYear();
-      const month = String(today.getMonth() + 1).padStart(2, "0");
-      const day = String(today.getDate()).padStart(2, "0");
-      const expectedFilename = `gateway-${year}-${month}-${day}.log`;
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    const expectedFilename = `gateway-${year}-${month}-${day}.log`;
 
-      expect(files).toContain(expectedFilename);
-    },
-  );
+    expect(files).toContain(expectedFilename);
+  });
 
   test("should handle logging without initialization gracefully", async () => {
     // Don't initialize logger
@@ -441,7 +430,7 @@ describe("Error Handling", () => {
     }).not.toThrow();
   });
 
-  test.serial("should handle concurrent writes gracefully", async () => {
+  test("should handle concurrent writes gracefully", async () => {
     await logger.initialize(tempDir);
 
     // Write many logs concurrently
