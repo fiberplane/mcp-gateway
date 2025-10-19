@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   createSSEEventStream,
+  resetCaptureState,
   type SSEEvent,
 } from "@fiberplane/mcp-gateway-core";
 import type { Registry } from "@fiberplane/mcp-gateway-types";
@@ -79,6 +80,9 @@ describe("SSE Integration Tests", () => {
   let storageDir: string;
 
   beforeAll(async () => {
+    // Reset capture state before running tests to ensure clean test isolation
+    resetCaptureState();
+
     // Create temp directory for storage
     storageDir = await mkdtemp(join(tmpdir(), "mcp-sse-integration-test-"));
 
@@ -129,6 +133,9 @@ describe("SSE Integration Tests", () => {
     } catch (error) {
       console.warn("Failed to clean up temp directory:", error);
     }
+
+    // Reset capture state after tests complete to prevent cross-test contamination
+    resetCaptureState();
   });
 
   test("should stream SSE events through gateway", async () => {
@@ -210,12 +217,23 @@ describe("SSE Integration Tests", () => {
     // Query captured logs from database
     const queryResult = await gateway.instance.logs.query({
       serverName: "sse-server",
+      sessionId: sessionId,
     });
 
-    // Should have captured at least the initial request
+    // Should have captured at least the initial request and SSE events
     expect(queryResult.data.length).toBeGreaterThanOrEqual(1);
 
-    const requestRecord = queryResult.data[0];
-    expect(requestRecord.method).toBe("tools/call");
+    // Find the tools/call request record
+    const toolsCallRecord = queryResult.data.find(
+      (r) => r.method === "tools/call",
+    );
+    expect(toolsCallRecord).toBeDefined();
+    expect(toolsCallRecord?.method).toBe("tools/call");
+
+    // Also verify we captured the progress notification from the SSE stream
+    const progressRecord = queryResult.data.find(
+      (r) => r.method === "notifications/progress",
+    );
+    expect(progressRecord).toBeDefined();
   });
 });
