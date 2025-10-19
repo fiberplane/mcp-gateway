@@ -1,0 +1,49 @@
+{
+  "name": "@fiberplane/mcp-gateway-core",
+  "private": true,
+  "type": "module",
+  "version": "0.2.0-next.0",
+  "description": "Core MCP Gateway functionality - registry, capture, health checks",
+  "homepage": "https://github.com/fiberplane/mcp-gateway",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fiberplane/mcp-gateway.git"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "bun run ../../scripts/build.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome ci .",
+    "format": "biome check --write ."
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/types/index.d.ts",
+        "import": "./dist/index.js"
+      }
+    }
+  },
+  "dependencies": {
+    "@fiberplane/mcp-gateway-types": "workspace:*",
+    "drizzle-orm": "^0.44.6",
+    "hono": "^4.9.8",
+    "mcp-lite": "^0.8.1",
+    "zod": "^4.1.11"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.5"
+  }
+}

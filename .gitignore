@@ -17,7 +17,7 @@ coverage
 *.lcov
 
 # logs
-logs
+*.log
 _.log
 report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
@@ -38,3 +38,16 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # Finder (MacOS) folder config
 .DS_Store
+
+# IDE folders
+.vscode
+
+# Test storage
+.test-storage
+
+# Auto-generated files
+packages/mcp-gateway/src/version.ts
+
+# Binary packages (compiled executables)
+packages/mcp-gateway-*/mcp-gateway
+packages/mcp-gateway-*/mcp-gateway.exe

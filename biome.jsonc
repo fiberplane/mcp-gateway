@@ -24,6 +24,25 @@
       }
     }
   },
+  "assist": {
+    "enabled": true
+  },
+  "overrides": [
+    {
+      "includes": [
+        "test-mcp-server/**/*.ts",
+        "test-mcp-server/**/*.tsx",
+        "**/scripts/**/*.ts"
+      ],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off"
+          }
+        }
+      }
+    }
+  ],
   "files": {
     "ignoreUnknown": false,
     "includes": [
@@ -36,6 +55,7 @@
       "**/*.md",
       "!**/dist",
       "!**/build",
+      "!**/public",
       "!**/node_modules"
     ]
   }
