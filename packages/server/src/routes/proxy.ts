@@ -1,6 +1,5 @@
 import {
   createSSEEventStream,
-  getServer,
   getStorageRoot,
   isJsonRpcResponse,
   logger,
@@ -511,7 +510,7 @@ export async function createProxyRoutes(options: {
     sValidator("header", sessionHeaderSchema),
     async (c) => {
       const { server: serverName } = c.req.valid("param");
-      const server = getServer(registry, serverName);
+      const server = deps.getServerFromRegistry(registry, serverName);
       if (!server) {
         return c.notFound();
       }
@@ -542,7 +541,7 @@ export async function createProxyRoutes(options: {
       const jsonRpcMessage = c.req.valid("json");
 
       // Find server in registry
-      const server = getServer(registry, serverName);
+      const server = deps.getServerFromRegistry(registry, serverName);
       if (!server) {
         return c.notFound();
       }
