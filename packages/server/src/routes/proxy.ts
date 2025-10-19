@@ -410,7 +410,15 @@ export async function createProxyRoutes(options: {
           // Log the 401 response (for TUI visibility)
           // FIXME - The `method` parameter is kinda unknown here, since it's not a JSON-RPC request
           //         I don't know what to record.
-          logResponse(server, sessionId, "GET /mcp", 401, duration);
+          logResponse(
+            server,
+            sessionId,
+            "GET /mcp",
+            401,
+            duration,
+            undefined,
+            onLog,
+          );
 
           return new Response(responseText, {
             status: 401,
@@ -492,7 +500,15 @@ export async function createProxyRoutes(options: {
         const duration = Date.now() - startTime;
 
         // Log error
-        logResponse(server, sessionId, "GET /mcp", 500, duration);
+        logResponse(
+          server,
+          sessionId,
+          "GET /mcp",
+          500,
+          duration,
+          undefined,
+          onLog,
+        );
 
         // Return error response (not JSON-RPC format for GET)
         return c.json({ error: String(error) }, 500);
