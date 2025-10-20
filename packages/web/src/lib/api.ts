@@ -11,6 +11,18 @@ export interface LogEntry {
     sessionId: string;
     durationMs: number;
     httpStatus: number;
+    client?: {
+      name: string;
+      version: string;
+      title?: string;
+    };
+    server?: {
+      name: string;
+      version: string;
+      title?: string;
+    };
+    userAgent?: string;
+    clientIp?: string;
   };
   request?: unknown;
   response?: unknown;

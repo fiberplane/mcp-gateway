@@ -1,5 +1,13 @@
 import { format } from "date-fns";
-import { ArrowDown, ArrowUp, ArrowUpDown, Check, Copy } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  ArrowUpDown,
+  Check,
+  Copy,
+} from "lucide-react";
 import { Fragment, useMemo, useState } from "react";
 import type { LogEntry } from "../lib/api";
 import { getMethodBadgeVariant } from "../lib/badge-color";
@@ -9,7 +17,13 @@ import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
 
-type SortField = "timestamp" | "server" | "session" | "method" | "duration";
+type SortField =
+  | "timestamp"
+  | "server"
+  | "session"
+  | "method"
+  | "duration"
+  | "client";
 type SortDirection = "asc" | "desc";
 
 interface LogTableProps {
@@ -100,6 +114,10 @@ export function LogTable({
           aValue = a.metadata.durationMs;
           bValue = b.metadata.durationMs;
           break;
+        case "client":
+          aValue = a.metadata.client?.name || "";
+          bValue = b.metadata.client?.name || "";
+          break;
       }
 
       const comparison =
@@ -139,6 +157,12 @@ export function LogTable({
     sortedLogs.length > 0 &&
     sortedLogs.every((log) => selectedIds.has(getLogKey(log)));
 
+  // Check if any log has server info to decide whether to show Server column
+  const hasServerInfo = useMemo(
+    () => logs.some((log) => log.metadata.server),
+    [logs],
+  );
+
   if (logs.length === 0) {
     return (
       <div className="p-10 text-center text-muted-foreground bg-card rounded-lg">
@@ -160,24 +184,36 @@ export function LogTable({
           </th>
           <th className="text-left p-3 text-sm font-semibold text-foreground">
             <SortHeader
-              field="timestamp"
+              field="method"
               sortField={sortField}
               sortDirection={sortDirection}
               onSort={handleSort}
             >
-              Timestamp
+              Method
             </SortHeader>
           </th>
           <th className="text-left p-3 text-sm font-semibold text-foreground">
             <SortHeader
-              field="server"
+              field="client"
               sortField={sortField}
               sortDirection={sortDirection}
               onSort={handleSort}
             >
-              Server
+              Client
             </SortHeader>
           </th>
+          {hasServerInfo && (
+            <th className="text-left p-3 text-sm font-semibold text-foreground">
+              <SortHeader
+                field="server"
+                sortField={sortField}
+                sortDirection={sortDirection}
+                onSort={handleSort}
+              >
+                Server
+              </SortHeader>
+            </th>
+          )}
           <th className="text-left p-3 text-sm font-semibold text-foreground">
             <SortHeader
               field="session"
@@ -190,22 +226,22 @@ export function LogTable({
           </th>
           <th className="text-left p-3 text-sm font-semibold text-foreground">
             <SortHeader
-              field="method"
-              sortField={sortField}
-              sortDirection={sortDirection}
-              onSort={handleSort}
-            >
-              Method
-            </SortHeader>
-          </th>
-          <th className="text-left p-3 text-sm font-semibold text-foreground">
-            <SortHeader
               field="duration"
               sortField={sortField}
               sortDirection={sortDirection}
               onSort={handleSort}
             >
               Duration
+            </SortHeader>
+          </th>
+          <th className="text-left p-3 text-sm font-semibold text-foreground">
+            <SortHeader
+              field="timestamp"
+              sortField={sortField}
+              sortDirection={sortDirection}
+              onSort={handleSort}
+            >
+              Timestamp
             </SortHeader>
           </th>
         </tr>
@@ -235,19 +271,69 @@ export function LogTable({
                 </td>
                 {/* biome-ignore lint/a11y/useKeyWithClickEvents: Table row click for expand/collapse, keyboard nav to be added */}
                 <td
-                  className="p-3 font-mono text-sm text-foreground cursor-pointer"
-                  title={log.timestamp}
+                  className="p-3 cursor-pointer"
                   onClick={() => handleRowClick(log)}
                 >
-                  {format(new Date(log.timestamp), "HH:mm:ss.SSS")}
+                  <Badge
+                    variant={getMethodBadgeVariant(log.method)}
+                    className="inline-flex items-center gap-1"
+                  >
+                    {log.direction === "request" ? (
+                      <ArrowRight className="w-3 h-3" />
+                    ) : (
+                      <ArrowLeft className="w-3 h-3" />
+                    )}
+                    <span>{log.method}</span>
+                  </Badge>
                 </td>
                 {/* biome-ignore lint/a11y/useKeyWithClickEvents: Table row click for expand/collapse, keyboard nav to be added */}
                 <td
                   className="p-3 text-sm text-foreground cursor-pointer"
                   onClick={() => handleRowClick(log)}
+                  title={
+                    log.metadata.client
+                      ? `${log.metadata.client.name} ${log.metadata.client.version}${log.metadata.client.title ? ` (${log.metadata.client.title})` : ""}`
+                      : log.metadata.userAgent || "Unknown"
+                  }
                 >
-                  {log.metadata.serverName}
+                  {log.metadata.client ? (
+                    <div className="flex flex-col">
+                      <span className="font-medium">
+                        {log.metadata.client.name}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {log.metadata.client.version}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground">-</span>
+                  )}
                 </td>
+                {hasServerInfo && (
+                  // biome-ignore lint/a11y/useKeyWithClickEvents: Table row click for expand/collapse, keyboard nav to be added
+                  <td
+                    className="p-3 text-sm text-foreground cursor-pointer"
+                    onClick={() => handleRowClick(log)}
+                    title={
+                      log.metadata.server
+                        ? `${log.metadata.server.name} ${log.metadata.server.version}${log.metadata.server.title ? ` (${log.metadata.server.title})` : ""}`
+                        : undefined
+                    }
+                  >
+                    {log.metadata.server ? (
+                      <div className="flex flex-col">
+                        <span className="font-medium">
+                          {log.metadata.server.name}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {log.metadata.server.version}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </td>
+                )}
                 {/* biome-ignore lint/a11y/useKeyWithClickEvents: Table row click for expand/collapse, keyboard nav to be added */}
                 <td
                   className="p-3 font-mono text-xs text-muted-foreground cursor-pointer"
@@ -257,32 +343,26 @@ export function LogTable({
                 </td>
                 {/* biome-ignore lint/a11y/useKeyWithClickEvents: Table row click for expand/collapse, keyboard nav to be added */}
                 <td
-                  className="p-3 cursor-pointer"
-                  onClick={() => handleRowClick(log)}
-                >
-                  <Badge
-                    variant={getMethodBadgeVariant(log.method)}
-                    className="inline-flex items-center gap-1"
-                  >
-                    {log.direction === "request" ? (
-                      <ArrowDown className="w-3 h-3" />
-                    ) : (
-                      <ArrowUp className="w-3 h-3" />
-                    )}
-                    <span>{log.method}</span>
-                  </Badge>
-                </td>
-                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Table row click for expand/collapse, keyboard nav to be added */}
-                <td
                   className="p-3 text-sm text-muted-foreground cursor-pointer"
                   onClick={() => handleRowClick(log)}
                 >
                   {log.metadata.durationMs}ms
                 </td>
+                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Table row click for expand/collapse, keyboard nav to be added */}
+                <td
+                  className="p-3 font-mono text-sm text-foreground cursor-pointer"
+                  title={log.timestamp}
+                  onClick={() => handleRowClick(log)}
+                >
+                  {format(new Date(log.timestamp), "HH:mm:ss.SSS")}
+                </td>
               </tr>
               {isExpanded && (
                 <tr key={`${logKey}-details`}>
-                  <td colSpan={6} className="p-5 bg-muted/30">
+                  <td
+                    colSpan={hasServerInfo ? 8 : 7}
+                    className="p-5 bg-muted/30"
+                  >
                     <LogDetails log={log} />
                   </td>
                 </tr>
