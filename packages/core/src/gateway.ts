@@ -97,6 +97,11 @@ export interface Gateway {
     clear(sessionId: string): void;
 
     /**
+     * Clear all client info
+     */
+    clearAll(): void;
+
+    /**
      * Get all active session IDs
      */
     getActiveSessions(): string[];
@@ -120,6 +125,36 @@ export interface Gateway {
      * Clear server info for a session
      */
     clear(sessionId: string): void;
+
+    /**
+     * Clear all server info
+     */
+    clearAll(): void;
+  };
+
+  /**
+   * Request tracker for correlating requests and responses
+   */
+  requestTracker: {
+    /**
+     * Track a request for duration calculation
+     */
+    trackRequest(id: string | number, method: string): void;
+
+    /**
+     * Calculate duration and cleanup tracked request
+     */
+    calculateDuration(id: string | number): number;
+
+    /**
+     * Get method for a tracked request
+     */
+    getMethod(id: string | number): string | undefined;
+
+    /**
+     * Check if request is being tracked
+     */
+    hasRequest(id: string | number): boolean;
   };
 
   /**
@@ -151,6 +186,27 @@ export interface Gateway {
     getClients(): Promise<
       import("@fiberplane/mcp-gateway-types").ClientAggregation[]
     >;
+
+    /**
+     * Clear all logs
+     *
+     * This is a destructive operation that removes all stored logs.
+     * Use with caution.
+     */
+    clearAll(): Promise<void>;
+
+    /**
+     * Update server info for an initialize request after getting the response
+     *
+     * This backfills server metadata on the initialize request record,
+     * which was captured before the response containing serverInfo was received.
+     */
+    updateServerInfoForInitializeRequest(
+      serverName: string,
+      sessionId: string,
+      requestId: string | number,
+      serverInfo: { name?: string; version: string; title?: string },
+    ): Promise<void>;
   };
 
   /**
@@ -230,6 +286,10 @@ class ClientInfoStore {
       (id) => id !== "stateless",
     );
   }
+
+  clearAll(): void {
+    this.sessionClientInfo.clear();
+  }
 }
 
 // In-memory storage for server info by session (scoped to Gateway instance)
@@ -246,6 +306,10 @@ class ServerInfoStore {
 
   clear(sessionId: string): void {
     this.sessionServerInfo.delete(sessionId);
+  }
+
+  clearAll(): void {
+    this.sessionServerInfo.clear();
   }
 }
 
@@ -540,6 +604,7 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
         clientInfoStore.store(sessionId, info),
       get: (sessionId: string) => clientInfoStore.get(sessionId),
       clear: (sessionId: string) => clientInfoStore.clear(sessionId),
+      clearAll: () => clientInfoStore.clearAll(),
       getActiveSessions: () => clientInfoStore.getActiveSessions(),
     },
 
@@ -548,6 +613,16 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
         serverInfoStore.store(sessionId, info),
       get: (sessionId: string) => serverInfoStore.get(sessionId),
       clear: (sessionId: string) => serverInfoStore.clear(sessionId),
+      clearAll: () => serverInfoStore.clearAll(),
+    },
+
+    requestTracker: {
+      trackRequest: (id: string | number, method: string) =>
+        requestTracker.trackRequest(id, method),
+      calculateDuration: (id: string | number) =>
+        requestTracker.calculateDuration(id),
+      getMethod: (id: string | number) => requestTracker.getMethod(id),
+      hasRequest: (id: string | number) => requestTracker.hasRequest(id),
     },
 
     logs: {
@@ -556,6 +631,19 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
       getSessions: async (serverName?) =>
         await storageManager.getSessions(serverName),
       getClients: async () => await storageManager.getClients(),
+      clearAll: async () => await storageManager.clearAll(),
+      updateServerInfoForInitializeRequest: async (
+        serverName: string,
+        sessionId: string,
+        requestId: string | number,
+        serverInfo: { name?: string; version: string; title?: string },
+      ) =>
+        await storageManager.updateServerInfoForInitializeRequest(
+          serverName,
+          sessionId,
+          requestId,
+          serverInfo,
+        ),
     },
 
     health: {

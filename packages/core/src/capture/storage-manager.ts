@@ -190,6 +190,70 @@ export class StorageManager {
   }
 
   /**
+   * Clear all logs from all backends
+   *
+   * This is a destructive operation that removes all stored logs.
+   * Use with caution.
+   */
+  async clearAll(): Promise<void> {
+    if (!this.initialized) {
+      throw new Error(
+        "Storage manager not initialized. Call initialize() first.",
+      );
+    }
+
+    // Clear all backends in parallel
+    const clearPromises = Array.from(this.backends.values()).map(
+      async (backend) => {
+        await backend.clearAll();
+      },
+    );
+
+    await Promise.all(clearPromises);
+    logger.info("All storage backends cleared");
+  }
+
+  /**
+   * Update server info for an initialize request after getting the response
+   *
+   * This backfills server metadata on the initialize request record,
+   * which was captured before the response containing serverInfo was received.
+   *
+   * Note: Currently delegates to the first registered backend.
+   *
+   * @param serverName - Name of the server
+   * @param sessionId - Session identifier
+   * @param requestId - JSON-RPC request ID
+   * @param serverInfo - Server information to backfill
+   */
+  async updateServerInfoForInitializeRequest(
+    serverName: string,
+    sessionId: string,
+    requestId: string | number,
+    serverInfo: { name?: string; version: string; title?: string },
+  ): Promise<void> {
+    if (!this.initialized) {
+      throw new Error(
+        "Storage manager not initialized. Call initialize() first.",
+      );
+    }
+
+    const backend = this.backends.values().next().value as
+      | StorageBackend
+      | undefined;
+    if (!backend) {
+      throw new Error("No storage backends registered");
+    }
+
+    await backend.updateServerInfoForInitializeRequest(
+      serverName,
+      sessionId,
+      requestId,
+      serverInfo,
+    );
+  }
+
+  /**
    * Close all registered backends
    */
   async close(): Promise<void> {

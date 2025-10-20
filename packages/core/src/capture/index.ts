@@ -64,6 +64,7 @@ export function createRequestCaptureRecord(
   request: JsonRpcRequest,
   httpContext?: HttpContext,
   clientInfo?: ClientInfo,
+  serverInfo?: McpServerInfo,
   requestTracker?: RequestTracker,
 ): CaptureRecord {
   const client = clientInfo ?? getClientInfo(sessionId);
@@ -88,6 +89,7 @@ export function createRequestCaptureRecord(
       durationMs: 0, // Unknown at request time
       httpStatus: 0, // Unknown at request time
       client,
+      server: serverInfo,
       userAgent: httpContext?.userAgent,
       clientIp: httpContext?.clientIp,
     },

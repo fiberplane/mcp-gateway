@@ -69,6 +69,27 @@ export interface StorageBackend {
   getClients(): Promise<ClientAggregation[]>;
 
   /**
+   * Clear all logs from storage
+   *
+   * This is a destructive operation that removes all stored logs.
+   * Use with caution.
+   */
+  clearAll(): Promise<void>;
+
+  /**
+   * Update server info for an initialize request after getting the response
+   *
+   * This backfills server metadata on the initialize request record,
+   * which was captured before the response containing serverInfo was received.
+   */
+  updateServerInfoForInitializeRequest(
+    serverName: string,
+    sessionId: string,
+    requestId: string | number,
+    serverInfo: { name?: string; version: string; title?: string },
+  ): Promise<void>;
+
+  /**
    * Close/cleanup the storage backend
    * Called on shutdown
    */

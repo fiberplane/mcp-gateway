@@ -179,6 +179,67 @@ export class SqliteStorageBackend implements StorageBackend {
     }
   }
 
+  async clearAll(): Promise<void> {
+    if (!this.db || !this.initialized) {
+      logger.debug("SQLite backend not ready, skipping clearAll");
+      return;
+    }
+
+    try {
+      // Delete all rows from the logs table
+      this.sqlite?.run("DELETE FROM logs");
+      // Reset auto-increment counter
+      this.sqlite?.run("DELETE FROM sqlite_sequence WHERE name='logs'");
+      logger.info("SQLite logs cleared");
+    } catch (error) {
+      logger.error("SQLite clearAll failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
+
+  async updateServerInfoForInitializeRequest(
+    serverName: string,
+    sessionId: string,
+    requestId: string | number,
+    serverInfo: { name?: string; version: string; title?: string },
+  ): Promise<void> {
+    if (!this.db || !this.initialized) {
+      logger.debug(
+        "SQLite backend not ready, skipping updateServerInfoForInitializeRequest",
+      );
+      return;
+    }
+
+    try {
+      const { updateServerInfoForInitializeRequest } = await import(
+        "../../logs/storage.js"
+      );
+      await updateServerInfoForInitializeRequest(
+        this.db,
+        serverName,
+        sessionId,
+        requestId,
+        serverInfo,
+      );
+      logger.debug("Server info backfilled for initialize request", {
+        serverName,
+        sessionId,
+        requestId,
+        serverInfo,
+      });
+    } catch (error) {
+      logger.error("SQLite updateServerInfoForInitializeRequest failed", {
+        error: error instanceof Error ? error.message : String(error),
+        serverName,
+        sessionId,
+        requestId,
+      });
+      throw error;
+    }
+  }
+
   async close(): Promise<void> {
     if (this.sqlite) {
       try {

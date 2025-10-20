@@ -48,6 +48,36 @@ export async function insertLog(
 }
 
 /**
+ * Update server info for an initialize request after getting the response
+ *
+ * This backfills server metadata on the initialize request record,
+ * which was captured before the response containing serverInfo was received.
+ */
+export async function updateServerInfoForInitializeRequest(
+  db: BunSQLiteDatabase<typeof schema>,
+  serverName: string,
+  sessionId: string,
+  requestId: string | number,
+  serverInfo: { name?: string; version: string; title?: string },
+): Promise<void> {
+  await db
+    .update(logs)
+    .set({
+      serverVersion: serverInfo.version,
+      serverTitle: serverInfo.title ?? null,
+    })
+    .where(
+      and(
+        eq(logs.serverName, serverName),
+        eq(logs.sessionId, sessionId),
+        eq(logs.method, "initialize"),
+        eq(logs.jsonrpcId, String(requestId)),
+        sql`${logs.requestJson} IS NOT NULL`, // Only update request records
+      ),
+    );
+}
+
+/**
  * Query logs with filtering and pagination
  */
 export async function queryLogs(
