@@ -3,6 +3,7 @@ import type {
   ClientInfo,
   JsonRpcRequest,
   JsonRpcResponse,
+  ServerInfo,
 } from "@fiberplane/mcp-gateway-types";
 import { captureRecordSchema } from "@fiberplane/mcp-gateway-types";
 import { logger } from "../logger";
@@ -50,11 +51,18 @@ export interface RequestTracker {
   hasRequest(id: string | number): boolean;
 }
 
+// HTTP context for requests
+export interface HttpContext {
+  userAgent?: string;
+  clientIp?: string;
+}
+
 // Create capture record for request only
 export function createRequestCaptureRecord(
   serverName: string,
   sessionId: string,
   request: JsonRpcRequest,
+  httpContext?: HttpContext,
   clientInfo?: ClientInfo,
   requestTracker?: RequestTracker,
 ): CaptureRecord {
@@ -80,6 +88,8 @@ export function createRequestCaptureRecord(
       durationMs: 0, // Unknown at request time
       httpStatus: 0, // Unknown at request time
       client,
+      userAgent: httpContext?.userAgent,
+      clientIp: httpContext?.clientIp,
     },
     request,
   };
@@ -101,7 +111,9 @@ export function createResponseCaptureRecord(
   response: JsonRpcResponse,
   httpStatus: number,
   method: string,
+  httpContext?: HttpContext,
   clientInfo?: ClientInfo,
+  serverInfo?: ServerInfo,
   requestTracker?: RequestTracker,
 ): CaptureRecord {
   const client = clientInfo ?? getClientInfo(sessionId);
@@ -131,6 +143,9 @@ export function createResponseCaptureRecord(
       durationMs,
       httpStatus,
       client,
+      server: serverInfo,
+      userAgent: httpContext?.userAgent,
+      clientIp: httpContext?.clientIp,
     },
     response,
   };
@@ -189,6 +204,7 @@ export function createSSEEventCaptureRecord(
   sseEvent: SSEEvent,
   method?: string,
   requestId?: string | number | null,
+  httpContext?: HttpContext,
   clientInfo?: ClientInfo,
 ): CaptureRecord {
   const client = clientInfo ?? getClientInfo(sessionId);
@@ -203,6 +219,8 @@ export function createSSEEventCaptureRecord(
       durationMs: 0, // SSE events don't have request/response timing
       httpStatus: 200, // SSE events are part of successful streaming response
       client,
+      userAgent: httpContext?.userAgent,
+      clientIp: httpContext?.clientIp,
       sseEventId: sseEvent.id,
       sseEventType: sseEvent.event,
     },
@@ -247,7 +265,9 @@ export function createSSEJsonRpcCaptureRecord(
   jsonRpcMessage: JsonRpcRequest | JsonRpcResponse,
   sseEvent: SSEEvent,
   isResponse: boolean = false,
+  httpContext?: HttpContext,
   clientInfo?: ClientInfo,
+  serverInfo?: ServerInfo,
   requestTracker?: RequestTracker,
 ): CaptureRecord {
   const client = clientInfo ?? getClientInfo(sessionId);
@@ -293,6 +313,9 @@ export function createSSEJsonRpcCaptureRecord(
       durationMs,
       httpStatus: 200,
       client,
+      server: serverInfo,
+      userAgent: httpContext?.userAgent,
+      clientIp: httpContext?.clientIp,
       sseEventId: sseEvent.id,
       sseEventType: sseEvent.event,
     },

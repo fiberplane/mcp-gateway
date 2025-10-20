@@ -20,6 +20,16 @@ export const logs = sqliteTable(
     requestJson: text("request_json"),
     responseJson: text("response_json"),
     errorJson: text("error_json"),
+    // Client identification from MCP initialize handshake
+    clientName: text("client_name"),
+    clientVersion: text("client_version"),
+    clientTitle: text("client_title"),
+    // Server identification from MCP initialize response
+    serverVersion: text("server_version"),
+    serverTitle: text("server_title"),
+    // HTTP context for fallback identification
+    userAgent: text("user_agent"),
+    clientIp: text("client_ip"),
   },
   (table) => ({
     // Index for time-based queries (newest first)
@@ -33,6 +43,15 @@ export const logs = sqliteTable(
       table.serverName,
       table.sessionId,
     ),
+    // Index for filtering by client
+    clientNameIdx: index("idx_client_name").on(table.clientName),
+    // Composite index for client name + version filtering
+    clientNameVersionIdx: index("idx_client_name_version").on(
+      table.clientName,
+      table.clientVersion,
+    ),
+    // Index for IP-based queries (debugging)
+    clientIpIdx: index("idx_client_ip").on(table.clientIp),
   }),
 );
 
