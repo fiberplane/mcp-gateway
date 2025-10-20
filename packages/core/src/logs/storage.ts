@@ -57,6 +57,9 @@ export async function queryLogs(
     serverName,
     sessionId,
     method,
+    clientName,
+    clientVersion,
+    clientIp,
     after,
     before,
     limit = 100,
@@ -73,6 +76,15 @@ export async function queryLogs(
   }
   if (method) {
     conditions.push(like(logs.method, `%${method}%`));
+  }
+  if (clientName) {
+    conditions.push(eq(logs.clientName, clientName));
+  }
+  if (clientVersion) {
+    conditions.push(eq(logs.clientVersion, clientVersion));
+  }
+  if (clientIp) {
+    conditions.push(eq(logs.clientIp, clientIp));
   }
   if (after) {
     conditions.push(gt(logs.timestamp, after));

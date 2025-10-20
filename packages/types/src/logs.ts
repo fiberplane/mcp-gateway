@@ -18,6 +18,9 @@ export interface LogQueryOptions {
   serverName?: string;
   sessionId?: string;
   method?: string;
+  clientName?: string; // Filter by client name
+  clientVersion?: string; // Filter by client version
+  clientIp?: string; // Filter by client IP
   after?: string; // ISO timestamp
   before?: string; // ISO timestamp
   limit?: number;
