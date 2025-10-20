@@ -153,11 +153,12 @@ export async function runCli(): Promise<void> {
 
     // Wire Gateway methods into ProxyDependencies for server
     const proxyDependencies: ProxyDependencies = {
-      createRequestRecord: (serverName, sessionId, request) =>
+      createRequestRecord: (serverName, sessionId, request, httpContext) =>
         createRequestCaptureRecord(
           serverName,
           sessionId,
           request,
+          httpContext,
           gateway.clientInfo.get(sessionId),
         ),
       createResponseRecord: (
@@ -166,6 +167,8 @@ export async function runCli(): Promise<void> {
         response,
         httpStatus,
         method,
+        httpContext,
+        serverInfo,
       ) =>
         createResponseCaptureRecord(
           serverName,
@@ -173,7 +176,9 @@ export async function runCli(): Promise<void> {
           response,
           httpStatus,
           method,
+          httpContext,
           gateway.clientInfo.get(sessionId),
+          serverInfo,
         ),
       appendRecord: (record) => gateway.capture.append(record),
       captureErrorResponse: (
@@ -183,6 +188,7 @@ export async function runCli(): Promise<void> {
         error,
         httpStatus,
         durationMs,
+        httpContext,
       ) =>
         gateway.capture.error(
           serverName,
@@ -198,6 +204,7 @@ export async function runCli(): Promise<void> {
         sseEvent,
         method,
         requestId,
+        httpContext,
       ) =>
         gateway.capture.sseEvent(
           serverName,
@@ -212,6 +219,8 @@ export async function runCli(): Promise<void> {
         jsonRpcMessage,
         sseEvent,
         isResponse,
+        httpContext,
+        serverInfo,
       ) =>
         gateway.capture.sseJsonRpc(
           serverName,
@@ -223,6 +232,9 @@ export async function runCli(): Promise<void> {
       storeClientInfoForSession: (sessionId, info) =>
         gateway.clientInfo.store(sessionId, info),
       getClientInfoForSession: (sessionId) => gateway.clientInfo.get(sessionId),
+      storeServerInfoForSession: (sessionId, info) =>
+        gateway.serverInfo.store(sessionId, info),
+      getServerInfoForSession: (sessionId) => gateway.serverInfo.get(sessionId),
       getServerFromRegistry: (registry, name) =>
         gateway.registry.getServer(registry, name),
       saveRegistryToStorage: (storage, registry) =>

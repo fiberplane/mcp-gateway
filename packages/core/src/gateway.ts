@@ -4,6 +4,7 @@ import type {
   JsonRpcRequest,
   JsonRpcResponse,
   McpServer,
+  McpServerInfo,
   Registry,
   ServerHealth,
 } from "@fiberplane/mcp-gateway-types";
@@ -99,6 +100,26 @@ export interface Gateway {
      * Get all active session IDs
      */
     getActiveSessions(): string[];
+  };
+
+  /**
+   * Server info management for sessions
+   */
+  serverInfo: {
+    /**
+     * Store server info for a session
+     */
+    store(sessionId: string, info: McpServerInfo): void;
+
+    /**
+     * Get server info for a session
+     */
+    get(sessionId: string): McpServerInfo | undefined;
+
+    /**
+     * Clear server info for a session
+     */
+    clear(sessionId: string): void;
   };
 
   /**
@@ -201,6 +222,23 @@ class ClientInfoStore {
     return Array.from(this.sessionClientInfo.keys()).filter(
       (id) => id !== "stateless",
     );
+  }
+}
+
+// In-memory storage for server info by session (scoped to Gateway instance)
+class ServerInfoStore {
+  private sessionServerInfo = new Map<string, McpServerInfo>();
+
+  store(sessionId: string, serverInfo: McpServerInfo): void {
+    this.sessionServerInfo.set(sessionId, serverInfo);
+  }
+
+  get(sessionId: string): McpServerInfo | undefined {
+    return this.sessionServerInfo.get(sessionId);
+  }
+
+  clear(sessionId: string): void {
+    this.sessionServerInfo.delete(sessionId);
   }
 }
 
@@ -371,6 +409,9 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
   // Create scoped client info store
   const clientInfoStore = new ClientInfoStore();
 
+  // Create scoped server info store
+  const serverInfoStore = new ServerInfoStore();
+
   // Create scoped request tracker
   const requestTracker = new RequestTracker();
 
@@ -493,6 +534,13 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
       get: (sessionId: string) => clientInfoStore.get(sessionId),
       clear: (sessionId: string) => clientInfoStore.clear(sessionId),
       getActiveSessions: () => clientInfoStore.getActiveSessions(),
+    },
+
+    serverInfo: {
+      store: (sessionId: string, info: McpServerInfo) =>
+        serverInfoStore.store(sessionId, info),
+      get: (sessionId: string) => serverInfoStore.get(sessionId),
+      clear: (sessionId: string) => serverInfoStore.clear(sessionId),
     },
 
     logs: {
