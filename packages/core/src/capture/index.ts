@@ -3,7 +3,7 @@ import type {
   ClientInfo,
   JsonRpcRequest,
   JsonRpcResponse,
-  ServerInfo,
+  McpServerInfo,
 } from "@fiberplane/mcp-gateway-types";
 import { captureRecordSchema } from "@fiberplane/mcp-gateway-types";
 import { logger } from "../logger";
@@ -113,7 +113,7 @@ export function createResponseCaptureRecord(
   method: string,
   httpContext?: HttpContext,
   clientInfo?: ClientInfo,
-  serverInfo?: ServerInfo,
+  serverInfo?: McpServerInfo,
   requestTracker?: RequestTracker,
 ): CaptureRecord {
   const client = clientInfo ?? getClientInfo(sessionId);
@@ -267,7 +267,7 @@ export function createSSEJsonRpcCaptureRecord(
   isResponse: boolean = false,
   httpContext?: HttpContext,
   clientInfo?: ClientInfo,
-  serverInfo?: ServerInfo,
+  serverInfo?: McpServerInfo,
   requestTracker?: RequestTracker,
 ): CaptureRecord {
   const client = clientInfo ?? getClientInfo(sessionId);

@@ -411,7 +411,9 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
           errorResponse,
           httpStatus,
           request.method,
+          undefined, // httpContext - not available in Gateway.error API
           clientInfoStore.get(sessionId),
+          undefined, // serverInfo - not available in Gateway.error API
           requestTracker,
         );
 
@@ -435,6 +437,7 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
             sseEvent,
             method,
             requestId,
+            undefined, // httpContext - not available in Gateway.sseEvent API
             clientInfoStore.get(sessionId),
           );
           await storageManager.write(record);
@@ -460,7 +463,9 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
             jsonRpcMessage,
             sseEvent,
             isResponse,
+            undefined, // httpContext - not available in Gateway.sseJsonRpc API
             clientInfoStore.get(sessionId),
+            undefined, // serverInfo - not available in Gateway.sseJsonRpc API
             requestTracker,
           );
           await storageManager.write(record);

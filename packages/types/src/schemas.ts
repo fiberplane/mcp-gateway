@@ -29,7 +29,7 @@ export const clientInfoSchema = z.object({
 });
 
 // Server info from MCP initialize response
-export const serverInfoSchema = z.object({
+export const mcpServerInfoSchema = z.object({
   name: z.string(),
   version: z.string(),
   title: z.string().optional(),
@@ -42,7 +42,7 @@ export const captureMetadataSchema = z.object({
   durationMs: z.number(),
   httpStatus: z.number(),
   client: clientInfoSchema.optional(),
-  server: serverInfoSchema.optional(),
+  server: mcpServerInfoSchema.optional(),
   userAgent: z.string().optional(),
   clientIp: z.string().optional(),
   sseEventId: z.string().optional(), // For SSE events
@@ -107,7 +107,7 @@ export function extractRemoteAddress(
 export type JsonRpcRequest = z.infer<typeof jsonRpcRequestSchema>;
 export type JsonRpcResponse = z.infer<typeof jsonRpcResponseSchema>;
 export type ClientInfo = z.infer<typeof clientInfoSchema>;
-export type ServerInfo = z.infer<typeof serverInfoSchema>;
+export type McpServerInfo = z.infer<typeof mcpServerInfoSchema>;
 export type CaptureMetadata = z.infer<typeof captureMetadataSchema>;
 export type CaptureRecord = z.infer<typeof captureRecordSchema>;
 export type ServerParam = z.infer<typeof serverParamSchema>;
