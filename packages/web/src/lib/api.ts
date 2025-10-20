@@ -53,6 +53,13 @@ export interface SessionInfo {
   endTime: string;
 }
 
+export interface ClientAggregation {
+  clientName: string;
+  clientVersion: string | null;
+  logCount: number;
+  sessionCount: number;
+}
+
 /**
  * API Client for MCP Gateway logs
  */
@@ -64,6 +71,7 @@ class APIClient {
    */
   async getLogs(params: {
     serverName?: string;
+    clientName?: string;
     sessionId?: string;
     method?: string;
     after?: string;
@@ -76,6 +84,7 @@ class APIClient {
     // Map frontend parameter names to API parameter names
     const paramMapping: Record<string, string> = {
       serverName: "server",
+      clientName: "clientName",
       sessionId: "session",
     };
 
@@ -116,6 +125,17 @@ class APIClient {
     const response = await fetch(url.toString());
     if (!response.ok) {
       throw new Error(`Failed to fetch sessions: ${response.statusText}`);
+    }
+    return response.json();
+  }
+
+  /**
+   * Get list of clients with aggregations
+   */
+  async getClients(): Promise<{ clients: ClientAggregation[] }> {
+    const response = await fetch(`${this.baseURL}/clients`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch clients: ${response.statusText}`);
     }
     return response.json();
   }

@@ -1,5 +1,6 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { ClientFilter } from "./components/client-filter";
 import { ExportButton } from "./components/export-button";
 import { LogTable } from "./components/log-table";
 import { Pagination } from "./components/pagination";
@@ -12,6 +13,7 @@ import { getLogKey } from "./lib/utils";
 
 function App() {
   const [serverName, setServerName] = useState<string | undefined>();
+  const [clientName, setClientName] = useState<string | undefined>();
   const [sessionId, setSessionId] = useState<string | undefined>();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -26,10 +28,11 @@ function App() {
     isLoading,
     error,
   } = useInfiniteQuery({
-    queryKey: ["logs", serverName, sessionId],
+    queryKey: ["logs", serverName, clientName, sessionId],
     queryFn: async ({ pageParam }) =>
       api.getLogs({
         serverName,
+        clientName,
         sessionId,
         limit: 100,
         before: pageParam,
@@ -61,6 +64,11 @@ function App() {
     setSelectedIds(new Set()); // Reset selection
   });
 
+  const handleClientChange = useHandler((value: string | undefined) => {
+    setClientName(value);
+    setSelectedIds(new Set()); // Reset selection
+  });
+
   const handleSessionChange = useHandler((value: string | undefined) => {
     setSessionId(value);
     setSelectedIds(new Set()); // Reset selection
@@ -81,6 +89,7 @@ function App() {
       <main className="max-w-7xl mx-auto px-6 py-6">
         <div className="mb-5 flex gap-3 items-center flex-wrap">
           <ServerFilter value={serverName} onChange={handleServerChange} />
+          <ClientFilter value={clientName} onChange={handleClientChange} />
           <SessionFilter
             serverName={serverName}
             value={sessionId}
