@@ -31,6 +31,16 @@ export async function insertLog(
     errorJson: record.response?.error
       ? JSON.stringify(record.response.error)
       : null,
+    // Client identification from MCP initialize handshake
+    clientName: record.metadata.client?.name ?? null,
+    clientVersion: record.metadata.client?.version ?? null,
+    clientTitle: record.metadata.client?.title ?? null,
+    // Server identification from MCP initialize response
+    serverVersion: record.metadata.server?.version ?? null,
+    serverTitle: record.metadata.server?.title ?? null,
+    // HTTP context for fallback identification
+    userAgent: record.metadata.userAgent ?? null,
+    clientIp: record.metadata.clientIp ?? null,
   };
 
   await db.insert(logs).values(newLog);
@@ -175,6 +185,26 @@ function safeJsonParse<T = unknown>(json: string | null): T | undefined {
  * Convert database row to CaptureRecord
  */
 function rowToRecord(row: Log): CaptureRecord {
+  // Reconstruct client info if any fields are present
+  const client =
+    row.clientName || row.clientVersion || row.clientTitle
+      ? {
+          name: row.clientName ?? "",
+          version: row.clientVersion ?? "",
+          title: row.clientTitle ?? undefined,
+        }
+      : undefined;
+
+  // Reconstruct server info if any fields are present
+  const server =
+    row.serverVersion || row.serverTitle
+      ? {
+          name: row.serverName, // Use serverName from metadata
+          version: row.serverVersion ?? "",
+          title: row.serverTitle ?? undefined,
+        }
+      : undefined;
+
   return {
     timestamp: row.timestamp,
     method: row.method,
@@ -184,6 +214,10 @@ function rowToRecord(row: Log): CaptureRecord {
       sessionId: row.sessionId,
       durationMs: row.durationMs || 0,
       httpStatus: row.httpStatus || 0,
+      client,
+      server,
+      userAgent: row.userAgent ?? undefined,
+      clientIp: row.clientIp ?? undefined,
     },
     request: safeJsonParse(row.requestJson),
     response: safeJsonParse(row.responseJson),
