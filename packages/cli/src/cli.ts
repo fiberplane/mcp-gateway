@@ -153,13 +153,22 @@ export async function runCli(): Promise<void> {
 
     // Wire Gateway methods into ProxyDependencies for server
     const proxyDependencies: ProxyDependencies = {
-      createRequestRecord: (serverName, sessionId, request, httpContext) =>
+      createRequestRecord: (
+        serverName,
+        sessionId,
+        request,
+        httpContext,
+        clientInfo,
+        serverInfo,
+      ) =>
         createRequestCaptureRecord(
           serverName,
           sessionId,
           request,
           httpContext,
-          gateway.clientInfo.get(sessionId),
+          clientInfo,
+          serverInfo,
+          gateway.requestTracker,
         ),
       createResponseRecord: (
         serverName,
@@ -168,6 +177,7 @@ export async function runCli(): Promise<void> {
         httpStatus,
         method,
         httpContext,
+        clientInfo,
         serverInfo,
       ) =>
         createResponseCaptureRecord(
@@ -177,8 +187,9 @@ export async function runCli(): Promise<void> {
           httpStatus,
           method,
           httpContext,
-          gateway.clientInfo.get(sessionId),
+          clientInfo,
           serverInfo,
+          gateway.requestTracker,
         ),
       appendRecord: (record) => gateway.capture.append(record),
       captureErrorResponse: (
@@ -188,7 +199,7 @@ export async function runCli(): Promise<void> {
         error,
         httpStatus,
         durationMs,
-        httpContext,
+        _httpContext,
       ) =>
         gateway.capture.error(
           serverName,
@@ -204,7 +215,7 @@ export async function runCli(): Promise<void> {
         sseEvent,
         method,
         requestId,
-        httpContext,
+        _httpContext,
       ) =>
         gateway.capture.sseEvent(
           serverName,
@@ -219,8 +230,9 @@ export async function runCli(): Promise<void> {
         jsonRpcMessage,
         sseEvent,
         isResponse,
-        httpContext,
-        serverInfo,
+        _httpContext,
+        _clientInfo,
+        _serverInfo,
       ) =>
         gateway.capture.sseJsonRpc(
           serverName,
@@ -235,6 +247,18 @@ export async function runCli(): Promise<void> {
       storeServerInfoForSession: (sessionId, info) =>
         gateway.serverInfo.store(sessionId, info),
       getServerInfoForSession: (sessionId) => gateway.serverInfo.get(sessionId),
+      updateServerInfoForInitializeRequest: (
+        serverName,
+        sessionId,
+        requestId,
+        serverInfo,
+      ) =>
+        gateway.logs.updateServerInfoForInitializeRequest(
+          serverName,
+          sessionId,
+          requestId,
+          serverInfo,
+        ),
       getServerFromRegistry: (registry, name) =>
         gateway.registry.getServer(registry, name),
       saveRegistryToStorage: (storage, registry) =>
@@ -425,6 +449,13 @@ export async function runCli(): Promise<void> {
         getSessions: (_storageDir, serverName) =>
           gateway.logs.getSessions(serverName),
         getClients: (_storageDir) => gateway.logs.getClients(),
+        clearSessions: async () => {
+          // Clear in-memory session metadata
+          gateway.clientInfo.clearAll();
+          gateway.serverInfo.clearAll();
+          // Clear all logs from database
+          await gateway.logs.clearAll();
+        },
       },
       logger,
     );
