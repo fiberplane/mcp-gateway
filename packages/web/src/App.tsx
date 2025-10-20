@@ -17,6 +17,7 @@ function App() {
   const [sessionId, setSessionId] = useState<string | undefined>();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isClearing, setIsClearing] = useState(false);
+  const [clearError, setClearError] = useState<string | null>(null);
 
   // Streaming: ON = auto-refresh with new logs, OFF = manual load more
   const [isStreaming, setIsStreaming] = useState(true);
@@ -78,7 +79,7 @@ function App() {
     setIsStreaming(enabled);
   });
 
-  const handleClearSessions = useHandler(async () => {
+  const handleClearSessions = useHandler(async (): Promise<void> => {
     // Ask for confirmation
     const confirmed = window.confirm(
       "Are you sure you want to clear all sessions? This will delete all captured logs and cannot be undone.",
@@ -89,6 +90,7 @@ function App() {
     }
 
     setIsClearing(true);
+    setClearError(null); // Clear any previous errors
     try {
       await api.clearSessions();
       // Invalidate all queries to refetch data after clearing (in parallel)
@@ -98,8 +100,15 @@ function App() {
         queryClient.invalidateQueries({ queryKey: ["sessions"] }),
         queryClient.invalidateQueries({ queryKey: ["clients"] }),
       ]);
+      // Reset selection after successful clear
+      setSelectedIds(new Set());
     } catch (error) {
-      // biome-ignore lint/suspicious/noConsole: Error logging for user
+      // Set user-facing error message
+      const errorMessage = error instanceof Error
+        ? error.message
+        : "An unknown error occurred";
+      setClearError(`Failed to clear sessions: ${errorMessage}`);
+      // biome-ignore lint/suspicious/noConsole: Error logging for debugging
       console.error("Failed to clear sessions:", error);
     } finally {
       setIsClearing(false);
@@ -141,6 +150,12 @@ function App() {
             />
           </div>
         </div>
+
+        {clearError && (
+          <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive mb-5">
+            {clearError}
+          </div>
+        )}
 
         {error && (
           <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive mb-5">
