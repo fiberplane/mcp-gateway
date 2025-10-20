@@ -4,10 +4,9 @@ import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { Registry } from "@fiberplane/mcp-gateway-types";
 import { McpServer, StreamableHttpTransport } from "mcp-lite";
-import type { Registry } from "../../src/registry.js";
-import { createApp } from "../../src/server/index.js";
-import { saveRegistry } from "../../src/storage.js";
+import { createApp, saveRegistry } from "../helpers/test-app.js";
 
 // JSON-RPC response type
 interface JsonRpcResponse {

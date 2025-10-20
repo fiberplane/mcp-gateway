@@ -42,6 +42,13 @@ export function getActiveSessions(): string[] {
   );
 }
 
+// Reset all capture state (for testing)
+export function resetCaptureState(): void {
+  sessionClientInfo.clear();
+  requestStartTimes.clear();
+  requestMethods.clear();
+}
+
 // Helper interface for request tracking (used by Gateway)
 export interface RequestTracker {
   trackRequest(id: string | number, method: string): void;
@@ -224,7 +231,7 @@ export function createSSEEventCaptureRecord(
   return record;
 }
 
-function resolveJsonRpcMethod(
+export function resolveJsonRpcMethod(
   jsonRpcMessage: JsonRpcRequest | JsonRpcResponse,
   requestTracker?: RequestTracker,
 ): string {

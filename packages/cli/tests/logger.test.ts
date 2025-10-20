@@ -10,7 +10,7 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { logger } from "../src/logger.js";
+import { logger } from "@fiberplane/mcp-gateway-core";
 
 let tempDir: string;
 
