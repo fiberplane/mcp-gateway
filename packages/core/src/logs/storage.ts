@@ -1,5 +1,6 @@
 import type {
   CaptureRecord,
+  ClientAggregation,
   LogQueryOptions,
   LogQueryResult,
   ServerInfo,
@@ -173,6 +174,27 @@ export async function getSessions(
     .orderBy(desc(sql`MIN(${logs.timestamp})`));
 
   return result as SessionInfo[];
+}
+
+/**
+ * Get client aggregations
+ */
+export async function getClients(
+  db: BunSQLiteDatabase<typeof schema>,
+): Promise<ClientAggregation[]> {
+  const result = await db
+    .select({
+      clientName: logs.clientName,
+      clientVersion: logs.clientVersion,
+      logCount: count(logs.id),
+      sessionCount: sql<number>`COUNT(DISTINCT ${logs.sessionId})`,
+    })
+    .from(logs)
+    .where(sql`${logs.clientName} IS NOT NULL`)
+    .groupBy(logs.clientName, logs.clientVersion)
+    .orderBy(logs.clientName);
+
+  return result as ClientAggregation[];
 }
 
 /**

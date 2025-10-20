@@ -2,6 +2,7 @@ import { Database } from "bun:sqlite";
 import { join } from "node:path";
 import type {
   CaptureRecord,
+  ClientAggregation,
   LogQueryOptions,
   LogQueryResult,
   ServerInfo,
@@ -155,6 +156,23 @@ export class SqliteStorageBackend implements StorageBackend {
       return await getSessions(this.db, serverName);
     } catch (error) {
       logger.error("SQLite getSessions failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
+
+  async getClients(): Promise<ClientAggregation[]> {
+    if (!this.db || !this.initialized) {
+      logger.debug("SQLite backend not ready, returning empty clients");
+      return [];
+    }
+
+    try {
+      const { getClients } = await import("../../logs/storage.js");
+      return await getClients(this.db);
+    } catch (error) {
+      logger.error("SQLite getClients failed", {
         error: error instanceof Error ? error.message : String(error),
       });
       throw error;

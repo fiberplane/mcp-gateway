@@ -1,5 +1,6 @@
 import type {
   CaptureRecord,
+  ClientAggregation,
   LogQueryOptions,
   LogQueryResult,
   ServerInfo,
@@ -164,6 +165,28 @@ export class StorageManager {
     }
 
     return await backend.getSessions(serverName);
+  }
+
+  /**
+   * Get client aggregations from the first available backend
+   *
+   * @returns List of client aggregation info
+   */
+  async getClients(): Promise<ClientAggregation[]> {
+    if (!this.initialized) {
+      throw new Error(
+        "Storage manager not initialized. Call initialize() first.",
+      );
+    }
+
+    const backend = this.backends.values().next().value as
+      | StorageBackend
+      | undefined;
+    if (!backend) {
+      throw new Error("No storage backends registered");
+    }
+
+    return await backend.getClients();
   }
 
   /**

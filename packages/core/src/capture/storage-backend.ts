@@ -1,5 +1,6 @@
 import type {
   CaptureRecord,
+  ClientAggregation,
   LogQueryOptions,
   LogQueryResult,
   ServerInfo,
@@ -59,6 +60,13 @@ export interface StorageBackend {
    * @returns List of session aggregation info
    */
   getSessions(serverName?: string): Promise<SessionInfo[]>;
+
+  /**
+   * Get client aggregations (client name/version, log count, session count)
+   *
+   * @returns List of client aggregation info
+   */
+  getClients(): Promise<ClientAggregation[]>;
 
   /**
    * Close/cleanup the storage backend

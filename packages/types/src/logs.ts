@@ -60,3 +60,13 @@ export interface SessionInfo {
   startTime: string;
   endTime: string;
 }
+
+/**
+ * Client aggregation info
+ */
+export interface ClientAggregation {
+  clientName: string;
+  clientVersion: string | null;
+  logCount: number;
+  sessionCount: number;
+}

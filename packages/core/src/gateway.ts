@@ -144,6 +144,13 @@ export interface Gateway {
     getSessions(
       serverName?: string,
     ): Promise<import("@fiberplane/mcp-gateway-types").SessionInfo[]>;
+
+    /**
+     * Get client aggregations
+     */
+    getClients(): Promise<
+      import("@fiberplane/mcp-gateway-types").ClientAggregation[]
+    >;
   };
 
   /**
@@ -548,6 +555,7 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
       getServers: async () => await storageManager.getServers(),
       getSessions: async (serverName?) =>
         await storageManager.getSessions(serverName),
+      getClients: async () => await storageManager.getClients(),
     },
 
     health: {

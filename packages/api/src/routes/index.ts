@@ -1,4 +1,5 @@
 import type {
+  ClientAggregation,
   LogQueryOptions,
   LogQueryResult,
   ServerInfo,
@@ -55,6 +56,7 @@ export interface QueryFunctions {
     storageDir: string,
     serverName?: string,
   ) => Promise<SessionInfo[]>;
+  getClients: (storageDir: string) => Promise<ClientAggregation[]>;
 }
 
 /**
@@ -64,6 +66,7 @@ export interface QueryFunctions {
  * - GET /logs - Query logs with filters and pagination
  * - GET /servers - List servers with aggregated stats
  * - GET /sessions - List sessions with aggregated stats
+ * - GET /clients - List clients with aggregated stats
  *
  * @param storageDir - Storage directory path
  * @param queries - Query functions to use for data access
@@ -155,6 +158,17 @@ export function createApiRoutes(
     const sessions = await queries.getSessions(storageDir, query.server);
 
     return c.json({ sessions });
+  });
+
+  /**
+   * GET /clients
+   *
+   * List all clients with log counts and session counts
+   */
+  app.get("/clients", async (c) => {
+    const clients = await queries.getClients(storageDir);
+
+    return c.json({ clients });
   });
 
   return app;
