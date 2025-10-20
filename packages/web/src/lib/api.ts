@@ -139,6 +139,19 @@ class APIClient {
     }
     return response.json();
   }
+
+  /**
+   * Clear all session data (client info and server info)
+   */
+  async clearSessions(): Promise<{ success: boolean }> {
+    const response = await fetch(`${this.baseURL}/sessions/clear`, {
+      method: "POST",
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to clear sessions: ${response.statusText}`);
+    }
+    return response.json();
+  }
 }
 
 /**

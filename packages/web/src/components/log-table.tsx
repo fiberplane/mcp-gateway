@@ -8,9 +8,10 @@ import {
   Check,
   Copy,
 } from "lucide-react";
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, type ReactNode, useMemo, useState } from "react";
 import type { LogEntry } from "../lib/api";
 import { getMethodBadgeVariant } from "../lib/badge-color";
+import { groupLogsByTime, type TimeInterval } from "../lib/time-grouping";
 import { useHandler } from "../lib/use-handler";
 import { getLogKey } from "../lib/utils";
 import { Badge } from "./ui/badge";
@@ -26,10 +27,30 @@ type SortField =
   | "client";
 type SortDirection = "asc" | "desc";
 
+/**
+ * Column configuration for the log table
+ */
+interface Column {
+  id: string;
+  header: string | (() => ReactNode);
+  cell: (log: LogEntry) => ReactNode;
+  sortField?: SortField;
+  size?: string | number;
+  isVisible?: (logs: LogEntry[]) => boolean;
+}
+
+/**
+ * Row items can be either a time divider or a log entry
+ */
+type RowItem =
+  | { type: "divider"; label: string; groupKey: string }
+  | { type: "log"; log: LogEntry };
+
 interface LogTableProps {
   logs: LogEntry[];
   selectedIds: Set<string>;
   onSelectionChange: (selectedIds: Set<string>) => void;
+  timeGrouping?: TimeInterval;
 }
 
 interface SortHeaderProps {
@@ -72,10 +93,23 @@ export function LogTable({
   logs,
   selectedIds,
   onSelectionChange,
+  timeGrouping = "day",
 }: LogTableProps) {
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [sortField, setSortField] = useState<SortField>("timestamp");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+
+  // Define columns configuration
+  const columns = useMemo(
+    createColumns(),
+    [],
+  );
+
+  // Filter visible columns
+  const visibleColumns = useMemo(
+    () => columns.filter((col) => !col.isVisible || col.isVisible(logs)),
+    [columns, logs],
+  );
 
   const handleSort = useHandler((field: SortField) => {
     if (sortField === field) {
@@ -129,6 +163,49 @@ export function LogTable({
     });
   }, [logs, sortField, sortDirection]);
 
+  // Group logs by time interval and create rows with dividers
+  const rowsWithDividers = useMemo(() => {
+    const { groups, config } = groupLogsByTime(sortedLogs, timeGrouping);
+    const result: RowItem[] = [];
+
+    if (sortedLogs.length === 0) {
+      return result;
+    }
+
+    // Get the current time's group key to check if a group is "current"
+    const now = new Date();
+    const currentGroupKey = config.getGroupKey(now);
+
+    // Sort group keys (respect current sort direction for display order)
+    const sortedGroupKeys = Array.from(groups.keys()).sort((a, b) => {
+      return sortDirection === "desc" ? b.localeCompare(a) : a.localeCompare(b);
+    });
+
+    for (let i = 0; i < sortedGroupKeys.length; i++) {
+      // biome-ignore lint/style/noNonNullAssertion: Array index is within bounds
+      const groupKey = sortedGroupKeys[i]!;
+      // biome-ignore lint/style/noNonNullAssertion: We know the key exists
+      const groupLogs = groups.get(groupKey)!;
+      // biome-ignore lint/style/noNonNullAssertion: Groups always have at least one log
+      const firstLog = groupLogs[0]!;
+      const label = config.formatLabel(new Date(firstLog.timestamp));
+
+      // Skip divider for the current time period
+      // Only show dividers when transitioning to older time periods
+      const isCurrentPeriod = groupKey === currentGroupKey;
+      if (!isCurrentPeriod) {
+        result.push({ type: "divider", label, groupKey });
+      }
+
+      // Add logs
+      for (const log of groupLogs) {
+        result.push({ type: "log", log });
+      }
+    }
+
+    return result;
+  }, [sortedLogs, timeGrouping, sortDirection]);
+
   const handleSelectAll = useHandler((checked: boolean) => {
     if (checked) {
       const allIds = new Set(sortedLogs.map(getLogKey));
@@ -157,12 +234,6 @@ export function LogTable({
     sortedLogs.length > 0 &&
     sortedLogs.every((log) => selectedIds.has(getLogKey(log)));
 
-  // Check if any log has server info to decide whether to show Server column
-  const hasServerInfo = useMemo(
-    () => logs.some((log) => log.metadata.server),
-    [logs],
-  );
-
   if (logs.length === 0) {
     return (
       <div className="p-10 text-center text-muted-foreground bg-card rounded-lg">
@@ -182,82 +253,60 @@ export function LogTable({
               aria-label="Select all"
             />
           </th>
-          <th className="text-left p-3 text-sm font-semibold text-foreground">
-            <SortHeader
-              field="method"
-              sortField={sortField}
-              sortDirection={sortDirection}
-              onSort={handleSort}
+          {visibleColumns.map((column) => (
+            <th
+              key={column.id}
+              className="text-left p-3 text-sm font-semibold text-foreground"
             >
-              Method
-            </SortHeader>
-          </th>
-          <th className="text-left p-3 text-sm font-semibold text-foreground">
-            <SortHeader
-              field="client"
-              sortField={sortField}
-              sortDirection={sortDirection}
-              onSort={handleSort}
-            >
-              Client
-            </SortHeader>
-          </th>
-          {hasServerInfo && (
-            <th className="text-left p-3 text-sm font-semibold text-foreground">
-              <SortHeader
-                field="server"
-                sortField={sortField}
-                sortDirection={sortDirection}
-                onSort={handleSort}
-              >
-                Server
-              </SortHeader>
+              {column.sortField ? (
+                <SortHeader
+                  field={column.sortField}
+                  sortField={sortField}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                >
+                  {typeof column.header === "function"
+                    ? column.header()
+                    : column.header}
+                </SortHeader>
+              ) : typeof column.header === "function" ? (
+                column.header()
+              ) : (
+                column.header
+              )}
             </th>
-          )}
-          <th className="text-left p-3 text-sm font-semibold text-foreground">
-            <SortHeader
-              field="session"
-              sortField={sortField}
-              sortDirection={sortDirection}
-              onSort={handleSort}
-            >
-              Session
-            </SortHeader>
-          </th>
-          <th className="text-left p-3 text-sm font-semibold text-foreground">
-            <SortHeader
-              field="duration"
-              sortField={sortField}
-              sortDirection={sortDirection}
-              onSort={handleSort}
-            >
-              Duration
-            </SortHeader>
-          </th>
-          <th className="text-left p-3 text-sm font-semibold text-foreground">
-            <SortHeader
-              field="timestamp"
-              sortField={sortField}
-              sortDirection={sortDirection}
-              onSort={handleSort}
-            >
-              Timestamp
-            </SortHeader>
-          </th>
+          ))}
         </tr>
       </thead>
       <tbody className="divide-y divide-border">
-        {sortedLogs.map((log) => {
+        {rowsWithDividers.map((item) => {
+          // Render divider row
+          if (item.type === "divider") {
+            return (
+              <tr
+                key={`divider-${item.groupKey}`}
+                className="bg-muted/30 border-t-2 border-border"
+              >
+                <td
+                  colSpan={visibleColumns.length + 1}
+                  className="p-3 text-sm font-semibold text-muted-foreground text-center"
+                >
+                  {item.label}
+                </td>
+              </tr>
+            );
+          }
+
+          // Render log row
+          const log = item.log;
           const logKey = getLogKey(log);
           const isExpanded = expandedKey === logKey;
 
           return (
             <Fragment key={logKey}>
               <tr
-                key={logKey}
-                className={`hover:bg-muted/50 transition-colors ${
-                  isExpanded ? "bg-blue-50/50" : ""
-                }`}
+                className={`hover:bg-muted/50 transition-colors ${isExpanded ? "bg-blue-50/50" : ""
+                  }`}
               >
                 {/* biome-ignore lint/a11y/useKeyWithClickEvents: Checkbox cell stops propagation */}
                 <td className="p-3" onClick={(e) => e.stopPropagation()}>
@@ -269,98 +318,21 @@ export function LogTable({
                     aria-label={`Select log ${logKey}`}
                   />
                 </td>
-                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Table row click for expand/collapse, keyboard nav to be added */}
-                <td
-                  className="p-3 cursor-pointer"
-                  onClick={() => handleRowClick(log)}
-                >
-                  <Badge
-                    variant={getMethodBadgeVariant(log.method)}
-                    className="inline-flex items-center gap-1"
-                  >
-                    {log.direction === "request" ? (
-                      <ArrowRight className="w-3 h-3" />
-                    ) : (
-                      <ArrowLeft className="w-3 h-3" />
-                    )}
-                    <span>{log.method}</span>
-                  </Badge>
-                </td>
-                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Table row click for expand/collapse, keyboard nav to be added */}
-                <td
-                  className="p-3 text-sm text-foreground cursor-pointer"
-                  onClick={() => handleRowClick(log)}
-                  title={
-                    log.metadata.client
-                      ? `${log.metadata.client.name} ${log.metadata.client.version}${log.metadata.client.title ? ` (${log.metadata.client.title})` : ""}`
-                      : log.metadata.userAgent || "Unknown"
-                  }
-                >
-                  {log.metadata.client ? (
-                    <div className="flex flex-col">
-                      <span className="font-medium">
-                        {log.metadata.client.name}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {log.metadata.client.version}
-                      </span>
-                    </div>
-                  ) : (
-                    <span className="text-muted-foreground">-</span>
-                  )}
-                </td>
-                {hasServerInfo && (
+                {visibleColumns.map((column) => (
                   // biome-ignore lint/a11y/useKeyWithClickEvents: Table row click for expand/collapse, keyboard nav to be added
                   <td
-                    className="p-3 text-sm text-foreground cursor-pointer"
+                    key={column.id}
+                    className="p-3 cursor-pointer"
                     onClick={() => handleRowClick(log)}
-                    title={
-                      log.metadata.server
-                        ? `${log.metadata.server.name} ${log.metadata.server.version}${log.metadata.server.title ? ` (${log.metadata.server.title})` : ""}`
-                        : undefined
-                    }
                   >
-                    {log.metadata.server ? (
-                      <div className="flex flex-col">
-                        <span className="font-medium">
-                          {log.metadata.server.name}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {log.metadata.server.version}
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
+                    {column.cell(log)}
                   </td>
-                )}
-                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Table row click for expand/collapse, keyboard nav to be added */}
-                <td
-                  className="p-3 font-mono text-xs text-muted-foreground cursor-pointer"
-                  onClick={() => handleRowClick(log)}
-                >
-                  {log.metadata.sessionId.slice(0, 8)}...
-                </td>
-                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Table row click for expand/collapse, keyboard nav to be added */}
-                <td
-                  className="p-3 text-sm text-muted-foreground cursor-pointer"
-                  onClick={() => handleRowClick(log)}
-                >
-                  {log.metadata.durationMs}ms
-                </td>
-                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Table row click for expand/collapse, keyboard nav to be added */}
-                <td
-                  className="p-3 font-mono text-sm text-foreground cursor-pointer"
-                  title={log.timestamp}
-                  onClick={() => handleRowClick(log)}
-                >
-                  {format(new Date(log.timestamp), "HH:mm:ss.SSS")}
-                </td>
+                ))}
               </tr>
               {isExpanded && (
                 <tr key={`${logKey}-details`}>
                   <td
-                    colSpan={hasServerInfo ? 8 : 7}
+                    colSpan={visibleColumns.length + 1}
                     className="p-5 bg-muted/30"
                   >
                     <LogDetails log={log} />
@@ -377,6 +349,93 @@ export function LogTable({
 
 interface LogDetailsProps {
   log: LogEntry;
+}
+
+function createColumns(): () => Column[] {
+  return () => [
+    {
+      id: "timestamp",
+      header: "Timestamp",
+      sortField: "timestamp",
+      cell: (log) => (
+        <span
+          className="font-mono text-sm text-foreground"
+          title={log.timestamp}
+        >
+          {format(new Date(log.timestamp), "HH:mm:ss.SSS")}
+        </span>
+      ),
+    },
+    {
+      id: "client",
+      header: "Client",
+      sortField: "client",
+      cell: (log) => log.metadata.client ? (
+        <div className="flex flex-col">
+          <span className="font-medium">{log.metadata.client.name}</span>
+          <span className="text-xs text-muted-foreground">
+            {log.metadata.client.version}
+          </span>
+        </div>
+      ) : (
+        <span className="text-muted-foreground">-</span>
+      ),
+    },
+    {
+      id: "method",
+      header: "Method",
+      sortField: "method",
+      cell: (log) => (
+        <Badge
+          variant={getMethodBadgeVariant(log.method)}
+          className="inline-flex items-center gap-1"
+        >
+          {log.direction === "request" ? (
+            <ArrowRight className="w-3 h-3" />
+          ) : (
+            <ArrowLeft className="w-3 h-3" />
+          )}
+          <span>{log.method}</span>
+        </Badge>
+      ),
+    },
+    {
+      id: "server",
+      header: "Server",
+      sortField: "server",
+      isVisible: (logs) => logs.some((log) => log.metadata.server),
+      cell: (log) => log.metadata.server ? (
+        <div className="flex flex-col">
+          <span className="font-medium">{log.metadata.server.name}</span>
+          <span className="text-xs text-muted-foreground">
+            {log.metadata.server.version}
+          </span>
+        </div>
+      ) : (
+        <span className="text-muted-foreground">-</span>
+      ),
+    },
+    {
+      id: "session",
+      header: "Session",
+      sortField: "session",
+      cell: (log) => (
+        <span className="font-mono text-xs text-muted-foreground">
+          {log.metadata.sessionId.slice(0, 8)}...
+        </span>
+      ),
+    },
+    {
+      id: "duration",
+      header: "Duration",
+      sortField: "duration",
+      cell: (log) => (
+        <span className="text-sm text-muted-foreground">
+          {log.metadata.durationMs}ms
+        </span>
+      ),
+    },
+  ];
 }
 
 function LogDetails({ log }: LogDetailsProps) {
