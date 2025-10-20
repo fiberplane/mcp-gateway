@@ -8,7 +8,6 @@ import { SessionFilter } from "./components/session-filter";
 import { StreamingToggle } from "./components/streaming-toggle";
 import { Button } from "./components/ui/button";
 import { api } from "./lib/api";
-import type { TimeInterval } from "./lib/time-grouping";
 import { useHandler } from "./lib/use-handler";
 import { getLogKey } from "./lib/utils";
 
@@ -24,7 +23,7 @@ function App() {
 
   // Fixed values (no UI controls)
   const clientName = undefined; // All clients
-  const timeGrouping: TimeInterval = "day"; // Group by day
+  const timeGrouping = "day" as const; // Group by day
 
   const {
     data,
@@ -92,11 +91,13 @@ function App() {
     setIsClearing(true);
     try {
       await api.clearSessions();
-      // Invalidate all queries to refetch data after clearing
-      await queryClient.invalidateQueries({ queryKey: ["logs"] });
-      await queryClient.invalidateQueries({ queryKey: ["servers"] });
-      await queryClient.invalidateQueries({ queryKey: ["sessions"] });
-      await queryClient.invalidateQueries({ queryKey: ["clients"] });
+      // Invalidate all queries to refetch data after clearing (in parallel)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["logs"] }),
+        queryClient.invalidateQueries({ queryKey: ["servers"] }),
+        queryClient.invalidateQueries({ queryKey: ["sessions"] }),
+        queryClient.invalidateQueries({ queryKey: ["clients"] }),
+      ]);
     } catch (error) {
       // biome-ignore lint/suspicious/noConsole: Error logging for user
       console.error("Failed to clear sessions:", error);
