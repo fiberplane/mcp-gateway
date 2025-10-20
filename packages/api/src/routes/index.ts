@@ -57,6 +57,7 @@ export interface QueryFunctions {
     serverName?: string,
   ) => Promise<SessionInfo[]>;
   getClients: (storageDir: string) => Promise<ClientAggregation[]>;
+  clearSessions: () => Promise<void>;
 }
 
 /**
@@ -67,6 +68,7 @@ export interface QueryFunctions {
  * - GET /servers - List servers with aggregated stats
  * - GET /sessions - List sessions with aggregated stats
  * - GET /clients - List clients with aggregated stats
+ * - POST /sessions/clear - Clear all session data
  *
  * @param storageDir - Storage directory path
  * @param queries - Query functions to use for data access
@@ -169,6 +171,17 @@ export function createApiRoutes(
     const clients = await queries.getClients(storageDir);
 
     return c.json({ clients });
+  });
+
+  /**
+   * POST /sessions/clear
+   *
+   * Clear all session data (client info and server info)
+   */
+  app.post("/sessions/clear", async (c) => {
+    await queries.clearSessions();
+
+    return c.json({ success: true });
   });
 
   return app;
