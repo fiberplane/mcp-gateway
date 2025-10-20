@@ -52,6 +52,8 @@ export interface ProxyDependencies {
     sessionId: string,
     request: JsonRpcRequest,
     httpContext?: HttpContext,
+    clientInfo?: ClientInfo,
+    serverInfo?: McpServerInfo,
   ) => CaptureRecord;
 
   /** Create a response capture record */
@@ -62,6 +64,7 @@ export interface ProxyDependencies {
     httpStatus: number,
     method: string,
     httpContext?: HttpContext,
+    clientInfo?: ClientInfo,
     serverInfo?: McpServerInfo,
   ) => CaptureRecord;
 
@@ -97,6 +100,7 @@ export interface ProxyDependencies {
     sseEvent: { id?: string; event?: string; data?: string; retry?: number },
     isResponse?: boolean,
     httpContext?: HttpContext,
+    clientInfo?: ClientInfo,
     serverInfo?: McpServerInfo,
   ) => Promise<CaptureRecord | null>;
 
@@ -111,6 +115,14 @@ export interface ProxyDependencies {
 
   /** Get server info for a session */
   getServerInfoForSession: (sessionId: string) => McpServerInfo | undefined;
+
+  /** Update server info for an initialize request after getting the response */
+  updateServerInfoForInitializeRequest: (
+    serverName: string,
+    sessionId: string,
+    requestId: string | number,
+    serverInfo: { name?: string; version: string; title?: string },
+  ) => Promise<void>;
 
   /** Get a server from the registry */
   getServerFromRegistry: (
@@ -213,7 +225,7 @@ async function updateServerActivity(
 
 // Helper: Handle session transition for initialize
 // When an initialize request moves from stateless to a new session ID,
-// copy over the client info to the new session
+// copy over the client info and server info to the new session
 async function handleSessionTransition(
   _storage: string,
   _server: McpServer,
@@ -235,6 +247,12 @@ async function handleSessionTransition(
     const clientInfo = deps.getClientInfoForSession(sessionId);
     if (clientInfo) {
       deps.storeClientInfoForSession(responseSessionId, clientInfo);
+    }
+
+    // Copy server info to new session
+    const serverInfo = deps.getServerInfoForSession(sessionId);
+    if (serverInfo) {
+      deps.storeServerInfoForSession(responseSessionId, serverInfo);
     }
   }
 }
@@ -404,12 +422,21 @@ export async function createProxyRoutes(options: {
         clientIp: extractRemoteAddress(validatedHeaders),
       };
 
+      // Handle initialize method - store client info BEFORE capturing request
+      handleInitializeClientInfo(sessionId, jsonRpcRequest, deps);
+
+      // Get stored client and server info for this session
+      const clientInfo = deps.getClientInfoForSession(sessionId);
+      const serverInfo = deps.getServerInfoForSession(sessionId);
+
       // Capture request immediately (before forwarding)
       const requestRecord = deps.createRequestRecord(
         server.name,
         sessionId,
         jsonRpcRequest,
         httpContext,
+        clientInfo,
+        serverInfo,
       );
       await deps.appendRecord(requestRecord);
 
@@ -420,8 +447,6 @@ export async function createProxyRoutes(options: {
       let httpStatus = 200;
 
       try {
-        // Handle initialize method - store client info
-        handleInitializeClientInfo(sessionId, jsonRpcRequest, deps);
 
         // Forward request to target MCP server using Hono proxy helper
         const proxyHeaders = buildProxyHeaders(c, server);
@@ -531,33 +556,47 @@ export async function createProxyRoutes(options: {
         response = responseBody as JsonRpcResponse;
         const duration = Date.now() - startTime;
 
-        // Capture server info from initialize response
+        // Capture server info from initialize response BEFORE creating response record
         if (jsonRpcRequest.method === "initialize" && response.result) {
           const result = response.result as Record<string, unknown>;
           if (result.serverInfo) {
-            const serverResult = mcpServerInfoSchema.safeParse(result.serverInfo);
+            const serverResult = mcpServerInfoSchema.safeParse(
+              result.serverInfo,
+            );
             if (serverResult.success) {
               deps.storeServerInfoForSession(sessionId, serverResult.data);
+
+              // Backfill server info on the initialize request record
+              // The request was captured before we received the response containing serverInfo
+              if (jsonRpcRequest.id != null) {
+                await deps.updateServerInfoForInitializeRequest(
+                  server.name,
+                  sessionId,
+                  jsonRpcRequest.id,
+                  serverResult.data,
+                );
+              }
             }
           }
         }
 
-        // Get stored server info for this session
-        const serverInfo = deps.getServerInfoForSession(sessionId);
+        // Get updated client and server info after initialize response
+        const updatedClientInfo = deps.getClientInfoForSession(sessionId);
+        const updatedServerInfo = deps.getServerInfoForSession(sessionId);
 
-        // Capture response (only if request expected one - has id)
-        if (jsonRpcRequest.id != null) {
-          const responseRecord = deps.createResponseRecord(
-            server.name,
-            sessionId,
-            response,
-            httpStatus,
-            jsonRpcRequest.method,
-            httpContext,
-            serverInfo,
-          );
-          await deps.appendRecord(responseRecord);
-        }
+        // Capture response (both for regular requests and notifications)
+        // The upstream server returns a JSON response for all requests, including notifications
+        const responseRecord = deps.createResponseRecord(
+          server.name,
+          sessionId,
+          response,
+          httpStatus,
+          jsonRpcRequest.method,
+          httpContext,
+          updatedClientInfo,
+          updatedServerInfo,
+        );
+        await deps.appendRecord(responseRecord);
 
         // Handle initialize → session transition
         await handleSessionTransition(
@@ -683,7 +722,8 @@ async function processSSECapture(
           // Capture as JSON-RPC message
           const isResponse = isJsonRpcResponse(jsonRpcMessage);
 
-          // Get stored server info for this session
+          // Get stored client and server info for this session
+          const clientInfo = deps.getClientInfoForSession(sessionId);
           const serverInfo = deps.getServerInfoForSession(sessionId);
 
           const record = await deps.captureSSEJsonRpcMessage(
@@ -693,6 +733,7 @@ async function processSSECapture(
             sseEvent,
             isResponse,
             httpContext,
+            clientInfo,
             serverInfo,
           );
 
