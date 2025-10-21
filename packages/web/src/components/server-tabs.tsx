@@ -11,10 +11,21 @@ function getStatusColor(status: ServerStatus): string {
     case "online":
       return "bg-green-500";
     case "offline":
-      return "bg-yellow-500";
+      return "bg-red-500";
     case "deleted":
       return "bg-gray-400";
   }
+}
+
+function getTextColor(status: ServerStatus, isSelected: boolean): string {
+  if (isSelected) {
+    return "text-primary-foreground";
+  }
+  // Offline servers get red text
+  if (status === "offline") {
+    return "text-red-600";
+  }
+  return "text-foreground";
 }
 
 export function ServerTabs({ value, onChange }: ServerTabsProps) {
@@ -38,39 +49,42 @@ export function ServerTabs({ value, onChange }: ServerTabsProps) {
         type="button"
         onClick={() => onChange(undefined)}
         className={`
-          px-3 py-2 rounded-md text-sm font-medium transition-colors
+          h-8 px-3 py-1 rounded-md text-sm transition-colors
           ${
             selectedServer === "all"
-              ? "bg-primary text-primary-foreground"
-              : "bg-muted text-foreground hover:bg-muted/80"
+              ? "bg-foreground text-background"
+              : "bg-card text-foreground border border-border hover:bg-muted"
           }
         `}
       >
         All servers
       </button>
-      {data.servers.map((server) => (
-        <button
-          key={server.name}
-          type="button"
-          onClick={() => onChange(server.name)}
-          className={`
-            flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors
-            ${
-              selectedServer === server.name
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-foreground hover:bg-muted/80"
-            }
-          `}
-        >
-          <span
-            className={`w-2 h-2 rounded-full ${getStatusColor(server.status)}`}
-            title={`${server.status} status`}
-          />
-          <span>
-            {server.name} ({server.logCount})
-          </span>
-        </button>
-      ))}
+      {data.servers.map((server) => {
+        const isSelected = selectedServer === server.name;
+        return (
+          <button
+            key={server.name}
+            type="button"
+            onClick={() => onChange(server.name)}
+            className={`
+              flex items-center gap-2 h-8 px-3 py-1 rounded-md text-sm transition-colors
+              ${
+                isSelected
+                  ? "bg-foreground text-background"
+                  : "bg-card border border-border hover:bg-muted"
+              }
+            `}
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${getStatusColor(server.status)}`}
+              title={`${server.status} status`}
+            />
+            <span className={getTextColor(server.status, isSelected)}>
+              {server.name}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }
