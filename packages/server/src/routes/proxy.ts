@@ -280,12 +280,14 @@ async function handleSessionTransition(
 }
 
 // Helper: Log request
-function logRequest(
-  server: McpServer,
-  sessionId: string,
-  request: JsonRpcRequest,
-  onLog?: (entry: LogEntry) => void,
-): void {
+function logRequest(options: {
+  server: McpServer;
+  sessionId: string;
+  request: JsonRpcRequest;
+  onLog?: (entry: LogEntry) => void;
+}): void {
+  const { server, sessionId, request, onLog } = options;
+
   const logEntry: LogEntry = {
     timestamp: new Date().toISOString(),
     serverName: server.name,
@@ -302,15 +304,18 @@ function logRequest(
 }
 
 // Helper: Log response
-function logResponse(
-  server: McpServer,
-  sessionId: string,
-  method: string,
-  httpStatus: number,
-  duration: number,
-  response?: JsonRpcResponse,
-  onLog?: (entry: LogEntry) => void,
-): void {
+function logResponse(options: {
+  server: McpServer;
+  sessionId: string;
+  method: string;
+  httpStatus: number;
+  duration: number;
+  response?: JsonRpcResponse;
+  onLog?: (entry: LogEntry) => void;
+}): void {
+  const { server, sessionId, method, httpStatus, duration, response, onLog } =
+    options;
+
   const errorMessage = response?.error
     ? `JSON-RPC ${response.error.code}: ${response.error.message}`
     : undefined;
@@ -494,15 +499,15 @@ export async function createProxyRoutes(options: {
           // Log the 401 response (for TUI visibility)
           // FIXME - The `method` parameter is kinda unknown here, since it's not a JSON-RPC request
           //         I don't know what to record.
-          logResponse(
+          logResponse({
             server,
             sessionId,
-            "GET /mcp",
-            401,
+            method: "GET /mcp",
+            httpStatus: 401,
             duration,
-            undefined,
+            response: undefined,
             onLog,
-          );
+          });
 
           return new Response(responseText, {
             status: 401,
@@ -585,15 +590,15 @@ export async function createProxyRoutes(options: {
         const duration = Date.now() - startTime;
 
         // Log error
-        logResponse(
+        logResponse({
           server,
           sessionId,
-          "GET /mcp",
-          500,
+          method: "GET /mcp",
+          httpStatus: 500,
           duration,
-          undefined,
+          response: undefined,
           onLog,
-        );
+        });
 
         // Return error response (not JSON-RPC format for GET)
         return c.json({ error: String(error) }, 500);
@@ -700,15 +705,15 @@ export async function createProxyRoutes(options: {
         await deps.appendRecord(responseRecord);
 
         // Log the response to TUI
-        logResponse(
+        logResponse({
           server,
           sessionId,
           method,
-          200,
-          responseRecord.metadata.durationMs,
-          jsonRpcResponse,
+          httpStatus: 200,
+          duration: responseRecord.metadata.durationMs,
+          response: jsonRpcResponse,
           onLog,
-        );
+        });
 
         // Update server activity
         await updateServerActivity(
@@ -761,7 +766,7 @@ export async function createProxyRoutes(options: {
       await deps.appendRecord(requestRecord);
 
       // Log incoming request from client
-      logRequest(server, sessionId, jsonRpcRequest, onLog);
+      logRequest({ server, sessionId, request: jsonRpcRequest, onLog });
 
       let response: JsonRpcResponse;
       let httpStatus = 200;
@@ -792,15 +797,15 @@ export async function createProxyRoutes(options: {
           }
 
           // Log the 401 response (for TUI visibility)
-          logResponse(
+          logResponse({
             server,
             sessionId,
-            jsonRpcRequest.method,
-            401,
+            method: jsonRpcRequest.method,
+            httpStatus: 401,
             duration,
-            undefined,
+            response: undefined,
             onLog,
-          );
+          });
 
           // Capture the 401 response with full details
           await captureAuthError(
@@ -957,15 +962,15 @@ export async function createProxyRoutes(options: {
         );
 
         // Log response
-        logResponse(
+        logResponse({
           server,
           sessionId,
-          jsonRpcRequest.method,
+          method: jsonRpcRequest.method,
           httpStatus,
           duration,
           response,
           onLog,
-        );
+        });
 
         // Create new response with the same data and headers
         // Remove auto-generated headers to avoid duplicates when Response constructor adds them
@@ -991,15 +996,15 @@ export async function createProxyRoutes(options: {
         };
 
         // Log error response
-        logResponse(
+        logResponse({
           server,
           sessionId,
-          jsonRpcRequest.method,
+          method: jsonRpcRequest.method,
           httpStatus,
           duration,
-          errorResponse,
+          response: errorResponse,
           onLog,
-        );
+        });
 
         // Capture error
         await deps.captureErrorResponse(
@@ -1082,15 +1087,15 @@ async function processSSECapture(
             const durationMs = record?.metadata.durationMs ?? 0;
             const httpStatus = record?.metadata.httpStatus ?? 200;
 
-            logResponse(
+            logResponse({
               server,
               sessionId,
               method,
               httpStatus,
-              durationMs,
-              jsonRpcMessage,
+              duration: durationMs,
+              response: jsonRpcMessage,
               onLog,
-            );
+            });
           }
         } else {
           // Capture as raw SSE event
