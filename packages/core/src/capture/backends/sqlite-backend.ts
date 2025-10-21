@@ -127,7 +127,7 @@ export class SqliteStorageBackend implements StorageBackend {
     }
   }
 
-  async getServers(): Promise<ServerInfo[]> {
+  async getServers(registryServers?: string[]): Promise<ServerInfo[]> {
     if (!this.db || !this.initialized) {
       logger.debug("SQLite backend not ready, returning empty servers");
       return [];
@@ -135,7 +135,7 @@ export class SqliteStorageBackend implements StorageBackend {
 
     try {
       const { getServers } = await import("../../logs/storage.js");
-      return await getServers(this.db);
+      return await getServers(this.db, registryServers);
     } catch (error) {
       logger.error("SQLite getServers failed", {
         error: error instanceof Error ? error.message : String(error),

@@ -48,9 +48,10 @@ export interface StorageBackend {
   /**
    * Get server aggregations (name, log count, session count)
    *
+   * @param registryServers - Optional list of server names from registry for status determination
    * @returns List of server aggregation info
    */
-  getServers(): Promise<ServerInfo[]>;
+  getServers(registryServers?: string[]): Promise<ServerInfo[]>;
 
   /**
    * Get session aggregations (session ID, server, log count, time range)

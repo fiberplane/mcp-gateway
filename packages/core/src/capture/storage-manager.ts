@@ -124,9 +124,10 @@ export class StorageManager {
   /**
    * Get server aggregations from the first available backend
    *
+   * @param registryServers - Optional list of server names from registry for status determination
    * @returns List of server aggregation info
    */
-  async getServers(): Promise<ServerInfo[]> {
+  async getServers(registryServers?: string[]): Promise<ServerInfo[]> {
     if (!this.initialized) {
       throw new Error(
         "Storage manager not initialized. Call initialize() first.",
@@ -140,7 +141,7 @@ export class StorageManager {
       throw new Error("No storage backends registered");
     }
 
-    return await backend.getServers();
+    return await backend.getServers(registryServers);
   }
 
   /**
