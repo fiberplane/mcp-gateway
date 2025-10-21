@@ -75,7 +75,7 @@ function App() {
     <div className="min-h-screen bg-muted">
       <TopNavigation />
 
-      <main className="mx-auto px-7 py-8">
+      <main className="max-w-7xl mx-auto px-6 py-8">
         <h1 className="text-2xl font-semibold text-foreground mb-6">
           MCP server logs
         </h1>

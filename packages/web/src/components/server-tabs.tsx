@@ -21,19 +21,27 @@ function getTextColor(status: ServerStatus, isSelected: boolean): string {
   if (isSelected) {
     return "text-primary-foreground";
   }
-  // Offline servers get red text
+  // Offline servers get destructive (red) text from design system
   if (status === "offline") {
-    return "text-red-600";
+    return "text-destructive";
   }
   return "text-foreground";
 }
 
 export function ServerTabs({ value, onChange }: ServerTabsProps) {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["servers"],
     queryFn: () => api.getServers(),
     refetchInterval: 5000, // Refresh less often than logs
   });
+
+  if (error) {
+    return (
+      <div className="text-sm text-destructive">
+        Failed to load servers. Please try refreshing the page.
+      </div>
+    );
+  }
 
   if (isLoading || !data) {
     return (
@@ -77,10 +85,18 @@ export function ServerTabs({ value, onChange }: ServerTabsProps) {
           >
             <span
               className={`w-2 h-2 rounded-full ${getStatusColor(server.status)}`}
-              title={`${server.status} status`}
+              aria-hidden="true"
             />
+            <span className="sr-only">{server.status}</span>
             <span className={getTextColor(server.status, isSelected)}>
               {server.name}
+              {server.logCount > 0 && ` (${server.logCount})`}
+              {server.status === "offline" && (
+                <span className="text-xs ml-1">(offline)</span>
+              )}
+              {server.status === "deleted" && (
+                <span className="text-xs ml-1 opacity-70">(deleted)</span>
+              )}
             </span>
           </button>
         );
