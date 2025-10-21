@@ -522,6 +522,7 @@ export async function createProxyRoutes(options: {
             "GET /mcp", // method for logging
             null, // no request ID for GET
             deps,
+            undefined, // no httpContext for GET
             onLog,
           ).catch((error) => {
             // Log capture errors but don't let them crash the server
