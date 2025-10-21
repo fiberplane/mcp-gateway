@@ -72,7 +72,7 @@ function App() {
   });
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-screen bg-muted">
       <TopNavigation />
 
       <main className="mx-auto px-7 py-8">
