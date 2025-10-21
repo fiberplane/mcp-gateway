@@ -174,11 +174,11 @@ export function createApiRoutes(
   });
 
   /**
-   * POST /sessions/clear
+   * POST /logs/clear
    *
-   * Clear all session data (client info and server info)
+   * Clear all captured logs and session metadata
    */
-  app.post("/sessions/clear", async (c) => {
+  app.post("/logs/clear", async (c) => {
     await queries.clearSessions();
 
     return c.json({ success: true });

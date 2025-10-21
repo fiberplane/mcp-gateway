@@ -144,7 +144,7 @@ class APIClient {
    * Clear all session data (client info and server info)
    */
   async clearSessions(): Promise<{ success: boolean }> {
-    const response = await fetch(`${this.baseURL}/sessions/clear`, {
+    const response = await fetch(`${this.baseURL}/logs/clear`, {
       method: "POST",
     });
     if (!response.ok) {

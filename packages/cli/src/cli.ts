@@ -426,6 +426,7 @@ export async function runCli(): Promise<void> {
         <div class="endpoint-item"><span class="endpoint-method">GET</span> /api/servers - List MCP servers</div>
         <div class="endpoint-item"><span class="endpoint-method">GET</span> /api/sessions - List sessions</div>
         <div class="endpoint-item"><span class="endpoint-method">GET</span> /api/clients - List clients</div>
+        <div class="endpoint-item"><span class="endpoint-method">POST</span> /api/logs/clear - Clear captured logs</div>
         <div class="endpoint-item"><span class="endpoint-method">GET</span> /ui - Web interface</div>
       </div>
     </div>
