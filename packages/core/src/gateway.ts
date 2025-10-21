@@ -8,9 +8,11 @@ import type {
   Registry,
   ServerHealth,
 } from "@fiberplane/mcp-gateway-types";
+import { mcpServerInfoSchema } from "@fiberplane/mcp-gateway-types";
 import { SqliteStorageBackend } from "./capture/backends/sqlite-backend.js";
 import type { SSEEvent } from "./capture/sse-parser.js";
 import { StorageManager } from "./capture/storage-manager.js";
+import { logger } from "./logger.js";
 
 /**
  * Gateway instance - scoped to a single storage directory
@@ -336,28 +338,19 @@ class ServerInfoStore {
   }
 
   private normalizeServerInfo(server: unknown): McpServerInfo | undefined {
-    if (!server || typeof server !== "object") {
+    if (!server) {
       return undefined;
     }
 
-    const candidate = server as Partial<McpServerInfo>;
-
-    if (typeof candidate.name !== "string" || candidate.name.length === 0) {
+    const result = mcpServerInfoSchema.safeParse(server);
+    if (!result.success) {
+      logger.debug("Discarding invalid server info from session metadata", {
+        issues: result.error.issues,
+      });
       return undefined;
     }
 
-    if (
-      typeof candidate.version !== "string" ||
-      candidate.version.length === 0
-    ) {
-      return undefined;
-    }
-
-    return {
-      name: candidate.name,
-      version: candidate.version,
-      title: candidate.title,
-    };
+    return result.data;
   }
 
   store(sessionId: string, serverInfo: McpServerInfo): void {

@@ -36,6 +36,15 @@ import type { z } from "zod";
 const SESSIONLESS_ID = "stateless";
 
 /**
+ * Hono context variables for temporary session metadata
+ * Used to store client/server info during stateless session transitions
+ */
+type Variables = {
+  tempClientInfo?: ClientInfo;
+  tempServerInfo?: McpServerInfo;
+};
+
+/**
  * HTTP context for capturing request metadata
  */
 export interface HttpContext {
@@ -199,7 +208,7 @@ function buildProxyHeaders(
 // For stateless requests, store in context to avoid race conditions
 // For established sessions, store in Gateway stores
 function handleInitializeClientInfo(
-  c: Context,
+  c: Context<{ Variables: Variables }>,
   sessionId: string,
   jsonRpcRequest: JsonRpcRequest,
   deps: ProxyDependencies,
@@ -219,7 +228,7 @@ function handleInitializeClientInfo(
 
         // For stateless sessions, also store in context to avoid race conditions
         if (sessionId === SESSIONLESS_ID) {
-          c.set("tempClientInfo" as never, clientResult.data as never);
+          c.set("tempClientInfo", clientResult.data);
         }
       }
     }
@@ -244,7 +253,7 @@ async function updateServerActivity(
 // When an initialize request moves from stateless to a new session ID,
 // copy metadata from request context to Gateway stores for the new session
 async function handleSessionTransition(
-  c: Context,
+  c: Context<{ Variables: Variables }>,
   _storage: string,
   _server: McpServer,
   targetResponse: Response,
@@ -262,17 +271,13 @@ async function handleSessionTransition(
 
   if (responseSessionId) {
     // Copy client info from context to new session (stored there to avoid race conditions)
-    const clientInfo = c.get("tempClientInfo" as never) as
-      | ClientInfo
-      | undefined;
+    const clientInfo = c.get("tempClientInfo");
     if (clientInfo) {
       deps.storeClientInfoForSession(responseSessionId, clientInfo);
     }
 
     // Copy server info from context to new session
-    const serverInfo = c.get("tempServerInfo" as never) as
-      | McpServerInfo
-      | undefined;
+    const serverInfo = c.get("tempServerInfo");
     if (serverInfo) {
       deps.storeServerInfoForSession(responseSessionId, serverInfo);
     }
@@ -412,7 +417,7 @@ export async function createProxyRoutes(options: {
   dependencies: ProxyDependencies;
   onLog?: (entry: LogEntry) => void;
   onRegistryUpdate?: () => void;
-}): Promise<Hono> {
+}): Promise<Hono<{ Variables: Variables }>> {
   const {
     registry,
     storageDir,
@@ -420,7 +425,7 @@ export async function createProxyRoutes(options: {
     onLog,
     onRegistryUpdate,
   } = options;
-  const app = new Hono();
+  const app = new Hono<{ Variables: Variables }>();
 
   // Determine storage directory
   const storage = getStorageRoot(storageDir);
@@ -745,12 +750,12 @@ export async function createProxyRoutes(options: {
       // For stateless requests, check context first (to avoid race conditions)
       const clientInfo =
         sessionId === SESSIONLESS_ID
-          ? (c.get("tempClientInfo" as never) as ClientInfo | undefined) ||
+          ? c.get("tempClientInfo") ||
             (await deps.getClientInfoForSession(sessionId))
           : await deps.getClientInfoForSession(sessionId);
       const serverInfo =
         sessionId === SESSIONLESS_ID
-          ? (c.get("tempServerInfo" as never) as McpServerInfo | undefined) ||
+          ? c.get("tempServerInfo") ||
             (await deps.getServerInfoForSession(sessionId))
           : await deps.getServerInfoForSession(sessionId);
 
@@ -906,7 +911,7 @@ export async function createProxyRoutes(options: {
 
               // For stateless sessions, also store in context to avoid race conditions
               if (sessionId === SESSIONLESS_ID) {
-                c.set("tempServerInfo" as never, serverResult.data as never);
+                c.set("tempServerInfo", serverResult.data);
               }
 
               // Backfill server info on the initialize request record
@@ -927,12 +932,12 @@ export async function createProxyRoutes(options: {
         // For stateless requests, check context first (to avoid race conditions)
         const updatedClientInfo =
           sessionId === SESSIONLESS_ID
-            ? (c.get("tempClientInfo" as never) as ClientInfo | undefined) ||
+            ? c.get("tempClientInfo") ||
               (await deps.getClientInfoForSession(sessionId))
             : await deps.getClientInfoForSession(sessionId);
         const updatedServerInfo =
           sessionId === SESSIONLESS_ID
-            ? (c.get("tempServerInfo" as never) as McpServerInfo | undefined) ||
+            ? c.get("tempServerInfo") ||
               (await deps.getServerInfoForSession(sessionId))
             : await deps.getServerInfoForSession(sessionId);
 

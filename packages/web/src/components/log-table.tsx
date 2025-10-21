@@ -100,7 +100,7 @@ export function LogTable({
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
   // Define columns configuration
-  const columns = useMemo(createColumns(), []);
+  const columns = useMemo(() => createColumns(), []);
 
   // Filter visible columns
   const visibleColumns = useMemo(
@@ -349,8 +349,8 @@ interface LogDetailsProps {
   log: LogEntry;
 }
 
-function createColumns(): () => Column[] {
-  return () => [
+function createColumns(): Column[] {
+  return [
     {
       id: "timestamp",
       header: "Timestamp",

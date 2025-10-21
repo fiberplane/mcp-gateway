@@ -272,9 +272,36 @@ export async function getServerMetrics(
   };
 }
 
-// TODO: Add pruneServerLogs function for cleanup of historical data
-// This would allow users to delete logs for removed servers if desired:
-// export async function pruneServerLogs(db: BunSQLiteDatabase<typeof schema>, serverName: string): Promise<number>
+/**
+ * Future enhancement: Add pruneServerLogs function for cleanup of historical data
+ *
+ * Purpose: Allow users to delete logs for removed servers to reclaim disk space
+ * and improve query performance for large databases.
+ *
+ * Proposed signature:
+ * ```typescript
+ * export async function pruneServerLogs(
+ *   db: BunSQLiteDatabase<typeof schema>,
+ *   serverName: string
+ * ): Promise<number>
+ * ```
+ *
+ * Implementation approach:
+ * 1. Delete logs matching the serverName using `db.delete(logs).where(eq(logs.serverName, serverName))`
+ * 2. Optionally clean up orphaned session_metadata records for that server
+ * 3. Return the count of deleted rows for feedback
+ * 4. Consider adding a timestamp filter to prune only old logs (e.g., older than 30 days)
+ *
+ * Use cases:
+ * - User removes a server from the registry and wants to clean up its logs
+ * - Periodic cleanup of test/development server logs
+ * - Disk space management for long-running gateways
+ *
+ * Considerations:
+ * - Should be exposed via the Gateway API under `logs.pruneServer(serverName)`
+ * - May want to add a confirmation prompt in the CLI before deletion
+ * - Consider adding a "dry run" option to preview deletion count
+ */
 
 /**
  * Upsert session metadata (insert or update)
