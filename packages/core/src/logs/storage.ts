@@ -10,7 +10,14 @@ import { and, count, desc, eq, gt, like, lt, sql } from "drizzle-orm";
 import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
 import { logger } from "../logger.js";
 import type * as schema from "./schema.js";
-import { type Log, logs, type NewLog } from "./schema.js";
+import {
+  type Log,
+  logs,
+  type NewLog,
+  type NewSessionMetadata,
+  sessionMetadata,
+  type SessionMetadata,
+} from "./schema.js";
 
 /**
  * Insert a new log entry into the database
@@ -39,12 +46,25 @@ export async function insertLog(
     // Server identification from MCP initialize response
     serverVersion: record.metadata.server?.version ?? null,
     serverTitle: record.metadata.server?.title ?? null,
+    serverInfoName:
+      record.metadata.server?.name ?? record.metadata.serverName ?? null,
     // HTTP context for fallback identification
     userAgent: record.metadata.userAgent ?? null,
     clientIp: record.metadata.clientIp ?? null,
   };
 
   await db.insert(logs).values(newLog);
+
+  // Also persist session metadata for this session
+  // This ensures metadata survives restarts and cache clears
+  if (record.metadata.client || record.metadata.server) {
+    await upsertSessionMetadata(db, {
+      sessionId: record.metadata.sessionId,
+      serverName: record.metadata.serverName,
+      client: record.metadata.client,
+      server: record.metadata.server,
+    });
+  }
 }
 
 /**
@@ -63,6 +83,7 @@ export async function updateServerInfoForInitializeRequest(
   await db
     .update(logs)
     .set({
+      serverInfoName: serverInfo.name ?? serverName,
       serverVersion: serverInfo.version,
       serverTitle: serverInfo.title ?? null,
     })
@@ -228,6 +249,133 @@ export async function getClients(
 }
 
 /**
+ * Get server metrics (derived from logs)
+ *
+ * Returns activity metrics for a specific server that are computed
+ * from the logs table rather than stored in the registry.
+ */
+export async function getServerMetrics(
+  db: BunSQLiteDatabase<typeof schema>,
+  serverName: string,
+): Promise<{ lastActivity: string | null; exchangeCount: number }> {
+  const result = await db
+    .select({
+      lastActivity: sql<string | null>`MAX(${logs.timestamp})`,
+      exchangeCount: count(logs.id),
+    })
+    .from(logs)
+    .where(eq(logs.serverName, serverName));
+
+  const row = result[0];
+  return {
+    lastActivity: row?.lastActivity ?? null,
+    exchangeCount: row?.exchangeCount ?? 0,
+  };
+}
+
+// TODO: Add pruneServerLogs function for cleanup of historical data
+// This would allow users to delete logs for removed servers if desired:
+// export async function pruneServerLogs(db: BunSQLiteDatabase<typeof schema>, serverName: string): Promise<number>
+
+/**
+ * Upsert session metadata (insert or update)
+ *
+ * This persists session metadata to SQLite, ensuring it survives
+ * gateway restarts and in-memory cache clears.
+ */
+export async function upsertSessionMetadata(
+  db: BunSQLiteDatabase<typeof schema>,
+  data: {
+    sessionId: string;
+    serverName: string;
+    client?: { name: string; version: string; title?: string };
+    server?: { name?: string; version: string; title?: string };
+  },
+): Promise<void> {
+  const timestamp = new Date().toISOString();
+
+  const metadata: NewSessionMetadata = {
+    sessionId: data.sessionId,
+    serverName: data.serverName,
+    clientName: data.client?.name ?? null,
+    clientVersion: data.client?.version ?? null,
+    clientTitle: data.client?.title ?? null,
+    serverVersion: data.server?.version ?? null,
+    serverTitle: data.server?.title ?? null,
+    serverInfoName: data.server?.name ?? data.serverName ?? null,
+    firstSeen: timestamp,
+    lastSeen: timestamp,
+  };
+
+  await db
+    .insert(sessionMetadata)
+    .values(metadata)
+    .onConflictDoUpdate({
+      target: sessionMetadata.sessionId,
+      set: {
+        // Update only lastSeen and metadata fields
+        lastSeen: timestamp,
+        clientName: metadata.clientName,
+        clientVersion: metadata.clientVersion,
+        clientTitle: metadata.clientTitle,
+        serverVersion: metadata.serverVersion,
+        serverTitle: metadata.serverTitle,
+        serverInfoName: metadata.serverInfoName,
+      },
+    });
+}
+
+/**
+ * Get session metadata by sessionId
+ *
+ * Returns null if session metadata doesn't exist in the database.
+ */
+export async function getSessionMetadata(
+  db: BunSQLiteDatabase<typeof schema>,
+  sessionId: string,
+): Promise<{
+  client?: { name: string; version: string; title?: string };
+  server?: { name?: string; version: string; title?: string };
+} | null> {
+  const result = await db
+    .select()
+    .from(sessionMetadata)
+    .where(eq(sessionMetadata.sessionId, sessionId))
+    .limit(1);
+
+  const row = result[0];
+  if (!row) {
+    return null;
+  }
+
+  // Reconstruct client info if any fields are present
+  const client =
+    row.clientName || row.clientVersion || row.clientTitle
+      ? {
+          name: row.clientName ?? "",
+          version: row.clientVersion ?? "",
+          title: row.clientTitle ?? undefined,
+        }
+      : undefined;
+
+  // Reconstruct server info if any fields are present
+  const server = row.serverVersion
+    ? {
+        name: row.serverInfoName ?? row.serverName,
+        version: row.serverVersion,
+        title: row.serverTitle ?? undefined,
+      }
+    : undefined;
+
+  // Return null if neither client nor server info exists
+  if (!client && !server) {
+    return null;
+  }
+
+  return { client, server };
+}
+
+/**
  * Safely parse JSON from database, handling corruption gracefully
  */
 function safeJsonParse<T = unknown>(json: string | null): T | undefined {
@@ -260,14 +408,13 @@ function rowToRecord(row: Log): CaptureRecord {
       : undefined;
 
   // Reconstruct server info if any fields are present
-  const server =
-    row.serverVersion || row.serverTitle
-      ? {
-          name: row.serverName, // Use serverName from metadata
-          version: row.serverVersion ?? "",
-          title: row.serverTitle ?? undefined,
-        }
-      : undefined;
+  const server = row.serverVersion
+    ? {
+        name: row.serverInfoName ?? row.serverName,
+        version: row.serverVersion,
+        title: row.serverTitle ?? undefined,
+      }
+    : undefined;
 
   return {
     timestamp: row.timestamp,

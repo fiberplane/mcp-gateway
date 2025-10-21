@@ -100,10 +100,7 @@ export function LogTable({
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
   // Define columns configuration
-  const columns = useMemo(
-    createColumns(),
-    [],
-  );
+  const columns = useMemo(createColumns(), []);
 
   // Filter visible columns
   const visibleColumns = useMemo(
@@ -370,16 +367,17 @@ function createColumns(): () => Column[] {
       id: "client",
       header: "Client",
       sortField: "client",
-      cell: (log) => log.metadata.client ? (
-        <div className="flex flex-col">
-          <span className="font-medium">{log.metadata.client.name}</span>
-          <span className="text-xs text-muted-foreground">
-            {log.metadata.client.version}
-          </span>
-        </div>
-      ) : (
-        <span className="text-muted-foreground">-</span>
-      ),
+      cell: (log) =>
+        log.metadata.client ? (
+          <div className="flex flex-col">
+            <span className="font-medium">{log.metadata.client.name}</span>
+            <span className="text-xs text-muted-foreground">
+              {log.metadata.client.version}
+            </span>
+          </div>
+        ) : (
+          <span className="text-muted-foreground">-</span>
+        ),
     },
     {
       id: "method",
@@ -404,16 +402,17 @@ function createColumns(): () => Column[] {
       header: "Server",
       sortField: "server",
       isVisible: (logs) => logs.some((log) => log.metadata.server),
-      cell: (log) => log.metadata.server ? (
-        <div className="flex flex-col">
-          <span className="font-medium">{log.metadata.server.name}</span>
-          <span className="text-xs text-muted-foreground">
-            {log.metadata.server.version}
-          </span>
-        </div>
-      ) : (
-        <span className="text-muted-foreground">-</span>
-      ),
+      cell: (log) =>
+        log.metadata.server ? (
+          <div className="flex flex-col">
+            <span className="font-medium">{log.metadata.server.name}</span>
+            <span className="text-xs text-muted-foreground">
+              {log.metadata.server.version}
+            </span>
+          </div>
+        ) : (
+          <span className="text-muted-foreground">-</span>
+        ),
     },
     {
       id: "session",
@@ -440,6 +439,9 @@ function createColumns(): () => Column[] {
 
 function LogDetails({ log }: LogDetailsProps) {
   const [copied, setCopied] = useState<"request" | "response" | null>(null);
+
+  // Check if this is a notification (id === null means notification)
+  const isNotification = log.id === null;
 
   // Memoize formatted JSON to avoid re-stringifying on every render
   const formattedRequest = useMemo(
@@ -490,7 +492,8 @@ function LogDetails({ log }: LogDetailsProps) {
           </pre>
         </div>
       ) : null}
-      {formattedResponse ? (
+      {/* Don't show response section for notifications (id === null) */}
+      {formattedResponse && !isNotification ? (
         <div className="flex-1">
           <div className="flex justify-between items-center mb-2.5">
             <h4 className="text-sm font-semibold text-foreground">Response</h4>

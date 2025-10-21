@@ -240,6 +240,27 @@ export class SqliteStorageBackend implements StorageBackend {
     }
   }
 
+  async getSessionMetadata(sessionId: string): Promise<{
+    client?: { name: string; version: string; title?: string };
+    server?: { name?: string; version: string; title?: string };
+  } | null> {
+    if (!this.db || !this.initialized) {
+      logger.debug("SQLite backend not ready, returning null for session metadata");
+      return null;
+    }
+
+    try {
+      const { getSessionMetadata } = await import("../../logs/storage.js");
+      return await getSessionMetadata(this.db, sessionId);
+    } catch (error) {
+      logger.error("SQLite getSessionMetadata failed", {
+        error: error instanceof Error ? error.message : String(error),
+        sessionId,
+      });
+      throw error;
+    }
+  }
+
   async close(): Promise<void> {
     if (this.sqlite) {
       try {
@@ -254,5 +275,9 @@ export class SqliteStorageBackend implements StorageBackend {
         });
       }
     }
+  }
+
+  getDb(): BunSQLiteDatabase<typeof schema> | null {
+    return this.db;
   }
 }

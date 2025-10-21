@@ -27,6 +27,7 @@ export const logs = sqliteTable(
     // Server identification from MCP initialize response
     serverVersion: text("server_version"),
     serverTitle: text("server_title"),
+    serverInfoName: text("server_info_name"),
     // HTTP context for fallback identification
     userAgent: text("user_agent"),
     clientIp: text("client_ip"),
@@ -57,3 +58,40 @@ export const logs = sqliteTable(
 
 export type Log = typeof logs.$inferSelect;
 export type NewLog = typeof logs.$inferInsert;
+
+/**
+ * SQLite table schema for session metadata
+ *
+ * This table stores persistent session metadata (client and server information)
+ * that survives gateway restarts and session clears. This ensures we can always
+ * retrieve session metadata even when in-memory stores are empty.
+ */
+export const sessionMetadata = sqliteTable(
+  "session_metadata",
+  {
+    sessionId: text("session_id").primaryKey(),
+    serverName: text("server_name").notNull(),
+    // Client identification from MCP initialize handshake
+    clientName: text("client_name"),
+    clientVersion: text("client_version"),
+    clientTitle: text("client_title"),
+    // Server identification from MCP initialize response
+    serverVersion: text("server_version"),
+    serverTitle: text("server_title"),
+    serverInfoName: text("server_info_name"),
+    // Timestamps for tracking session lifecycle
+    firstSeen: text("first_seen").notNull(),
+    lastSeen: text("last_seen").notNull(),
+  },
+  (table) => ({
+    // Index for filtering by server
+    serverNameIdx: index("session_metadata_idx_server_name").on(
+      table.serverName,
+    ),
+    // Index for time-based queries
+    lastSeenIdx: index("session_metadata_idx_last_seen").on(table.lastSeen),
+  }),
+);
+
+export type SessionMetadata = typeof sessionMetadata.$inferSelect;
+export type NewSessionMetadata = typeof sessionMetadata.$inferInsert;

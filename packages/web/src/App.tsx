@@ -104,9 +104,8 @@ function App() {
       setSelectedIds(new Set());
     } catch (error) {
       // Set user-facing error message
-      const errorMessage = error instanceof Error
-        ? error.message
-        : "An unknown error occurred";
+      const errorMessage =
+        error instanceof Error ? error.message : "An unknown error occurred";
       setClearError(`Failed to clear sessions: ${errorMessage}`);
       // biome-ignore lint/suspicious/noConsole: Error logging for debugging
       console.error("Failed to clear sessions:", error);

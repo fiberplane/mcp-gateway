@@ -5,12 +5,19 @@ import type {
   JsonRpcResponse,
   McpServerInfo,
 } from "@fiberplane/mcp-gateway-types";
-import { captureRecordSchema } from "@fiberplane/mcp-gateway-types";
+import {
+  captureRecordSchema,
+  clientInfoSchema,
+  mcpServerInfoSchema,
+} from "@fiberplane/mcp-gateway-types";
 import { logger } from "../logger";
 import type { SSEEvent } from "./sse-parser";
 
 // In-memory storage for client info by session
 const sessionClientInfo = new Map<string, ClientInfo>();
+
+// In-memory storage for server info by session
+const sessionServerInfo = new Map<string, McpServerInfo>();
 
 // Store request start times for duration calculation
 const requestStartTimes = new Map<string | number, number>();
@@ -34,6 +41,7 @@ export function getClientInfo(sessionId: string): ClientInfo | undefined {
 // Clear client info for session
 export function clearClientInfo(sessionId: string): void {
   sessionClientInfo.delete(sessionId);
+  sessionServerInfo.delete(sessionId);
 }
 
 // Get all active session IDs
@@ -57,6 +65,42 @@ export interface HttpContext {
   clientIp?: string;
 }
 
+function sanitizeClientInfo(info?: ClientInfo): ClientInfo | undefined {
+  if (!info) {
+    return undefined;
+  }
+
+  const result = clientInfoSchema.safeParse(info);
+  if (!result.success) {
+    logger.debug("Discarding invalid client info for capture record", {
+      issues: result.error.issues,
+    });
+    return undefined;
+  }
+
+  return result.data;
+}
+
+function sanitizeServerInfo(info?: McpServerInfo): McpServerInfo | undefined {
+  if (!info) {
+    return undefined;
+  }
+
+  const result = mcpServerInfoSchema.safeParse(info);
+  if (!result.success) {
+    logger.debug("Discarding invalid server info for capture record", {
+      issues: result.error.issues,
+    });
+    return undefined;
+  }
+
+  return result.data;
+}
+
+function getStoredServerInfo(sessionId: string): McpServerInfo | undefined {
+  return sessionServerInfo.get(sessionId);
+}
+
 // Create capture record for request only
 export function createRequestCaptureRecord(
   serverName: string,
@@ -67,7 +111,16 @@ export function createRequestCaptureRecord(
   serverInfo?: McpServerInfo,
   requestTracker?: RequestTracker,
 ): CaptureRecord {
-  const client = clientInfo ?? getClientInfo(sessionId);
+  const client = sanitizeClientInfo(clientInfo ?? getClientInfo(sessionId));
+  const server = sanitizeServerInfo(serverInfo);
+
+  if (client) {
+    sessionClientInfo.set(sessionId, client);
+  }
+
+  if (server) {
+    sessionServerInfo.set(sessionId, server);
+  }
 
   // Store start time and method if request expects response (has id)
   if (request.id != null) {
@@ -89,7 +142,7 @@ export function createRequestCaptureRecord(
       durationMs: 0, // Unknown at request time
       httpStatus: 0, // Unknown at request time
       client,
-      server: serverInfo,
+      server,
       userAgent: httpContext?.userAgent,
       clientIp: httpContext?.clientIp,
     },
@@ -118,7 +171,16 @@ export function createResponseCaptureRecord(
   serverInfo?: McpServerInfo,
   requestTracker?: RequestTracker,
 ): CaptureRecord {
-  const client = clientInfo ?? getClientInfo(sessionId);
+  const client = sanitizeClientInfo(clientInfo ?? getClientInfo(sessionId));
+  const server = sanitizeServerInfo(serverInfo ?? getStoredServerInfo(sessionId));
+
+  if (client) {
+    sessionClientInfo.set(sessionId, client);
+  }
+
+  if (server) {
+    sessionServerInfo.set(sessionId, server);
+  }
 
   // Calculate duration and cleanup if we tracked the request
   let durationMs = 0;
@@ -145,7 +207,7 @@ export function createResponseCaptureRecord(
       durationMs,
       httpStatus,
       client,
-      server: serverInfo,
+      server,
       userAgent: httpContext?.userAgent,
       clientIp: httpContext?.clientIp,
     },
@@ -209,7 +271,10 @@ export function createSSEEventCaptureRecord(
   httpContext?: HttpContext,
   clientInfo?: ClientInfo,
 ): CaptureRecord {
-  const client = clientInfo ?? getClientInfo(sessionId);
+  const client = sanitizeClientInfo(clientInfo ?? getClientInfo(sessionId));
+  if (client) {
+    sessionClientInfo.set(sessionId, client);
+  }
 
   const record: CaptureRecord = {
     timestamp: new Date().toISOString(),
@@ -272,7 +337,16 @@ export function createSSEJsonRpcCaptureRecord(
   serverInfo?: McpServerInfo,
   requestTracker?: RequestTracker,
 ): CaptureRecord {
-  const client = clientInfo ?? getClientInfo(sessionId);
+  const client = sanitizeClientInfo(clientInfo ?? getClientInfo(sessionId));
+  const server = sanitizeServerInfo(serverInfo ?? getStoredServerInfo(sessionId));
+
+  if (client) {
+    sessionClientInfo.set(sessionId, client);
+  }
+
+  if (server) {
+    sessionServerInfo.set(sessionId, server);
+  }
 
   const method = resolveJsonRpcMethod(jsonRpcMessage, requestTracker);
 
@@ -315,7 +389,7 @@ export function createSSEJsonRpcCaptureRecord(
       durationMs,
       httpStatus: 200,
       client,
-      server: serverInfo,
+      server,
       userAgent: httpContext?.userAgent,
       clientIp: httpContext?.clientIp,
       sseEventId: sseEvent.id,

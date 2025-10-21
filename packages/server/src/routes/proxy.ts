@@ -108,13 +108,13 @@ export interface ProxyDependencies {
   storeClientInfoForSession: (sessionId: string, info: ClientInfo) => void;
 
   /** Get client info for a session */
-  getClientInfoForSession: (sessionId: string) => ClientInfo | undefined;
+  getClientInfoForSession: (sessionId: string) => Promise<ClientInfo | undefined>;
 
   /** Store server info for a session */
   storeServerInfoForSession: (sessionId: string, info: McpServerInfo) => void;
 
   /** Get server info for a session */
-  getServerInfoForSession: (sessionId: string) => McpServerInfo | undefined;
+  getServerInfoForSession: (sessionId: string) => Promise<McpServerInfo | undefined>;
 
   /** Update server info for an initialize request after getting the response */
   updateServerInfoForInitializeRequest: (
@@ -188,7 +188,10 @@ function buildProxyHeaders(
 }
 
 // Helper: Handle client info from initialize
+// For stateless requests, store in context to avoid race conditions
+// For established sessions, store in Gateway stores
 function handleInitializeClientInfo(
+  c: Context,
   sessionId: string,
   jsonRpcRequest: JsonRpcRequest,
   deps: ProxyDependencies,
@@ -198,35 +201,28 @@ function handleInitializeClientInfo(
     if (params.clientInfo) {
       const clientResult = clientInfoSchema.safeParse(params.clientInfo);
       if (clientResult.success) {
+        // Always store in Gateway stores for the current session
         deps.storeClientInfoForSession(sessionId, clientResult.data);
+
+        // Also store for stateless as fallback (for sessions that haven't received their ID yet)
+        if (sessionId !== SESSIONLESS_ID) {
+          deps.storeClientInfoForSession(SESSIONLESS_ID, clientResult.data);
+        }
+
+        // For stateless sessions, also store in context to avoid race conditions
+        if (sessionId === SESSIONLESS_ID) {
+          c.set("tempClientInfo" as never, clientResult.data as never);
+        }
       }
     }
   }
 }
 
-// Helper: Update server activity
-// This function is called for each successful proxy request to:
-// 1. Update the server's last activity timestamp
-// 2. Increment the exchange counter for metrics
-// 3. Persist the updated registry to disk
-// 4. Notify the TUI to re-render with updated server stats
-async function updateServerActivity(
-  storage: string,
-  registry: Registry,
-  server: McpServer,
-  deps: ProxyDependencies,
-  onRegistryUpdate?: () => void,
-): Promise<void> {
-  server.lastActivity = new Date().toISOString();
-  server.exchangeCount = server.exchangeCount + 1;
-  await deps.saveRegistryToStorage(storage, registry);
-  onRegistryUpdate?.();
-}
-
 // Helper: Handle session transition for initialize
 // When an initialize request moves from stateless to a new session ID,
-// copy over the client info and server info to the new session
+// copy metadata from request context to Gateway stores for the new session
 async function handleSessionTransition(
+  c: Context,
   _storage: string,
   _server: McpServer,
   targetResponse: Response,
@@ -243,14 +239,18 @@ async function handleSessionTransition(
   );
 
   if (responseSessionId) {
-    // Copy client info to new session
-    const clientInfo = deps.getClientInfoForSession(sessionId);
+    // Copy client info from context to new session (stored there to avoid race conditions)
+    const clientInfo = c.get("tempClientInfo" as never) as
+      | ClientInfo
+      | undefined;
     if (clientInfo) {
       deps.storeClientInfoForSession(responseSessionId, clientInfo);
     }
 
-    // Copy server info to new session
-    const serverInfo = deps.getServerInfoForSession(sessionId);
+    // Copy server info from context to new session
+    const serverInfo = c.get("tempServerInfo" as never) as
+      | McpServerInfo
+      | undefined;
     if (serverInfo) {
       deps.storeServerInfoForSession(responseSessionId, serverInfo);
     }
@@ -318,7 +318,7 @@ async function captureAuthError(
   deps: ProxyDependencies,
   httpContext?: HttpContext,
 ): Promise<void> {
-  const clientInfo = deps.getClientInfoForSession(sessionId);
+  const clientInfo = await deps.getClientInfoForSession(sessionId);
 
   // Try to parse response body as JSON-RPC error
   let response: JsonRpcResponse | undefined;
@@ -389,7 +389,7 @@ export async function createProxyRoutes(options: {
     storageDir,
     dependencies: deps,
     onLog,
-    onRegistryUpdate,
+    onRegistryUpdate: _onRegistryUpdate,
   } = options;
   const app = new Hono();
 
@@ -423,11 +423,20 @@ export async function createProxyRoutes(options: {
       };
 
       // Handle initialize method - store client info BEFORE capturing request
-      handleInitializeClientInfo(sessionId, jsonRpcRequest, deps);
+      handleInitializeClientInfo(c, sessionId, jsonRpcRequest, deps);
 
       // Get stored client and server info for this session
-      const clientInfo = deps.getClientInfoForSession(sessionId);
-      const serverInfo = deps.getServerInfoForSession(sessionId);
+      // For stateless requests, check context first (to avoid race conditions)
+      const clientInfo =
+        sessionId === SESSIONLESS_ID
+          ? (c.get("tempClientInfo" as never) as ClientInfo | undefined) ||
+            (await deps.getClientInfoForSession(sessionId))
+          : await deps.getClientInfoForSession(sessionId);
+      const serverInfo =
+        sessionId === SESSIONLESS_ID
+          ? (c.get("tempServerInfo" as never) as McpServerInfo | undefined) ||
+            (await deps.getServerInfoForSession(sessionId))
+          : await deps.getServerInfoForSession(sessionId);
 
       // Capture request immediately (before forwarding)
       const requestRecord = deps.createRequestRecord(
@@ -447,7 +456,6 @@ export async function createProxyRoutes(options: {
       let httpStatus = 200;
 
       try {
-
         // Forward request to target MCP server using Hono proxy helper
         const proxyHeaders = buildProxyHeaders(c, server);
 
@@ -508,15 +516,6 @@ export async function createProxyRoutes(options: {
         if (isSSE) {
           // Handle SSE streaming response
 
-          // Update server activity immediately for SSE
-          await updateServerActivity(
-            storageDir,
-            registry,
-            server,
-            deps,
-            onRegistryUpdate,
-          );
-
           if (!targetResponse.body) {
             throw new Error("SSE response has no body");
           }
@@ -564,7 +563,18 @@ export async function createProxyRoutes(options: {
               result.serverInfo,
             );
             if (serverResult.success) {
+              // Always store in Gateway stores for the current session
               deps.storeServerInfoForSession(sessionId, serverResult.data);
+
+              // Also store for stateless as fallback (for sessions that haven't received their ID yet)
+              if (sessionId !== SESSIONLESS_ID) {
+                deps.storeServerInfoForSession(SESSIONLESS_ID, serverResult.data);
+              }
+
+              // For stateless sessions, also store in context to avoid race conditions
+              if (sessionId === SESSIONLESS_ID) {
+                c.set("tempServerInfo" as never, serverResult.data as never);
+              }
 
               // Backfill server info on the initialize request record
               // The request was captured before we received the response containing serverInfo
@@ -581,8 +591,17 @@ export async function createProxyRoutes(options: {
         }
 
         // Get updated client and server info after initialize response
-        const updatedClientInfo = deps.getClientInfoForSession(sessionId);
-        const updatedServerInfo = deps.getServerInfoForSession(sessionId);
+        // For stateless requests, check context first (to avoid race conditions)
+        const updatedClientInfo =
+          sessionId === SESSIONLESS_ID
+            ? (c.get("tempClientInfo" as never) as ClientInfo | undefined) ||
+              (await deps.getClientInfoForSession(sessionId))
+            : await deps.getClientInfoForSession(sessionId);
+        const updatedServerInfo =
+          sessionId === SESSIONLESS_ID
+            ? (c.get("tempServerInfo" as never) as McpServerInfo | undefined) ||
+              (await deps.getServerInfoForSession(sessionId))
+            : await deps.getServerInfoForSession(sessionId);
 
         // Capture response (both for regular requests and notifications)
         // The upstream server returns a JSON response for all requests, including notifications
@@ -600,6 +619,7 @@ export async function createProxyRoutes(options: {
 
         // Handle initialize → session transition
         await handleSessionTransition(
+          c,
           storageDir,
           server,
           targetResponse,
@@ -617,15 +637,6 @@ export async function createProxyRoutes(options: {
           duration,
           response,
           onLog,
-        );
-
-        // Update server activity
-        await updateServerActivity(
-          storageDir,
-          registry,
-          server,
-          deps,
-          onRegistryUpdate,
         );
 
         // Create new response with the same data and headers
@@ -723,8 +734,8 @@ async function processSSECapture(
           const isResponse = isJsonRpcResponse(jsonRpcMessage);
 
           // Get stored client and server info for this session
-          const clientInfo = deps.getClientInfoForSession(sessionId);
-          const serverInfo = deps.getServerInfoForSession(sessionId);
+          const clientInfo = await deps.getClientInfoForSession(sessionId);
+          const serverInfo = await deps.getServerInfoForSession(sessionId);
 
           const record = await deps.captureSSEJsonRpcMessage(
             server.name,

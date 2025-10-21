@@ -90,10 +90,31 @@ export interface StorageBackend {
   ): Promise<void>;
 
   /**
+   * Get session metadata by sessionId
+   *
+   * Returns client and server information for a specific session.
+   * This metadata is persisted to SQLite and survives gateway restarts.
+   *
+   * @param sessionId - The session ID to retrieve metadata for
+   * @returns Session metadata (client and server info) or null if not found
+   */
+  getSessionMetadata(sessionId: string): Promise<{
+    client?: { name: string; version: string; title?: string };
+    server?: { name?: string; version: string; title?: string };
+  } | null>;
+
+  /**
    * Close/cleanup the storage backend
    * Called on shutdown
    */
   close?(): Promise<void>;
+
+  /**
+   * Get the database connection (if applicable)
+   * Returns the underlying database connection for backends that use one.
+   * Used by MCP tools to query server metrics.
+   */
+  getDb?(): unknown;
 }
 
 /**

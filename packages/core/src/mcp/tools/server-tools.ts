@@ -1,6 +1,9 @@
 import type { Registry } from "@fiberplane/mcp-gateway-types";
+import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
 import type { McpServer } from "mcp-lite";
 import { z } from "zod";
+import type * as schema from "../../logs/schema.js";
+import { getServerMetrics } from "../../logs/storage.js";
 import {
   addServer as addServerToRegistry,
   getServer,
@@ -80,11 +83,13 @@ const ListServersSchema = z.object({
  * @param mcp - The MCP server instance to register tools with
  * @param registry - The gateway's server registry
  * @param storageDir - Directory where registry data is persisted
+ * @param db - Database connection for querying server metrics
  */
 export function createServerTools(
   mcp: McpServer,
   registry: Registry,
   storageDir: string,
+  db: BunSQLiteDatabase<typeof schema>,
 ): void {
   mcp.tool("add_server", {
     description: `Adds a new MCP server to the gateway's registry, making it accessible for proxying requests. This tool validates the server configuration and ensures the server name is unique within the registry.
@@ -204,6 +209,9 @@ The tool will confirm successful removal or provide an error if the server doesn
           };
         }
 
+        // Query metrics from database before removing
+        const metrics = await getServerMetrics(db, existingServer.name);
+
         // Remove server from registry
         const updatedRegistry = removeServerFromRegistry(registry, args.name);
 
@@ -222,8 +230,8 @@ The tool will confirm successful removal or provide an error if the server doesn
 **Removed Server:**
 - Name: ${existingServer.name}
 - URL: ${existingServer.url}
-- Last Activity: ${existingServer.lastActivity || "Never"}
-- Total Requests: ${existingServer.exchangeCount}
+- Last Activity: ${metrics.lastActivity || "Never"}
+- Total Requests: ${metrics.exchangeCount}
 
 The server is no longer accessible at /${args.name}/mcp. Historical capture data has been preserved for analysis.`,
             },
@@ -282,19 +290,27 @@ For large deployments, use the 'concise' format first to get an overview, then q
         };
       }
 
-      // Apply filtering
-      let filteredServers = servers;
+      // Query metrics for all servers from database
+      const serversWithMetrics = await Promise.all(
+        servers.map(async (server) => {
+          const metrics = await getServerMetrics(db, server.name);
+          return { ...server, ...metrics };
+        }),
+      );
+
+      // Apply filtering based on queried metrics
+      let filteredServers = serversWithMetrics;
       const now = Date.now();
       const oneHourAgo = now - 60 * 60 * 1000;
 
       if (args.filter === "active") {
-        filteredServers = servers.filter(
+        filteredServers = serversWithMetrics.filter(
           (server) =>
             server.lastActivity &&
             new Date(server.lastActivity).getTime() > oneHourAgo,
         );
       } else if (args.filter === "inactive") {
-        filteredServers = servers.filter(
+        filteredServers = serversWithMetrics.filter(
           (server) =>
             !server.lastActivity ||
             new Date(server.lastActivity).getTime() <= oneHourAgo,
@@ -387,8 +403,8 @@ ${"─".repeat(50)}
 
 **Summary:**
 - Total Servers: ${servers.length}
-- Active (last hour): ${servers.filter((s) => s.lastActivity && new Date(s.lastActivity).getTime() > oneHourAgo).length}
-- Total Requests Processed: ${servers.reduce((sum, s) => sum + s.exchangeCount, 0)}`,
+- Active (last hour): ${serversWithMetrics.filter((s) => s.lastActivity && new Date(s.lastActivity).getTime() > oneHourAgo).length}
+- Total Requests Processed: ${serversWithMetrics.reduce((sum, s) => sum + s.exchangeCount, 0)}`,
             },
           ],
         };

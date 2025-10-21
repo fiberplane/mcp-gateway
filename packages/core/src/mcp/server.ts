@@ -1,9 +1,11 @@
 import type { Registry } from "@fiberplane/mcp-gateway-types";
+import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { McpServer, RpcError, StreamableHttpTransport } from "mcp-lite";
 import { z } from "zod";
 import { logger } from "../logger";
+import type * as schema from "../logs/schema.js";
 import { createCaptureTools } from "./tools/capture-tools";
 import { createServerTools } from "./tools/server-tools";
 
@@ -59,8 +61,14 @@ export function createMcpServer(
     }
   });
 
+  // Get database connection from gateway for server tools
+  const db = gateway.getDb() as BunSQLiteDatabase<typeof schema> | null;
+  if (!db) {
+    throw new Error("Database not available for MCP server tools");
+  }
+
   // Register server management tools
-  createServerTools(mcp, registry, storageDir);
+  createServerTools(mcp, registry, storageDir, db);
 
   // Register capture analysis tools (search_records with SQLite queries)
   createCaptureTools(mcp, registry, gateway);

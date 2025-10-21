@@ -88,8 +88,11 @@ export interface Gateway {
 
     /**
      * Get client info for a session
+     *
+     * Checks in-memory cache first, then falls back to SQLite.
+     * This ensures session metadata persists across gateway restarts.
      */
-    get(sessionId: string): ClientInfo | undefined;
+    get(sessionId: string): Promise<ClientInfo | undefined>;
 
     /**
      * Clear client info for a session
@@ -118,8 +121,11 @@ export interface Gateway {
 
     /**
      * Get server info for a session
+     *
+     * Checks in-memory cache first, then falls back to SQLite.
+     * This ensures session metadata persists across gateway restarts.
      */
-    get(sessionId: string): McpServerInfo | undefined;
+    get(sessionId: string): Promise<McpServerInfo | undefined>;
 
     /**
      * Clear server info for a session
@@ -250,6 +256,16 @@ export interface Gateway {
   };
 
   /**
+   * Get the database connection for direct queries
+   *
+   * Returns the underlying database connection from the SQLite backend.
+   * Used by MCP tools to query server metrics.
+   *
+   * @returns The database connection, or null if not available
+   */
+  getDb(): unknown;
+
+  /**
    * Close all connections and clean up resources
    */
   close(): Promise<void>;
@@ -268,13 +284,31 @@ export interface GatewayOptions {
 // In-memory storage for client info by session (scoped to Gateway instance)
 class ClientInfoStore {
   private sessionClientInfo = new Map<string, ClientInfo>();
+  private storageManager: StorageManager;
+
+  constructor(storageManager: StorageManager) {
+    this.storageManager = storageManager;
+  }
 
   store(sessionId: string, clientInfo: ClientInfo): void {
     this.sessionClientInfo.set(sessionId, clientInfo);
   }
 
-  get(sessionId: string): ClientInfo | undefined {
-    return this.sessionClientInfo.get(sessionId);
+  async get(sessionId: string): Promise<ClientInfo | undefined> {
+    // Try in-memory first
+    const cached = this.sessionClientInfo.get(sessionId);
+    if (cached) {
+      return cached;
+    }
+
+    // Fall back to SQLite
+    try {
+      const metadata = await this.storageManager.getSessionMetadata(sessionId);
+      return metadata?.client;
+    } catch {
+      // If SQLite query fails, return undefined
+      return undefined;
+    }
   }
 
   clear(sessionId: string): void {
@@ -295,13 +329,66 @@ class ClientInfoStore {
 // In-memory storage for server info by session (scoped to Gateway instance)
 class ServerInfoStore {
   private sessionServerInfo = new Map<string, McpServerInfo>();
+  private storageManager: StorageManager;
+
+  constructor(storageManager: StorageManager) {
+    this.storageManager = storageManager;
+  }
+
+  private normalizeServerInfo(server: unknown): McpServerInfo | undefined {
+    if (!server || typeof server !== "object") {
+      return undefined;
+    }
+
+    const candidate = server as Partial<McpServerInfo>;
+
+    if (typeof candidate.name !== "string" || candidate.name.length === 0) {
+      return undefined;
+    }
+
+    if (typeof candidate.version !== "string" || candidate.version.length === 0) {
+      return undefined;
+    }
+
+    return {
+      name: candidate.name,
+      version: candidate.version,
+      title: candidate.title,
+    };
+  }
 
   store(sessionId: string, serverInfo: McpServerInfo): void {
     this.sessionServerInfo.set(sessionId, serverInfo);
   }
 
-  get(sessionId: string): McpServerInfo | undefined {
-    return this.sessionServerInfo.get(sessionId);
+  async get(sessionId: string): Promise<McpServerInfo | undefined> {
+    // Try to get serverInfo for this session from in-memory first
+    let serverInfo = this.sessionServerInfo.get(sessionId);
+
+    // If not found and this isn't the stateless session, try falling back to stateless in-memory
+    // This ensures server metadata is always available even if session transition fails
+    if (!serverInfo && sessionId !== "stateless") {
+      serverInfo = this.sessionServerInfo.get("stateless");
+    }
+
+    // If still not found, try SQLite
+    if (!serverInfo) {
+      try {
+        const metadata = await this.storageManager.getSessionMetadata(sessionId);
+        serverInfo = this.normalizeServerInfo(metadata?.server);
+        // Also try stateless as fallback in SQLite
+        if (!serverInfo && sessionId !== "stateless") {
+          const statelessMetadata =
+            await this.storageManager.getSessionMetadata("stateless");
+          serverInfo = this.normalizeServerInfo(statelessMetadata?.server);
+        }
+      } catch {
+        // If SQLite query fails, return undefined
+        return undefined;
+      }
+    }
+
+    return serverInfo;
   }
 
   clear(sessionId: string): void {
@@ -477,11 +564,11 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
   storageManager.registerBackend(new SqliteStorageBackend());
   await storageManager.initialize(storageDir);
 
-  // Create scoped client info store
-  const clientInfoStore = new ClientInfoStore();
+  // Create scoped client info store with SQLite fallback
+  const clientInfoStore = new ClientInfoStore(storageManager);
 
-  // Create scoped server info store
-  const serverInfoStore = new ServerInfoStore();
+  // Create scoped server info store with SQLite fallback
+  const serverInfoStore = new ServerInfoStore(storageManager);
 
   // Create scoped request tracker
   const requestTracker = new RequestTracker();
@@ -524,7 +611,7 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
           httpStatus,
           request.method,
           undefined, // httpContext - not available in Gateway.error API
-          clientInfoStore.get(sessionId),
+          await clientInfoStore.get(sessionId),
           undefined, // serverInfo - not available in Gateway.error API
           requestTracker,
         );
@@ -550,7 +637,7 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
             method,
             requestId,
             undefined, // httpContext - not available in Gateway.sseEvent API
-            clientInfoStore.get(sessionId),
+            await clientInfoStore.get(sessionId),
           );
           await storageManager.write(record);
         } catch (error) {
@@ -576,7 +663,7 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
             sseEvent,
             isResponse,
             undefined, // httpContext - not available in Gateway.sseJsonRpc API
-            clientInfoStore.get(sessionId),
+            await clientInfoStore.get(sessionId),
             undefined, // serverInfo - not available in Gateway.sseJsonRpc API
             requestTracker,
           );
@@ -666,6 +753,10 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
       check: async (registry: Registry) => {
         return await healthCheckManager.check(registry);
       },
+    },
+
+    getDb: () => {
+      return storageManager.getDb();
     },
 
     close: async () => {

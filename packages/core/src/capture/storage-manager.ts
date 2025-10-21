@@ -254,6 +254,37 @@ export class StorageManager {
   }
 
   /**
+   * Get session metadata by sessionId from the first available backend
+   *
+   * Returns client and server information for a specific session.
+   * This metadata is persisted to SQLite and survives gateway restarts.
+   *
+   * Note: Currently delegates to the first registered backend.
+   *
+   * @param sessionId - The session ID to retrieve metadata for
+   * @returns Session metadata (client and server info) or null if not found
+   */
+  async getSessionMetadata(sessionId: string): Promise<{
+    client?: { name: string; version: string; title?: string };
+    server?: { name?: string; version: string; title?: string };
+  } | null> {
+    if (!this.initialized) {
+      throw new Error(
+        "Storage manager not initialized. Call initialize() first.",
+      );
+    }
+
+    const backend = this.backends.values().next().value as
+      | StorageBackend
+      | undefined;
+    if (!backend) {
+      throw new Error("No storage backends registered");
+    }
+
+    return await backend.getSessionMetadata(sessionId);
+  }
+
+  /**
    * Close all registered backends
    */
   async close(): Promise<void> {
@@ -285,5 +316,18 @@ export class StorageManager {
    */
   getBackendNames(): string[] {
     return Array.from(this.backends.keys());
+  }
+
+  /**
+   * Get the database connection from the SQLite backend
+   *
+   * Returns the underlying database connection for querying server metrics.
+   * Used by MCP tools to access the database directly.
+   *
+   * @returns The database connection, or null if not available
+   */
+  getDb(): unknown {
+    const sqliteBackend = this.backends.get("sqlite");
+    return sqliteBackend?.getDb?.() ?? null;
   }
 }
