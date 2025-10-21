@@ -14,6 +14,10 @@ import {
 	shouldPromote,
 } from "../../optimization/evaluator";
 import {
+	generateCandidates,
+	generateGoldenPrompts,
+} from "../../optimization/generator";
+import {
 	deletePromotion,
 	loadAllCandidates,
 	loadAllEvalRuns,
@@ -783,56 +787,230 @@ The reversion is immediate - the gateway will use the canonical description for 
 	});
 
 	// ====================
-	// GENERATOR TOOLS (Placeholder - MCP Sampling integration needed)
+	// GENERATOR TOOLS (Claude Code subprocess)
 	// ====================
 
 	mcp.tool("generate_candidates", {
-		description: `Auto-generate optimized description candidates using LLM.
+		description: `Auto-generate optimized description candidates using Claude Code subprocess.
 
-[PLACEHOLDER - Not yet implemented]
+Spawns a Claude Code session to generate multiple description variants for a tool. The generated candidates are automatically saved and ready for evaluation.
 
-This tool will use MCP sampling (or Claude CLI fallback) to automatically generate multiple description candidates for a tool. The LLM will be prompted to create variations optimized for:
+The LLM is prompted to create variations optimized for:
 - Clarity about when to use the tool
 - Precision (avoiding false positives)
 - Conciseness (under 280 characters)
 
-Each generated candidate will automatically be saved via propose_candidate.`,
+Each candidate is automatically saved via propose_candidate. After generation, use generate_golden_prompts and run evaluations to measure effectiveness.`,
 		inputSchema: GenerateCandidatesSchema,
 		handler: async ({ server, tool, count }) => {
-			return {
-				content: [
-					{
-						type: "text",
-						text: `⚠️ generate_candidates is not yet implemented.\n\nFor now, please manually create candidates using propose_candidate.\n\nRequested: ${count} candidates for '${tool}' on server '${server}'`,
-					},
-				],
-				isError: true,
-			};
+			try {
+				// Load canonical tool
+				const canonicalTools = await loadCanonicalTools(storageDir, server);
+				const canonicalTool = canonicalTools.find((t) => t.name === tool);
+
+				if (!canonicalTool) {
+					return {
+						content: [
+							{
+								type: "text",
+								text: `❌ Tool '${tool}' not found in canonical tools for server '${server}'.\n\nMake sure the server is registered and connected.`,
+							},
+						],
+						isError: true,
+					};
+				}
+
+				// Generate candidates using Claude Code subprocess
+				logger.info("Generating candidates using Claude Code", {
+					server,
+					tool,
+					count,
+				});
+
+				const result = await generateCandidates(canonicalTool, count);
+
+				if (result.error) {
+					return {
+						content: [
+							{
+								type: "text",
+								text: `❌ Failed to generate candidates: ${result.error}\n\nStderr: ${result.stderr}`,
+							},
+						],
+						isError: true,
+					};
+				}
+
+				if (result.candidates.length === 0) {
+					return {
+						content: [
+							{
+								type: "text",
+								text: `⚠️ No candidates were generated. Claude may not have followed the output format.\n\nRaw output:\n${result.stdout}`,
+							},
+						],
+						isError: true,
+					};
+				}
+
+				// Save each candidate
+				const savedCandidates: string[] = [];
+				for (const candidate of result.candidates) {
+					const toolCandidate: ToolCandidate = {
+						id: crypto.randomUUID(),
+						toolName: tool,
+						description: candidate.description,
+						example: candidate.example,
+						charCount: candidate.description.length,
+						createdAt: new Date().toISOString(),
+					};
+
+					await saveCandidate(storageDir, server, tool, toolCandidate);
+					savedCandidates.push(
+						`${toolCandidate.id.slice(0, 8)}: ${candidate.description.slice(0, 60)}...`,
+					);
+				}
+
+				return {
+					content: [
+						{
+							type: "text",
+							text: `✅ Generated and saved ${result.candidates.length} candidate(s) for '${tool}'\n\n**Saved Candidates:**\n${savedCandidates.map((c, i) => `${i + 1}. ${c}`).join("\n")}\n\n💡 Next steps:\n1. Generate golden prompts: generate_golden_prompts\n2. Run evaluations against prompts\n3. View results: get_eval_results\n4. Promote best performer: promote_candidate`,
+						},
+					],
+				};
+			} catch (error) {
+				logger.error("Failed to generate candidates", { server, tool, error });
+				return {
+					content: [
+						{
+							type: "text",
+							text: `❌ Failed to generate candidates: ${error instanceof Error ? error.message : "Unknown error"}`,
+						},
+					],
+					isError: true,
+				};
+			}
 		},
 	});
 
 	mcp.tool("generate_golden_prompts", {
-		description: `Auto-generate test prompts for a tool using LLM.
+		description: `Auto-generate test prompts for a tool using Claude Code subprocess.
 
-[PLACEHOLDER - Not yet implemented]
+Spawns a Claude Code session to generate a comprehensive set of golden prompts for evaluating a tool description. Generated prompts are automatically saved and ready for evaluation.
 
-This tool will use MCP sampling (or Claude CLI fallback) to automatically generate a comprehensive set of golden prompts for evaluating a tool description. The LLM will create:
-- Direct prompts (user explicitly names the data source)
-- Indirect prompts (user describes outcome without naming tool)
-- Negative prompts (should use other tools or built-in knowledge)
+The LLM creates three categories:
+- **Direct prompts**: User explicitly names the data source or action
+- **Indirect prompts**: User describes outcome without naming tool
+- **Negative prompts**: Should use other tools or built-in knowledge (tests precision)
 
-Generated prompts will automatically be saved via save_golden_prompts.`,
+Generated prompts will automatically be saved. After generation, run evaluations for your candidates to measure effectiveness.`,
 		inputSchema: GenerateGoldenPromptsSchema,
 		handler: async ({ server, tool, directCount, indirectCount, negativeCount }) => {
-			return {
-				content: [
-					{
-						type: "text",
-						text: `⚠️ generate_golden_prompts is not yet implemented.\n\nFor now, please manually create prompts using save_golden_prompts.\n\nRequested: ${directCount} direct + ${indirectCount} indirect + ${negativeCount} negative prompts for '${tool}' on server '${server}'`,
+			try {
+				// Load canonical tool
+				const canonicalTools = await loadCanonicalTools(storageDir, server);
+				const canonicalTool = canonicalTools.find((t) => t.name === tool);
+
+				if (!canonicalTool) {
+					return {
+						content: [
+							{
+								type: "text",
+								text: `❌ Tool '${tool}' not found in canonical tools for server '${server}'.\n\nMake sure the server is registered and connected.`,
+							},
+						],
+						isError: true,
+					};
+				}
+
+				// Generate prompts using Claude Code subprocess
+				logger.info("Generating golden prompts using Claude Code", {
+					server,
+					tool,
+					directCount,
+					indirectCount,
+					negativeCount,
+				});
+
+				const result = await generateGoldenPrompts(canonicalTool, {
+					direct: directCount,
+					indirect: indirectCount,
+					negative: negativeCount,
+				});
+
+				if (result.error) {
+					return {
+						content: [
+							{
+								type: "text",
+								text: `❌ Failed to generate prompts: ${result.error}\n\nStderr: ${result.stderr}`,
+							},
+						],
+						isError: true,
+					};
+				}
+
+				if (result.prompts.length === 0) {
+					return {
+						content: [
+							{
+								type: "text",
+								text: `⚠️ No prompts were generated. Claude may not have followed the output format.\n\nRaw output:\n${result.stdout}`,
+							},
+						],
+						isError: true,
+					};
+				}
+
+				// Convert to GoldenPrompt format
+				const goldenPrompts: GoldenPrompt[] = result.prompts.map((p) => ({
+					id: crypto.randomUUID(),
+					toolName: tool,
+					category: p.category,
+					prompt: p.prompt,
+					expectedBehavior: {
+						shouldCallTool: p.category !== "negative",
+						notes: p.notes,
 					},
-				],
-				isError: true,
-			};
+				}));
+
+				// Save prompts
+				await saveGoldenPrompts(storageDir, server, tool, goldenPrompts);
+
+				// Count by category
+				const byCategoryCount = goldenPrompts.reduce(
+					(acc, p) => {
+						acc[p.category]++;
+						return acc;
+					},
+					{ direct: 0, indirect: 0, negative: 0 },
+				);
+
+				return {
+					content: [
+						{
+							type: "text",
+							text: `✅ Generated and saved ${goldenPrompts.length} golden prompt(s) for '${tool}'\n\n**Breakdown:**\n- Direct: ${byCategoryCount.direct}\n- Indirect: ${byCategoryCount.indirect}\n- Negative: ${byCategoryCount.negative}\n\n💡 Now run evaluations for your candidates to measure effectiveness against these prompts.`,
+						},
+					],
+				};
+			} catch (error) {
+				logger.error("Failed to generate golden prompts", {
+					server,
+					tool,
+					error,
+				});
+				return {
+					content: [
+						{
+							type: "text",
+							text: `❌ Failed to generate golden prompts: ${error instanceof Error ? error.message : "Unknown error"}`,
+						},
+					],
+					isError: true,
+				};
+			}
 		},
 	});
 }

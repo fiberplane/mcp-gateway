@@ -16,7 +16,7 @@
   "sideEffects": false,
   "scripts": {
     "build": "bun run ../../scripts/build.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsgo --noEmit",
     "test": "bun test"
   },
   "exports": {
@@ -37,7 +37,7 @@
   "dependencies": {
     "@fiberplane/mcp-gateway-types": "workspace:*",
     "hono": "^4.9.8",
-    "mcp-lite": "^0.8.1",
+    "mcp-lite": "https://pkg.pr.new/fiberplane/mcp-lite@133",
     "zod": "^4.1.11"
   }
 }

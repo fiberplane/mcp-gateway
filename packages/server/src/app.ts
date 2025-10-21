@@ -2,6 +2,8 @@ import {
   createMcpApp,
   getStorageRoot,
   logger,
+  ClientManager,
+  saveCanonicalTools,
 } from "@fiberplane/mcp-gateway-core";
 import type { LogEntry, Registry } from "@fiberplane/mcp-gateway-types";
 import { Hono } from "hono";
@@ -16,8 +18,9 @@ export async function createApp(
   eventHandlers?: {
     onLog?: (entry: LogEntry) => void;
     onRegistryUpdate?: () => void;
+    enableMcpClient?: boolean;
   },
-): Promise<{ app: Hono; registry: Registry }> {
+): Promise<{ app: Hono; registry: Registry; clientManager?: ClientManager }> {
   const app = new Hono();
 
   // Custom Hono logger middleware to log to our log files
@@ -65,8 +68,35 @@ export async function createApp(
   const oauthRoutes = await createOAuthRoutes(registry);
   app.route("/", oauthRoutes);
 
+  // Initialize ClientManager if enabled
+  let clientManager: ClientManager | undefined;
+
+  if (eventHandlers?.enableMcpClient) {
+    logger.info("Initializing MCP client manager");
+    clientManager = new ClientManager();
+
+    // Connect to all registered servers
+    for (const server of registry.servers) {
+      try {
+        await clientManager.connectServer(server);
+        const tools = await clientManager.discoverTools(server.name);
+        await saveCanonicalTools(storage, server.name, tools);
+        logger.info(`Connected to ${server.name} via MCP client`, {
+          toolCount: tools.length,
+        });
+      } catch (error) {
+        logger.error(`Failed to connect to ${server.name}`, {
+          error: String(error),
+        });
+      }
+    }
+  }
+
   // Mount the proxy routes for server connections
-  const proxyRoutes = await createProxyRoutes(registry, storage, eventHandlers);
+  const proxyRoutes = await createProxyRoutes(registry, storage, {
+    ...eventHandlers,
+    clientManager,
+  });
   app.route("/servers", proxyRoutes);
   // Short alias for server connections
   app.route("/s", proxyRoutes);
@@ -77,5 +107,5 @@ export async function createApp(
   // Short alias for gateway's own MCP server
   app.route("/g", gatewayMcp);
 
-  return { app, registry };
+  return { app, registry, clientManager };
 }

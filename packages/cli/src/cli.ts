@@ -34,11 +34,14 @@ Options:
                                (default: 3333)
   --storage-dir <path>          Storage directory for registry and captures
                                (default: ~/.mcp-gateway)
+  --enable-mcp-client           Use MCP client architecture (experimental,
+                               enables optimization)
 
 Examples:
   mcp-gateway
   mcp-gateway --port 8080
   mcp-gateway --storage-dir /tmp/mcp-data
+  mcp-gateway --enable-mcp-client
   mcp-gateway --help
   mcp-gateway --version
 `);
@@ -72,6 +75,10 @@ export async function runCli(): Promise<void> {
         "storage-dir": {
           type: "string",
           default: undefined,
+        },
+        "enable-mcp-client": {
+          type: "boolean",
+          default: false,
         },
       },
       allowPositionals: false,
@@ -108,6 +115,7 @@ export async function runCli(): Promise<void> {
     const { app } = await createApp(registry, storageDir, {
       onLog: emitLog,
       onRegistryUpdate: emitRegistryUpdate,
+      enableMcpClient: values["enable-mcp-client"],
     });
 
     // Start server and wait for it to be listening or error

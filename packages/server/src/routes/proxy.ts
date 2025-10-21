@@ -17,6 +17,8 @@ import {
   saveRegistry,
   storeClientInfo,
 } from "@fiberplane/mcp-gateway-core";
+import type { ClientManager } from "@fiberplane/mcp-gateway-core";
+import { loadPromotions } from "@fiberplane/mcp-gateway-core";
 import type {
   CaptureRecord,
   JsonRpcRequest,
@@ -278,6 +280,449 @@ async function captureAuthError(
 }
 
 /**
+ * Handle MCP client request using direct MCP protocol communication
+ */
+async function handleMcpClientRequest(
+  c: Context,
+  server: McpServer,
+  jsonRpcRequest: JsonRpcRequest,
+  sessionId: string,
+  clientManager: ClientManager,
+  storage: string,
+  registry: Registry,
+  eventHandlers?: {
+    onLog?: (entry: LogEntry) => void;
+    onRegistryUpdate?: () => void;
+  },
+): Promise<Response> {
+  const startTime = Date.now();
+
+  // Log incoming request
+  logRequest(server, sessionId, jsonRpcRequest, eventHandlers?.onLog);
+
+  // Capture request immediately
+  const requestRecord = createRequestCaptureRecord(
+    server.name,
+    sessionId,
+    jsonRpcRequest,
+  );
+  await appendCapture(storage, requestRecord);
+
+  try {
+    let result: unknown;
+    let httpStatus = 200;
+
+    // Handle different JSON-RPC methods
+    switch (jsonRpcRequest.method) {
+      case "initialize": {
+        // Handle initialize method - store client info
+        handleInitializeClientInfo(sessionId, jsonRpcRequest);
+
+        // For initialize, we just return success since connection is already established
+        result = {
+          protocolVersion: "2024-11-05",
+          capabilities: {
+            tools: {},
+            resources: {},
+            prompts: {},
+          },
+          serverInfo: {
+            name: server.name,
+            version: "1.0.0",
+          },
+        };
+        break;
+      }
+
+      case "ping": {
+        // Simple ping response
+        result = {};
+        break;
+      }
+
+      case "tools/list": {
+        // Load promotions and pass to listTools
+        const promotions = await loadPromotions(storage, server.name);
+        const tools = await clientManager.listTools(
+          server.name,
+          promotions.size > 0 ? promotions : undefined,
+        );
+        result = { tools };
+        break;
+      }
+
+      case "tools/call": {
+        // Extract tool name and arguments from params
+        const params = jsonRpcRequest.params as {
+          name: string;
+          arguments?: unknown;
+        };
+        const toolResult = await clientManager.callTool(
+          server.name,
+          params.name,
+          params.arguments || {},
+        );
+        result = toolResult;
+        break;
+      }
+
+      case "resources/list": {
+        const resources = await clientManager.listResources(server.name);
+        result = { resources };
+        break;
+      }
+
+      case "resources/read": {
+        const params = jsonRpcRequest.params as { uri: string };
+        const resourceContent = await clientManager.readResource(
+          server.name,
+          params.uri,
+        );
+        result = resourceContent;
+        break;
+      }
+
+      case "prompts/list": {
+        const prompts = await clientManager.listPrompts(server.name);
+        result = { prompts };
+        break;
+      }
+
+      case "prompts/get": {
+        const params = jsonRpcRequest.params as {
+          name: string;
+          arguments?: unknown;
+        };
+        const promptResult = await clientManager.getPrompt(
+          server.name,
+          params.name,
+          params.arguments,
+        );
+        result = promptResult;
+        break;
+      }
+
+      default: {
+        throw new Error(`Unsupported method: ${jsonRpcRequest.method}`);
+      }
+    }
+
+    // Create JSON-RPC response
+    const response: JsonRpcResponse = {
+      jsonrpc: "2.0",
+      id: jsonRpcRequest.id ?? null,
+      result,
+    };
+
+    const duration = Date.now() - startTime;
+
+    // Capture response
+    if (jsonRpcRequest.id != null) {
+      const responseRecord = createResponseCaptureRecord(
+        server.name,
+        sessionId,
+        response,
+        httpStatus,
+        jsonRpcRequest.method,
+      );
+      await appendCapture(storage, responseRecord);
+    }
+
+    // Log response
+    logResponse(
+      server,
+      sessionId,
+      jsonRpcRequest.method,
+      httpStatus,
+      duration,
+      response,
+      eventHandlers?.onLog,
+    );
+
+    // Update server activity
+    await updateServerActivity(
+      storage,
+      registry,
+      server,
+      eventHandlers?.onRegistryUpdate,
+    );
+
+    return new Response(JSON.stringify(response), {
+      status: httpStatus,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    const duration = Date.now() - startTime;
+
+    // Create error response
+    const errorResponse: JsonRpcResponse = {
+      jsonrpc: "2.0",
+      id: jsonRpcRequest.id ?? null,
+      error: {
+        code: -32603,
+        message: String(error),
+      },
+    };
+
+    // Log error response
+    logResponse(
+      server,
+      sessionId,
+      jsonRpcRequest.method,
+      500,
+      duration,
+      errorResponse,
+      eventHandlers?.onLog,
+    );
+
+    // Capture error
+    await captureError(
+      storage,
+      server.name,
+      sessionId,
+      jsonRpcRequest,
+      {
+        code: -32603,
+        message: String(error),
+      },
+      500,
+      duration,
+    );
+
+    return new Response(JSON.stringify(errorResponse), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+}
+
+/**
+ * Handle proxy request using HTTP forwarding
+ */
+async function handleProxyRequest(
+  c: Context,
+  server: McpServer,
+  jsonRpcRequest: JsonRpcRequest,
+  sessionId: string,
+  storage: string,
+  registry: Registry,
+  requestCaptureFilename: string,
+  eventHandlers?: {
+    onLog?: (entry: LogEntry) => void;
+    onRegistryUpdate?: () => void;
+  },
+): Promise<Response> {
+  const startTime = Date.now();
+
+  let response: JsonRpcResponse;
+  let httpStatus = 200;
+
+  try {
+    // Handle initialize method - store client info
+    handleInitializeClientInfo(sessionId, jsonRpcRequest);
+
+    // Forward request to target MCP server using Hono proxy helper
+    const proxyHeaders = buildProxyHeaders(c, server);
+
+    const targetResponse = await proxy(server.url, {
+      method: "POST",
+      headers: proxyHeaders,
+      body: JSON.stringify(jsonRpcRequest),
+    });
+
+    httpStatus = targetResponse.status;
+
+    // CRITICAL: If 401, return response as-is with all auth info
+    // 401 responses may contain authentication information (WWW-Authenticate header,
+    // auth URLs, error details) that must be preserved for the client
+    if (httpStatus === 401) {
+      const duration = Date.now() - startTime;
+      const responseText = await targetResponse.text();
+      const responseHeaders = new Headers(targetResponse.headers);
+
+      // Remove auto-generated headers to avoid duplicates
+      for (const header of AUTO_HEADERS) {
+        responseHeaders.delete(header);
+      }
+
+      // Log the 401 response (for TUI visibility)
+      logResponse(
+        server,
+        sessionId,
+        jsonRpcRequest.method,
+        401,
+        duration,
+        undefined,
+        eventHandlers?.onLog,
+      );
+
+      // Capture the 401 response with full details
+      await captureAuthError(
+        storage,
+        server.name,
+        sessionId,
+        jsonRpcRequest,
+        responseText,
+        401,
+      );
+
+      return new Response(responseText, {
+        status: 401,
+        headers: responseHeaders,
+      });
+    }
+
+    // Check if response is SSE stream
+    const contentType =
+      targetResponse.headers.get("content-type")?.toLowerCase() || "";
+    const isSSE = contentType.startsWith("text/event-stream");
+
+    if (isSSE) {
+      // Handle SSE streaming response
+
+      // Update server activity immediately for SSE
+      await updateServerActivity(
+        storage,
+        registry,
+        server,
+        eventHandlers?.onRegistryUpdate,
+      );
+
+      if (!targetResponse.body) {
+        throw new Error("SSE response has no body");
+      }
+
+      // Create two streams from the response body
+      const [streamForClient, streamForCapture] = targetResponse.body.tee();
+
+      // Start background capture processing
+      processSSECapture(
+        streamForCapture,
+        storage,
+        server,
+        sessionId,
+        jsonRpcRequest.method,
+        jsonRpcRequest.id,
+        eventHandlers?.onLog,
+      );
+
+      // Return streaming response to client
+      return new Response(streamForClient, {
+        status: httpStatus,
+        headers: targetResponse.headers,
+      });
+    }
+
+    // Handle regular JSON response (existing logic)
+    // Read body as text first to avoid consuming the stream twice
+    const responseText = await targetResponse.text();
+    let responseBody: unknown;
+    try {
+      responseBody = JSON.parse(responseText);
+    } catch {
+      // If not valid JSON, use as-is
+      responseBody = responseText;
+    }
+    response = responseBody as JsonRpcResponse;
+    const duration = Date.now() - startTime;
+
+    // Capture response (only if request expected one - has id)
+    if (jsonRpcRequest.id != null) {
+      const responseRecord = createResponseCaptureRecord(
+        server.name,
+        sessionId,
+        response,
+        httpStatus,
+        jsonRpcRequest.method,
+      );
+      await appendCapture(storage, responseRecord);
+    }
+
+    // Handle initialize → session transition
+    await handleSessionTransition(
+      storage,
+      server,
+      targetResponse,
+      sessionId,
+      jsonRpcRequest,
+      requestCaptureFilename,
+    );
+
+    // Log response
+    logResponse(
+      server,
+      sessionId,
+      jsonRpcRequest.method,
+      httpStatus,
+      duration,
+      response,
+      eventHandlers?.onLog,
+    );
+
+    // Update server activity
+    await updateServerActivity(
+      storage,
+      registry,
+      server,
+      eventHandlers?.onRegistryUpdate,
+    );
+
+    // Create new response with the same data and headers
+    // Remove auto-generated headers to avoid duplicates when Response constructor adds them
+    const responseHeaders = new Headers(targetResponse.headers);
+    for (const header of AUTO_HEADERS) {
+      responseHeaders.delete(header);
+    }
+    return new Response(responseText, {
+      status: httpStatus,
+      headers: responseHeaders,
+    });
+  } catch (error) {
+    const duration = Date.now() - startTime;
+
+    // Create error response
+    const errorResponse: JsonRpcResponse = {
+      jsonrpc: "2.0",
+      id: jsonRpcRequest.id ?? null,
+      error: {
+        code: -32603,
+        message: String(error),
+      },
+    };
+
+    // Log error response
+    logResponse(
+      server,
+      sessionId,
+      jsonRpcRequest.method,
+      httpStatus,
+      duration,
+      errorResponse,
+      eventHandlers?.onLog,
+    );
+
+    // Capture error
+    await captureError(
+      storage,
+      server.name,
+      sessionId,
+      jsonRpcRequest,
+      {
+        code: -32603,
+        message: String(error),
+      },
+      httpStatus,
+      duration,
+    );
+
+    return new Response(JSON.stringify(errorResponse), {
+      status: httpStatus,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+}
+
+/**
  * Create a composable Hono app with the following routes:
  *
  * - POST `/:server/mcp`
@@ -292,6 +737,8 @@ export async function createProxyRoutes(
   eventHandlers?: {
     onLog?: (entry: LogEntry) => void;
     onRegistryUpdate?: () => void;
+    enableMcpClient?: boolean;
+    clientManager?: ClientManager;
   },
 ): Promise<Hono> {
   const app = new Hono();
@@ -306,8 +753,6 @@ export async function createProxyRoutes(
     sValidator("json", jsonRpcRequestSchema),
     sValidator("header", sessionHeaderSchema),
     async (c) => {
-      const startTime = Date.now();
-
       // Get validated data
       const { server: serverName } = c.req.valid("param");
       const jsonRpcRequest = c.req.valid("json");
@@ -322,7 +767,21 @@ export async function createProxyRoutes(
       const validatedHeaders = c.req.valid("header");
       const sessionId = extractSessionId(validatedHeaders);
 
-      // Capture request immediately (before forwarding)
+      // Branch: MCP client mode vs proxy mode
+      if (eventHandlers?.enableMcpClient && eventHandlers?.clientManager) {
+        return handleMcpClientRequest(
+          c,
+          server,
+          jsonRpcRequest,
+          sessionId,
+          eventHandlers.clientManager,
+          storage,
+          registry,
+          eventHandlers,
+        );
+      }
+
+      // Proxy mode: capture request immediately (before forwarding)
       const requestRecord = createRequestCaptureRecord(
         server.name,
         sessionId,
@@ -336,212 +795,17 @@ export async function createProxyRoutes(
       // Log incoming request from client
       logRequest(server, sessionId, jsonRpcRequest, eventHandlers?.onLog);
 
-      let response: JsonRpcResponse;
-      let httpStatus = 200;
-
-      try {
-        // Handle initialize method - store client info
-        handleInitializeClientInfo(sessionId, jsonRpcRequest);
-
-        // Forward request to target MCP server using Hono proxy helper
-        const proxyHeaders = buildProxyHeaders(c, server);
-
-        const targetResponse = await proxy(server.url, {
-          method: "POST",
-          headers: proxyHeaders,
-          body: JSON.stringify(jsonRpcRequest),
-        });
-
-        httpStatus = targetResponse.status;
-
-        // CRITICAL: If 401, return response as-is with all auth info
-        // 401 responses may contain authentication information (WWW-Authenticate header,
-        // auth URLs, error details) that must be preserved for the client
-        if (httpStatus === 401) {
-          const duration = Date.now() - startTime;
-          const responseText = await targetResponse.text();
-          const responseHeaders = new Headers(targetResponse.headers);
-
-          // Remove auto-generated headers to avoid duplicates
-          for (const header of AUTO_HEADERS) {
-            responseHeaders.delete(header);
-          }
-
-          // Log the 401 response (for TUI visibility)
-          logResponse(
-            server,
-            sessionId,
-            jsonRpcRequest.method,
-            401,
-            duration,
-            undefined,
-            eventHandlers?.onLog,
-          );
-
-          // Capture the 401 response with full details
-          await captureAuthError(
-            storage,
-            server.name,
-            sessionId,
-            jsonRpcRequest,
-            responseText,
-            401,
-          );
-
-          return new Response(responseText, {
-            status: 401,
-            headers: responseHeaders,
-          });
-        }
-
-        // Check if response is SSE stream
-        const contentType =
-          targetResponse.headers.get("content-type")?.toLowerCase() || "";
-        const isSSE = contentType.startsWith("text/event-stream");
-
-        if (isSSE) {
-          // Handle SSE streaming response
-
-          // Update server activity immediately for SSE
-          await updateServerActivity(
-            storage,
-            registry,
-            server,
-            eventHandlers?.onRegistryUpdate,
-          );
-
-          if (!targetResponse.body) {
-            throw new Error("SSE response has no body");
-          }
-
-          // Create two streams from the response body
-          const [streamForClient, streamForCapture] = targetResponse.body.tee();
-
-          // Start background capture processing
-          processSSECapture(
-            streamForCapture,
-            storage,
-            server,
-            sessionId,
-            jsonRpcRequest.method,
-            jsonRpcRequest.id,
-            eventHandlers?.onLog,
-          );
-
-          // Return streaming response to client
-          return new Response(streamForClient, {
-            status: httpStatus,
-            headers: targetResponse.headers,
-          });
-        }
-
-        // Handle regular JSON response (existing logic)
-        // Read body as text first to avoid consuming the stream twice
-        const responseText = await targetResponse.text();
-        let responseBody: unknown;
-        try {
-          responseBody = JSON.parse(responseText);
-        } catch {
-          // If not valid JSON, use as-is
-          responseBody = responseText;
-        }
-        response = responseBody as JsonRpcResponse;
-        const duration = Date.now() - startTime;
-
-        // Capture response (only if request expected one - has id)
-        if (jsonRpcRequest.id != null) {
-          const responseRecord = createResponseCaptureRecord(
-            server.name,
-            sessionId,
-            response,
-            httpStatus,
-            jsonRpcRequest.method,
-          );
-          await appendCapture(storage, responseRecord);
-        }
-
-        // Handle initialize → session transition
-        await handleSessionTransition(
-          storage,
-          server,
-          targetResponse,
-          sessionId,
-          jsonRpcRequest,
-          requestCaptureFilename,
-        );
-
-        // Log response
-        logResponse(
-          server,
-          sessionId,
-          jsonRpcRequest.method,
-          httpStatus,
-          duration,
-          response,
-          eventHandlers?.onLog,
-        );
-
-        // Update server activity
-        await updateServerActivity(
-          storage,
-          registry,
-          server,
-          eventHandlers?.onRegistryUpdate,
-        );
-
-        // Create new response with the same data and headers
-        // Remove auto-generated headers to avoid duplicates when Response constructor adds them
-        const responseHeaders = new Headers(targetResponse.headers);
-        for (const header of AUTO_HEADERS) {
-          responseHeaders.delete(header);
-        }
-        return new Response(responseText, {
-          status: httpStatus,
-          headers: responseHeaders,
-        });
-      } catch (error) {
-        const duration = Date.now() - startTime;
-
-        // Create error response
-        const errorResponse: JsonRpcResponse = {
-          jsonrpc: "2.0",
-          id: jsonRpcRequest.id ?? null,
-          error: {
-            code: -32603,
-            message: String(error),
-          },
-        };
-
-        // Log error response
-        logResponse(
-          server,
-          sessionId,
-          jsonRpcRequest.method,
-          httpStatus,
-          duration,
-          errorResponse,
-          eventHandlers?.onLog,
-        );
-
-        // Capture error
-        await captureError(
-          storage,
-          server.name,
-          sessionId,
-          jsonRpcRequest,
-          {
-            code: -32603,
-            message: String(error),
-          },
-          httpStatus,
-          duration,
-        );
-
-        return new Response(JSON.stringify(errorResponse), {
-          status: httpStatus,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
+      // Proxy mode: use existing proxy logic
+      return handleProxyRequest(
+        c,
+        server,
+        jsonRpcRequest,
+        sessionId,
+        storage,
+        registry,
+        requestCaptureFilename,
+        eventHandlers,
+      );
     },
   );
 

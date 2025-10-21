@@ -16,3 +16,37 @@ export interface McpServer {
 export interface Registry {
   servers: McpServer[];
 }
+
+// MCP protocol types
+
+/**
+ * Tool definition from MCP server
+ */
+export interface Tool {
+  name: string;
+  description: string;
+  inputSchema: unknown;
+}
+
+/**
+ * Resource definition from MCP server
+ */
+export interface Resource {
+  uri: string;
+  name: string;
+  description?: string;
+  mimeType?: string;
+}
+
+/**
+ * Prompt definition from MCP server
+ */
+export interface Prompt {
+  name: string;
+  description?: string;
+  arguments?: Array<{
+    name: string;
+    description?: string;
+    required?: boolean;
+  }>;
+}
