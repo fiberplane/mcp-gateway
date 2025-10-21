@@ -39,6 +39,11 @@ export function ServerTabs({ value, onChange, panelId }: ServerTabsProps) {
 
   const tabListRef = useRef<HTMLDivElement>(null);
 
+  const availableServers = useMemo(
+    () => new Set(data?.servers.map((s) => s.name) ?? []),
+    [data?.servers],
+  );
+
   // Build the list of all tab values ("all" + server names)
   // Use useMemo to stabilize the array reference
   const allTabValues = useMemo(
@@ -46,8 +51,36 @@ export function ServerTabs({ value, onChange, panelId }: ServerTabsProps) {
     [data?.servers],
   );
 
-  const selectedServer = value || "all";
+  const selectedServer = value && !availableServers.has(value) ? "all" : value || "all";
   const selectedIndex = allTabValues.indexOf(selectedServer);
+
+  const focusFallbackRef = useRef(false);
+
+  useEffect(() => {
+    if (!data?.servers || value === undefined) {
+      return;
+    }
+
+    // If the current value is no longer available, reset to "all"
+    if (!availableServers.has(value)) {
+      focusFallbackRef.current = true;
+      onChange(undefined);
+    }
+  }, [availableServers, data?.servers, onChange, value]);
+
+  useEffect(() => {
+    if (!focusFallbackRef.current || selectedServer !== "all") {
+      return;
+    }
+
+    focusFallbackRef.current = false;
+    requestAnimationFrame(() => {
+      const buttons = tabListRef.current?.querySelectorAll<HTMLButtonElement>(
+        '[role="tab"]',
+      );
+      buttons?.[0]?.focus();
+    });
+  }, [selectedServer]);
 
   // Handle keyboard navigation
   useEffect(() => {

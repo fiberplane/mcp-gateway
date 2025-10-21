@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { CaptureRecord } from "@fiberplane/mcp-gateway-types";
+import type { CaptureRecord, ServerHealth } from "@fiberplane/mcp-gateway-types";
 import { getDb } from "./db.js";
 import { ensureMigrations, resetMigrationState } from "./migrations.js";
 import { getServers, getSessions, insertLog, queryLogs } from "./storage.js";
@@ -302,6 +302,39 @@ describe("Storage Functions", () => {
 
       expect(serverA?.sessionCount).toBe(2);
       expect(serverB?.sessionCount).toBe(1);
+    });
+
+    test("should default statuses to online when registry data is unavailable", async () => {
+      const db = getDb(storageDir);
+      const result = await getServers(db);
+
+      for (const server of result) {
+        expect(server.status).toBe("online");
+      }
+    });
+
+    test("should derive statuses using registry membership and health data", async () => {
+      const db = getDb(storageDir);
+      const registryServers = ["server-a", "server-c"];
+      const serverHealthMap = new Map<string, ServerHealth>([
+        ["server-a", "down"],
+        ["server-c", "unknown"],
+      ]);
+
+      const result = await getServers(db, registryServers, serverHealthMap);
+
+      const serverA = result.find((s) => s.name === "server-a");
+      const serverB = result.find((s) => s.name === "server-b");
+      const serverC = result.find((s) => s.name === "server-c");
+
+      expect(serverA?.status).toBe("offline");
+      expect(serverB?.status).toBe("deleted");
+      expect(serverC).toEqual({
+        name: "server-c",
+        logCount: 0,
+        sessionCount: 0,
+        status: "online",
+      });
     });
   });
 

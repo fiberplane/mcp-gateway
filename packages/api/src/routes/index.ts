@@ -160,8 +160,8 @@ export function createApiRoutes(
   app.get("/servers", async (c) => {
     try {
       // Get registry servers and health status for status determination
-      const registryServers = queries.getRegistryServers?.() ?? [];
-      const serverHealthMap = queries.getServerHealthMap?.() ?? new Map();
+      const registryServers = queries.getRegistryServers?.();
+      const serverHealthMap = queries.getServerHealthMap?.();
       const servers = await queries.getServers(
         storageDir,
         registryServers,

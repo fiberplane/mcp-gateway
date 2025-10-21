@@ -134,8 +134,11 @@ export async function getServers(
   // Create a map of registry servers (normalized name -> original name)
   // This preserves the registry's casing as the source of truth
   const registryMap = new Map<string, string>();
-  for (const serverName of registryServers || []) {
-    registryMap.set(serverName.toLowerCase(), serverName);
+  const registryProvided = Array.isArray(registryServers);
+  if (registryProvided) {
+    for (const serverName of registryServers || []) {
+      registryMap.set(serverName.toLowerCase(), serverName);
+    }
   }
 
   // Create a map of servers from logs
@@ -148,13 +151,18 @@ export async function getServers(
 
     // Determine status based on registry membership and health
     let status: "online" | "offline" | "deleted";
-    if (registryName) {
-      // Server is in registry - check health to determine online vs offline
-      const health = serverHealthMap?.get(normalizedName);
-      status = health === "down" ? "offline" : "online";
+    if (registryProvided) {
+      if (registryName) {
+        // Server is in registry - check health to determine online vs offline
+        const health = serverHealthMap?.get(normalizedName);
+        status = health === "down" ? "offline" : "online";
+      } else {
+        // Server has logs but not in registry = deleted
+        status = "deleted";
+      }
     } else {
-      // Server has logs but not in registry = deleted
-      status = "deleted";
+      // No registry info provided – treat all servers as online
+      status = "online";
     }
 
     serverMap.set(normalizedName, {
@@ -166,19 +174,21 @@ export async function getServers(
   }
 
   // Add servers from registry that don't have logs yet
-  for (const serverName of registryServers || []) {
-    const normalizedName = serverName.toLowerCase();
-    if (!serverMap.has(normalizedName)) {
-      // New server in registry with no logs yet - check health
-      const health = serverHealthMap?.get(normalizedName);
-      const status = health === "down" ? "offline" : "online";
+  if (registryProvided) {
+    for (const serverName of registryServers || []) {
+      const normalizedName = serverName.toLowerCase();
+      if (!serverMap.has(normalizedName)) {
+        // New server in registry with no logs yet - check health
+        const health = serverHealthMap?.get(normalizedName);
+        const status = health === "down" ? "offline" : "online";
 
-      serverMap.set(normalizedName, {
-        name: serverName,
-        logCount: 0,
-        sessionCount: 0,
-        status,
-      });
+        serverMap.set(normalizedName, {
+          name: serverName,
+          logCount: 0,
+          sessionCount: 0,
+          status,
+        });
+      }
     }
   }
 
