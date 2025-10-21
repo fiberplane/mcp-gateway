@@ -329,7 +329,7 @@ Managed at monorepo root level.
 
 ## Related Documentation
 
-- [CLAUDE.md](../../CLAUDE.md) - Complete monorepo development guide
+- [AGENTS.md](../../AGENTS.md) - Complete monorepo development guide
 - [packages/web/README.md](../web/README.md) - Web UI package documentation
 - [packages/api/README.md](../api/README.md) - API package documentation
 - [packages/server/README.md](../server/README.md) - Server package documentation
