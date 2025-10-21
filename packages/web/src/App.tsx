@@ -72,10 +72,10 @@ function App() {
   });
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-muted/30">
       <TopNavigation />
 
-      <main className="max-w-7xl mx-auto px-6 py-6">
+      <main className="mx-auto px-7 py-8">
         <h1 className="text-2xl font-semibold text-foreground mb-6">
           MCP server logs
         </h1>
