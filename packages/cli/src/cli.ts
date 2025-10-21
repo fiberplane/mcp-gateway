@@ -408,11 +408,26 @@ export async function runCli(): Promise<void> {
       storageDir,
       {
         queryLogs: (_storageDir, options) => gateway.logs.query(options),
-        getServers: (_storageDir, registryServers) =>
-          gateway.logs.getServers(registryServers),
+        getServers: (_storageDir, registryServers, serverHealthMap) =>
+          gateway.logs.getServers(registryServers, serverHealthMap),
         getSessions: (_storageDir, serverName) =>
           gateway.logs.getSessions(serverName),
         getRegistryServers: () => (registry?.servers ?? []).map((s) => s.name),
+        getServerHealthMap: () => {
+          // Build a map of server names (lowercase) to health status from registry
+          const healthMap = new Map<
+            string,
+            import("@fiberplane/mcp-gateway-types").ServerHealth
+          >();
+          for (const server of registry?.servers ?? []) {
+            // Use lowercase for consistent case-insensitive lookup
+            healthMap.set(
+              server.name.toLowerCase(),
+              server.health ?? "unknown",
+            );
+          }
+          return healthMap;
+        },
       },
       logger,
     );

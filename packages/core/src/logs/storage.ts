@@ -2,6 +2,7 @@ import type {
   CaptureRecord,
   LogQueryOptions,
   LogQueryResult,
+  ServerHealth,
   ServerInfo,
   SessionInfo,
 } from "@fiberplane/mcp-gateway-types";
@@ -111,11 +112,13 @@ export async function queryLogs(
  *
  * @param db - Database instance
  * @param registryServers - Optional list of registered server names
+ * @param serverHealthMap - Optional map of server names to health status
  * @returns Server information with status (online/offline/deleted)
  */
 export async function getServers(
   db: BunSQLiteDatabase<typeof schema>,
   registryServers?: string[],
+  serverHealthMap?: Map<string, ServerHealth>,
 ): Promise<ServerInfo[]> {
   // Get servers that have logs in the database
   const logsResult = await db
@@ -143,11 +146,22 @@ export async function getServers(
     const normalizedName = server.name.toLowerCase();
     const registryName = registryMap.get(normalizedName);
 
+    // Determine status based on registry membership and health
+    let status: "online" | "offline" | "deleted";
+    if (registryName) {
+      // Server is in registry - check health to determine online vs offline
+      const health = serverHealthMap?.get(normalizedName);
+      status = health === "down" ? "offline" : "online";
+    } else {
+      // Server has logs but not in registry = deleted
+      status = "deleted";
+    }
+
     serverMap.set(normalizedName, {
       ...server,
       // Use registry name for consistency if server is registered, otherwise use log name
       name: registryName || server.name,
-      status: registryName ? ("online" as const) : ("deleted" as const),
+      status,
     });
   }
 
@@ -155,11 +169,15 @@ export async function getServers(
   for (const serverName of registryServers || []) {
     const normalizedName = serverName.toLowerCase();
     if (!serverMap.has(normalizedName)) {
+      // New server in registry with no logs yet - check health
+      const health = serverHealthMap?.get(normalizedName);
+      const status = health === "down" ? "offline" : "online";
+
       serverMap.set(normalizedName, {
         name: serverName,
         logCount: 0,
         sessionCount: 0,
-        status: "online" as const,
+        status,
       });
     }
   }

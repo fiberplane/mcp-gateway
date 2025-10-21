@@ -2,6 +2,7 @@ import type {
   CaptureRecord,
   LogQueryOptions,
   LogQueryResult,
+  ServerHealth,
   ServerInfo,
   SessionInfo,
 } from "@fiberplane/mcp-gateway-types";
@@ -49,9 +50,13 @@ export interface StorageBackend {
    * Get server aggregations (name, log count, session count)
    *
    * @param registryServers - Optional list of server names from registry for status determination
+   * @param serverHealthMap - Optional map of server names (lowercase) to health status for determining online/offline
    * @returns List of server aggregation info
    */
-  getServers(registryServers?: string[]): Promise<ServerInfo[]>;
+  getServers(
+    registryServers?: string[],
+    serverHealthMap?: Map<string, ServerHealth>,
+  ): Promise<ServerInfo[]>;
 
   /**
    * Get session aggregations (session ID, server, log count, time range)

@@ -115,9 +115,14 @@ export interface Gateway {
     /**
      * Get server aggregations
      * @param registryServers - Optional list of server names from registry for status determination
+     * @param serverHealthMap - Optional map of server names (lowercase) to health status
      */
     getServers(
       registryServers?: string[],
+      serverHealthMap?: Map<
+        string,
+        import("@fiberplane/mcp-gateway-types").ServerHealth
+      >,
     ): Promise<import("@fiberplane/mcp-gateway-types").ServerInfo[]>;
 
     /**
@@ -495,8 +500,8 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
 
     logs: {
       query: async (options?) => await storageManager.queryLogs(options),
-      getServers: async (registryServers?) =>
-        await storageManager.getServers(registryServers),
+      getServers: async (registryServers?, serverHealthMap?) =>
+        await storageManager.getServers(registryServers, serverHealthMap),
       getSessions: async (serverName?) =>
         await storageManager.getSessions(serverName),
     },

@@ -2,6 +2,7 @@ import type {
   CaptureRecord,
   LogQueryOptions,
   LogQueryResult,
+  ServerHealth,
   ServerInfo,
   SessionInfo,
 } from "@fiberplane/mcp-gateway-types";
@@ -125,9 +126,13 @@ export class StorageManager {
    * Get server aggregations from the first available backend
    *
    * @param registryServers - Optional list of server names from registry for status determination
+   * @param serverHealthMap - Optional map of server names (lowercase) to health status
    * @returns List of server aggregation info
    */
-  async getServers(registryServers?: string[]): Promise<ServerInfo[]> {
+  async getServers(
+    registryServers?: string[],
+    serverHealthMap?: Map<string, ServerHealth>,
+  ): Promise<ServerInfo[]> {
     if (!this.initialized) {
       throw new Error(
         "Storage manager not initialized. Call initialize() first.",
@@ -141,7 +146,7 @@ export class StorageManager {
       throw new Error("No storage backends registered");
     }
 
-    return await backend.getServers(registryServers);
+    return await backend.getServers(registryServers, serverHealthMap);
   }
 
   /**

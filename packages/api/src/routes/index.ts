@@ -1,6 +1,7 @@
 import type {
   LogQueryOptions,
   LogQueryResult,
+  ServerHealth,
   ServerInfo,
   SessionInfo,
 } from "@fiberplane/mcp-gateway-types";
@@ -53,6 +54,7 @@ export interface QueryFunctions {
   getServers: (
     storageDir: string,
     registryServers?: string[],
+    serverHealthMap?: Map<string, ServerHealth>,
   ) => Promise<ServerInfo[]>;
   getSessions: (
     storageDir: string,
@@ -66,6 +68,13 @@ export interface QueryFunctions {
    * @returns Array of server names currently in the registry
    */
   getRegistryServers?: () => string[];
+  /**
+   * Optional function to retrieve current server health status.
+   * Used to determine if registered servers are online (healthy) or offline (unhealthy).
+   *
+   * @returns Map of server names (lowercase) to health status
+   */
+  getServerHealthMap?: () => Map<string, ServerHealth>;
 }
 
 /**
@@ -150,9 +159,14 @@ export function createApiRoutes(
    */
   app.get("/servers", async (c) => {
     try {
-      // Get registry servers for status determination
+      // Get registry servers and health status for status determination
       const registryServers = queries.getRegistryServers?.() ?? [];
-      const servers = await queries.getServers(storageDir, registryServers);
+      const serverHealthMap = queries.getServerHealthMap?.() ?? new Map();
+      const servers = await queries.getServers(
+        storageDir,
+        registryServers,
+        serverHealthMap,
+      );
 
       return c.json({ servers });
     } catch (error) {
