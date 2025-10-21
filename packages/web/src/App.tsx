@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { ExportButton } from "./components/export-button";
 import { LogTable } from "./components/log-table";
 import { Pagination } from "./components/pagination";
@@ -12,6 +12,7 @@ import { useHandler } from "./lib/use-handler";
 import { getLogKey } from "./lib/utils";
 
 function App() {
+  const logTableId = useId();
   const [serverName, setServerName] = useState<string | undefined>();
   const [sessionId, setSessionId] = useState<string | undefined>();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -80,7 +81,11 @@ function App() {
           MCP server logs
         </h1>
         <div className="mb-6">
-          <ServerTabs value={serverName} onChange={handleServerChange} />
+          <ServerTabs
+            value={serverName}
+            onChange={handleServerChange}
+            panelId={logTableId}
+          />
         </div>
         <div className="mb-5 flex gap-3 items-center flex-wrap">
           <SessionFilter
@@ -113,7 +118,12 @@ function App() {
           </div>
         ) : (
           <>
-            <div className="bg-card rounded-lg overflow-auto border border-border max-h-[calc(100vh-16rem)]">
+            <div
+              id={logTableId}
+              role="tabpanel"
+              aria-label="Server logs"
+              className="bg-card rounded-lg overflow-auto border border-border max-h-[calc(100vh-16rem)]"
+            >
               <LogTable
                 logs={allLogs}
                 selectedIds={selectedIds}

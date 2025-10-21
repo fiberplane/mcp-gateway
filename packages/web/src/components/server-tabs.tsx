@@ -1,9 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useRef } from "react";
 import { api, type ServerStatus } from "../lib/api";
 
 interface ServerTabsProps {
   value?: string;
   onChange: (value: string | undefined) => void;
+  panelId: string;
 }
 
 function getStatusColor(status: ServerStatus): string {
@@ -28,12 +30,73 @@ function getTextColor(status: ServerStatus, isSelected: boolean): string {
   return "text-foreground";
 }
 
-export function ServerTabs({ value, onChange }: ServerTabsProps) {
+export function ServerTabs({ value, onChange, panelId }: ServerTabsProps) {
   const { data, isLoading, error } = useQuery({
     queryKey: ["servers"],
     queryFn: () => api.getServers(),
     refetchInterval: 5000, // Refresh less often than logs
   });
+
+  const tabListRef = useRef<HTMLDivElement>(null);
+
+  // Build the list of all tab values ("all" + server names)
+  // Use useMemo to stabilize the array reference
+  const allTabValues = useMemo(
+    () => ["all", ...(data?.servers.map((s) => s.name) ?? [])],
+    [data?.servers],
+  );
+
+  const selectedServer = value || "all";
+  const selectedIndex = allTabValues.indexOf(selectedServer);
+
+  // Handle keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!tabListRef.current?.contains(e.target as Node)) {
+        return;
+      }
+
+      let newIndex = selectedIndex;
+
+      switch (e.key) {
+        case "ArrowLeft":
+          e.preventDefault();
+          newIndex =
+            selectedIndex > 0 ? selectedIndex - 1 : allTabValues.length - 1;
+          break;
+        case "ArrowRight":
+          e.preventDefault();
+          newIndex =
+            selectedIndex < allTabValues.length - 1 ? selectedIndex + 1 : 0;
+          break;
+        case "Home":
+          e.preventDefault();
+          newIndex = 0;
+          break;
+        case "End":
+          e.preventDefault();
+          newIndex = allTabValues.length - 1;
+          break;
+        default:
+          return;
+      }
+
+      const newValue = allTabValues[newIndex];
+      onChange(newValue === "all" ? undefined : newValue);
+
+      // Focus the newly selected tab
+      requestAnimationFrame(() => {
+        const buttons =
+          tabListRef.current?.querySelectorAll<HTMLButtonElement>(
+            '[role="tab"]',
+          );
+        buttons?.[newIndex]?.focus();
+      });
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [selectedIndex, allTabValues, onChange]);
 
   if (error) {
     return (
@@ -49,12 +112,19 @@ export function ServerTabs({ value, onChange }: ServerTabsProps) {
     );
   }
 
-  const selectedServer = value || "all";
-
   return (
-    <div className="flex gap-2 items-center flex-wrap">
+    <div
+      ref={tabListRef}
+      role="tablist"
+      aria-label="Server filter tabs"
+      className="flex gap-2 items-center flex-wrap"
+    >
       <button
         type="button"
+        role="tab"
+        aria-selected={selectedServer === "all"}
+        aria-controls={panelId}
+        tabIndex={selectedServer === "all" ? 0 : -1}
         onClick={() => onChange(undefined)}
         className={`
           h-8 px-3 py-1 rounded-md text-sm transition-colors
@@ -73,6 +143,10 @@ export function ServerTabs({ value, onChange }: ServerTabsProps) {
           <button
             key={server.name}
             type="button"
+            role="tab"
+            aria-selected={isSelected}
+            aria-controls={panelId}
+            tabIndex={isSelected ? 0 : -1}
             onClick={() => onChange(server.name)}
             className={`
               flex items-center gap-2 h-8 px-3 py-1 rounded-md text-sm transition-colors
