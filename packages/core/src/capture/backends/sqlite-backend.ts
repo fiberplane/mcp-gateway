@@ -188,8 +188,13 @@ export class SqliteStorageBackend implements StorageBackend {
     try {
       // Delete all rows from the logs table
       this.sqlite?.run("DELETE FROM logs");
+      // Delete all rows from session metadata table
+      this.sqlite?.run("DELETE FROM session_metadata");
       // Reset auto-increment counter
       this.sqlite?.run("DELETE FROM sqlite_sequence WHERE name='logs'");
+      this.sqlite?.run(
+        "DELETE FROM sqlite_sequence WHERE name='session_metadata'",
+      );
       logger.info("SQLite logs cleared");
     } catch (error) {
       logger.error("SQLite clearAll failed", {
@@ -245,7 +250,9 @@ export class SqliteStorageBackend implements StorageBackend {
     server?: { name?: string; version: string; title?: string };
   } | null> {
     if (!this.db || !this.initialized) {
-      logger.debug("SQLite backend not ready, returning null for session metadata");
+      logger.debug(
+        "SQLite backend not ready, returning null for session metadata",
+      );
       return null;
     }
 

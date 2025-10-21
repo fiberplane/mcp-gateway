@@ -16,7 +16,6 @@ import {
   type NewLog,
   type NewSessionMetadata,
   sessionMetadata,
-  type SessionMetadata,
 } from "./schema.js";
 
 /**

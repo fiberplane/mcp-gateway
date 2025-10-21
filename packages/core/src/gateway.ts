@@ -346,7 +346,10 @@ class ServerInfoStore {
       return undefined;
     }
 
-    if (typeof candidate.version !== "string" || candidate.version.length === 0) {
+    if (
+      typeof candidate.version !== "string" ||
+      candidate.version.length === 0
+    ) {
       return undefined;
     }
 
@@ -374,7 +377,8 @@ class ServerInfoStore {
     // If still not found, try SQLite
     if (!serverInfo) {
       try {
-        const metadata = await this.storageManager.getSessionMetadata(sessionId);
+        const metadata =
+          await this.storageManager.getSessionMetadata(sessionId);
         serverInfo = this.normalizeServerInfo(metadata?.server);
         // Also try stateless as fallback in SQLite
         if (!serverInfo && sessionId !== "stateless") {

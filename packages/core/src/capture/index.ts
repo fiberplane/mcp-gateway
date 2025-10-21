@@ -172,7 +172,9 @@ export function createResponseCaptureRecord(
   requestTracker?: RequestTracker,
 ): CaptureRecord {
   const client = sanitizeClientInfo(clientInfo ?? getClientInfo(sessionId));
-  const server = sanitizeServerInfo(serverInfo ?? getStoredServerInfo(sessionId));
+  const server = sanitizeServerInfo(
+    serverInfo ?? getStoredServerInfo(sessionId),
+  );
 
   if (client) {
     sessionClientInfo.set(sessionId, client);
@@ -338,7 +340,9 @@ export function createSSEJsonRpcCaptureRecord(
   requestTracker?: RequestTracker,
 ): CaptureRecord {
   const client = sanitizeClientInfo(clientInfo ?? getClientInfo(sessionId));
-  const server = sanitizeServerInfo(serverInfo ?? getStoredServerInfo(sessionId));
+  const server = sanitizeServerInfo(
+    serverInfo ?? getStoredServerInfo(sessionId),
+  );
 
   if (client) {
     sessionClientInfo.set(sessionId, client);

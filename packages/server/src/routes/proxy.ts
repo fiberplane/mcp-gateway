@@ -22,6 +22,7 @@ import {
   serverParamSchema,
   sessionHeaderSchema,
 } from "@fiberplane/mcp-gateway-types";
+import { getConnInfo } from "@hono/node-server/conninfo";
 import { sValidator } from "@hono/standard-validator";
 import type { Context } from "hono";
 import { Hono } from "hono";
@@ -108,13 +109,17 @@ export interface ProxyDependencies {
   storeClientInfoForSession: (sessionId: string, info: ClientInfo) => void;
 
   /** Get client info for a session */
-  getClientInfoForSession: (sessionId: string) => Promise<ClientInfo | undefined>;
+  getClientInfoForSession: (
+    sessionId: string,
+  ) => Promise<ClientInfo | undefined>;
 
   /** Store server info for a session */
   storeServerInfoForSession: (sessionId: string, info: McpServerInfo) => void;
 
   /** Get server info for a session */
-  getServerInfoForSession: (sessionId: string) => Promise<McpServerInfo | undefined>;
+  getServerInfoForSession: (
+    sessionId: string,
+  ) => Promise<McpServerInfo | undefined>;
 
   /** Update server info for an initialize request after getting the response */
   updateServerInfoForInitializeRequest: (
@@ -417,9 +422,23 @@ export async function createProxyRoutes(options: {
       const sessionId = extractSessionId(validatedHeaders);
 
       // Extract HTTP context for capture
+      let clientIp = extractRemoteAddress(validatedHeaders);
+
+      if (!clientIp || clientIp === "unknown") {
+        try {
+          const connInfo = getConnInfo(c);
+          const remoteAddress = connInfo.remote?.address;
+          if (remoteAddress) {
+            clientIp = remoteAddress;
+          }
+        } catch {
+          // No-op if conn info is unavailable (e.g., non-node runtime)
+        }
+      }
+
       const httpContext: HttpContext = {
         userAgent: c.req.header("User-Agent"),
-        clientIp: extractRemoteAddress(validatedHeaders),
+        clientIp: clientIp && clientIp !== "unknown" ? clientIp : undefined,
       };
 
       // Handle initialize method - store client info BEFORE capturing request
@@ -568,7 +587,10 @@ export async function createProxyRoutes(options: {
 
               // Also store for stateless as fallback (for sessions that haven't received their ID yet)
               if (sessionId !== SESSIONLESS_ID) {
-                deps.storeServerInfoForSession(SESSIONLESS_ID, serverResult.data);
+                deps.storeServerInfoForSession(
+                  SESSIONLESS_ID,
+                  serverResult.data,
+                );
               }
 
               // For stateless sessions, also store in context to avoid race conditions

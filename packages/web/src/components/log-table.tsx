@@ -302,8 +302,9 @@ export function LogTable({
           return (
             <Fragment key={logKey}>
               <tr
-                className={`hover:bg-muted/50 transition-colors ${isExpanded ? "bg-blue-50/50" : ""
-                  }`}
+                className={`hover:bg-muted/50 transition-colors ${
+                  isExpanded ? "bg-blue-50/50" : ""
+                }`}
               >
                 {/* biome-ignore lint/a11y/useKeyWithClickEvents: Checkbox cell stops propagation */}
                 <td className="p-3" onClick={(e) => e.stopPropagation()}>
@@ -440,10 +441,63 @@ function createColumns(): () => Column[] {
 function LogDetails({ log }: LogDetailsProps) {
   const [copied, setCopied] = useState<"request" | "response" | null>(null);
 
-  // Check if this is a notification (id === null means notification)
   const isNotification = log.id === null;
 
-  // Memoize formatted JSON to avoid re-stringifying on every render
+  const responseError = useMemo(() => {
+    if (!log.response || typeof log.response !== "object") {
+      return null;
+    }
+
+    const candidate = log.response as {
+      error?: { code?: number; message?: string; data?: unknown };
+    };
+
+    return candidate.error ?? null;
+  }, [log.response]);
+
+  const metadataDetails = useMemo(() => {
+    const items: Array<{ label: string; value: ReactNode }> = [];
+
+    items.push({ label: "Session ID", value: log.metadata.sessionId });
+
+    items.push({
+      label: "JSON-RPC ID",
+      value: isNotification ? "Notification" : String(log.id),
+    });
+
+    if (log.direction === "response" && log.metadata.httpStatus > 0) {
+      items.push({ label: "HTTP Status", value: log.metadata.httpStatus });
+    }
+
+    if (log.metadata.clientIp && log.metadata.clientIp !== "unknown") {
+      items.push({ label: "Client IP", value: log.metadata.clientIp });
+    }
+
+    if (log.metadata.userAgent) {
+      items.push({ label: "User Agent", value: log.metadata.userAgent });
+    }
+
+    if (log.metadata.client?.title) {
+      items.push({ label: "Client Title", value: log.metadata.client.title });
+    }
+
+    if (log.metadata.server?.title) {
+      items.push({ label: "Server Title", value: log.metadata.server.title });
+    }
+
+    return items;
+  }, [
+    isNotification,
+    log.direction,
+    log.id,
+    log.metadata.client?.title,
+    log.metadata.clientIp,
+    log.metadata.httpStatus,
+    log.metadata.server?.title,
+    log.metadata.sessionId,
+    log.metadata.userAgent,
+  ]);
+
   const formattedRequest = useMemo(
     () => (log.request ? JSON.stringify(log.request, null, 2) : null),
     [log.request],
@@ -463,64 +517,95 @@ function LogDetails({ log }: LogDetailsProps) {
   );
 
   return (
-    <div className="flex gap-5">
-      {formattedRequest ? (
-        <div className="flex-1">
-          <div className="flex justify-between items-center mb-2.5">
-            <h4 className="text-sm font-semibold text-foreground">Request</h4>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => copyToClipboard(log.request, "request")}
+    <div className="flex flex-col gap-5">
+      {metadataDetails.length > 0 ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {metadataDetails.map((item) => (
+            <div
+              key={`${item.label}-${String(item.value)}`}
+              className="rounded-md border border-border bg-muted/30 p-3"
             >
-              {copied === "request" ? (
-                <>
-                  <Check className="w-4 h-4 mr-1" />
-                  Copied
-                </>
-              ) : (
-                <>
-                  <Copy className="w-4 h-4 mr-1" />
-                  Copy
-                </>
-              )}
-            </Button>
-          </div>
-          <pre className="bg-card border border-border rounded-md p-4 overflow-auto max-h-96 text-xs font-mono">
-            {formattedRequest}
-          </pre>
+              <div className="text-xs font-medium uppercase text-muted-foreground">
+                {item.label}
+              </div>
+              <div className="mt-1 break-all text-sm text-foreground">
+                {item.value}
+              </div>
+            </div>
+          ))}
         </div>
       ) : null}
-      {/* Don't show response section for notifications (id === null) */}
-      {formattedResponse && !isNotification ? (
-        <div className="flex-1">
-          <div className="flex justify-between items-center mb-2.5">
-            <h4 className="text-sm font-semibold text-foreground">Response</h4>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => copyToClipboard(log.response, "response")}
-            >
-              {copied === "response" ? (
-                <>
-                  <Check className="w-4 h-4 mr-1" />
-                  Copied
-                </>
-              ) : (
-                <>
-                  <Copy className="w-4 h-4 mr-1" />
-                  Copy
-                </>
-              )}
-            </Button>
+
+      {responseError ? (
+        <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+          <div className="font-semibold">JSON-RPC Error</div>
+          <div className="mt-1">
+            {responseError.code != null ? `Code ${responseError.code}: ` : null}
+            {responseError.message ?? "Unknown error"}
           </div>
-          <pre className="bg-card border border-border rounded-md p-4 overflow-auto max-h-96 text-xs font-mono">
-            {formattedResponse}
-          </pre>
         </div>
       ) : null}
+
+      <div className="flex flex-col gap-5 md:flex-row">
+        {formattedRequest ? (
+          <div className="flex-1">
+            <div className="mb-2.5 flex items-center justify-between">
+              <h4 className="text-sm font-semibold text-foreground">Request</h4>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => copyToClipboard(log.request, "request")}
+              >
+                {copied === "request" ? (
+                  <>
+                    <Check className="mr-1 h-4 w-4" />
+                    Copied
+                  </>
+                ) : (
+                  <>
+                    <Copy className="mr-1 h-4 w-4" />
+                    Copy
+                  </>
+                )}
+              </Button>
+            </div>
+            <pre className="max-h-96 overflow-auto rounded-md border border-border bg-card p-4 text-xs font-mono">
+              {formattedRequest}
+            </pre>
+          </div>
+        ) : null}
+        {formattedResponse && !isNotification ? (
+          <div className="flex-1">
+            <div className="mb-2.5 flex items-center justify-between">
+              <h4 className="text-sm font-semibold text-foreground">
+                Response
+              </h4>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => copyToClipboard(log.response, "response")}
+              >
+                {copied === "response" ? (
+                  <>
+                    <Check className="mr-1 h-4 w-4" />
+                    Copied
+                  </>
+                ) : (
+                  <>
+                    <Copy className="mr-1 h-4 w-4" />
+                    Copy
+                  </>
+                )}
+              </Button>
+            </div>
+            <pre className="max-h-96 overflow-auto rounded-md border border-border bg-card p-4 text-xs font-mono">
+              {formattedResponse}
+            </pre>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

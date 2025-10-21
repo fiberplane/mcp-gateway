@@ -64,11 +64,13 @@ export function createMcpServer(
   // Get database connection from gateway for server tools
   const db = gateway.getDb() as BunSQLiteDatabase<typeof schema> | null;
   if (!db) {
-    throw new Error("Database not available for MCP server tools");
+    logger.warn(
+      "MCP server tools disabled: SQLite database connection is unavailable",
+    );
+  } else {
+    // Register server management tools (requires SQLite metrics)
+    createServerTools(mcp, registry, storageDir, db);
   }
-
-  // Register server management tools
-  createServerTools(mcp, registry, storageDir, db);
 
   // Register capture analysis tools (search_records with SQLite queries)
   createCaptureTools(mcp, registry, gateway);
