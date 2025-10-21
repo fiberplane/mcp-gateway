@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@fiberplane/mcp-gateway-types": ["./packages/types/src/index.ts"],
+      "@fiberplane/mcp-gateway-types/*": ["./packages/types/src/*"],
+      "@fiberplane/mcp-gateway-core": ["./packages/core/src/index.ts"],
+      "@fiberplane/mcp-gateway-core/*": ["./packages/core/src/*"],
+      "@fiberplane/mcp-gateway-api": ["./packages/api/src/index.ts"],
+      "@fiberplane/mcp-gateway-api/*": ["./packages/api/src/*"],
+      "@fiberplane/mcp-gateway-server": ["./packages/server/src/index.ts"],
+      "@fiberplane/mcp-gateway-server/*": ["./packages/server/src/*"],
+      "@fiberplane/mcp-gateway-cli": ["./packages/mcp-gateway/src/index.ts"],
+      "@fiberplane/mcp-gateway-cli/*": ["./packages/mcp-gateway/src/*"]
+    }
+  }
+}

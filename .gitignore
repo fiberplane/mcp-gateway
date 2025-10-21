@@ -53,3 +53,5 @@ packages/mcp-gateway-*/mcp-gateway
 packages/mcp-gateway-*/mcp-gateway.exe
 packages/mcp-gateway-*/public
 packages/mcp-gateway-*/drizzle
+
+deps.svg

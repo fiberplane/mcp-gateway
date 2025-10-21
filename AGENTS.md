@@ -84,13 +84,14 @@ This is a Bun workspace monorepo containing the MCP Gateway project. The reposit
 ### Development Commands
 - `bun install` - Install all workspace dependencies
 - `bun run dev` - Start development mode (filters to CLI package)
-- `bun run build` - Build CLI package (filters to main package)
+- `bun run build` - Build all packages in dependency order (types → core → api → server → web → cli)
 - `bun run build:binaries` - Build platform-specific binaries (current platform or --all)
 - `bun run clean` - Clean all dist folders
+- `bun test` - Run all tests across workspace
 - `bun run typecheck` - Type check all packages
-- `bun run lint` - Lint all files
-- `bun run format` - Format all files
-- `bun run check-circular` - Check for circular dependencies
+- `bun run lint` - Lint all files with Biome
+- `bun run format` - Format all files with Biome
+- `bun run check-circular` - Check for circular dependencies (both within and between packages)
 - `bun run deps-graph` - Generate dependency graph (deps.svg)
 
 ### Package-Specific Commands
