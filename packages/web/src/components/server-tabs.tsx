@@ -51,7 +51,8 @@ export function ServerTabs({ value, onChange, panelId }: ServerTabsProps) {
     [data?.servers],
   );
 
-  const selectedServer = value && !availableServers.has(value) ? "all" : value || "all";
+  const selectedServer =
+    value && !availableServers.has(value) ? "all" : value || "all";
   const selectedIndex = allTabValues.indexOf(selectedServer);
 
   const focusFallbackRef = useRef(false);
@@ -75,9 +76,8 @@ export function ServerTabs({ value, onChange, panelId }: ServerTabsProps) {
 
     focusFallbackRef.current = false;
     requestAnimationFrame(() => {
-      const buttons = tabListRef.current?.querySelectorAll<HTMLButtonElement>(
-        '[role="tab"]',
-      );
+      const buttons =
+        tabListRef.current?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
       buttons?.[0]?.focus();
     });
   }, [selectedServer]);
