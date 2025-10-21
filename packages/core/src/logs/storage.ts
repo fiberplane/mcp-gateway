@@ -117,7 +117,8 @@ export async function getServers(
   db: BunSQLiteDatabase<typeof schema>,
   registryServers?: string[],
 ): Promise<ServerInfo[]> {
-  const result = await db
+  // Get servers that have logs in the database
+  const logsResult = await db
     .select({
       name: logs.serverName,
       logCount: count(logs.id),
@@ -132,13 +133,36 @@ export async function getServers(
     (registryServers || []).map((s) => s.toLowerCase()),
   );
 
-  // Add status to each server
-  return result.map((server) => ({
-    ...server,
-    status: normalizedRegistry.has(server.name.toLowerCase())
-      ? ("online" as const) // For now, all registered servers are "online"
-      : ("deleted" as const), // Servers not in registry are "deleted"
-  }));
+  // Create a map of servers from logs
+  const serverMap = new Map<string, ServerInfo>();
+
+  // Add servers from logs with their counts
+  for (const server of logsResult) {
+    serverMap.set(server.name.toLowerCase(), {
+      ...server,
+      status: normalizedRegistry.has(server.name.toLowerCase())
+        ? ("online" as const)
+        : ("deleted" as const),
+    });
+  }
+
+  // Add servers from registry that don't have logs yet
+  for (const serverName of registryServers || []) {
+    const normalizedName = serverName.toLowerCase();
+    if (!serverMap.has(normalizedName)) {
+      serverMap.set(normalizedName, {
+        name: serverName,
+        logCount: 0,
+        sessionCount: 0,
+        status: "online" as const,
+      });
+    }
+  }
+
+  // Convert to array and sort by name
+  return Array.from(serverMap.values()).sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
 }
 
 /**
