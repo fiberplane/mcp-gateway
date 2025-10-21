@@ -412,7 +412,7 @@ export async function runCli(): Promise<void> {
           gateway.logs.getServers(registryServers),
         getSessions: (_storageDir, serverName) =>
           gateway.logs.getSessions(serverName),
-        getRegistryServers: () => registry.servers.map((s) => s.name),
+        getRegistryServers: () => (registry?.servers ?? []).map((s) => s.name),
       },
       logger,
     );

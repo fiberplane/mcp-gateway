@@ -58,6 +58,13 @@ export interface QueryFunctions {
     storageDir: string,
     serverName?: string,
   ) => Promise<SessionInfo[]>;
+  /**
+   * Optional function to retrieve current registry server names.
+   * Used to determine server status (online/offline/deleted) by comparing
+   * servers with logs against currently registered servers.
+   *
+   * @returns Array of server names currently in the registry
+   */
   getRegistryServers?: () => string[];
 }
 
@@ -142,11 +149,24 @@ export function createApiRoutes(
    * List all servers with log counts, session counts, and status
    */
   app.get("/servers", async (c) => {
-    // Get registry servers for status determination
-    const registryServers = queries.getRegistryServers?.() || [];
-    const servers = await queries.getServers(storageDir, registryServers);
+    try {
+      // Get registry servers for status determination
+      const registryServers = queries.getRegistryServers?.() ?? [];
+      const servers = await queries.getServers(storageDir, registryServers);
 
-    return c.json({ servers });
+      return c.json({ servers });
+    } catch (error) {
+      return c.json(
+        {
+          error: {
+            code: "SERVER_QUERY_FAILED",
+            message: "Failed to retrieve servers",
+            details: error instanceof Error ? error.message : String(error),
+          },
+        },
+        500,
+      );
+    }
   });
 
   /**
