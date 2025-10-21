@@ -50,11 +50,15 @@ export interface QueryFunctions {
     storageDir: string,
     options?: LogQueryOptions,
   ) => Promise<LogQueryResult>;
-  getServers: (storageDir: string) => Promise<ServerInfo[]>;
+  getServers: (
+    storageDir: string,
+    registryServers?: string[],
+  ) => Promise<ServerInfo[]>;
   getSessions: (
     storageDir: string,
     serverName?: string,
   ) => Promise<SessionInfo[]>;
+  getRegistryServers?: () => string[];
 }
 
 /**
@@ -135,10 +139,12 @@ export function createApiRoutes(
   /**
    * GET /servers
    *
-   * List all servers with log counts and session counts
+   * List all servers with log counts, session counts, and status
    */
   app.get("/servers", async (c) => {
-    const servers = await queries.getServers(storageDir);
+    // Get registry servers for status determination
+    const registryServers = queries.getRegistryServers?.() || [];
+    const servers = await queries.getServers(storageDir, registryServers);
 
     return c.json({ servers });
   });

@@ -107,10 +107,15 @@ export async function queryLogs(
 }
 
 /**
- * Get server aggregations
+ * Get server aggregations with status
+ *
+ * @param db - Database instance
+ * @param registryServers - Optional list of registered server names
+ * @returns Server information with status (online/offline/deleted)
  */
 export async function getServers(
   db: BunSQLiteDatabase<typeof schema>,
+  registryServers?: string[],
 ): Promise<ServerInfo[]> {
   const result = await db
     .select({
@@ -122,7 +127,18 @@ export async function getServers(
     .groupBy(logs.serverName)
     .orderBy(logs.serverName);
 
-  return result as ServerInfo[];
+  // Normalize registry server names for comparison (lowercase)
+  const normalizedRegistry = new Set(
+    (registryServers || []).map((s) => s.toLowerCase()),
+  );
+
+  // Add status to each server
+  return result.map((server) => ({
+    ...server,
+    status: normalizedRegistry.has(server.name.toLowerCase())
+      ? ("online" as const) // For now, all registered servers are "online"
+      : ("deleted" as const), // Servers not in registry are "deleted"
+  }));
 }
 
 /**

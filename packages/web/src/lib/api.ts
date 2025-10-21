@@ -27,10 +27,13 @@ export interface LogQueryResult {
   };
 }
 
+export type ServerStatus = "online" | "offline" | "deleted";
+
 export interface ServerInfo {
   name: string;
   logCount: number;
   sessionCount: number;
+  status: ServerStatus;
 }
 
 export interface SessionInfo {

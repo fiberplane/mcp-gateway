@@ -3,7 +3,7 @@ import { useState } from "react";
 import { ExportButton } from "./components/export-button";
 import { LogTable } from "./components/log-table";
 import { Pagination } from "./components/pagination";
-import { ServerFilter } from "./components/server-filter";
+import { ServerTabs } from "./components/server-tabs";
 import { SessionFilter } from "./components/session-filter";
 import { StreamingToggle } from "./components/streaming-toggle";
 import { TopNavigation } from "./components/top-navigation";
@@ -79,8 +79,10 @@ function App() {
         <h1 className="text-2xl font-semibold text-foreground mb-6">
           MCP server logs
         </h1>
+        <div className="mb-6">
+          <ServerTabs value={serverName} onChange={handleServerChange} />
+        </div>
         <div className="mb-5 flex gap-3 items-center flex-wrap">
-          <ServerFilter value={serverName} onChange={handleServerChange} />
           <SessionFilter
             serverName={serverName}
             value={sessionId}

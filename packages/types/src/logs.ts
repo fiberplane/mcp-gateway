@@ -39,12 +39,21 @@ export interface LogQueryResult {
 }
 
 /**
+ * Server status
+ * - online: Server is in registry and active
+ * - offline: Server is in registry but not responding
+ * - deleted: Server has logs but is no longer in registry
+ */
+export type ServerStatus = "online" | "offline" | "deleted";
+
+/**
  * Server aggregation info
  */
 export interface ServerInfo {
   name: string;
   logCount: number;
   sessionCount: number;
+  status: ServerStatus;
 }
 
 /**

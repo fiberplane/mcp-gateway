@@ -39,12 +39,16 @@ export async function queryLogs(
  * Returns list of servers with log count and session count
  *
  * @param storageDir - Path to storage directory
- * @returns Server information list
+ * @param registryServers - Optional list of registered server names for status determination
+ * @returns Server information list with status
  */
-export async function getServers(storageDir: string): Promise<ServerInfo[]> {
+export async function getServers(
+  storageDir: string,
+  registryServers?: string[],
+): Promise<ServerInfo[]> {
   const db = getDb(storageDir);
   await ensureMigrations(db);
-  return getServersInternal(db);
+  return getServersInternal(db, registryServers);
 }
 
 /**
