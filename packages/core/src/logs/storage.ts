@@ -125,24 +125,29 @@ export async function getServers(
       sessionCount: sql<number>`COUNT(DISTINCT ${logs.sessionId})`,
     })
     .from(logs)
-    .groupBy(logs.serverName)
-    .orderBy(logs.serverName);
+    .groupBy(logs.serverName);
+  // Note: No .orderBy() here since we sort the final result with localeCompare anyway
 
-  // Normalize registry server names for comparison (lowercase)
-  const normalizedRegistry = new Set(
-    (registryServers || []).map((s) => s.toLowerCase()),
-  );
+  // Create a map of registry servers (normalized name -> original name)
+  // This preserves the registry's casing as the source of truth
+  const registryMap = new Map<string, string>();
+  for (const serverName of registryServers || []) {
+    registryMap.set(serverName.toLowerCase(), serverName);
+  }
 
   // Create a map of servers from logs
   const serverMap = new Map<string, ServerInfo>();
 
   // Add servers from logs with their counts
   for (const server of logsResult) {
-    serverMap.set(server.name.toLowerCase(), {
+    const normalizedName = server.name.toLowerCase();
+    const registryName = registryMap.get(normalizedName);
+
+    serverMap.set(normalizedName, {
       ...server,
-      status: normalizedRegistry.has(server.name.toLowerCase())
-        ? ("online" as const)
-        : ("deleted" as const),
+      // Use registry name for consistency if server is registered, otherwise use log name
+      name: registryName || server.name,
+      status: registryName ? ("online" as const) : ("deleted" as const),
     });
   }
 
