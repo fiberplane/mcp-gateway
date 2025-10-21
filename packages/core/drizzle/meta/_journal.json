@@ -12,22 +12,8 @@
     {
       "idx": 1,
       "version": "6",
-      "when": 1760952823340,
-      "tag": "0001_smiling_wind_dancer",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1760992187909,
-      "tag": "0002_daily_hercules",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
       "when": 1761000000000,
-      "tag": "0003_sunny_server_info",
+      "tag": "0001_client_server_metadata",
       "breakpoints": true
     }
   ]

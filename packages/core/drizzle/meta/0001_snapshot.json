@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "5bc20832-f883-432d-ade9-5397ab697252",
+  "id": "dd9e50cc-7cf8-4f26-9a2a-6d48c8f9c1af",
   "prevId": "08c89bff-96f0-4e0c-8a01-24f45a9866ab",
   "tables": {
     "logs": {
@@ -121,6 +121,13 @@
           "notNull": false,
           "autoincrement": false
         },
+        "server_info_name": {
+          "name": "server_info_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "user_agent": {
           "name": "user_agent",
           "type": "text",
@@ -170,6 +177,97 @@
         "idx_client_ip": {
           "name": "idx_client_ip",
           "columns": ["client_ip"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "session_metadata": {
+      "name": "session_metadata",
+      "columns": {
+        "session_id": {
+          "name": "session_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "server_name": {
+          "name": "server_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "client_name": {
+          "name": "client_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "client_version": {
+          "name": "client_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "client_title": {
+          "name": "client_title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "server_version": {
+          "name": "server_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "server_title": {
+          "name": "server_title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "server_info_name": {
+          "name": "server_info_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "first_seen": {
+          "name": "first_seen",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "last_seen": {
+          "name": "last_seen",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "session_metadata_idx_server_name": {
+          "name": "session_metadata_idx_server_name",
+          "columns": ["server_name"],
+          "isUnique": false
+        },
+        "session_metadata_idx_last_seen": {
+          "name": "session_metadata_idx_last_seen",
+          "columns": ["last_seen"],
           "isUnique": false
         }
       },
