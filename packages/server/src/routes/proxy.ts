@@ -444,6 +444,26 @@ export async function createProxyRoutes(options: {
       const validatedHeaders = c.req.valid("header");
       const sessionId = extractSessionId(validatedHeaders);
 
+      // Extract HTTP context for capture
+      let clientIp = extractRemoteAddress(validatedHeaders);
+
+      if (!clientIp || clientIp === "unknown") {
+        try {
+          const connInfo = getConnInfo(c);
+          const remoteAddress = connInfo.remote?.address;
+          if (remoteAddress) {
+            clientIp = remoteAddress;
+          }
+        } catch {
+          // No-op if conn info is unavailable (e.g., non-node runtime)
+        }
+      }
+
+      const httpContext: HttpContext = {
+        userAgent: c.req.header("User-Agent"),
+        clientIp: clientIp && clientIp !== "unknown" ? clientIp : undefined,
+      };
+
       // Build proxy headers for GET request
       // We don't want to forward the Content-Type header, since this is a GET request
       const { "Content-Type": _, ...proxyHeaders } = buildProxyHeaders(
@@ -522,7 +542,7 @@ export async function createProxyRoutes(options: {
             "GET /mcp", // method for logging
             null, // no request ID for GET
             deps,
-            undefined, // no httpContext for GET
+            httpContext,
             onLog,
           ).catch((error) => {
             // Log capture errors but don't let them crash the server
