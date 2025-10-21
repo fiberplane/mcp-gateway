@@ -82,6 +82,53 @@ Runs on port 3333 with an interactive TUI for server management. Configuration p
 
 **Short aliases**: For convenience, use `/s/:server/mcp` for servers and `/g/mcp` for gateway tools
 
+## Tool Description Optimization (Experimental)
+
+The gateway includes an experimental system for optimizing MCP tool descriptions to improve LLM recall and precision. When enabled with `--enable-mcp-client`, the gateway connects to downstream servers as an MCP client and can dynamically swap tool descriptions.
+
+**Key Features:**
+- **Canonical tool storage**: Original tool definitions saved on first connection
+- **Description candidates**: Generate and test alternative tool descriptions (≤280 chars)
+- **Golden prompts**: Test with direct, indirect, and negative prompts to measure recall/precision
+- **Evaluation metrics**: Track success rates across prompt categories
+- **Promotion system**: Activate optimized descriptions that meet quality thresholds
+
+**Optimization Tools** (available at `/gateway/mcp`):
+- `get_canonical_tools` - View original tool definitions
+- `propose_candidate` - Submit rewritten descriptions for testing
+- `save_golden_prompts` - Store test prompts for evaluation
+- `record_eval_run` - Record evaluation results
+- `get_eval_results` - View metrics for candidates
+- `promote_candidate` - Activate optimized description
+- `revert_optimization` - Restore canonical description
+- `get_optimization_report` - View optimization stats
+- `generate_candidates` - Auto-generate description variants (uses Claude Code subprocess)
+- `generate_golden_prompts` - Auto-generate test prompts (uses Claude Code subprocess)
+
+**Storage Structure** (`~/.mcp-gateway/optimization/{serverName}/`):
+```
+canonical-tools.json          # Original tools from server
+candidates/{toolName}.json    # Description candidates
+prompts/{toolName}.json       # Test prompts
+eval-runs/{candidateId}.json  # Evaluation results
+promotions.json               # Active optimizations
+```
+
+**Example Workflow:**
+```bash
+# Start gateway with MCP client mode
+mcp-gateway --enable-mcp-client
+
+# Use Claude Code to optimize tools via /gateway/mcp
+# 1. Generate candidates with generate_candidates
+# 2. Generate test prompts with generate_golden_prompts
+# 3. Run evaluations locally and record results
+# 4. Review metrics with get_eval_results
+# 5. Promote best candidate with promote_candidate
+```
+
+See `.cursor/plans/tool-description-optimization-5ec0037f.plan.md` for detailed architecture and implementation notes.
+
 ## CLI Options
 
 ```bash
@@ -104,6 +151,7 @@ mcp-gateway --version
 **Available Options:**
 - `--port <number>` - Port to run the gateway server on (default: 3333)
 - `--storage-dir <path>` - Storage directory for registry and captures (default: ~/.mcp-gateway)
+- `--enable-mcp-client` - Use MCP client architecture for downstream connections (experimental)
 - `-h, --help` - Show help information
 - `-v, --version` - Show version number
 

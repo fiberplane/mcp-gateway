@@ -13,8 +13,8 @@
 
 **Claude Code does:**
 
-- Generate description candidates and golden prompts
-- Run evaluations locally
+- Generate description candidates and golden prompts (via subprocess: `claude -p`)
+- Run evaluations locally (via subprocess with tool call detection)
 - Store results via gateway optimization tools
 - Pick winners and promote them
 
@@ -235,19 +235,20 @@ promotions.json          # Map of toolName → PromotedTool
 - Input: `{server?: string}`
 - Output: Aggregate metrics
 
-**Generator tools (with MCP Sampling / headless fallback):**
+**Generator tools (Claude Code subprocess):**
 
 **`generate_candidates`** - Auto-generate rewrites
 
 - Input: `{server: string, tool: string, count?: number}`
-- Uses sampling/createMessage or claude -p headless mode
-- Calls propose_candidate for each
+- Uses `claude -p` subprocess to generate description variants
+- Automatically saves each via propose_candidate
 
 **`generate_golden_prompts`** - Auto-generate test prompts
 
-- Input: `{server: string, tool: string}`
+- Input: `{server: string, tool: string, directCount?: number, indirectCount?: number, negativeCount?: number}`
+- Uses `claude -p` subprocess to generate test prompts
 - Generates direct/indirect/negative prompts
-- Calls save_golden_prompts internally
+- Automatically saves via save_golden_prompts
 
 ### 6. Server Package - MCP Server Routes (`packages/server/src/routes/mcp-server.ts`)
 
@@ -773,9 +774,10 @@ interface OptimizationProgress {
 - ✅ Stage 2: Storage layer (COMPLETE)
 - ✅ Stage 3: Optimization logic & metrics (COMPLETE)
 - ✅ Stage 4: MCP optimization tools (COMPLETE)
-- ⬜ Stage 5: MCP Client integration (NOT STARTED)
-- ⬜ Stage 6: Main app integration (NOT STARTED)
-- ⬜ Stage 7: CLI integration & feature flags (NOT STARTED)
+- ✅ Stage 4.5: Generator tools (COMPLETE - Claude Code subprocess)
+- ✅ Stage 5: MCP Client integration (COMPLETE - Feature-flagged)
+- ⬜ Stage 6: Main app integration (NOT STARTED - Deprecated, replaced by Stage 5)
+- ⬜ Stage 7: CLI integration & feature flags (NOT STARTED - Partially done via Stage 5)
 - ⬜ Stage 8: End-to-end testing (NOT STARTED)
 - ⬜ Stage 9: Documentation & polish (NOT STARTED)
 
@@ -1342,11 +1344,11 @@ interface OptimizationProgress {
   });
   ```
 
-#### 4.4: Generator Tools (Placeholders - MCP Sampling Integration Deferred)
-- [x] `generate_candidates` - Auto-generate rewrites (placeholder)
+#### 4.4: Generator Tools ✅ **COMPLETED** (Claude Code subprocess)
+- [x] `generate_candidates` - Auto-generate rewrites
   ```typescript
   mcp.tool("generate_candidates", {
-    description: "Auto-generate optimized description candidates using LLM...",
+    description: "Auto-generate optimized description candidates using Claude Code subprocess...",
     inputSchema: z.object({
       server: z.string(),
       tool: z.string(),
@@ -1354,17 +1356,32 @@ interface OptimizationProgress {
     }),
     handler: async ({ server, tool, count }) => {
       // Load canonical tool
-      // Use MCP sampling or createMessage to generate candidates
-      // Call propose_candidate for each
-      // Return candidateIds
+      const canonicalTool = await loadCanonicalTools(storageDir, server);
+
+      // Generate via Claude Code subprocess
+      const result = await generateCandidates(canonicalTool, count);
+
+      // Save each candidate
+      for (const candidate of result.candidates) {
+        await saveCandidate(storageDir, server, tool, {
+          id: crypto.randomUUID(),
+          toolName: tool,
+          description: candidate.description,
+          example: candidate.example,
+          charCount: candidate.description.length,
+          createdAt: new Date().toISOString(),
+        });
+      }
+
+      return { candidateIds: result.candidates.map(c => c.id) };
     }
   });
   ```
 
-- [x] `generate_golden_prompts` - Auto-generate test prompts (placeholder)
+- [x] `generate_golden_prompts` - Auto-generate test prompts
   ```typescript
   mcp.tool("generate_golden_prompts", {
-    description: "Auto-generate test prompts for a tool...",
+    description: "Auto-generate test prompts for a tool using Claude Code subprocess...",
     inputSchema: z.object({
       server: z.string(),
       tool: z.string(),
@@ -1374,9 +1391,29 @@ interface OptimizationProgress {
     }),
     handler: async ({ server, tool, directCount, indirectCount, negativeCount }) => {
       // Load canonical tool
-      // Generate prompts via LLM
-      // Call save_golden_prompts
-      // Return prompt count
+      const canonicalTool = await loadCanonicalTools(storageDir, server);
+
+      // Generate via Claude Code subprocess
+      const result = await generateGoldenPrompts(canonicalTool, {
+        direct: directCount,
+        indirect: indirectCount,
+        negative: negativeCount,
+      });
+
+      // Convert and save prompts
+      const goldenPrompts = result.prompts.map(p => ({
+        id: crypto.randomUUID(),
+        toolName: tool,
+        category: p.category,
+        prompt: p.prompt,
+        expectedBehavior: {
+          shouldCallTool: p.category !== "negative",
+          notes: p.notes,
+        },
+      }));
+
+      await saveGoldenPrompts(storageDir, server, tool, goldenPrompts);
+      return { promptCount: goldenPrompts.length };
     }
   });
   ```
@@ -1394,27 +1431,38 @@ interface OptimizationProgress {
   }
   ```
 
+**File**: `packages/core/src/optimization/generator.ts` ✅ **COMPLETED** (340 lines)
+- [x] Implement `generateCandidates()` - Generate description variants via Claude Code subprocess
+- [x] Implement `generateGoldenPrompts()` - Generate test prompts via Claude Code subprocess
+- [x] Subprocess execution using `Bun.spawn()` with `claude -p --output-format text`
+- [x] Structured prompt engineering for consistent output parsing
+- [x] Parse candidates and prompts from Claude's text output
+
 **Implementation Notes**:
-- All 10 tools implemented with comprehensive descriptions
-- Generator tools (`generate_candidates`, `generate_golden_prompts`) marked as placeholders
+- All 10 tools fully implemented with comprehensive descriptions
+- Generator tools use Claude Code subprocess (no MCP sampling)
 - Tools follow same pattern as `server-tools.ts` with detailed descriptions and error handling
 - Includes helpful UX messages like "💡 Next steps:" and formatted output
+- Generator prompts use structured output format for reliable parsing
 
 **Testing**: ✅
 - Tools registered successfully in MCP server
 - TypeScript compilation passes
-- Integration tested via storage and evaluator unit tests (42 total tests passing)
+- Integration tested via storage and evaluator unit tests (57 total tests passing)
+- Generator tools tested manually with Claude Code subprocess
 
 ---
 
-### Stage 5: MCP Client Integration (Dynamic Tool Re-exposure)
+### Stage 5: MCP Client Integration (Dynamic Tool Re-exposure) ✅ **COMPLETED**
 
 **Goal**: Implement MCP client connections to downstream servers and dynamic tool re-exposure with optimized descriptions.
 
-#### 5.1: Client Manager (NEW infrastructure)
-**File**: `packages/core/src/mcp/client-manager.ts`
+**Architecture**: Feature-flagged implementation using `--enable-mcp-client` flag. When enabled, the existing proxy routes use ClientManager instead of HTTP forwarding, maintaining the same endpoints for backward compatibility.
 
-- [ ] Implement `ClientManager` class
+#### 5.1: Client Manager ✅ **COMPLETED**
+**File**: `packages/core/src/mcp/client-manager.ts` (303 lines)
+
+- [x] Implement `ClientManager` class
   ```typescript
   class ClientManager {
     private clients: Map<string, {
@@ -1445,16 +1493,41 @@ interface OptimizationProgress {
   }
   ```
 
-- [ ] Export from `packages/core/src/index.ts`
+- [x] Export from `packages/core/src/index.ts`
 
-**Bun APIs Used**:
-- `fetch()` for MCP HTTP transport
-- Standard MCP client from `mcp-lite` package
+**Implementation**:
+- Uses `mcp-lite`'s `McpClient` and `StreamableHttpClientTransport`
+- Manages connections in `Map<string, ConnectionInfo>`
+- Methods: `connectServer()`, `discoverTools()`, `callTool()`, `listTools()`, `listResources()`, `readResource()`, `listPrompts()`, `getPrompt()`, `disconnectServer()`
+- Handles connection lifecycle and error recovery
+- Description override logic in `listTools()` for applying promotions
 
-#### 5.2: Dynamic Server Module (Tool Re-exposure)
-**File**: `packages/core/src/mcp/dynamic-server.ts`
+#### 5.2: Proxy Routes Integration ✅ **COMPLETED**
+**File**: `packages/server/src/routes/proxy.ts` (682 lines modified)
 
-- [ ] Implement `registerDownstreamTools()` function
+- [x] Add `handleMcpClientRequest()` function
+  - Handles all JSON-RPC methods (`tools/list`, `tools/call`, `resources/*`, `prompts/*`)
+  - Loads promotions and applies optimized descriptions
+  - Same capture/logging logic as HTTP proxy
+  - Same session management and error handling
+
+- [x] Branch in main handler based on `enableMcpClient` flag
+  ```typescript
+  app.post("/:server/mcp", async (c) => {
+    const { server: serverName } = c.req.valid("param");
+    const jsonRpcRequest = c.req.valid("json");
+    const server = getServer(registry, serverName);
+
+    // Branch: MCP Client vs HTTP Proxy
+    if (eventHandlers?.enableMcpClient && eventHandlers?.clientManager) {
+      return handleMcpClientRequest(c, server, jsonRpcRequest, ...);
+    } else {
+      return handleProxyRequest(c, server, jsonRpcRequest, ...);
+    }
+  });
+  ```
+
+**Note**: This approach maintains the same routes (`/servers/{server}/mcp`) while swapping the implementation, ensuring backward compatibility.
   ```typescript
   function registerDownstreamTools(
     mcp: McpServer,
@@ -1481,12 +1554,58 @@ interface OptimizationProgress {
   }
   ```
 
-- [ ] Export from `packages/core/src/index.ts`
+#### 5.3: Main App Integration ✅ **COMPLETED**
+**File**: `packages/server/src/app.ts` (36 lines added)
 
-#### 5.3: MCP Server Routes (Downstream Servers)
-**File**: `packages/server/src/routes/mcp-server.ts` (NEW)
+- [x] Add `enableMcpClient` flag to `createApp()` options
+- [x] Initialize `ClientManager` when flag enabled
+- [x] Connect to all registered servers on startup
+- [x] Discover and save canonical tools automatically
+- [x] Pass `clientManager` to proxy routes
 
-- [ ] Create `createDownstreamMcpApp()` factory
+```typescript
+if (eventHandlers?.enableMcpClient) {
+  clientManager = new ClientManager();
+
+  for (const server of registry.servers) {
+    await clientManager.connectServer(server);
+    const tools = await clientManager.discoverTools(server.name);
+    await saveCanonicalTools(storage, server.name, tools);
+  }
+}
+
+const proxyRoutes = await createProxyRoutes(registry, storage, {
+  ...eventHandlers,
+  clientManager,
+});
+```
+
+#### 5.4: CLI Integration ✅ **COMPLETED**
+**File**: `packages/cli/src/cli.ts` (8 lines added)
+
+- [x] Add `--enable-mcp-client` flag
+  ```typescript
+  .option("--enable-mcp-client", "Use MCP client architecture for downstream connections (experimental)")
+  ```
+
+- [x] Pass flag to `createApp()`
+  ```typescript
+  const { app, registry, clientManager } = await createApp(
+    registry,
+    storageDir,
+    {
+      onLog: handleLog,
+      onRegistryUpdate: handleUpdate,
+      enableMcpClient: options.enableMcpClient,
+    }
+  );
+  ```
+
+#### 5.5: Type Definitions ✅ **COMPLETED**
+**File**: `packages/types/src/registry.ts` (34 lines added)
+
+- [x] Add `Tool` interface
+- [x] Export from index
   ```typescript
   export function createDownstreamMcpApp(
     serverName: string,
@@ -1521,11 +1640,13 @@ interface OptimizationProgress {
   }
   ```
 
-**Testing**:
-- Connect to test MCP server
-- Discover tools successfully
-- Call re-exposed tool, verify forwarding works
-- Promote candidate, verify description updated
+**Testing**: ✅
+- [x] Integration test suite created (`packages/cli/tests/mcp-client/proxy-mcp-comparison.test.ts`, 704 lines)
+- [x] 8 tests, 55 assertions, all passing
+- [x] Tests both modes side-by-side (proxy vs MCP client)
+- [x] Validates tool listing, calling, error handling
+- [x] Verifies optimized descriptions work with MCP client mode
+- [x] Uses real test MCP server (no mocking)
 
 ---
 
@@ -1775,36 +1896,43 @@ interface OptimizationProgress {
 - **Tool Forwarding**: Proxy calls through to downstream
 - **Description Swapping**: At tool registration time, not in-flight
 
-### File Changes Summary (Stages 0-4 COMPLETED)
+### File Changes Summary (Stages 0-5 COMPLETED)
 
-**New Files** (~1304 lines):
+**New Files** (~2347 lines):
 - ✅ `packages/types/src/optimization.ts` (86 lines) - All types and Zod schemas
 - ✅ `packages/core/src/optimization/subprocess.ts` (217 lines) - Evaluation subprocess with Claude CLI integration
 - ✅ `packages/core/src/optimization/storage.ts` (323 lines) - File-based storage for all optimization data
 - ✅ `packages/core/src/optimization/evaluator.ts` (211 lines) - Metrics computation and promotion logic
+- ✅ `packages/core/src/optimization/generator.ts` (340 lines) - Generator tools using Claude Code subprocess
 - ✅ `packages/core/src/optimization/index.ts` (8 lines) - Module exports
-- ✅ `packages/core/src/mcp/tools/optimization-tools.ts` (656 lines) - 10 MCP tools (8 functional, 2 placeholders)
+- ✅ `packages/core/src/mcp/tools/optimization-tools.ts` (1016 lines) - 10 fully implemented MCP tools
+- ✅ `packages/core/src/mcp/client-manager.ts` (303 lines) - ClientManager class
+- ✅ `packages/cli/tests/mcp-client/proxy-mcp-comparison.test.ts` (704 lines) - Integration tests
 
-**Modified Files** (~15 lines):
+**Modified Files** (~808 lines):
+- ✅ `packages/server/src/routes/proxy.ts` (+682 lines) - MCP client handler integration
+- ✅ `packages/server/src/app.ts` (+36 lines) - ClientManager initialization
+- ✅ `packages/cli/src/cli.ts` (+8 lines) - CLI flag
+- ✅ `packages/types/src/registry.ts` (+34 lines) - Tool type definitions
 - ✅ `packages/core/src/mcp/server.ts` (+3 lines) - Register optimization tools
-- ✅ `packages/types/src/index.ts` (+1 line) - Export optimization types
-- ✅ `packages/core/src/index.ts` (+1 line) - Export optimization module
+- ✅ `packages/types/src/index.ts` (+6 lines) - Export types
+- ✅ `packages/core/src/index.ts` (+6 lines) - Export modules
+- ✅ Various package.json files - Dependency updates
 
-**Test Files** (~681 lines):
+**Test Files** (~1385 lines):
 - ✅ `packages/core/tests/subprocess.test.ts` (255 lines) - 15 tests for subprocess evaluation
 - ✅ `packages/core/tests/storage.test.ts` (257 lines) - 22 tests for storage operations
 - ✅ `packages/core/tests/evaluator.test.ts` (169 lines) - 20 tests for metrics and promotion logic
+- ✅ `packages/cli/tests/mcp-client/proxy-mcp-comparison.test.ts` (704 lines) - 8 integration tests
 
-**Total Lines (Stages 0-4)**: ~2000 lines of new/modified code
-**Test Coverage**: 42 tests, 100% passing
+**Total Lines (Stages 0-5)**: ~3836 lines of new/modified code
+**Test Coverage**: 57 tests, 100% passing
 
-**Remaining for Stages 5-9**:
-- `packages/core/src/mcp/client-manager.ts` (~200 lines) - ClientManager class
-- `packages/core/src/mcp/dynamic-server.ts` (~150 lines) - Dynamic tool re-exposure
-- `packages/server/src/routes/mcp-server.ts` (~100 lines) - Downstream MCP server routes
-- `packages/server/src/app.ts` (~50 lines modifications) - Main app integration
-- `packages/cli/src/cli.ts` (~10 lines modifications) - CLI flags
-- Generator tool implementations for `generate_candidates` and `generate_golden_prompts`
+**Remaining for Stages 6-9**:
+- Stage 6: Deprecated (replaced by feature-flagged Stage 5 approach)
+- Stage 7: Partially complete (CLI flag added, full integration exists)
+- Stage 8: End-to-end testing
+- Stage 9: Documentation & polish
 
 ### Dependencies
 - ✅ `mcp-lite` - Already in use, has McpClient (PR #133)
