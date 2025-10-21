@@ -215,15 +215,32 @@ export function LogTable({
           const logKey = getLogKey(log);
           const isExpanded = expandedKey === logKey;
 
+          const handleRowKeyDown = (
+            e: React.KeyboardEvent<HTMLTableRowElement>,
+          ) => {
+            if (
+              (e.key === "Enter" || e.key === " ") &&
+              e.target === e.currentTarget
+            ) {
+              e.preventDefault();
+              handleRowClick(log);
+            }
+          };
+
           return (
             <Fragment key={logKey}>
               <tr
                 key={logKey}
-                className={`hover:bg-muted/50 transition-colors ${
+                tabIndex={0}
+                aria-expanded={isExpanded}
+                aria-label={`Log entry - ${log.method} ${log.direction} from ${log.metadata.serverName} at ${format(new Date(log.timestamp), "HH:mm:ss.SSS")}`}
+                className={`hover:bg-muted/50 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                   isExpanded ? "bg-blue-50/50" : ""
                 }`}
+                onClick={() => handleRowClick(log)}
+                onKeyDown={handleRowKeyDown}
               >
-                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Checkbox cell stops propagation */}
+                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Event delegation handled by parent row */}
                 <td className="p-3" onClick={(e) => e.stopPropagation()}>
                   <Checkbox
                     checked={selectedIds.has(logKey)}
@@ -233,33 +250,30 @@ export function LogTable({
                     aria-label={`Select log ${logKey}`}
                   />
                 </td>
-                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Table row click for expand/collapse, keyboard nav to be added */}
+                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Event delegation handled by parent row */}
                 <td
-                  className="p-3 font-mono text-sm text-foreground cursor-pointer"
+                  className="p-3 font-mono text-sm text-foreground"
                   title={log.timestamp}
-                  onClick={() => handleRowClick(log)}
+                  onClick={(e) => e.stopPropagation()}
                 >
                   {format(new Date(log.timestamp), "HH:mm:ss.SSS")}
                 </td>
-                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Table row click for expand/collapse, keyboard nav to be added */}
+                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Event delegation handled by parent row */}
                 <td
-                  className="p-3 text-sm text-foreground cursor-pointer"
-                  onClick={() => handleRowClick(log)}
+                  className="p-3 text-sm text-foreground"
+                  onClick={(e) => e.stopPropagation()}
                 >
                   {log.metadata.serverName}
                 </td>
-                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Table row click for expand/collapse, keyboard nav to be added */}
+                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Event delegation handled by parent row */}
                 <td
-                  className="p-3 font-mono text-xs text-muted-foreground cursor-pointer"
-                  onClick={() => handleRowClick(log)}
+                  className="p-3 font-mono text-xs text-muted-foreground"
+                  onClick={(e) => e.stopPropagation()}
                 >
                   {log.metadata.sessionId.slice(0, 8)}...
                 </td>
-                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Table row click for expand/collapse, keyboard nav to be added */}
-                <td
-                  className="p-3 cursor-pointer"
-                  onClick={() => handleRowClick(log)}
-                >
+                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Event delegation handled by parent row */}
+                <td className="p-3" onClick={(e) => e.stopPropagation()}>
                   <Badge
                     variant={getMethodBadgeVariant(log.method)}
                     className="inline-flex items-center gap-1"
@@ -272,10 +286,10 @@ export function LogTable({
                     <span>{log.method}</span>
                   </Badge>
                 </td>
-                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Table row click for expand/collapse, keyboard nav to be added */}
+                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Event delegation handled by parent row */}
                 <td
-                  className="p-3 text-sm text-muted-foreground cursor-pointer"
-                  onClick={() => handleRowClick(log)}
+                  className="p-3 text-sm text-muted-foreground"
+                  onClick={(e) => e.stopPropagation()}
                 >
                   {log.metadata.durationMs}ms
                 </td>
