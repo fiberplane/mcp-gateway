@@ -4,10 +4,13 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { Registry } from "../src/registry.js";
-import { createApp } from "../src/server/index.js";
-import { createSSEEventStream, type SSEEvent } from "../src/sse-parser.js";
-import { saveRegistry } from "../src/storage.js";
+import {
+  createSSEEventStream,
+  resetCaptureState,
+  type SSEEvent,
+} from "@fiberplane/mcp-gateway-core";
+import type { Registry } from "@fiberplane/mcp-gateway-types";
+import { createApp, saveRegistry } from "./helpers/test-app.js";
 
 // Real SSE server for testing
 function createSSEServer(port: number): { url: string; stop: () => void } {
@@ -69,10 +72,17 @@ function createSSEServer(port: number): { url: string; stop: () => void } {
 // Integration Tests with Real SSE Server
 describe("SSE Integration Tests", () => {
   let sseServer: { url: string; stop: () => void };
-  let gateway: { port: number; stop: () => void };
+  let gateway: {
+    port: number;
+    stop: () => void;
+    instance: import("@fiberplane/mcp-gateway-core").Gateway;
+  };
   let storageDir: string;
 
   beforeAll(async () => {
+    // Reset capture state before running tests to ensure clean test isolation
+    resetCaptureState();
+
     // Create temp directory for storage
     storageDir = await mkdtemp(join(tmpdir(), "mcp-sse-integration-test-"));
 
@@ -96,15 +106,19 @@ describe("SSE Integration Tests", () => {
     await saveRegistry(storageDir, registry);
 
     // Create and start gateway app
-    const { app } = await createApp(registry, storageDir);
+    const { app, gateway: gatewayInstance } = await createApp(
+      registry,
+      storageDir,
+    );
     const server = Bun.serve({
-      port: 8100,
+      port: 8600, // Changed to avoid port conflicts
       fetch: app.fetch,
     });
 
     gateway = {
-      port: 8100,
+      port: 8600,
       stop: () => server.stop(),
+      instance: gatewayInstance,
     };
   });
 
@@ -119,6 +133,9 @@ describe("SSE Integration Tests", () => {
     } catch (error) {
       console.warn("Failed to clean up temp directory:", error);
     }
+
+    // Reset capture state after tests complete to prevent cross-test contamination
+    resetCaptureState();
   });
 
   test("should stream SSE events through gateway", async () => {
@@ -197,28 +214,26 @@ describe("SSE Integration Tests", () => {
     // Give some time for background capture processing
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    // Check if capture file exists and contains SSE events
-    const serverDir = join(storageDir, "sse-server");
-    const files = await Bun.$`find ${serverDir} -name "*.jsonl"`.text();
+    // Query captured logs from database
+    const queryResult = await gateway.instance.logs.query({
+      serverName: "sse-server",
+      sessionId: sessionId,
+    });
 
-    expect(files.trim()).not.toBe("");
+    // Should have captured at least the initial request and SSE events
+    expect(queryResult.data.length).toBeGreaterThanOrEqual(1);
 
-    const captureFile = files.trim().split("\n")[0];
-    if (!captureFile) throw new Error("Capture file not found");
-
-    const content = await Bun.file(captureFile).text();
-    const lines = content.trim().split("\n");
-
-    // Should have at least the initial request and some SSE events
-    expect(lines.length).toBeGreaterThan(1);
-
-    const requestRecord = JSON.parse(lines[0] ?? "");
-    expect(requestRecord.method).toBe("tools/call");
-
-    // Note: SSE requests may be processed with stateless session initially
-    // but the important thing is that we captured SSE events
-    expect(requestRecord.metadata.sessionId).toMatch(
-      /sse-capture-test|stateless/,
+    // Find the tools/call request record
+    const toolsCallRecord = queryResult.data.find(
+      (r) => r.method === "tools/call",
     );
+    expect(toolsCallRecord).toBeDefined();
+    expect(toolsCallRecord?.method).toBe("tools/call");
+
+    // Also verify we captured the progress notification from the SSE stream
+    const progressRecord = queryResult.data.find(
+      (r) => r.method === "notifications/progress",
+    );
+    expect(progressRecord).toBeDefined();
   });
 });

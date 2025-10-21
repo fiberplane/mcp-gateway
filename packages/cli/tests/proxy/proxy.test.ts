@@ -4,10 +4,9 @@ import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { Registry } from "@fiberplane/mcp-gateway-types";
 import { McpServer, StreamableHttpTransport } from "mcp-lite";
-import type { Registry } from "../../src/registry.js";
-import { createApp } from "../../src/server/index.js";
-import { saveRegistry } from "../../src/storage.js";
+import { createApp, saveRegistry } from "../helpers/test-app.js";
 
 // JSON-RPC response type
 interface JsonRpcResponse {
@@ -120,7 +119,11 @@ async function makeJsonRpcRequest(
 describe("Proxy Integration Tests", () => {
   let testServers: TestServer[] = [];
   let storageDir: string;
-  let gateway: { port: number; stop: () => void };
+  let gateway: {
+    port: number;
+    stop: () => void;
+    instance: import("@fiberplane/mcp-gateway-core").Gateway;
+  };
 
   beforeAll(async () => {
     // Create temp directory for storage
@@ -158,15 +161,19 @@ describe("Proxy Integration Tests", () => {
     await saveRegistry(storageDir, registry);
 
     // Create and start gateway app
-    const { app } = await createApp(registry, storageDir);
+    const { app, gateway: gatewayInstance } = await createApp(
+      registry,
+      storageDir,
+    );
     const server = Bun.serve({
-      port: 8000,
+      port: 8100, // Changed from 8000 to avoid conflicts with auth-401s.test.ts
       fetch: app.fetch,
     });
 
     gateway = {
-      port: 8000,
+      port: 8100,
       stop: () => server.stop(),
+      instance: gatewayInstance,
     };
 
     // Initialize both test servers
@@ -291,7 +298,7 @@ describe("Proxy Integration Tests", () => {
   });
 
   describe("Capture Storage", () => {
-    it("should create capture files", async () => {
+    it("should capture logs to database", async () => {
       const gatewayUrl = `http://localhost:${gateway.port}/servers/server1/mcp`;
       const sessionId = "capture-test-session";
 
@@ -305,12 +312,17 @@ describe("Proxy Integration Tests", () => {
         sessionId,
       );
 
-      // Check if capture file exists
-      const serverDir = join(storageDir, "server1");
-      const files = await Bun.$`find ${serverDir} -name "*.jsonl"`.text();
+      // Wait for async capture to complete
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
-      expect(files.trim()).not.toBe("");
-      expect(files).toContain("-server1-capture_test_session.jsonl");
+      // Query logs from database
+      const queryResult = await gateway.instance.logs.query({
+        serverName: "server1",
+        sessionId,
+      });
+
+      // Should have captured the request and response
+      expect(queryResult.data.length).toBeGreaterThan(0);
     });
 
     it("should capture request and response data", async () => {
@@ -327,27 +339,21 @@ describe("Proxy Integration Tests", () => {
         sessionId,
       );
 
-      // Read the capture file
-      const serverDir = join(storageDir, "server2");
-      const sanitizedSessionId = sessionId.replace(/[^a-zA-Z0-9]/g, "_");
-      const files =
-        await Bun.$`find ${serverDir} -name "*${sanitizedSessionId}*.jsonl"`.text();
-      const captureFile = files.trim().split("\n")[0];
+      // Wait for async capture to complete
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
-      expect(captureFile).toBeTruthy();
+      // Query logs from database
+      const queryResult = await gateway.instance.logs.query({
+        serverName: "server2",
+        sessionId,
+        order: "asc",
+      });
 
-      if (!captureFile) {
-        throw new Error("Capture file not found");
-      }
+      // Should have two records: request and response
+      expect(queryResult.data).toHaveLength(2);
 
-      const content = await Bun.file(captureFile).text();
-      const lines = content.trim().split("\n");
-
-      // Should have two lines: request and response
-      expect(lines).toHaveLength(2);
-
-      const requestRecord = JSON.parse(lines[0] ?? "");
-      const responseRecord = JSON.parse(lines[1] ?? "");
+      const requestRecord = queryResult.data[0];
+      const responseRecord = queryResult.data[1];
 
       // Validate request record
       expect(requestRecord.timestamp).toBeDefined();
@@ -355,7 +361,7 @@ describe("Proxy Integration Tests", () => {
       expect(requestRecord.id).toBeDefined();
       expect(requestRecord.metadata.serverName).toBe("server2");
       expect(requestRecord.metadata.sessionId).toBe(sessionId);
-      expect(requestRecord.request.method).toBe("tools/call");
+      expect(requestRecord.request?.method).toBe("tools/call");
       expect(requestRecord.response).toBeUndefined();
 
       // Validate response record
@@ -365,7 +371,7 @@ describe("Proxy Integration Tests", () => {
       expect(responseRecord.metadata.serverName).toBe("server2");
       expect(responseRecord.metadata.sessionId).toBe(sessionId);
       expect(responseRecord.request).toBeUndefined();
-      expect(responseRecord.response.result.content[0].text).toBe("30");
+      expect(responseRecord.response?.result?.content?.[0]?.text).toBe("30");
     });
   });
 });
