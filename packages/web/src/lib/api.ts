@@ -1,3 +1,9 @@
+import type {
+  ServerInfo,
+  ServerStatus,
+  SessionInfo,
+} from "@fiberplane/mcp-gateway-types";
+
 /**
  * Types matching the API responses
  */
@@ -27,22 +33,8 @@ export interface LogQueryResult {
   };
 }
 
-export type ServerStatus = "online" | "offline" | "deleted";
-
-export interface ServerInfo {
-  name: string;
-  logCount: number;
-  sessionCount: number;
-  status: ServerStatus;
-}
-
-export interface SessionInfo {
-  sessionId: string;
-  serverName: string;
-  logCount: number;
-  startTime: string;
-  endTime: string;
-}
+// Re-export types from shared package for convenience
+export type { ServerInfo, ServerStatus, SessionInfo };
 
 /**
  * API Client for MCP Gateway logs
