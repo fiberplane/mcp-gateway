@@ -42,10 +42,4 @@ jobs:
         run: bun run lint
 
       - name: Build packages
-        run: |
-          bun run --filter @fiberplane/mcp-gateway-web build
-          bun run --filter @fiberplane/mcp-gateway-types build
-          bun run --filter @fiberplane/mcp-gateway-core build
-          bun run --filter @fiberplane/mcp-gateway-api build
-          bun run --filter @fiberplane/mcp-gateway-server build
-          bun run --filter @fiberplane/mcp-gateway-cli build
+        run: bun run build
