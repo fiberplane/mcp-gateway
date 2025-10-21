@@ -1,7 +1,7 @@
 export function TopNavigation() {
   return (
     <header className="bg-card border-b border-border">
-      <div className="flex items-center justify-between px-6 py-6">
+      <div className="flex items-center px-6 py-6">
         {/* Logo container */}
         <div className="flex items-center gap-3">
           {/* Logo icon */}
@@ -46,9 +46,6 @@ export function TopNavigation() {
             Fiberplane
           </span>
         </div>
-
-        {/* Avatar - circular gradient placeholder */}
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-purple-500" />
       </div>
     </header>
   );
