@@ -1,6 +1,5 @@
 import {
   createSSEEventStream,
-  getStorageRoot,
   isJsonRpcResponse,
   logger,
   parseJsonRpcFromSSE,
@@ -146,9 +145,6 @@ export interface ProxyDependencies {
     registry: Registry,
     name: string,
   ) => McpServer | undefined;
-
-  /** Save the registry to storage */
-  saveRegistryToStorage: (storage: string, registry: Registry) => Promise<void>;
 }
 
 // Headers that are automatically managed by fetch/proxy and should not be manually set
@@ -241,10 +237,6 @@ function handleInitializeClientInfo(
 // to be accurate and survive gateway restarts. Metrics are calculated on-demand
 // by getServers() / getRegisteredServers() from the logs.
 async function updateServerActivity(
-  _storage: string,
-  _registry: Registry,
-  _server: McpServer,
-  _deps: ProxyDependencies,
   onRegistryUpdate?: () => void,
 ): Promise<void> {
   // Notify that we should invalidate any cached registry data
@@ -430,9 +422,6 @@ export async function createProxyRoutes(options: {
   } = options;
   const app = new Hono<{ Variables: Variables }>();
 
-  // Determine storage directory
-  const storage = getStorageRoot(storageDir);
-
   /**
    * Proxy the GET /mcp route for SSE streams
    * Handles Server-Sent Events from the target MCP server, capturing and logging all events
@@ -529,14 +518,8 @@ export async function createProxyRoutes(options: {
         const isSSE = contentType.startsWith("text/event-stream");
 
         if (isSSE) {
-          // Update server activity immediately for SSE
-          await updateServerActivity(
-            storage,
-            registry,
-            server,
-            deps,
-            onRegistryUpdate,
-          );
+          // Trigger cache invalidation so metrics are recomputed from logs
+          await updateServerActivity(onRegistryUpdate);
 
           if (!targetResponse.body) {
             throw new Error("SSE response has no body");
@@ -582,13 +565,8 @@ export async function createProxyRoutes(options: {
 
         // Handle non-SSE responses (shouldn't happen normally but be defensive)
         const responseText = await targetResponse.text();
-        await updateServerActivity(
-          storage,
-          registry,
-          server,
-          deps,
-          onRegistryUpdate,
-        );
+        // Trigger cache invalidation so metrics are recomputed from logs
+        await updateServerActivity(onRegistryUpdate);
 
         return new Response(responseText, {
           status: httpStatus,
@@ -723,14 +701,8 @@ export async function createProxyRoutes(options: {
           onLog,
         });
 
-        // Update server activity
-        await updateServerActivity(
-          storage,
-          registry,
-          server,
-          deps,
-          onRegistryUpdate,
-        );
+        // Trigger cache invalidation so metrics are recomputed from logs
+        await updateServerActivity(onRegistryUpdate);
 
         // Forward to target server
         const proxyHeaders = buildProxyHeaders(c, server);

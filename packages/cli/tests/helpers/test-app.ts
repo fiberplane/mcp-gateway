@@ -10,7 +10,6 @@ import {
   getServer,
   logger,
   resetMigrationState,
-  saveRegistry as saveRegistryCore,
 } from "@fiberplane/mcp-gateway-core";
 import {
   createApp as createServerApp,
@@ -130,10 +129,6 @@ export async function createApp(
 
     getServerFromRegistry: (registry: Registry, name: string) => {
       return gateway.registry.getServer(registry, name);
-    },
-
-    saveRegistryToStorage: async (storage: string, registry: Registry) => {
-      await saveRegistryCore(storage, registry);
     },
   };
 

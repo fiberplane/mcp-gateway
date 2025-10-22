@@ -261,15 +261,6 @@ export async function runCli(): Promise<void> {
         ),
       getServerFromRegistry: (registry, name) =>
         gateway.registry.getServer(registry, name),
-      // Note: saveRegistryToStorage is intentionally a no-op
-      // Server metrics (lastActivity, exchangeCount) are now computed from captured logs
-      // in the database, not persisted to mcp.json. This allows:
-      // 1. Metrics are always accurate and computed on-demand
-      // 2. Metrics survive gateway restarts
-      // 3. No separate persistence of activity data needed
-      saveRegistryToStorage: async () => {
-        // No-op: Metrics are computed from logs by storage.getServerMetrics()
-      },
     };
 
     // Create MCP protocol server (proxy, OAuth, gateway MCP server)
