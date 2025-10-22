@@ -1,7 +1,9 @@
+import type { Registry } from "@fiberplane/mcp-gateway-types";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { McpServer, RpcError, StreamableHttpTransport } from "mcp-lite";
 import { z } from "zod";
+import type { Gateway } from "../gateway.js";
 import { logger } from "../logger";
 import {
   addServer as addServerToRegistry,
@@ -26,8 +28,8 @@ import {
  * @returns MCP server instance with configured tools
  */
 export function createMcpServer(
-  gateway: import("../gateway.js").Gateway,
-  registry: import("@fiberplane/mcp-gateway-types").Registry,
+  gateway: Gateway,
+  registry: Registry,
   storageDir: string,
 ): McpServer {
   // Create MCP server with Zod schema adapter for validation
@@ -146,8 +148,8 @@ export function createMcpServer(
  * @returns Hono app configured to serve the MCP server
  */
 export function createMcpApp(
-  gateway: import("../gateway.js").Gateway,
-  registry: import("@fiberplane/mcp-gateway-types").Registry,
+  gateway: Gateway,
+  registry: Registry,
   storageDir: string,
 ): Hono {
   const mcp = createMcpServer(gateway, registry, storageDir);
