@@ -5,6 +5,7 @@ import type {
   JsonRpcRequest,
   JsonRpcResponse,
   McpServerInfo,
+  RequestTracker,
   SSEEvent,
 } from "@fiberplane/mcp-gateway-types";
 import {

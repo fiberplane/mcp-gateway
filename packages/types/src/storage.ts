@@ -1,4 +1,3 @@
-import type { CaptureRecord } from "./schemas.js";
 import type {
   ClientAggregation,
   LogQueryOptions,
@@ -7,6 +6,7 @@ import type {
   SessionInfo,
 } from "./logs.js";
 import type { McpServer, McpServerConfig } from "./registry.js";
+import type { CaptureRecord } from "./schemas.js";
 
 /**
  * Storage backend interface

@@ -3,6 +3,7 @@ import type {
   ClientAggregation,
   LogQueryOptions,
   LogQueryResult,
+  QueryFunctions,
   ServerInfo,
   SessionInfo,
 } from "@fiberplane/mcp-gateway-types";
@@ -44,8 +45,8 @@ const sessionsQuerySchema = z.object({
   server: z.string().optional(),
 });
 
-// Re-export QueryFunctions from types package
-export type { QueryFunctions } from "@fiberplane/mcp-gateway-types";
+// QueryFunctions is imported above and re-exported for backward compatibility
+export type { QueryFunctions };
 
 /**
  * Create API routes for querying logs
