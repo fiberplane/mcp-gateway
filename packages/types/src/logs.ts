@@ -1,5 +1,4 @@
 import type {
-  CaptureMetadata,
   CaptureRecord,
   JsonRpcRequest,
   JsonRpcResponse,
@@ -23,23 +22,48 @@ export interface ApiError {
  * - Request/response pairs are split into individual entries with direction field
  * - SSE events are included as standalone entries with direction: "sse-event"
  *
- * This makes it easier for clients to work with individual events.
+ * This is a discriminated union where direction field determines which fields are present.
  */
-export interface ApiLogEntry {
-  timestamp: string;
-  method: string;
-  id: string | number | null;
-  direction: "request" | "response" | "sse-event";
-  metadata: CaptureMetadata;
-  request?: JsonRpcRequest;
-  response?: JsonRpcResponse;
-  sseEvent?: {
+
+/**
+ * Request log entry (from CaptureRecord.request)
+ */
+export interface ApiRequestLogEntry
+  extends Omit<CaptureRecord, "response" | "sseEvent"> {
+  direction: "request";
+  request: JsonRpcRequest;
+}
+
+/**
+ * Response log entry (from CaptureRecord.response)
+ */
+export interface ApiResponseLogEntry
+  extends Omit<CaptureRecord, "request" | "sseEvent"> {
+  direction: "response";
+  response: JsonRpcResponse;
+}
+
+/**
+ * SSE event log entry (from CaptureRecord.sseEvent)
+ */
+export interface ApiSseEventLogEntry
+  extends Omit<CaptureRecord, "request" | "response"> {
+  direction: "sse-event";
+  sseEvent: {
     id?: string;
     event?: string;
     data?: string;
     retry?: number;
   };
 }
+
+/**
+ * Union type representing all possible API log entries
+ */
+export type ApiLogEntry =
+  | ApiRequestLogEntry
+  | ApiResponseLogEntry
+  | ApiSseEventLogEntry;
 
 /**
  * Query options for log filtering and pagination

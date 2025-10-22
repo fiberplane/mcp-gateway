@@ -9,7 +9,11 @@ import {
   Copy,
 } from "lucide-react";
 import { Fragment, type ReactNode, useMemo, useState } from "react";
-import type { LogEntry } from "../lib/api";
+import type {
+  ApiRequestLogEntry,
+  ApiResponseLogEntry,
+  LogEntry,
+} from "../lib/api";
 import { getMethodBadgeVariant } from "../lib/badge-color";
 import { groupLogsByTime, type TimeInterval } from "../lib/time-grouping";
 import { useHandler } from "../lib/use-handler";
@@ -444,16 +448,22 @@ function LogDetails({ log }: LogDetailsProps) {
   const isNotification = log.id === null;
 
   const responseError = useMemo(() => {
-    if (!log.response || typeof log.response !== "object") {
+    if (log.direction !== "response") {
       return null;
     }
 
-    const candidate = log.response as {
+    const responseLog = log as ApiResponseLogEntry;
+
+    if (!responseLog.response || typeof responseLog.response !== "object") {
+      return null;
+    }
+
+    const candidate = responseLog.response as {
       error?: { code?: number; message?: string; data?: unknown };
     };
 
     return candidate.error ?? null;
-  }, [log.response]);
+  }, [log]);
 
   const metadataDetails = useMemo(() => {
     const items: Array<{ label: string; value: ReactNode }> = [];
@@ -498,15 +508,23 @@ function LogDetails({ log }: LogDetailsProps) {
     log.metadata.userAgent,
   ]);
 
-  const formattedRequest = useMemo(
-    () => (log.request ? JSON.stringify(log.request, null, 2) : null),
-    [log.request],
-  );
+  const formattedRequest = useMemo(() => {
+    if (log.direction !== "request") {
+      return null;
+    }
 
-  const formattedResponse = useMemo(
-    () => (log.response ? JSON.stringify(log.response, null, 2) : null),
-    [log.response],
-  );
+    const requestLog = log as ApiRequestLogEntry;
+    return JSON.stringify(requestLog.request, null, 2);
+  }, [log]);
+
+  const formattedResponse = useMemo(() => {
+    if (log.direction !== "response") {
+      return null;
+    }
+
+    const responseLog = log as ApiResponseLogEntry;
+    return JSON.stringify(responseLog.response, null, 2);
+  }, [log]);
 
   const copyToClipboard = useHandler(
     (data: unknown, type: "request" | "response") => {
@@ -547,7 +565,7 @@ function LogDetails({ log }: LogDetailsProps) {
       ) : null}
 
       <div className="flex flex-col gap-5 md:flex-row">
-        {formattedRequest ? (
+        {formattedRequest && log.direction === "request" ? (
           <div className="flex-1">
             <div className="mb-2.5 flex items-center justify-between">
               <h4 className="text-sm font-semibold text-foreground">Request</h4>
@@ -555,7 +573,12 @@ function LogDetails({ log }: LogDetailsProps) {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => copyToClipboard(log.request, "request")}
+                onClick={() =>
+                  copyToClipboard(
+                    (log as ApiRequestLogEntry).request,
+                    "request",
+                  )
+                }
               >
                 {copied === "request" ? (
                   <>
@@ -575,7 +598,9 @@ function LogDetails({ log }: LogDetailsProps) {
             </pre>
           </div>
         ) : null}
-        {formattedResponse && !isNotification ? (
+        {formattedResponse &&
+        !isNotification &&
+        log.direction === "response" ? (
           <div className="flex-1">
             <div className="mb-2.5 flex items-center justify-between">
               <h4 className="text-sm font-semibold text-foreground">
@@ -585,7 +610,12 @@ function LogDetails({ log }: LogDetailsProps) {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => copyToClipboard(log.response, "response")}
+                onClick={() =>
+                  copyToClipboard(
+                    (log as ApiResponseLogEntry).response,
+                    "response",
+                  )
+                }
               >
                 {copied === "response" ? (
                   <>
