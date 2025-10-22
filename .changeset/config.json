@@ -13,7 +13,8 @@
     "@fiberplane/mcp-gateway-core",
     "@fiberplane/mcp-gateway-server",
     "@fiberplane/mcp-gateway-cli",
-    "@fiberplane/mcp-gateway-api"
+    "@fiberplane/mcp-gateway-api",
+    "@fiberplane/mcp-gateway-web"
   ],
   "packages": ["packages/*"]
 }
