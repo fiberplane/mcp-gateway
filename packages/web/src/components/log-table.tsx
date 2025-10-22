@@ -254,7 +254,7 @@ export function LogTable({
                 tabIndex={0}
                 aria-expanded={isExpanded}
                 aria-label={`Log entry - ${log.method} ${log.direction} from ${log.metadata.serverName} at ${format(new Date(log.timestamp), "HH:mm:ss.SSS")}`}
-                className={`hover:bg-muted transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                className={`hover:bg-muted transition-colors cursor-pointer focus:outline-none focus:bg-accent ${
                   isExpanded ? "bg-muted" : ""
                 }`}
                 onClick={() => handleRowClick(log)}
