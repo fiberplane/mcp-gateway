@@ -207,8 +207,10 @@ The tool will confirm successful removal or provide an error if the server doesn
           };
         }
 
-        // Query metrics from gateway before removing
-        const metrics = await gateway.getServerMetrics(existingServer.name);
+        // Query metrics from gateway storage before removing
+        const metrics = await gateway.storage.getServerMetrics(
+          existingServer.name,
+        );
 
         // Remove server from registry
         const updatedRegistry = removeServerFromRegistry(registry, args.name);
@@ -288,10 +290,10 @@ For large deployments, use the 'concise' format first to get an overview, then q
         };
       }
 
-      // Query metrics for all servers from gateway
+      // Query metrics for all servers from gateway storage
       const serversWithMetrics = await Promise.all(
         servers.map(async (server) => {
-          const metrics = await gateway.getServerMetrics(server.name);
+          const metrics = await gateway.storage.getServerMetrics(server.name);
           return { ...server, ...metrics };
         }),
       );

@@ -253,7 +253,7 @@ export async function runCli(): Promise<void> {
         requestId,
         serverInfo,
       ) =>
-        gateway.logs.updateServerInfoForInitializeRequest(
+        gateway.storage.updateServerInfoForInitializeRequest(
           serverName,
           sessionId,
           requestId,
@@ -445,17 +445,17 @@ export async function runCli(): Promise<void> {
     const apiApp = createApiApp(
       storageDir,
       {
-        queryLogs: (_storageDir, options) => gateway.logs.query(options),
-        getServers: (_storageDir) => gateway.logs.getServers(),
+        queryLogs: (_storageDir, options) => gateway.storage.query(options),
+        getServers: (_storageDir) => gateway.storage.getServers(),
         getSessions: (_storageDir, serverName) =>
-          gateway.logs.getSessions(serverName),
-        getClients: (_storageDir) => gateway.logs.getClients(),
+          gateway.storage.getSessions(serverName),
+        getClients: (_storageDir) => gateway.storage.getClients(),
         clearSessions: async () => {
           // Clear in-memory session metadata
           gateway.clientInfo.clearAll();
           gateway.serverInfo.clearAll();
           // Clear all logs from database
-          await gateway.logs.clearAll();
+          await gateway.storage.clearAll();
         },
       },
       logger,

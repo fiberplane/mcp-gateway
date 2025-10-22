@@ -166,9 +166,9 @@ export interface Gateway {
   };
 
   /**
-   * Log query operations for retrieving captured traffic
+   * Storage and database operations for querying captured traffic and metadata
    */
-  logs: {
+  storage: {
     /**
      * Query logs with filtering and pagination
      */
@@ -177,26 +177,38 @@ export interface Gateway {
     ): Promise<import("@fiberplane/mcp-gateway-types").LogQueryResult>;
 
     /**
-     * Get server aggregations
+     * Get server aggregations from storage
      */
     getServers(): Promise<import("@fiberplane/mcp-gateway-types").ServerInfo[]>;
 
     /**
-     * Get session aggregations
+     * Get session aggregations from storage
      */
     getSessions(
       serverName?: string,
     ): Promise<import("@fiberplane/mcp-gateway-types").SessionInfo[]>;
 
     /**
-     * Get client aggregations
+     * Get client aggregations from storage
      */
     getClients(): Promise<
       import("@fiberplane/mcp-gateway-types").ClientAggregation[]
     >;
 
     /**
-     * Clear all logs
+     * Get metrics for a specific server
+     *
+     * Returns activity metrics for a server computed from stored logs.
+     *
+     * @param serverName - Name of the server to get metrics for
+     * @returns Metrics including last activity timestamp and request count
+     */
+    getServerMetrics(
+      serverName: string,
+    ): Promise<{ lastActivity: string | null; exchangeCount: number }>;
+
+    /**
+     * Clear all logs from storage
      *
      * This is a destructive operation that removes all stored logs.
      * Use with caution.
@@ -256,18 +268,6 @@ export interface Gateway {
       }>
     >;
   };
-
-  /**
-   * Get metrics for a specific server
-   *
-   * Returns activity metrics for a server computed from stored logs.
-   *
-   * @param serverName - Name of the server to get metrics for
-   * @returns Metrics including last activity timestamp and request count
-   */
-  getServerMetrics(
-    serverName: string,
-  ): Promise<{ lastActivity: string | null; exchangeCount: number }>;
 
   /**
    * Close all connections and clean up resources
@@ -711,12 +711,14 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
       hasRequest: (id: string | number) => requestTracker.hasRequest(id),
     },
 
-    logs: {
+    storage: {
       query: async (options?) => await storageManager.queryLogs(options),
       getServers: async () => await storageManager.getServers(),
       getSessions: async (serverName?) =>
         await storageManager.getSessions(serverName),
       getClients: async () => await storageManager.getClients(),
+      getServerMetrics: async (serverName: string) =>
+        await storageManager.getServerMetrics(serverName),
       clearAll: async () => await storageManager.clearAll(),
       updateServerInfoForInitializeRequest: async (
         serverName: string,
@@ -752,10 +754,6 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
       check: async (registry: Registry) => {
         return await healthCheckManager.check(registry);
       },
-    },
-
-    getServerMetrics: async (serverName: string) => {
-      return await storageManager.getServerMetrics(serverName);
     },
 
     close: async () => {

@@ -54,7 +54,7 @@ Examples:
     inputSchema: SearchRecordsSchema,
     handler: async (args) => {
       try {
-        const result = await gateway.logs.query(args);
+        const result = await gateway.storage.query(args);
 
         // Format results for MCP output
         const summary = `Found ${result.data.length} records (limit: ${result.pagination.limit}, hasMore: ${result.pagination.hasMore})`;
