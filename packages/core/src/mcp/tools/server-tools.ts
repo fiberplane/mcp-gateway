@@ -1,5 +1,5 @@
-import type { McpServer as RegistryMcpServer } from "@fiberplane/mcp-gateway-types";
-import type { McpServer as McpLiteServer } from "mcp-lite";
+import type { McpServer } from "@fiberplane/mcp-gateway-types";
+import type { McpServer as MCP_LiteServer } from "mcp-lite";
 import { z } from "zod";
 
 // Schema for adding a new server
@@ -74,12 +74,12 @@ export interface ServerToolsDependencies {
   /**
    * Get a server by name from the registry
    */
-  getServer: (name: string) => RegistryMcpServer | undefined;
+  getServer: (name: string) => McpServer | undefined;
 
   /**
    * Add a new server to the registry and persist changes
    */
-  addServer: (server: RegistryMcpServer) => Promise<void>;
+  addServer: (server: McpServer) => Promise<void>;
 
   /**
    * Remove a server from the registry and persist changes
@@ -89,7 +89,7 @@ export interface ServerToolsDependencies {
   /**
    * Get all servers from the registry
    */
-  listServers: () => Promise<RegistryMcpServer[]>;
+  listServers: () => Promise<McpServer[]>;
 }
 
 /**
@@ -100,7 +100,7 @@ export interface ServerToolsDependencies {
  * @param deps - Dependencies for server management operations
  */
 export function createServerTools(
-  mcp: McpLiteServer,
+  mcp: MCP_LiteServer,
   deps: ServerToolsDependencies,
 ): void {
   mcp.tool("add_server", {
@@ -143,7 +143,7 @@ The tool will return success confirmation with the server's configuration detail
           url: args.url,
           type: "http",
           headers: args.headers || {},
-        } as RegistryMcpServer);
+        } as McpServer);
 
         return {
           content: [
