@@ -26,7 +26,7 @@ import type { Context } from "@fiberplane/mcp-gateway-types";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { serveStatic } from "hono/bun";
-import { emitLog, emitRegistryUpdate } from "./events.js";
+import { emitLog, emitRegistryUpdate, tuiEvents } from "./events.js";
 import { runOpenTUI } from "./tui/App.js";
 import { useAppStore } from "./tui/store.js";
 import { getVersion } from "./utils/version.js";
@@ -583,7 +583,6 @@ export async function runCli(): Promise<void> {
     // Start TUI only if running in a TTY and --no-tui flag is not set
     if (process.stdin.isTTY && !values["no-tui"]) {
       // Listen for registry updates and reload into HTTP server's registry
-      const { tuiEvents } = await import("./events.js");
       tuiEvents.on("action", async (action) => {
         if (action.type === "registry_updated") {
           logger.debug("Registry update event received in HTTP server");
