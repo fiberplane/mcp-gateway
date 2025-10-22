@@ -228,43 +228,6 @@ export function createResponseCaptureRecord(
   return record;
 }
 
-/**
- * @deprecated This function uses global state and is deprecated.
- * Use Gateway.capture.append() instead.
- *
- * This function will be removed in a future version.
- */
-export async function appendCapture(
-  _storageDir: string,
-  _record: CaptureRecord,
-): Promise<string> {
-  throw new Error(
-    "appendCapture() is deprecated. Use Gateway.capture.append() instead. " +
-      "Create a Gateway instance via createGateway() and use its capture methods.",
-  );
-}
-
-/**
- * @deprecated This function uses global state and is deprecated.
- * Use Gateway.capture.error() instead.
- *
- * This function will be removed in a future version.
- */
-export async function captureError(
-  _storageDir: string,
-  _serverName: string,
-  _sessionId: string,
-  _request: JsonRpcRequest,
-  _error: { code: number; message: string; data?: unknown },
-  _httpStatus: number,
-  _durationMs: number,
-): Promise<void> {
-  throw new Error(
-    "captureError() is deprecated. Use Gateway.capture.error() instead. " +
-      "Create a Gateway instance via createGateway() and use its capture methods.",
-  );
-}
-
 // Create capture record for SSE event
 export function createSSEEventCaptureRecord(
   serverName: string,
@@ -423,44 +386,4 @@ export function createSSEJsonRpcCaptureRecord(
   }
 
   return record;
-}
-
-/**
- * @deprecated This function uses global state and is deprecated.
- * Use Gateway.capture.sseEvent() instead.
- *
- * This function will be removed in a future version.
- */
-export async function captureSSEEvent(
-  _storageDir: string,
-  _serverName: string,
-  _sessionId: string,
-  _sseEvent: SSEEvent,
-  _method?: string,
-  _requestId?: string | number | null,
-): Promise<void> {
-  throw new Error(
-    "captureSSEEvent() is deprecated. Use Gateway.capture.sseEvent() instead. " +
-      "Create a Gateway instance via createGateway() and use its capture methods.",
-  );
-}
-
-/**
- * @deprecated This function uses global state and is deprecated.
- * Use Gateway.capture.sseJsonRpc() instead.
- *
- * This function will be removed in a future version.
- */
-export async function captureSSEJsonRpc(
-  _storageDir: string,
-  _serverName: string,
-  _sessionId: string,
-  _jsonRpcMessage: JsonRpcRequest | JsonRpcResponse,
-  _sseEvent: SSEEvent,
-  _isResponse: boolean = false,
-): Promise<CaptureRecord | null> {
-  throw new Error(
-    "captureSSEJsonRpc() is deprecated. Use Gateway.capture.sseJsonRpc() instead. " +
-      "Create a Gateway instance via createGateway() and use its capture methods.",
-  );
 }
