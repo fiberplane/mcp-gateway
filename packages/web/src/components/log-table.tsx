@@ -9,7 +9,13 @@ import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
 
-type SortField = "timestamp" | "server" | "session" | "method" | "duration";
+type SortField =
+  | "timestamp"
+  | "client"
+  | "method"
+  | "server"
+  | "session"
+  | "duration";
 type SortDirection = "asc" | "desc";
 
 interface LogTableProps {
@@ -84,6 +90,14 @@ export function LogTable({
           aValue = a.timestamp;
           bValue = b.timestamp;
           break;
+        case "client":
+          aValue = a.metadata.client?.name || "";
+          bValue = b.metadata.client?.name || "";
+          break;
+        case "method":
+          aValue = a.method;
+          bValue = b.method;
+          break;
         case "server":
           aValue = a.metadata.serverName;
           bValue = b.metadata.serverName;
@@ -91,10 +105,6 @@ export function LogTable({
         case "session":
           aValue = a.metadata.sessionId;
           bValue = b.metadata.sessionId;
-          break;
-        case "method":
-          aValue = a.method;
-          bValue = b.method;
           break;
         case "duration":
           aValue = a.metadata.durationMs;
@@ -170,6 +180,26 @@ export function LogTable({
           </th>
           <th className="text-left p-3 text-sm font-semibold text-foreground">
             <SortHeader
+              field="client"
+              sortField={sortField}
+              sortDirection={sortDirection}
+              onSort={handleSort}
+            >
+              Client
+            </SortHeader>
+          </th>
+          <th className="text-left p-3 text-sm font-semibold text-foreground">
+            <SortHeader
+              field="method"
+              sortField={sortField}
+              sortDirection={sortDirection}
+              onSort={handleSort}
+            >
+              Method
+            </SortHeader>
+          </th>
+          <th className="text-left p-3 text-sm font-semibold text-foreground">
+            <SortHeader
               field="server"
               sortField={sortField}
               sortDirection={sortDirection}
@@ -186,16 +216,6 @@ export function LogTable({
               onSort={handleSort}
             >
               Session
-            </SortHeader>
-          </th>
-          <th className="text-left p-3 text-sm font-semibold text-foreground">
-            <SortHeader
-              field="method"
-              sortField={sortField}
-              sortDirection={sortDirection}
-              onSort={handleSort}
-            >
-              Method
             </SortHeader>
           </th>
           <th className="text-left p-3 text-sm font-semibold text-foreground">
@@ -266,14 +286,7 @@ export function LogTable({
                   className="p-3 text-sm text-foreground"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {log.metadata.serverName}
-                </td>
-                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Event delegation handled by parent row */}
-                <td
-                  className="p-3 font-mono text-xs text-muted-foreground"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {log.metadata.sessionId.slice(0, 8)}...
+                  {log.metadata.client?.name || "—"}
                 </td>
                 {/* biome-ignore lint/a11y/useKeyWithClickEvents: Event delegation handled by parent row */}
                 <td className="p-3" onClick={(e) => e.stopPropagation()}>
@@ -291,6 +304,20 @@ export function LogTable({
                 </td>
                 {/* biome-ignore lint/a11y/useKeyWithClickEvents: Event delegation handled by parent row */}
                 <td
+                  className="p-3 text-sm text-foreground"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {log.metadata.serverName}
+                </td>
+                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Event delegation handled by parent row */}
+                <td
+                  className="p-3 font-mono text-xs text-muted-foreground"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {log.metadata.sessionId.slice(0, 8)}...
+                </td>
+                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Event delegation handled by parent row */}
+                <td
                   className="p-3 text-sm text-muted-foreground"
                   onClick={(e) => e.stopPropagation()}
                 >
@@ -299,7 +326,7 @@ export function LogTable({
               </tr>
               {isExpanded && (
                 <tr key={`${logKey}-details`}>
-                  <td colSpan={6} className="p-5 bg-card">
+                  <td colSpan={7} className="p-5 bg-card">
                     <LogDetails log={log} />
                   </td>
                 </tr>
