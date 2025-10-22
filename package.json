@@ -11,7 +11,7 @@
     "build": "bun run --filter @fiberplane/mcp-gateway-types build && bun run --filter @fiberplane/mcp-gateway-core build && bun run --filter @fiberplane/mcp-gateway-api build && bun run --filter @fiberplane/mcp-gateway-server build && bun run --filter @fiberplane/mcp-gateway-web build && bun run --filter @fiberplane/mcp-gateway-cli build",
     "build:types": "bun run --filter @fiberplane/mcp-gateway-cli build:types",
     "build:binaries": "bun run scripts/build-binaries.ts",
-    "clean": "rm -rf packages/*/dist",
+    "clean": "rm -rf packages/*/dist && rm -rf packages/*/public && rm -rf packages/mcp-gateway-*/drizzle",
     "test": "bun test",
     "typecheck": "bun run --filter '*' typecheck",
     "lint": "biome ci .",

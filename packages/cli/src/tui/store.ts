@@ -1,4 +1,4 @@
-import type { Gateway } from "@fiberplane/mcp-gateway-core";
+import { checkServerHealth, type Gateway } from "@fiberplane/mcp-gateway-core";
 import type {
   LogEntry,
   Registry,
@@ -157,7 +157,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
     }
 
     // Perform health check BEFORE persisting (to ensure we have health status)
-    const { checkServerHealth } = await import("@fiberplane/mcp-gateway-core");
     const health = await checkServerHealth(normalizedUrl);
     const lastHealthCheck = new Date().toISOString();
 

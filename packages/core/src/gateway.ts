@@ -12,6 +12,11 @@ import type {
 } from "@fiberplane/mcp-gateway-types";
 import { mcpServerInfoSchema } from "@fiberplane/mcp-gateway-types";
 import { SqliteStorageBackend } from "./capture/backends/sqlite-backend.js";
+import {
+  createResponseCaptureRecord,
+  createSSEEventCaptureRecord,
+  createSSEJsonRpcCaptureRecord,
+} from "./capture/index.js";
 import { StorageManager } from "./capture/storage-manager.js";
 import { logger } from "./logger.js";
 
@@ -305,9 +310,6 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
   // Create scoped health check manager
   const healthCheckManager = new HealthCheckManager();
 
-  // Import capture functions dynamically to avoid circular dependencies
-  const captureModule = await import("./capture/index.js");
-
   return {
     capture: {
       append: async (record: CaptureRecord) => {
@@ -333,7 +335,7 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
           error,
         };
 
-        const record = captureModule.createResponseCaptureRecord(
+        const record = createResponseCaptureRecord(
           serverName,
           sessionId,
           errorResponse,
@@ -359,7 +361,7 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
         requestId?: string | number | null,
       ) => {
         try {
-          const record = captureModule.createSSEEventCaptureRecord(
+          const record = createSSEEventCaptureRecord(
             serverName,
             sessionId,
             sseEvent,
@@ -370,8 +372,6 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
           );
           await storageManager.write(record);
         } catch (error) {
-          // Import logger dynamically to avoid circular deps
-          const { logger } = await import("./logger.js");
           logger.error("Failed to capture SSE event", { error: String(error) });
           // Don't throw - SSE capture failures shouldn't break streaming
         }
@@ -385,7 +385,7 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
         isResponse = false,
       ) => {
         try {
-          const record = captureModule.createSSEJsonRpcCaptureRecord(
+          const record = createSSEJsonRpcCaptureRecord(
             serverName,
             sessionId,
             jsonRpcMessage,
@@ -399,7 +399,6 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
           await storageManager.write(record);
           return record;
         } catch (error) {
-          const { logger } = await import("./logger.js");
           logger.error("Failed to capture SSE JSON-RPC", {
             error: String(error),
           });

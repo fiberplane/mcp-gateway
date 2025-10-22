@@ -12,7 +12,19 @@ import type {
 } from "@fiberplane/mcp-gateway-types";
 import { type BunSQLiteDatabase, drizzle } from "drizzle-orm/bun-sqlite";
 import { logger } from "../../logger";
+import { ensureMigrations } from "../../logs/migrations.js";
 import * as schema from "../../logs/schema.js";
+import {
+  getClients,
+  getServerMetrics,
+  getServers,
+  getSessionMetadata,
+  getSessions,
+  insertLog,
+  queryLogs,
+  updateServerInfoForInitializeRequest,
+} from "../../logs/storage.js";
+import { loadRegistry, saveRegistry } from "../../registry/storage.js";
 import type { StorageBackend, StorageWriteResult } from "../storage-backend.js";
 
 /**
@@ -48,7 +60,6 @@ export class SqliteStorageBackend implements StorageBackend {
       this.db = drizzle(this.sqlite, { schema });
 
       // Run migrations
-      const { ensureMigrations } = await import("../../logs/migrations.js");
       await ensureMigrations(this.db);
 
       this.initialized = true;
@@ -80,7 +91,6 @@ export class SqliteStorageBackend implements StorageBackend {
 
     try {
       // Use owned DB connection
-      const { insertLog } = await import("../../logs/storage.js");
       await insertLog(this.db, record);
 
       return {
@@ -120,7 +130,6 @@ export class SqliteStorageBackend implements StorageBackend {
     }
 
     try {
-      const { queryLogs } = await import("../../logs/storage.js");
       return await queryLogs(this.db, options);
     } catch (error) {
       logger.error("SQLite queryLogs failed", {
@@ -137,7 +146,6 @@ export class SqliteStorageBackend implements StorageBackend {
     }
 
     try {
-      const { getServers } = await import("../../logs/storage.js");
       return await getServers(this.db);
     } catch (error) {
       logger.error("SQLite getServers failed", {
@@ -154,7 +162,6 @@ export class SqliteStorageBackend implements StorageBackend {
     }
 
     try {
-      const { getSessions } = await import("../../logs/storage.js");
       return await getSessions(this.db, serverName);
     } catch (error) {
       logger.error("SQLite getSessions failed", {
@@ -171,7 +178,6 @@ export class SqliteStorageBackend implements StorageBackend {
     }
 
     try {
-      const { getClients } = await import("../../logs/storage.js");
       return await getClients(this.db);
     } catch (error) {
       logger.error("SQLite getClients failed", {
@@ -223,9 +229,6 @@ export class SqliteStorageBackend implements StorageBackend {
     }
 
     try {
-      const { updateServerInfoForInitializeRequest } = await import(
-        "../../logs/storage.js"
-      );
       await updateServerInfoForInitializeRequest(
         this.db,
         serverName,
@@ -262,7 +265,6 @@ export class SqliteStorageBackend implements StorageBackend {
     }
 
     try {
-      const { getSessionMetadata } = await import("../../logs/storage.js");
       return await getSessionMetadata(this.db, sessionId);
     } catch (error) {
       logger.error("SQLite getSessionMetadata failed", {
@@ -285,7 +287,6 @@ export class SqliteStorageBackend implements StorageBackend {
     }
 
     try {
-      const { getServerMetrics } = await import("../../logs/storage.js");
       return await getServerMetrics(this.db, serverName);
     } catch (error) {
       logger.error("SQLite getServerMetrics failed", {
@@ -305,7 +306,6 @@ export class SqliteStorageBackend implements StorageBackend {
 
     try {
       // Load server configuration from mcp.json
-      const { loadRegistry } = await import("../../registry/storage.js");
       const registry = await loadRegistry(this.storageDir);
 
       // Enrich each server with computed metrics from database
@@ -343,10 +343,6 @@ export class SqliteStorageBackend implements StorageBackend {
     }
 
     try {
-      const { loadRegistry, saveRegistry } = await import(
-        "../../registry/storage.js"
-      );
-
       const registry = await loadRegistry(this.storageDir);
 
       // Check for duplicate server name
@@ -383,10 +379,6 @@ export class SqliteStorageBackend implements StorageBackend {
     }
 
     try {
-      const { loadRegistry, saveRegistry } = await import(
-        "../../registry/storage.js"
-      );
-
       const registry = await loadRegistry(this.storageDir);
 
       // Find server to remove
@@ -421,10 +413,6 @@ export class SqliteStorageBackend implements StorageBackend {
     }
 
     try {
-      const { loadRegistry, saveRegistry } = await import(
-        "../../registry/storage.js"
-      );
-
       const registry = await loadRegistry(this.storageDir);
 
       // Find server to update
