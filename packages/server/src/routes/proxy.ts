@@ -249,8 +249,6 @@ async function updateServerActivity(
 // copy metadata from request context to Gateway stores for the new session
 async function handleSessionTransition(
   c: Context<{ Variables: Variables }>,
-  _storage: string,
-  _server: McpServer,
   targetResponse: Response,
   sessionId: string,
   jsonRpcRequest: JsonRpcRequest,
@@ -413,13 +411,7 @@ export async function createProxyRoutes(options: {
   onLog?: (entry: LogEntry) => void;
   onRegistryUpdate?: () => void;
 }): Promise<Hono<{ Variables: Variables }>> {
-  const {
-    registry,
-    storageDir,
-    dependencies: deps,
-    onLog,
-    onRegistryUpdate,
-  } = options;
+  const { registry, dependencies: deps, onLog, onRegistryUpdate } = options;
   const app = new Hono<{ Variables: Variables }>();
 
   /**
@@ -933,8 +925,6 @@ export async function createProxyRoutes(options: {
         // Handle initialize → session transition
         await handleSessionTransition(
           c,
-          storageDir,
-          server,
           targetResponse,
           sessionId,
           jsonRpcRequest,
@@ -1027,16 +1017,12 @@ async function processSSECapture(
     const eventStream = createSSEEventStream(reader);
     const eventReader = eventStream.getReader();
 
-    let _eventCount = 0;
-
     while (true) {
       const { done, value: sseEvent } = await eventReader.read();
 
       if (done) {
         break;
       }
-
-      _eventCount++;
 
       // Try to parse SSE data as JSON-RPC
       if (sseEvent.data) {
