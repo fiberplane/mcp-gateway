@@ -235,17 +235,20 @@ function handleInitializeClientInfo(
   }
 }
 
-// Helper: Update server activity timestamp and exchange count
+// Helper: Notify that server activity has occurred
+// Note: Server metrics (lastActivity, exchangeCount) are now computed from
+// captured logs in the database, not persisted to mcp.json. This allows metrics
+// to be accurate and survive gateway restarts. Metrics are calculated on-demand
+// by getServers() / getRegisteredServers() from the logs.
 async function updateServerActivity(
-  storage: string,
-  registry: Registry,
-  server: McpServer,
-  deps: ProxyDependencies,
+  _storage: string,
+  _registry: Registry,
+  _server: McpServer,
+  _deps: ProxyDependencies,
   onRegistryUpdate?: () => void,
 ): Promise<void> {
-  server.lastActivity = new Date().toISOString();
-  server.exchangeCount = server.exchangeCount + 1;
-  await deps.saveRegistryToStorage(storage, registry);
+  // Notify that we should invalidate any cached registry data
+  // The actual metrics will be recomputed from logs when needed
   onRegistryUpdate?.();
 }
 

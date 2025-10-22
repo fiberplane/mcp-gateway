@@ -261,11 +261,14 @@ export async function runCli(): Promise<void> {
         ),
       getServerFromRegistry: (registry, name) =>
         gateway.registry.getServer(registry, name),
-      // Note: saveRegistryToStorage is no longer used - server activity is now computed from logs
-      // This is kept for backward compatibility with the ProxyDependencies interface
+      // Note: saveRegistryToStorage is intentionally a no-op
+      // Server metrics (lastActivity, exchangeCount) are now computed from captured logs
+      // in the database, not persisted to mcp.json. This allows:
+      // 1. Metrics are always accurate and computed on-demand
+      // 2. Metrics survive gateway restarts
+      // 3. No separate persistence of activity data needed
       saveRegistryToStorage: async () => {
-        // No-op: Server metrics are now computed from database, not persisted to mcp.json
-        // The proxy code will be refactored in a future PR to remove this dependency
+        // No-op: Metrics are computed from logs by storage.getServerMetrics()
       },
     };
 
