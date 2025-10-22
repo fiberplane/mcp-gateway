@@ -624,19 +624,14 @@ Open [GitHub discussion](https://github.com/fiberplane/mcp-gateway/discussions) 
 
 ### Is there a roadmap?
 
-See [IMPLEMENTATION_PLAN.md](../planning/IMPLEMENTATION_PLAN.md) for planned features.
-
-Current in-progress:
-- Web UI enhancements
-- CLI improvements
-- Documentation expansion
-
-Future planned:
+Future planned features:
 - Built-in TLS support
 - API authentication
 - Encrypted storage
 - Log rotation
 - Prometheus metrics export
+
+For the latest updates, see the [GitHub project board](https://github.com/fiberplane/mcp-gateway/projects).
 
 ## Getting More Help
 

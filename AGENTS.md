@@ -75,7 +75,6 @@ This is a Bun workspace monorepo containing the MCP Gateway project. The reposit
 │   └── build.ts                 # Package build script
 ├── .github/workflows/           # CI/CD workflows
 ├── package.json                 # Root workspace configuration
-├── REFACTORING_PLAN.md          # Detailed refactoring documentation
 └── [config files]              # Root-level configurations
 ```
 
