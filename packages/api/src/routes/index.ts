@@ -44,22 +44,8 @@ const sessionsQuerySchema = z.object({
   server: z.string().optional(),
 });
 
-/**
- * Query functions interface for dependency injection
- */
-export interface QueryFunctions {
-  queryLogs: (
-    storageDir: string,
-    options?: LogQueryOptions,
-  ) => Promise<LogQueryResult>;
-  getServers: (storageDir: string) => Promise<ServerInfo[]>;
-  getSessions: (
-    storageDir: string,
-    serverName?: string,
-  ) => Promise<SessionInfo[]>;
-  getClients: (storageDir: string) => Promise<ClientAggregation[]>;
-  clearSessions: () => Promise<void>;
-}
+// Re-export QueryFunctions from types package
+export type { QueryFunctions } from "@fiberplane/mcp-gateway-types";
 
 /**
  * Create API routes for querying logs

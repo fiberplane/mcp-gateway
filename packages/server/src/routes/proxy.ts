@@ -6,6 +6,7 @@ import {
   resolveJsonRpcMethod,
 } from "@fiberplane/mcp-gateway-core";
 import type {
+  ProxyDependencies as _ProxyDependencies,
   CaptureRecord,
   ClientInfo,
   HttpContext,
@@ -44,101 +45,8 @@ type Variables = {
   tempServerInfo?: McpServerInfo;
 };
 
-/**
- * Dependency injection callbacks for proxy routes
- *
- * These callbacks decouple the server package from core package,
- * allowing the CLI to wire in Gateway methods at runtime.
- */
-export interface ProxyDependencies {
-  /** Create a request capture record */
-  createRequestRecord: (
-    serverName: string,
-    sessionId: string,
-    request: JsonRpcRequest,
-    httpContext?: HttpContext,
-    clientInfo?: ClientInfo,
-    serverInfo?: McpServerInfo,
-  ) => CaptureRecord;
-
-  /** Create a response capture record */
-  createResponseRecord: (
-    serverName: string,
-    sessionId: string,
-    response: JsonRpcResponse,
-    httpStatus: number,
-    method: string,
-    httpContext?: HttpContext,
-    clientInfo?: ClientInfo,
-    serverInfo?: McpServerInfo,
-  ) => CaptureRecord;
-
-  /** Append a capture record to storage */
-  appendRecord: (record: CaptureRecord) => Promise<void>;
-
-  /** Capture an error response */
-  captureErrorResponse: (
-    serverName: string,
-    sessionId: string,
-    request: JsonRpcRequest,
-    error: { code: number; message: string; data?: unknown },
-    httpStatus: number,
-    durationMs: number,
-    httpContext?: HttpContext,
-  ) => Promise<void>;
-
-  /** Capture an SSE event */
-  captureSSEEventData: (
-    serverName: string,
-    sessionId: string,
-    sseEvent: { id?: string; event?: string; data?: string; retry?: number },
-    method?: string,
-    requestId?: string | number | null,
-    httpContext?: HttpContext,
-  ) => Promise<void>;
-
-  /** Capture JSON-RPC message from SSE */
-  captureSSEJsonRpcMessage: (
-    serverName: string,
-    sessionId: string,
-    jsonRpcMessage: JsonRpcRequest | JsonRpcResponse,
-    sseEvent: { id?: string; event?: string; data?: string; retry?: number },
-    isResponse?: boolean,
-    httpContext?: HttpContext,
-    clientInfo?: ClientInfo,
-    serverInfo?: McpServerInfo,
-  ) => Promise<CaptureRecord | null>;
-
-  /** Store client info for a session */
-  storeClientInfoForSession: (sessionId: string, info: ClientInfo) => void;
-
-  /** Get client info for a session */
-  getClientInfoForSession: (
-    sessionId: string,
-  ) => Promise<ClientInfo | undefined>;
-
-  /** Store server info for a session */
-  storeServerInfoForSession: (sessionId: string, info: McpServerInfo) => void;
-
-  /** Get server info for a session */
-  getServerInfoForSession: (
-    sessionId: string,
-  ) => Promise<McpServerInfo | undefined>;
-
-  /** Update server info for an initialize request after getting the response */
-  updateServerInfoForInitializeRequest: (
-    serverName: string,
-    sessionId: string,
-    requestId: string | number,
-    serverInfo: { name?: string; version: string; title?: string },
-  ) => Promise<void>;
-
-  /** Get a server from the registry */
-  getServerFromRegistry: (
-    registry: Registry,
-    name: string,
-  ) => McpServer | undefined;
-}
+// Re-export ProxyDependencies from types package for backward compatibility
+export type ProxyDependencies = _ProxyDependencies;
 
 // Headers that are automatically managed by fetch/proxy and should not be manually set
 const AUTO_HEADERS = ["content-length", "transfer-encoding", "connection"];

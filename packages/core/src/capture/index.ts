@@ -15,7 +15,11 @@ import {
 import { logger } from "../logger";
 
 // Re-export types for backward compatibility
-export type { HttpContext, SSEEvent };
+export type {
+  HttpContext,
+  RequestTracker,
+  SSEEvent,
+} from "@fiberplane/mcp-gateway-types";
 
 // In-memory storage for client info by session
 const sessionClientInfo = new Map<string, ClientInfo>();
@@ -60,14 +64,6 @@ export function resetCaptureState(): void {
   sessionClientInfo.clear();
   requestStartTimes.clear();
   requestMethods.clear();
-}
-
-// Helper interface for request tracking (used by Gateway)
-export interface RequestTracker {
-  trackRequest(id: string | number, method: string): void;
-  calculateDuration(id: string | number): number;
-  getMethod(id: string | number): string | undefined;
-  hasRequest(id: string | number): boolean;
 }
 
 function sanitizeClientInfo(info?: ClientInfo): ClientInfo | undefined {
