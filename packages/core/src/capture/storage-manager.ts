@@ -75,6 +75,9 @@ export class StorageManager {
    * All backends write in parallel. If any backend fails, the entire
    * write operation fails.
    *
+   * Invalidates the registry cache because metrics (lastActivity, exchangeCount)
+   * are computed from captured logs, and this write operation changes those logs.
+   *
    * @param record - The capture record to write
    * @returns Map of backend names to write results
    */
@@ -96,6 +99,10 @@ export class StorageManager {
     );
 
     await Promise.all(writePromises);
+
+    // Invalidate cache after write because metrics depend on logs
+    this.registryCache = null;
+
     return results;
   }
 
@@ -197,6 +204,8 @@ export class StorageManager {
    *
    * This is a destructive operation that removes all stored logs.
    * Use with caution.
+   *
+   * Invalidates the registry cache because metrics depend on logs.
    */
   async clearAll(): Promise<void> {
     if (!this.initialized) {
@@ -213,6 +222,10 @@ export class StorageManager {
     );
 
     await Promise.all(clearPromises);
+
+    // Invalidate cache after clearing logs
+    this.registryCache = null;
+
     logger.info("All storage backends cleared");
   }
 
@@ -350,7 +363,10 @@ export class StorageManager {
    * Get all registered servers with computed metrics
    *
    * Uses in-memory cache for performance. Cache is automatically
-   * invalidated on write operations (add, remove, update).
+   * invalidated on:
+   * - Server registry changes (add, remove, update)
+   * - New log writes (metrics depend on captured logs)
+   * - Log clear operations
    *
    * @returns List of all registered servers with current metrics
    */
