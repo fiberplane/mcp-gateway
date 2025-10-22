@@ -151,7 +151,7 @@ export function LogTable({
     <table className="w-full border-collapse">
       <thead className="border-b border-border">
         <tr>
-          <th className="w-12 p-3">
+          <th className="w-12 p-3 flex items-center justify-center">
             <Checkbox
               checked={allSelected}
               onCheckedChange={handleSelectAll}
@@ -241,7 +241,10 @@ export function LogTable({
                 onKeyDown={handleRowKeyDown}
               >
                 {/* biome-ignore lint/a11y/useKeyWithClickEvents: Event delegation handled by parent row */}
-                <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                <td
+                  className="w-12 p-3 flex items-center justify-center"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <Checkbox
                     checked={selectedIds.has(logKey)}
                     onCheckedChange={(checked) =>
