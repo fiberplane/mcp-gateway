@@ -1,9 +1,14 @@
-// Gateway exports (main entry point)
+// Gateway exports (main entry point, re-exported from types for backward compatibility)
 
+export type {
+  Gateway,
+  GatewayOptions,
+  SSEEvent,
+} from "@fiberplane/mcp-gateway-types";
 // Capture exports
 export * from "./capture/index";
 export * from "./capture/sse-parser";
-export { createGateway, type Gateway, type GatewayOptions } from "./gateway";
+export { createGateway } from "./gateway";
 // Health exports
 export * from "./health";
 // Infrastructure exports
