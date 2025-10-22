@@ -101,7 +101,8 @@ export function createApiRoutes(
 
     const result = await queries.queryLogs(storageDir, options);
 
-    // Transform CaptureRecords into separate request/response ApiLogEntry records
+    // Transform CaptureRecords into separate ApiLogEntry records
+    // Splits request/response pairs and includes SSE events as separate entries
     const logEntries: ApiLogEntry[] = result.data.flatMap((record) => {
       const entries: ApiLogEntry[] = [];
 
@@ -126,6 +127,18 @@ export function createApiRoutes(
           direction: "response",
           metadata: record.metadata,
           response: record.response,
+        });
+      }
+
+      // Add SSE event entry if present
+      if (record.sseEvent) {
+        entries.push({
+          timestamp: record.timestamp,
+          method: record.method,
+          id: record.id,
+          direction: "sse-event",
+          metadata: record.metadata,
+          sseEvent: record.sseEvent,
         });
       }
 

@@ -19,18 +19,26 @@ export interface ApiError {
 /**
  * API log entry - transformed from CaptureRecord
  *
- * The API endpoint splits CaptureRecords (which contain both request and response)
- * into separate entries with a direction field, making it easier for clients to
- * work with individual request/response pairs.
+ * The API endpoint transforms CaptureRecords into separate entries:
+ * - Request/response pairs are split into individual entries with direction field
+ * - SSE events are included as standalone entries with direction: "sse-event"
+ *
+ * This makes it easier for clients to work with individual events.
  */
 export interface ApiLogEntry {
   timestamp: string;
   method: string;
   id: string | number | null;
-  direction: "request" | "response";
+  direction: "request" | "response" | "sse-event";
   metadata: CaptureMetadata;
   request?: JsonRpcRequest;
   response?: JsonRpcResponse;
+  sseEvent?: {
+    id?: string;
+    event?: string;
+    data?: string;
+    retry?: number;
+  };
 }
 
 /**
