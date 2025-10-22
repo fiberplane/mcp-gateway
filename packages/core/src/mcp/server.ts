@@ -4,6 +4,7 @@ import { cors } from "hono/cors";
 import { McpServer, RpcError, StreamableHttpTransport } from "mcp-lite";
 import { z } from "zod";
 import { logger } from "../logger";
+import { saveRegistry } from "../registry/storage";
 import { createCaptureTools } from "./tools/capture-tools";
 import { createServerTools } from "./tools/server-tools";
 
@@ -59,11 +60,17 @@ export function createMcpServer(
     }
   });
 
-  // Register server management tools (uses gateway.getServerMetrics)
-  createServerTools(mcp, registry, storageDir, gateway);
+  // Register server management tools with explicit dependencies
+  createServerTools(mcp, registry, storageDir, {
+    getServerMetrics: (serverName) =>
+      gateway.storage.getServerMetrics(serverName),
+    saveRegistry,
+  });
 
-  // Register capture analysis tools (search_records with SQLite queries)
-  createCaptureTools(mcp, registry, gateway);
+  // Register capture analysis tools with explicit dependencies
+  createCaptureTools(mcp, registry, {
+    query: (options) => gateway.storage.query(options),
+  });
 
   // Set up custom error handler
   mcp.onError((error, ctx) => {

@@ -1,13 +1,13 @@
 import type { Registry } from "@fiberplane/mcp-gateway-types";
 import type { McpServer } from "mcp-lite";
 import { z } from "zod";
-import type { Gateway } from "../../gateway.js";
+
 import {
   addServer as addServerToRegistry,
   getServer,
   removeServer as removeServerFromRegistry,
 } from "../../registry";
-import { saveRegistry } from "../../registry/storage";
+import type { ServerToolsDependencies } from "./dependencies.js";
 
 // Schema for adding a new server
 const AddServerSchema = z.object({
@@ -81,13 +81,13 @@ const ListServersSchema = z.object({
  * @param mcp - The MCP server instance to register tools with
  * @param registry - The gateway's server registry
  * @param storageDir - Directory where registry data is persisted
- * @param gateway - Gateway instance for accessing server metrics
+ * @param deps - Dependencies for server management (metrics, persistence)
  */
 export function createServerTools(
   mcp: McpServer,
   registry: Registry,
   storageDir: string,
-  gateway: Gateway,
+  deps: ServerToolsDependencies,
 ): void {
   mcp.tool("add_server", {
     description: `Adds a new MCP server to the gateway's registry, making it accessible for proxying requests. This tool validates the server configuration and ensures the server name is unique within the registry.
@@ -135,7 +135,7 @@ The tool will return success confirmation with the server's configuration detail
         registry.servers = updatedRegistry.servers;
 
         // Persist to storage
-        await saveRegistry(storageDir, registry);
+        await deps.saveRegistry(storageDir, registry);
 
         return {
           content: [
@@ -208,9 +208,7 @@ The tool will confirm successful removal or provide an error if the server doesn
         }
 
         // Query metrics from gateway storage before removing
-        const metrics = await gateway.storage.getServerMetrics(
-          existingServer.name,
-        );
+        const metrics = await deps.getServerMetrics(existingServer.name);
 
         // Remove server from registry
         const updatedRegistry = removeServerFromRegistry(registry, args.name);
@@ -219,7 +217,7 @@ The tool will confirm successful removal or provide an error if the server doesn
         registry.servers = updatedRegistry.servers;
 
         // Persist to storage
-        await saveRegistry(storageDir, registry);
+        await deps.saveRegistry(storageDir, registry);
 
         return {
           content: [
@@ -293,7 +291,7 @@ For large deployments, use the 'concise' format first to get an overview, then q
       // Query metrics for all servers from gateway storage
       const serversWithMetrics = await Promise.all(
         servers.map(async (server) => {
-          const metrics = await gateway.storage.getServerMetrics(server.name);
+          const metrics = await deps.getServerMetrics(server.name);
           return { ...server, ...metrics };
         }),
       );

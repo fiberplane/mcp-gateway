@@ -316,7 +316,7 @@ describe("Proxy Integration Tests", () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Query logs from database
-      const queryResult = await gateway.instance.logs.query({
+      const queryResult = await gateway.instance.storage.query({
         serverName: "server1",
         sessionId,
       });
@@ -343,7 +343,7 @@ describe("Proxy Integration Tests", () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Query logs from database
-      const queryResult = await gateway.instance.logs.query({
+      const queryResult = await gateway.instance.storage.query({
         serverName: "server2",
         sessionId,
         order: "asc",
