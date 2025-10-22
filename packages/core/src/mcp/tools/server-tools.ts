@@ -1,12 +1,6 @@
-import type { Registry } from "@fiberplane/mcp-gateway-types";
-import type { McpServer } from "mcp-lite";
+import type { McpServer as RegistryMcpServer } from "@fiberplane/mcp-gateway-types";
+import type { McpServer as McpLiteServer } from "mcp-lite";
 import { z } from "zod";
-import {
-  addServer as addServerToRegistry,
-  getServer,
-  removeServer as removeServerFromRegistry,
-} from "../../registry";
-import { saveRegistry } from "../../registry/storage";
 
 // Schema for adding a new server
 const AddServerSchema = z.object({
@@ -74,17 +68,40 @@ const ListServersSchema = z.object({
 });
 
 /**
+ * Dependencies for server management tools
+ */
+export interface ServerToolsDependencies {
+  /**
+   * Get a server by name from the registry
+   */
+  getServer: (name: string) => RegistryMcpServer | undefined;
+
+  /**
+   * Add a new server to the registry and persist changes
+   */
+  addServer: (server: RegistryMcpServer) => Promise<void>;
+
+  /**
+   * Remove a server from the registry and persist changes
+   */
+  removeServer: (name: string) => Promise<void>;
+
+  /**
+   * Get all servers from the registry
+   */
+  listServers: () => Promise<RegistryMcpServer[]>;
+}
+
+/**
  * Registers server management tools with the MCP server.
  * These tools allow clients to manage the gateway's server registry.
  *
  * @param mcp - The MCP server instance to register tools with
- * @param registry - The gateway's server registry
- * @param storageDir - Directory where registry data is persisted
+ * @param deps - Dependencies for server management operations
  */
 export function createServerTools(
-  mcp: McpServer,
-  registry: Registry,
-  storageDir: string,
+  mcp: McpLiteServer,
+  deps: ServerToolsDependencies,
 ): void {
   mcp.tool("add_server", {
     description: `Adds a new MCP server to the gateway's registry, making it accessible for proxying requests. This tool validates the server configuration and ensures the server name is unique within the registry.
@@ -108,7 +125,7 @@ The tool will return success confirmation with the server's configuration detail
     handler: async (args) => {
       try {
         // Validate that server doesn't already exist
-        if (getServer(registry, args.name)) {
+        if (deps.getServer(args.name)) {
           return {
             content: [
               {
@@ -121,18 +138,12 @@ The tool will return success confirmation with the server's configuration detail
         }
 
         // Add server to registry
-        const updatedRegistry = addServerToRegistry(registry, {
+        await deps.addServer({
           name: args.name,
           url: args.url,
           type: "http",
           headers: args.headers || {},
-        });
-
-        // Update the registry in place
-        registry.servers = updatedRegistry.servers;
-
-        // Persist to storage
-        await saveRegistry(storageDir, registry);
+        } as RegistryMcpServer);
 
         return {
           content: [
@@ -191,7 +202,7 @@ The tool will confirm successful removal or provide an error if the server doesn
     handler: async (args) => {
       try {
         // Check if server exists
-        const existingServer = getServer(registry, args.name);
+        const existingServer = deps.getServer(args.name);
         if (!existingServer) {
           return {
             content: [
@@ -205,13 +216,7 @@ The tool will confirm successful removal or provide an error if the server doesn
         }
 
         // Remove server from registry
-        const updatedRegistry = removeServerFromRegistry(registry, args.name);
-
-        // Update the registry in place
-        registry.servers = updatedRegistry.servers;
-
-        // Persist to storage
-        await saveRegistry(storageDir, registry);
+        await deps.removeServer(args.name);
 
         return {
           content: [
@@ -269,7 +274,7 @@ The response includes operational metrics like request counts, last activity tim
 For large deployments, use the 'concise' format first to get an overview, then query specific servers in 'detailed' mode for deeper analysis.`,
     inputSchema: ListServersSchema,
     handler: async (args) => {
-      const servers = registry.servers;
+      const servers = await deps.listServers();
 
       if (servers.length === 0) {
         return {

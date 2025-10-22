@@ -3,8 +3,17 @@ import { cors } from "hono/cors";
 import { McpServer, RpcError, StreamableHttpTransport } from "mcp-lite";
 import { z } from "zod";
 import { logger } from "../logger";
+import {
+  addServer as addServerToRegistry,
+  getServer,
+  removeServer as removeServerFromRegistry,
+} from "../registry";
+import { saveRegistry } from "../registry/storage";
 import { createCaptureTools } from "./tools/capture-tools";
-import { createServerTools } from "./tools/server-tools";
+import {
+  createServerTools,
+  type ServerToolsDependencies,
+} from "./tools/server-tools";
 
 /**
  * Creates an MCP server instance for the gateway with tools for server management
@@ -59,7 +68,21 @@ export function createMcpServer(
   });
 
   // Register server management tools
-  createServerTools(mcp, registry, storageDir);
+  const serverToolsDeps: ServerToolsDependencies = {
+    getServer: (name: string) => getServer(registry, name) ?? undefined,
+    addServer: async (server) => {
+      const updatedRegistry = addServerToRegistry(registry, server);
+      registry.servers = updatedRegistry.servers;
+      await saveRegistry(storageDir, registry);
+    },
+    removeServer: async (name: string) => {
+      const updatedRegistry = removeServerFromRegistry(registry, name);
+      registry.servers = updatedRegistry.servers;
+      await saveRegistry(storageDir, registry);
+    },
+    listServers: async () => registry.servers,
+  };
+  createServerTools(mcp, serverToolsDeps);
 
   // Register capture analysis tools (search_records with SQLite queries)
   createCaptureTools(mcp, gateway);
