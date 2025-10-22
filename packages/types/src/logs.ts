@@ -1,4 +1,9 @@
-import type { CaptureRecord } from "./schemas.js";
+import type {
+  CaptureMetadata,
+  CaptureRecord,
+  JsonRpcRequest,
+  JsonRpcResponse,
+} from "./schemas.js";
 
 /**
  * Standard API error response
@@ -9,6 +14,23 @@ export interface ApiError {
     message: string;
     details?: unknown;
   };
+}
+
+/**
+ * API log entry - transformed from CaptureRecord
+ *
+ * The API endpoint splits CaptureRecords (which contain both request and response)
+ * into separate entries with a direction field, making it easier for clients to
+ * work with individual request/response pairs.
+ */
+export interface ApiLogEntry {
+  timestamp: string;
+  method: string;
+  id: string | number | null;
+  direction: "request" | "response";
+  metadata: CaptureMetadata;
+  request?: JsonRpcRequest;
+  response?: JsonRpcResponse;
 }
 
 /**

@@ -2,46 +2,18 @@
  * Types matching the API responses
  */
 import type {
+  ApiLogEntry,
   ClientAggregation,
   LogQueryResult,
   ServerInfo,
   SessionInfo,
 } from "@fiberplane/mcp-gateway-types";
 
-/**
- * Log entry returned by the API (transformed from CaptureRecord)
- * Unlike CaptureRecord which contains both request and response,
- * LogEntry is separated into individual request/response entries with direction field
- */
-export interface LogEntry {
-  timestamp: string;
-  method: string;
-  id: string | number | null;
-  direction: "request" | "response";
-  metadata: {
-    serverName: string;
-    sessionId: string;
-    durationMs: number;
-    httpStatus: number;
-    client?: {
-      name: string;
-      version: string;
-      title?: string;
-    };
-    server?: {
-      name: string;
-      version: string;
-      title?: string;
-    };
-    userAgent?: string;
-    clientIp?: string;
-  };
-  request?: unknown;
-  response?: unknown;
-}
-
-// Re-export query result types from types package
+// Re-export types from types package
 export type { ClientAggregation, LogQueryResult, ServerInfo, SessionInfo };
+
+// Type alias for convenience - use ApiLogEntry from types package
+export type LogEntry = ApiLogEntry;
 
 /**
  * API Client for MCP Gateway logs
@@ -52,8 +24,8 @@ class APIClient {
   /**
    * Get logs with optional filters
    *
-   * Note: The API transforms CaptureRecords into separate request/response LogEntry records
-   * with a direction field, so the return type is { data: LogEntry[]; pagination: ... }
+   * Returns ApiLogEntry records (transformed from CaptureRecords by the API).
+   * Each CaptureRecord is split into separate request/response entries with a direction field.
    */
   async getLogs(params: {
     serverName?: string;
@@ -64,7 +36,10 @@ class APIClient {
     before?: string;
     limit?: number;
     order?: "asc" | "desc";
-  }): Promise<{ data: LogEntry[]; pagination: LogQueryResult["pagination"] }> {
+  }): Promise<{
+    data: ApiLogEntry[];
+    pagination: LogQueryResult["pagination"];
+  }> {
     const url = new URL(`${this.baseURL}/logs`, window.location.origin);
 
     // Map frontend parameter names to API parameter names

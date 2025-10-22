@@ -1,4 +1,5 @@
 import type {
+  ApiLogEntry,
   ClientAggregation,
   LogQueryOptions,
   LogQueryResult,
@@ -100,9 +101,9 @@ export function createApiRoutes(
 
     const result = await queries.queryLogs(storageDir, options);
 
-    // Transform CaptureRecords into separate request/response LogEntry records
-    const logEntries = result.data.flatMap((record) => {
-      const entries = [];
+    // Transform CaptureRecords into separate request/response ApiLogEntry records
+    const logEntries: ApiLogEntry[] = result.data.flatMap((record) => {
+      const entries: ApiLogEntry[] = [];
 
       // Add request entry if present
       if (record.request) {
@@ -110,7 +111,7 @@ export function createApiRoutes(
           timestamp: record.timestamp,
           method: record.method,
           id: record.id,
-          direction: "request" as const,
+          direction: "request",
           metadata: record.metadata,
           request: record.request,
         });
@@ -122,7 +123,7 @@ export function createApiRoutes(
           timestamp: record.timestamp,
           method: record.method,
           id: record.id,
-          direction: "response" as const,
+          direction: "response",
           metadata: record.metadata,
           response: record.response,
         });
