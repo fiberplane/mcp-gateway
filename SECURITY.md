@@ -352,7 +352,7 @@ For security questions or concerns:
 
 ---
 
-**Last Updated**: October 2024
+**Last Updated**: October 2025
 
 **Related Documentation**:
 - [Deployment Guide](./docs/deployment/production.md)

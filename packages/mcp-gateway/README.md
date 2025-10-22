@@ -1,10 +1,101 @@
-# @fiberplane/mcp-gateway-cli
+# MCP Gateway
 
-Private package containing the CLI source code for MCP Gateway. This package orchestrates the server, API, and TUI components.
+**A unified gateway for managing and monitoring MCP (Model Context Protocol) servers in production.**
+
+MCP Gateway provides a centralized platform for discovering, routing, and logging all MCP protocol traffic. Use it to manage multiple MCP servers, capture detailed interaction logs, and troubleshoot integration issues with Claude and other AI clients.
+
+## Features
+
+- **Server Management** - Add, remove, and monitor MCP servers from a single dashboard
+- **Traffic Capture** - Automatic logging of all MCP requests, responses, and errors
+- **Health Monitoring** - Real-time health checks and status tracking for all servers
+- **Web Dashboard** - Intuitive web UI for browsing logs and managing servers
+- **Terminal UI** - Full-featured TUI for command-line power users
+- **REST API** - Query logs programmatically for integration with other tools
+- **Metrics & Analytics** - Track server activity, response times, and error patterns
+
+## Quick Start
+
+### Installation
+
+```bash
+npm install -g @fiberplane/mcp-gateway
+```
+
+Or with yarn:
+```bash
+yarn global add @fiberplane/mcp-gateway
+```
+
+### Start the Gateway
+
+```bash
+mcp-gateway
+```
+
+This launches both:
+- **Web UI** - http://localhost:3333/ui
+- **TUI** - Terminal interface in the same terminal
+- **API** - REST API on http://localhost:3333/api
+
+### Add Your First Server
+
+1. Open the Web UI or TUI
+2. Press `A` (TUI) or click "Add Server" (Web)
+3. Enter server name and URL
+4. Gateway will perform a health check
+5. Start making MCP requests - traffic will be captured automatically
+
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    MCP Gateway                              │
+│                                                             │
+│  ┌──────────────┐  ┌─────────────┐  ┌──────────────────┐  │
+│  │  Web UI      │  │  Terminal   │  │   REST API       │  │
+│  │  (React)     │  │   UI        │  │   (/api)         │  │
+│  └──────┬───────┘  └──────┬──────┘  └────────┬─────────┘  │
+│         │                 │                  │             │
+│         └─────────────────┼──────────────────┘             │
+│                           │                                 │
+│         ┌─────────────────▼──────────────────┐             │
+│         │     Storage & Log Management       │             │
+│         │  (SQLite + mcp.json registry)      │             │
+│         └─────────────────┬──────────────────┘             │
+│                           │                                 │
+│         ┌─────────────────▼──────────────────┐             │
+│         │    MCP Server Router & Proxy       │             │
+│         │  (Routes requests to servers)      │             │
+│         └─────────────────┬──────────────────┘             │
+│                           │                                 │
+└───────────────────────────┼────────────────────────────────┘
+                            │
+                ┌───────────┼───────────┐
+                │           │           │
+         ┌──────▼───┐ ┌────▼────┐ ┌───▼──────┐
+         │  MCP     │ │   MCP   │ │   MCP    │
+         │ Server 1 │ │ Server 2│ │ Server N │
+         └──────────┘ └─────────┘ └──────────┘
+```
+
+## Project Structure
+
+This is a **Bun workspace monorepo** with the following packages:
+
+- **`@fiberplane/mcp-gateway-types`** - Type definitions and schemas
+- **`@fiberplane/mcp-gateway-core`** - Core business logic (capture, storage, registry)
+- **`@fiberplane/mcp-gateway-api`** - REST API for querying logs
+- **`@fiberplane/mcp-gateway-server`** - MCP protocol HTTP server
+- **`@fiberplane/mcp-gateway-web`** - React-based web UI
+- **`@fiberplane/mcp-gateway-cli`** - CLI source code (this package)
+- **`@fiberplane/mcp-gateway`** - Public wrapper package for binary distribution
+
+## CLI Package Overview
+
+This package (`@fiberplane/mcp-gateway-cli`) contains the CLI source code and orchestrates the server, API, and TUI components.
 
 > **Note**: This is the private source package. The public wrapper package is `@fiberplane/mcp-gateway` which handles platform-specific binary distribution.
-
-## Overview
 
 This package contains:
 - **CLI Entry Point** (`src/cli.ts`) - Command-line interface and argument parsing
@@ -380,16 +471,3 @@ ls -la ~/.mcp-gateway/captures/
 cat ~/.mcp-gateway/captures/my-server/*.jsonl
 ```
 
-## Contributing
-
-When contributing to the CLI package:
-
-1. **Follow monorepo patterns** - Use workspace dependencies
-2. **Maintain backwards compatibility** - CLI is a public API
-3. **Test with real MCP servers** - Not just test servers
-4. **Document new features** - Update README and CLAUDE.md
-5. **Add tests** - For new CLI options or TUI features
-
-## License
-
-MIT
