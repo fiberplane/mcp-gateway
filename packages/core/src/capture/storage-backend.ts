@@ -104,17 +104,23 @@ export interface StorageBackend {
   } | null>;
 
   /**
+   * Get metrics for a specific server
+   *
+   * Returns activity metrics for a server computed from stored logs.
+   * Used by MCP tools for server management operations.
+   *
+   * @param serverName - Name of the server to get metrics for
+   * @returns Metrics including last activity timestamp and request count
+   */
+  getServerMetrics(
+    serverName: string,
+  ): Promise<{ lastActivity: string | null; exchangeCount: number }>;
+
+  /**
    * Close/cleanup the storage backend
    * Called on shutdown
    */
   close?(): Promise<void>;
-
-  /**
-   * Get the database connection (if applicable)
-   * Returns the underlying database connection for backends that use one.
-   * Used by MCP tools to query server metrics.
-   */
-  getDb?(): unknown;
 }
 
 /**

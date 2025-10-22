@@ -258,14 +258,16 @@ export interface Gateway {
   };
 
   /**
-   * Get the database connection for direct queries
+   * Get metrics for a specific server
    *
-   * Returns the underlying database connection from the SQLite backend.
-   * Used by MCP tools to query server metrics.
+   * Returns activity metrics for a server computed from stored logs.
    *
-   * @returns The database connection, or null if not available
+   * @param serverName - Name of the server to get metrics for
+   * @returns Metrics including last activity timestamp and request count
    */
-  getDb(): unknown;
+  getServerMetrics(
+    serverName: string,
+  ): Promise<{ lastActivity: string | null; exchangeCount: number }>;
 
   /**
    * Close all connections and clean up resources
@@ -752,8 +754,8 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
       },
     },
 
-    getDb: () => {
-      return storageManager.getDb();
+    getServerMetrics: async (serverName: string) => {
+      return await storageManager.getServerMetrics(serverName);
     },
 
     close: async () => {

@@ -271,6 +271,29 @@ export class SqliteStorageBackend implements StorageBackend {
     }
   }
 
+  async getServerMetrics(
+    serverName: string,
+  ): Promise<{ lastActivity: string | null; exchangeCount: number }> {
+    if (!this.db || !this.initialized) {
+      logger.debug("SQLite backend not ready, returning empty metrics");
+      return {
+        lastActivity: null,
+        exchangeCount: 0,
+      };
+    }
+
+    try {
+      const { getServerMetrics } = await import("../../logs/storage.js");
+      return await getServerMetrics(this.db, serverName);
+    } catch (error) {
+      logger.error("SQLite getServerMetrics failed", {
+        error: error instanceof Error ? error.message : String(error),
+        serverName,
+      });
+      throw error;
+    }
+  }
+
   async close(): Promise<void> {
     if (this.sqlite) {
       try {
@@ -285,9 +308,5 @@ export class SqliteStorageBackend implements StorageBackend {
         });
       }
     }
-  }
-
-  getDb(): BunSQLiteDatabase<typeof schema> | null {
-    return this.db;
   }
 }

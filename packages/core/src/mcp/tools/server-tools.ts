@@ -1,9 +1,7 @@
 import type { Registry } from "@fiberplane/mcp-gateway-types";
-import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
 import type { McpServer } from "mcp-lite";
 import { z } from "zod";
-import type * as schema from "../../logs/schema.js";
-import { getServerMetrics } from "../../logs/storage.js";
+import type { Gateway } from "../../gateway.js";
 import {
   addServer as addServerToRegistry,
   getServer,
@@ -83,13 +81,13 @@ const ListServersSchema = z.object({
  * @param mcp - The MCP server instance to register tools with
  * @param registry - The gateway's server registry
  * @param storageDir - Directory where registry data is persisted
- * @param db - Database connection for querying server metrics
+ * @param gateway - Gateway instance for accessing server metrics
  */
 export function createServerTools(
   mcp: McpServer,
   registry: Registry,
   storageDir: string,
-  db: BunSQLiteDatabase<typeof schema>,
+  gateway: Gateway,
 ): void {
   mcp.tool("add_server", {
     description: `Adds a new MCP server to the gateway's registry, making it accessible for proxying requests. This tool validates the server configuration and ensures the server name is unique within the registry.
@@ -209,8 +207,8 @@ The tool will confirm successful removal or provide an error if the server doesn
           };
         }
 
-        // Query metrics from database before removing
-        const metrics = await getServerMetrics(db, existingServer.name);
+        // Query metrics from gateway before removing
+        const metrics = await gateway.getServerMetrics(existingServer.name);
 
         // Remove server from registry
         const updatedRegistry = removeServerFromRegistry(registry, args.name);
@@ -290,10 +288,10 @@ For large deployments, use the 'concise' format first to get an overview, then q
         };
       }
 
-      // Query metrics for all servers from database
+      // Query metrics for all servers from gateway
       const serversWithMetrics = await Promise.all(
         servers.map(async (server) => {
-          const metrics = await getServerMetrics(db, server.name);
+          const metrics = await gateway.getServerMetrics(server.name);
           return { ...server, ...metrics };
         }),
       );

@@ -319,15 +319,27 @@ export class StorageManager {
   }
 
   /**
-   * Get the database connection from the SQLite backend
+   * Get metrics for a specific server
    *
-   * Returns the underlying database connection for querying server metrics.
-   * Used by MCP tools to access the database directly.
-   *
-   * @returns The database connection, or null if not available
+   * @param serverName - Name of the server to get metrics for
+   * @returns Metrics including last activity timestamp and request count
    */
-  getDb(): unknown {
-    const sqliteBackend = this.backends.get("sqlite");
-    return sqliteBackend?.getDb?.() ?? null;
+  async getServerMetrics(
+    serverName: string,
+  ): Promise<{ lastActivity: string | null; exchangeCount: number }> {
+    if (!this.initialized) {
+      throw new Error(
+        "Storage manager not initialized. Call initialize() first.",
+      );
+    }
+
+    const backend = this.backends.values().next().value as
+      | StorageBackend
+      | undefined;
+    if (!backend) {
+      throw new Error("No storage backends registered");
+    }
+
+    return await backend.getServerMetrics(serverName);
   }
 }
