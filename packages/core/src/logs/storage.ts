@@ -150,19 +150,20 @@ export async function getServers(
     const registryName = registryMap.get(normalizedName);
 
     // Determine status based on registry membership and health
-    let status: "online" | "offline" | "deleted";
-    if (registryProvided) {
-      if (registryName) {
-        // Server is in registry - check health to determine online vs offline
-        const health = serverHealthMap?.get(normalizedName);
-        status = health === "down" ? "offline" : "online";
-      } else {
-        // Server has logs but not in registry = deleted
-        status = "deleted";
-      }
+    let status: "online" | "offline" | "not-found";
+    if (registryProvided && registryName) {
+      // Server is in registry - check health to determine online vs offline
+      const health = serverHealthMap?.get(normalizedName);
+      status =
+        health === "down"
+          ? "offline"
+          : health === "up"
+            ? "online"
+            : "not-found";
     } else {
-      // No registry info provided – treat all servers as online
-      status = "online";
+      // Server not in registry or no health data = not-found
+      // Could be: deleted from registry, imported from external source, etc.
+      status = "not-found";
     }
 
     serverMap.set(normalizedName, {

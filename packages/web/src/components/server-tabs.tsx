@@ -14,7 +14,7 @@ function getStatusColor(status: ServerStatus): string {
       return "bg-green-500";
     case "offline":
       return "bg-red-500";
-    case "deleted":
+    case "not-found":
       return "bg-gray-400";
   }
 }
@@ -201,8 +201,8 @@ export function ServerTabs({ value, onChange, panelId }: ServerTabsProps) {
               {server.status === "offline" && (
                 <span className="text-xs ml-1">(offline)</span>
               )}
-              {server.status === "deleted" && (
-                <span className="text-xs ml-1 opacity-70">(deleted)</span>
+              {server.status === "not-found" && (
+                <span className="text-xs ml-1 opacity-70">(not found)</span>
               )}
             </span>
           </button>

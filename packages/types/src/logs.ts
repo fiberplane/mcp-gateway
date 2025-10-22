@@ -40,11 +40,11 @@ export interface LogQueryResult {
 
 /**
  * Server status determined by registry membership and health checks
- * - online: Server is in registry and responding to health checks (health = "up" or "unknown")
+ * - online: Server is in registry and responding to health checks (health = "up")
  * - offline: Server is in registry but failing health checks (health = "down")
- * - deleted: Server has historical logs but is no longer in the registry
+ * - not-found: Server not in registry, health unknown, or imported from external source
  */
-export type ServerStatus = "online" | "offline" | "deleted";
+export type ServerStatus = "online" | "offline" | "not-found";
 
 /**
  * Server aggregation info

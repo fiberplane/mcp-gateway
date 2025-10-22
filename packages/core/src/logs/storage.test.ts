@@ -307,12 +307,12 @@ describe("Storage Functions", () => {
       expect(serverB?.sessionCount).toBe(1);
     });
 
-    test("should default statuses to online when registry data is unavailable", async () => {
+    test("should default statuses to not-found when registry data is unavailable", async () => {
       const db = getDb(storageDir);
       const result = await getServers(db);
 
       for (const server of result) {
-        expect(server.status).toBe("online");
+        expect(server.status).toBe("not-found");
       }
     });
 
@@ -321,7 +321,7 @@ describe("Storage Functions", () => {
       const registryServers = ["server-a", "server-c"];
       const serverHealthMap = new Map<string, ServerHealth>([
         ["server-a", "down"],
-        ["server-c", "unknown"],
+        ["server-c", "up"],
       ]);
 
       const result = await getServers(db, registryServers, serverHealthMap);
@@ -331,7 +331,7 @@ describe("Storage Functions", () => {
       const serverC = result.find((s) => s.name === "server-c");
 
       expect(serverA?.status).toBe("offline");
-      expect(serverB?.status).toBe("deleted");
+      expect(serverB?.status).toBe("not-found");
       expect(serverC).toEqual({
         name: "server-c",
         logCount: 0,
