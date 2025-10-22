@@ -273,23 +273,16 @@ export function LogTable({
                     aria-label={`Select log ${logKey}`}
                   />
                 </td>
-                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Event delegation handled by parent row */}
                 <td
                   className="p-3 font-mono text-sm text-foreground"
                   title={log.timestamp}
-                  onClick={(e) => e.stopPropagation()}
                 >
                   {format(new Date(log.timestamp), "HH:mm:ss.SSS")}
                 </td>
-                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Event delegation handled by parent row */}
-                <td
-                  className="p-3 text-sm text-foreground"
-                  onClick={(e) => e.stopPropagation()}
-                >
+                <td className="p-3 text-sm text-foreground">
                   {log.metadata.client?.name || "—"}
                 </td>
-                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Event delegation handled by parent row */}
-                <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                <td className="p-3">
                   <Badge
                     variant={getMethodBadgeVariant(log.method)}
                     className="inline-flex items-center gap-1"
@@ -302,25 +295,13 @@ export function LogTable({
                     <span>{log.method}</span>
                   </Badge>
                 </td>
-                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Event delegation handled by parent row */}
-                <td
-                  className="p-3 text-sm text-foreground"
-                  onClick={(e) => e.stopPropagation()}
-                >
+                <td className="p-3 text-sm text-foreground">
                   {log.metadata.serverName}
                 </td>
-                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Event delegation handled by parent row */}
-                <td
-                  className="p-3 font-mono text-xs text-muted-foreground"
-                  onClick={(e) => e.stopPropagation()}
-                >
+                <td className="p-3 font-mono text-xs text-muted-foreground">
                   {log.metadata.sessionId.slice(0, 8)}...
                 </td>
-                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Event delegation handled by parent row */}
-                <td
-                  className="p-3 text-sm text-muted-foreground"
-                  onClick={(e) => e.stopPropagation()}
-                >
+                <td className="p-3 text-sm text-muted-foreground">
                   {log.metadata.durationMs}ms
                 </td>
               </tr>
