@@ -128,8 +128,8 @@ export async function getServers(
       sessionCount: sql<number>`COUNT(DISTINCT ${logs.sessionId})`,
     })
     .from(logs)
-    .groupBy(logs.serverName);
-  // Note: No .orderBy() here since we sort the final result with localeCompare anyway
+    .groupBy(logs.serverName)
+    .orderBy(sql`LOWER(${logs.serverName}) COLLATE NOCASE`);
 
   // Create a map of registry servers (normalized name -> original name)
   // This preserves the registry's casing as the source of truth
@@ -194,6 +194,8 @@ export async function getServers(
   }
 
   // Convert to array and sort by name
+  // Database already sorted by LOWER(name), but we apply localeCompare as a safety net
+  // for consistency in case the map operations affect the order
   return Array.from(serverMap.values()).sort((a, b) =>
     a.name.localeCompare(b.name),
   );
