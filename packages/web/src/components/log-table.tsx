@@ -151,12 +151,14 @@ export function LogTable({
     <table className="w-full border-collapse">
       <thead className="border-b border-border">
         <tr>
-          <th className="w-12 p-3 flex items-center justify-center">
-            <Checkbox
-              checked={allSelected}
-              onCheckedChange={handleSelectAll}
-              aria-label="Select all"
-            />
+          <th className="w-12 p-3">
+            <div className="flex items-center justify-center">
+              <Checkbox
+                checked={allSelected}
+                onCheckedChange={handleSelectAll}
+                aria-label="Select all"
+              />
+            </div>
           </th>
           <th className="text-left p-3 text-sm font-semibold text-foreground">
             <SortHeader
@@ -241,17 +243,16 @@ export function LogTable({
                 onKeyDown={handleRowKeyDown}
               >
                 {/* biome-ignore lint/a11y/useKeyWithClickEvents: Event delegation handled by parent row */}
-                <td
-                  className="w-12 p-3 flex items-center justify-center"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Checkbox
-                    checked={selectedIds.has(logKey)}
-                    onCheckedChange={(checked) =>
-                      handleSelectRow(logKey, checked as boolean)
-                    }
-                    aria-label={`Select log ${logKey}`}
-                  />
+                <td className="w-12 p-3" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center justify-center">
+                    <Checkbox
+                      checked={selectedIds.has(logKey)}
+                      onCheckedChange={(checked) =>
+                        handleSelectRow(logKey, checked as boolean)
+                      }
+                      aria-label={`Select log ${logKey}`}
+                    />
+                  </div>
                 </td>
                 <td
                   className="p-3 font-mono text-sm text-foreground"
