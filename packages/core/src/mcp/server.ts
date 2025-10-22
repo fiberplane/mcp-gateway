@@ -1,4 +1,3 @@
-import type { Registry } from "@fiberplane/mcp-gateway-types";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { McpServer, RpcError, StreamableHttpTransport } from "mcp-lite";
@@ -12,15 +11,15 @@ import { createServerTools } from "./tools/server-tools";
  * and capture analysis. The server exposes tools that allow MCP clients to manage
  * the gateway's server registry and analyze captured MCP traffic.
  *
- * @param registry - The gateway's server registry
- * @param storageDir - Directory where captures are stored
- * @param gateway - Gateway instance for accessing query operations
+ * @param gateway - Gateway instance for accessing query operations and server management
+ * @param registry - The gateway's server registry (needed for server management tools)
+ * @param storageDir - Directory where captures are stored (needed for server management tools)
  * @returns MCP server instance with configured tools
  */
 export function createMcpServer(
-  registry: Registry,
-  storageDir: string,
   gateway: import("../gateway.js").Gateway,
+  registry: import("@fiberplane/mcp-gateway-types").Registry,
+  storageDir: string,
 ): McpServer {
   // Create MCP server with Zod schema adapter for validation
   const mcp = new McpServer({
@@ -63,7 +62,7 @@ export function createMcpServer(
   createServerTools(mcp, registry, storageDir);
 
   // Register capture analysis tools (search_records with SQLite queries)
-  createCaptureTools(mcp, registry, gateway);
+  createCaptureTools(mcp, gateway);
 
   // Set up custom error handler
   mcp.onError((error, ctx) => {
@@ -118,17 +117,17 @@ export function createMcpServer(
  * The server is mounted at /mcp endpoint. This app is meant to be mounted at
  * /gateway (canonical) or /g (short alias) in the main server.
  *
+ * @param gateway - Gateway instance for accessing query operations
  * @param registry - The gateway's server registry
  * @param storageDir - Directory where captures are stored
- * @param gateway - Gateway instance for accessing query operations
  * @returns Hono app configured to serve the MCP server
  */
 export function createMcpApp(
-  registry: Registry,
-  storageDir: string,
   gateway: import("../gateway.js").Gateway,
+  registry: import("@fiberplane/mcp-gateway-types").Registry,
+  storageDir: string,
 ): Hono {
-  const mcp = createMcpServer(registry, storageDir, gateway);
+  const mcp = createMcpServer(gateway, registry, storageDir);
 
   // Create HTTP transport for the MCP server
   const transport = new StreamableHttpTransport();

@@ -1,4 +1,3 @@
-import type { Registry } from "@fiberplane/mcp-gateway-types";
 import type { McpServer } from "mcp-lite";
 import { z } from "zod";
 import type { Gateway } from "../../gateway.js";
@@ -27,11 +26,7 @@ const SearchRecordsSchema = z.object({
  * Registers capture analysis tools with the MCP server.
  * These tools allow clients to search and analyze captured MCP traffic.
  */
-export function createCaptureTools(
-  mcp: McpServer,
-  _registry: Registry,
-  gateway: Gateway,
-): void {
+export function createCaptureTools(mcp: McpServer, gateway: Gateway): void {
   mcp.tool("search_records", {
     description: `Search captured MCP traffic records with filtering and pagination.
 
