@@ -1,6 +1,18 @@
 /**
  * Types matching the API responses
  */
+import type {
+  ClientAggregation,
+  LogQueryResult,
+  ServerInfo,
+  SessionInfo,
+} from "@fiberplane/mcp-gateway-types";
+
+/**
+ * Log entry returned by the API (transformed from CaptureRecord)
+ * Unlike CaptureRecord which contains both request and response,
+ * LogEntry is separated into individual request/response entries with direction field
+ */
 export interface LogEntry {
   timestamp: string;
   method: string;
@@ -28,37 +40,8 @@ export interface LogEntry {
   response?: unknown;
 }
 
-export interface LogQueryResult {
-  data: LogEntry[];
-  pagination: {
-    count: number;
-    limit: number;
-    hasMore: boolean;
-    oldestTimestamp: string | null;
-    newestTimestamp: string | null;
-  };
-}
-
-export interface ServerInfo {
-  name: string;
-  logCount: number;
-  sessionCount: number;
-}
-
-export interface SessionInfo {
-  sessionId: string;
-  serverName: string;
-  logCount: number;
-  startTime: string;
-  endTime: string;
-}
-
-export interface ClientAggregation {
-  clientName: string;
-  clientVersion: string | null;
-  logCount: number;
-  sessionCount: number;
-}
+// Re-export query result types from types package
+export type { ClientAggregation, LogQueryResult, ServerInfo, SessionInfo };
 
 /**
  * API Client for MCP Gateway logs
@@ -68,6 +51,9 @@ class APIClient {
 
   /**
    * Get logs with optional filters
+   *
+   * Note: The API transforms CaptureRecords into separate request/response LogEntry records
+   * with a direction field, so the return type is { data: LogEntry[]; pagination: ... }
    */
   async getLogs(params: {
     serverName?: string;
@@ -78,7 +64,7 @@ class APIClient {
     before?: string;
     limit?: number;
     order?: "asc" | "desc";
-  }): Promise<LogQueryResult> {
+  }): Promise<{ data: LogEntry[]; pagination: LogQueryResult["pagination"] }> {
     const url = new URL(`${this.baseURL}/logs`, window.location.origin);
 
     // Map frontend parameter names to API parameter names

@@ -20,6 +20,17 @@ import type {
 } from "./schemas";
 
 /**
+ * HTTP context information for requests
+ *
+ * Contains metadata about the HTTP request context,
+ * extracted from headers and connection information.
+ */
+export interface HttpContext {
+  userAgent?: string;
+  clientIp?: string;
+}
+
+/**
  * Server-Sent Event (SSE) structure
  *
  * Represents a single SSE event parsed from SSE stream.

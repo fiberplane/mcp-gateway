@@ -8,6 +8,7 @@ import {
 import type {
   CaptureRecord,
   ClientInfo,
+  HttpContext,
   JsonRpcRequest,
   JsonRpcResponse,
   LogEntry,
@@ -42,14 +43,6 @@ type Variables = {
   tempClientInfo?: ClientInfo;
   tempServerInfo?: McpServerInfo;
 };
-
-/**
- * HTTP context for capturing request metadata
- */
-export interface HttpContext {
-  userAgent?: string;
-  clientIp?: string;
-}
 
 /**
  * Dependency injection callbacks for proxy routes

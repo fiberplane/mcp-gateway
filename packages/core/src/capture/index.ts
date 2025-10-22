@@ -1,9 +1,11 @@
 import type {
   CaptureRecord,
   ClientInfo,
+  HttpContext,
   JsonRpcRequest,
   JsonRpcResponse,
   McpServerInfo,
+  SSEEvent,
 } from "@fiberplane/mcp-gateway-types";
 import {
   captureRecordSchema,
@@ -11,7 +13,9 @@ import {
   mcpServerInfoSchema,
 } from "@fiberplane/mcp-gateway-types";
 import { logger } from "../logger";
-import type { SSEEvent } from "./sse-parser";
+
+// Re-export types for backward compatibility
+export type { HttpContext, SSEEvent };
 
 // In-memory storage for client info by session
 const sessionClientInfo = new Map<string, ClientInfo>();
@@ -64,12 +68,6 @@ export interface RequestTracker {
   calculateDuration(id: string | number): number;
   getMethod(id: string | number): string | undefined;
   hasRequest(id: string | number): boolean;
-}
-
-// HTTP context for requests
-export interface HttpContext {
-  userAgent?: string;
-  clientIp?: string;
 }
 
 function sanitizeClientInfo(info?: ClientInfo): ClientInfo | undefined {

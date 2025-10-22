@@ -1,5 +1,6 @@
 import type {
   LogEntry,
+  Logger,
   McpServer,
   Registry,
 } from "@fiberplane/mcp-gateway-types";
@@ -8,16 +9,6 @@ import { Hono as HonoApp } from "hono";
 import { logger as loggerMiddleware } from "hono/logger";
 import { createOAuthRoutes } from "./routes/oauth";
 import { createProxyRoutes, type ProxyDependencies } from "./routes/proxy";
-
-/**
- * Logger interface for dependency injection
- */
-export interface Logger {
-  debug(message: string, context?: Record<string, unknown>): void;
-  info(message: string, context?: Record<string, unknown>): void;
-  warn(message: string, context?: Record<string, unknown>): void;
-  error(message: string, context?: Record<string, unknown>): void;
-}
 
 /**
  * Create MCP Gateway HTTP server
