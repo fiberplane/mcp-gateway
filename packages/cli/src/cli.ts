@@ -199,7 +199,6 @@ export async function runCli(): Promise<void> {
         error,
         httpStatus,
         durationMs,
-        _httpContext,
       ) =>
         gateway.capture.error(
           serverName,
@@ -215,7 +214,6 @@ export async function runCli(): Promise<void> {
         sseEvent,
         method,
         requestId,
-        _httpContext,
       ) =>
         gateway.capture.sseEvent(
           serverName,
@@ -230,9 +228,6 @@ export async function runCli(): Promise<void> {
         jsonRpcMessage,
         sseEvent,
         isResponse,
-        _httpContext,
-        _clientInfo,
-        _serverInfo,
       ) =>
         gateway.capture.sseJsonRpc(
           serverName,
