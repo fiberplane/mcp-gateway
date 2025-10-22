@@ -1,11 +1,7 @@
 import type {
   ApiLogEntry,
-  ClientAggregation,
   LogQueryOptions,
-  LogQueryResult,
   QueryFunctions,
-  ServerInfo,
-  SessionInfo,
 } from "@fiberplane/mcp-gateway-types";
 import { sValidator } from "@hono/standard-validator";
 import { Hono } from "hono";

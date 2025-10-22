@@ -6,6 +6,7 @@ import type {
   ClientInfo,
   JsonRpcRequest,
   JsonRpcResponse,
+  McpServerInfo,
 } from "./schemas.js";
 
 /**
@@ -24,11 +25,7 @@ export interface ProxyDependencies {
     request: JsonRpcRequest,
     httpContext?: HttpContext,
     clientInfo?: ClientInfo,
-    serverInfo?: {
-      name?: string;
-      version: string;
-      title?: string;
-    },
+    serverInfo?: McpServerInfo,
   ) => CaptureRecord;
 
   /** Create a response capture record */
@@ -40,11 +37,7 @@ export interface ProxyDependencies {
     method: string,
     httpContext?: HttpContext,
     clientInfo?: ClientInfo,
-    serverInfo?: {
-      name?: string;
-      version: string;
-      title?: string;
-    },
+    serverInfo?: McpServerInfo,
   ) => CaptureRecord;
 
   /** Append a capture record to storage */
@@ -80,11 +73,7 @@ export interface ProxyDependencies {
     isResponse?: boolean,
     httpContext?: HttpContext,
     clientInfo?: ClientInfo,
-    serverInfo?: {
-      name?: string;
-      version: string;
-      title?: string;
-    },
+    serverInfo?: McpServerInfo,
   ) => Promise<CaptureRecord | null>;
 
   /** Store client info for a session */
@@ -96,31 +85,19 @@ export interface ProxyDependencies {
   ) => Promise<ClientInfo | undefined>;
 
   /** Store server info for a session */
-  storeServerInfoForSession: (
-    sessionId: string,
-    info: {
-      name?: string;
-      version: string;
-      title?: string;
-    },
-  ) => void;
+  storeServerInfoForSession: (sessionId: string, info: McpServerInfo) => void;
 
   /** Get server info for a session */
-  getServerInfoForSession: (sessionId: string) => Promise<
-    | {
-        name?: string;
-        version: string;
-        title?: string;
-      }
-    | undefined
-  >;
+  getServerInfoForSession: (
+    sessionId: string,
+  ) => Promise<McpServerInfo | undefined>;
 
   /** Update server info for an initialize request after getting the response */
   updateServerInfoForInitializeRequest: (
     serverName: string,
     sessionId: string,
     requestId: string | number,
-    serverInfo: { name?: string; version: string; title?: string },
+    serverInfo: McpServerInfo,
   ) => Promise<void>;
 
   /** Get a server from the registry */
