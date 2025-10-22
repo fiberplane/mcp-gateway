@@ -54,14 +54,10 @@ export type { QueryFunctions };
  * - GET /clients - List clients with aggregated stats
  * - POST /sessions/clear - Clear all session data
  *
- * @param storageDir - Storage directory path
  * @param queries - Query functions to use for data access
  * @returns Hono app with API routes
  */
-export function createApiRoutes(
-  storageDir: string,
-  queries: QueryFunctions,
-): Hono {
+export function createApiRoutes(queries: QueryFunctions): Hono {
   const app = new Hono();
 
   /**
@@ -82,7 +78,7 @@ export function createApiRoutes(
       order: query.order,
     };
 
-    const result = await queries.queryLogs(storageDir, options);
+    const result = await queries.queryLogs(options);
 
     // Transform CaptureRecords into separate ApiLogEntry records
     // Splits request/response pairs and includes SSE events as separate entries
@@ -140,7 +136,7 @@ export function createApiRoutes(
    * List all servers with log counts and session counts
    */
   app.get("/servers", async (c) => {
-    const servers = await queries.getServers(storageDir);
+    const servers = await queries.getServers();
 
     return c.json({ servers });
   });
@@ -154,7 +150,7 @@ export function createApiRoutes(
   app.get("/sessions", sValidator("query", sessionsQuerySchema), async (c) => {
     const query = c.req.valid("query") as z.infer<typeof sessionsQuerySchema>;
 
-    const sessions = await queries.getSessions(storageDir, query.server);
+    const sessions = await queries.getSessions(query.server);
 
     return c.json({ sessions });
   });
@@ -165,7 +161,7 @@ export function createApiRoutes(
    * List all clients with log counts and session counts
    */
   app.get("/clients", async (c) => {
-    const clients = await queries.getClients(storageDir);
+    const clients = await queries.getClients();
 
     return c.json({ clients });
   });

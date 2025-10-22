@@ -434,15 +434,12 @@ export async function runCli(): Promise<void> {
     app.route("/", serverApp);
 
     // Mount API for observability (query logs, servers, sessions, clients)
-    // Wrap Gateway methods to match API's expected signature (storageDir is ignored since Gateway already knows it)
     const apiApp = createApiApp(
-      storageDir,
       {
-        queryLogs: (_storageDir, options) => gateway.storage.query(options),
-        getServers: (_storageDir) => gateway.storage.getServers(),
-        getSessions: (_storageDir, serverName) =>
-          gateway.storage.getSessions(serverName),
-        getClients: (_storageDir) => gateway.storage.getClients(),
+        queryLogs: (options) => gateway.storage.query(options),
+        getServers: () => gateway.storage.getServers(),
+        getSessions: (serverName) => gateway.storage.getSessions(serverName),
+        getClients: () => gateway.storage.getClients(),
         clearSessions: async () => {
           // Clear in-memory session metadata
           gateway.clientInfo.clearAll();

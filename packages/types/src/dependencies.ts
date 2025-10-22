@@ -117,15 +117,12 @@ export interface QueryFunctions {
   /**
    * Query logs with optional filters and pagination
    */
-  queryLogs: (
-    storageDir: string,
-    options?: LogQueryOptions,
-  ) => Promise<LogQueryResult>;
+  queryLogs: (options?: LogQueryOptions) => Promise<LogQueryResult>;
 
   /**
    * Get all servers with aggregated stats
    */
-  getServers: (storageDir: string) => Promise<
+  getServers: () => Promise<
     Array<{
       name: string;
       logCount: number;
@@ -136,10 +133,7 @@ export interface QueryFunctions {
   /**
    * Get all sessions with aggregated stats
    */
-  getSessions: (
-    storageDir: string,
-    serverName?: string,
-  ) => Promise<
+  getSessions: (serverName?: string) => Promise<
     Array<{
       sessionId: string;
       serverName: string;
@@ -152,7 +146,7 @@ export interface QueryFunctions {
   /**
    * Get all clients with aggregated stats
    */
-  getClients: (storageDir: string) => Promise<
+  getClients: () => Promise<
     Array<{
       clientName: string;
       clientVersion: string | null;

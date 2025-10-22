@@ -11,7 +11,6 @@ import { createApiRoutes, type QueryFunctions } from "./routes/index.js";
  * - GET /servers - List servers with aggregated stats
  * - GET /sessions - List sessions with aggregated stats
  *
- * @param storageDir - Path to the MCP Gateway storage directory (passed to query functions)
  * @param queries - Query functions for data access (dependency injected)
  * @param logger - Logger instance for error logging (dependency injected)
  * @returns Hono app with mounted API routes
@@ -20,12 +19,8 @@ import { createApiRoutes, type QueryFunctions } from "./routes/index.js";
  * See the CLI package (packages/cli/src/cli.ts) for a complete integration example
  * that shows how to wire the Gateway instance into the API's query functions.
  */
-export function createApp(
-  storageDir: string,
-  queries: QueryFunctions,
-  logger: Logger,
-): Hono {
-  const app = createApiRoutes(storageDir, queries);
+export function createApp(queries: QueryFunctions, logger: Logger): Hono {
+  const app = createApiRoutes(queries);
 
   // Add global error handler for consistent error responses
   app.onError((err, c) => {
