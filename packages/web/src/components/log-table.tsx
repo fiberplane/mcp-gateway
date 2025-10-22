@@ -395,8 +395,10 @@ function createColumns(): Column[] {
         >
           {log.direction === "request" ? (
             <ArrowRight className="w-3 h-3" />
-          ) : (
+          ) : log.direction === "response" ? (
             <ArrowLeft className="w-3 h-3" />
+          ) : (
+            <ArrowDown className="w-3 h-3" />
           )}
           <span>{log.method}</span>
         </Badge>
@@ -443,7 +445,9 @@ function createColumns(): Column[] {
 }
 
 function LogDetails({ log }: LogDetailsProps) {
-  const [copied, setCopied] = useState<"request" | "response" | null>(null);
+  const [copied, setCopied] = useState<
+    "request" | "response" | "sseEvent" | null
+  >(null);
 
   const isNotification = log.id === null;
 
@@ -479,6 +483,18 @@ function LogDetails({ log }: LogDetailsProps) {
       items.push({ label: "HTTP Status", value: log.metadata.httpStatus });
     }
 
+    if (log.direction === "sse-event") {
+      if (log.metadata.sseEventId) {
+        items.push({ label: "SSE Event ID", value: log.metadata.sseEventId });
+      }
+      if (log.metadata.sseEventType) {
+        items.push({
+          label: "SSE Event Type",
+          value: log.metadata.sseEventType,
+        });
+      }
+    }
+
     if (log.metadata.clientIp && log.metadata.clientIp !== "unknown") {
       items.push({ label: "Client IP", value: log.metadata.clientIp });
     }
@@ -505,6 +521,8 @@ function LogDetails({ log }: LogDetailsProps) {
     log.metadata.httpStatus,
     log.metadata.server?.title,
     log.metadata.sessionId,
+    log.metadata.sseEventId,
+    log.metadata.sseEventType,
     log.metadata.userAgent,
   ]);
 
@@ -526,8 +544,31 @@ function LogDetails({ log }: LogDetailsProps) {
     return JSON.stringify(responseLog.response, null, 2);
   }, [log]);
 
+  const formattedSseEvent = useMemo(() => {
+    if (log.direction !== "sse-event") {
+      return null;
+    }
+
+    // Type narrowing for SSE event log entry
+    const sseLog = log as {
+      sseEvent?: {
+        id?: string;
+        event?: string;
+        data?: string;
+        retry?: number;
+      };
+    };
+
+    return {
+      id: sseLog.sseEvent?.id || "—",
+      event: sseLog.sseEvent?.event || "—",
+      data: sseLog.sseEvent?.data || "—",
+      retry: sseLog.sseEvent?.retry ? String(sseLog.sseEvent.retry) : "—",
+    };
+  }, [log]);
+
   const copyToClipboard = useHandler(
-    (data: unknown, type: "request" | "response") => {
+    (data: unknown, type: "request" | "response" | "sseEvent") => {
       navigator.clipboard.writeText(JSON.stringify(data, null, 2));
       setCopied(type);
       setTimeout(() => setCopied(null), 2000);
@@ -633,6 +674,69 @@ function LogDetails({ log }: LogDetailsProps) {
             <pre className="max-h-96 overflow-auto rounded-md border border-border bg-card p-4 text-xs font-mono">
               {formattedResponse}
             </pre>
+          </div>
+        ) : null}
+        {formattedSseEvent && log.direction === "sse-event" ? (
+          <div className="flex-1">
+            <div className="mb-2.5 flex items-center justify-between">
+              <h4 className="text-sm font-semibold text-foreground">
+                SSE Event
+              </h4>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => copyToClipboard(formattedSseEvent, "sseEvent")}
+              >
+                {copied === "sseEvent" ? (
+                  <>
+                    <Check className="mr-1 h-4 w-4" />
+                    Copied
+                  </>
+                ) : (
+                  <>
+                    <Copy className="mr-1 h-4 w-4" />
+                    Copy
+                  </>
+                )}
+              </Button>
+            </div>
+            <div className="space-y-3">
+              <div className="rounded-md border border-border bg-card p-4">
+                <div className="text-xs font-medium uppercase text-muted-foreground">
+                  Event ID
+                </div>
+                <div className="mt-1 font-mono text-sm text-foreground">
+                  {formattedSseEvent.id}
+                </div>
+              </div>
+              <div className="rounded-md border border-border bg-card p-4">
+                <div className="text-xs font-medium uppercase text-muted-foreground">
+                  Event Type
+                </div>
+                <div className="mt-1 font-mono text-sm text-foreground">
+                  {formattedSseEvent.event}
+                </div>
+              </div>
+              <div className="rounded-md border border-border bg-card p-4">
+                <div className="text-xs font-medium uppercase text-muted-foreground">
+                  Data
+                </div>
+                <pre className="mt-1 max-h-48 overflow-auto rounded-sm bg-muted p-2 text-xs font-mono text-foreground">
+                  {formattedSseEvent.data}
+                </pre>
+              </div>
+              {formattedSseEvent.retry !== "—" && (
+                <div className="rounded-md border border-border bg-card p-4">
+                  <div className="text-xs font-medium uppercase text-muted-foreground">
+                    Retry (ms)
+                  </div>
+                  <div className="mt-1 font-mono text-sm text-foreground">
+                    {formattedSseEvent.retry}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         ) : null}
       </div>
