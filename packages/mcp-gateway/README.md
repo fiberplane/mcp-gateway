@@ -327,9 +327,19 @@ cp -r packages/web/public packages/cli/public
 
 Managed at monorepo root level.
 
-## Related Documentation
+## User Documentation
 
-- [AGENTS.md](../../AGENTS.md) - Complete monorepo development guide
+If you're using MCP Gateway, see the user guides:
+
+- **[Getting Started](../../docs/user-guide/getting-started.md)** - Installation and first steps
+- **[Web UI Guide](../../docs/user-guide/web-ui-guide.md)** - Using the web dashboard
+- **[CLI Reference](../../docs/user-guide/cli-reference.md)** - Command-line usage
+- **[Troubleshooting](../../docs/user-guide/troubleshooting.md)** - Common issues
+- **[FAQ](../../docs/user-guide/faq.md)** - Frequently asked questions
+
+## Developer Documentation
+
+- [CLAUDE.md](../../CLAUDE.md) - Complete monorepo development guide
 - [packages/web/README.md](../web/README.md) - Web UI package documentation
 - [packages/api/README.md](../api/README.md) - API package documentation
 - [packages/server/README.md](../server/README.md) - Server package documentation
