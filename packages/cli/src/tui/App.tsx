@@ -174,7 +174,7 @@ export async function runOpenTUI(context: Context, registry: Registry) {
 
   // Initialize store
   const initialize = useAppStore.getState().initialize;
-  const gateway = context.gateway as Gateway; // Type assertion since context.gateway is unknown type
+  const gateway = context.gateway as Gateway;
   if (!gateway) {
     throw new Error("Gateway is required for TUI initialization");
   }

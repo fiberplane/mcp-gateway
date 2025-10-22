@@ -156,6 +156,11 @@ export const useAppStore = create<AppStore>((set, get) => ({
       throw new Error(`Server '${name}' already exists`);
     }
 
+    // Perform health check BEFORE persisting (to ensure we have health status)
+    const { checkServerHealth } = await import("@fiberplane/mcp-gateway-core");
+    const health = await checkServerHealth(normalizedUrl);
+    const lastHealthCheck = new Date().toISOString();
+
     // Add server via storage API (which handles persistence)
     await gateway.storage.addServer({
       name: normalizedName,
@@ -164,30 +169,22 @@ export const useAppStore = create<AppStore>((set, get) => ({
       headers: {},
     });
 
-    // Emit event so HTTP server updates
-    emitRegistryUpdate();
-
-    // Add to UI state
+    // Create UI server with complete health info
     const uiServer: UIServer = {
       name: normalizedName,
       url: normalizedUrl,
       type: "http",
       headers: {},
-      health: "unknown",
+      health,
+      lastHealthCheck,
     };
+
+    // Update UI state with complete data
     set({ servers: [...servers, uiServer] });
 
-    // Trigger immediate health check for the new server
-    const { checkServerHealth } = await import("@fiberplane/mcp-gateway-core");
-    const health = await checkServerHealth(normalizedUrl);
-    const lastHealthCheck = new Date().toISOString();
-
-    // Update UI with health status
-    set((state) => ({
-      servers: state.servers.map((s) =>
-        s.name === normalizedName ? { ...s, health, lastHealthCheck } : s,
-      ),
-    }));
+    // Emit event only after all UI updates are complete
+    // This prevents race condition where registry reload overwrites health status
+    emitRegistryUpdate();
   },
 
   removeServer: async (name) => {
