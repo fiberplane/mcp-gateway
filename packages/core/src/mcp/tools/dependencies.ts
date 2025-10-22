@@ -3,7 +3,6 @@ import type {
   LogQueryResult,
   McpServer,
   McpServerConfig,
-  Registry,
 } from "@fiberplane/mcp-gateway-types";
 
 /**

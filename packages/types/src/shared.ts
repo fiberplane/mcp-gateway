@@ -4,6 +4,7 @@ import type { JsonRpcRequest, JsonRpcResponse } from "./schemas";
 export type Context = {
   storageDir: string;
   port: number;
+  gateway?: unknown; // Gateway type (imported here would create circular dependency, so use unknown)
   onExit?: () => void | Promise<void>;
 };
 

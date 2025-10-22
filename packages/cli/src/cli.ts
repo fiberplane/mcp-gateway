@@ -16,8 +16,8 @@ import {
   getStorageRoot,
   loadRegistry,
   logger,
-  saveRegistry,
 } from "@fiberplane/mcp-gateway-core";
+
 import {
   createApp as createServerApp,
   type ProxyDependencies,
@@ -261,8 +261,12 @@ export async function runCli(): Promise<void> {
         ),
       getServerFromRegistry: (registry, name) =>
         gateway.registry.getServer(registry, name),
-      saveRegistryToStorage: (storage, registry) =>
-        saveRegistry(storage, registry),
+      // Note: saveRegistryToStorage is no longer used - server activity is now computed from logs
+      // This is kept for backward compatibility with the ProxyDependencies interface
+      saveRegistryToStorage: async () => {
+        // No-op: Server metrics are now computed from database, not persisted to mcp.json
+        // The proxy code will be refactored in a future PR to remove this dependency
+      },
     };
 
     // Create MCP protocol server (proxy, OAuth, gateway MCP server)
@@ -565,6 +569,7 @@ export async function runCli(): Promise<void> {
     const context: Context = {
       storageDir,
       port,
+      gateway,
       onExit: async () => {
         await gateway.close(); // Close Gateway connections (includes stopping health checks)
         return new Promise<void>((resolve) => {

@@ -172,7 +172,9 @@ export interface Gateway {
     /**
      * Get all registered servers with current metrics
      */
-    getRegisteredServers(): Promise<import("@fiberplane/mcp-gateway-types").McpServer[]>;
+    getRegisteredServers(): Promise<
+      import("@fiberplane/mcp-gateway-types").McpServer[]
+    >;
 
     /**
      * Add a new server to the registry
@@ -191,7 +193,9 @@ export interface Gateway {
      */
     updateServer(
       name: string,
-      changes: Partial<Omit<import("@fiberplane/mcp-gateway-types").McpServerConfig, "name">>,
+      changes: Partial<
+        Omit<import("@fiberplane/mcp-gateway-types").McpServerConfig, "name">
+      >,
     ): Promise<void>;
 
     /**

@@ -1,10 +1,71 @@
 import { beforeEach, describe, expect, test } from "bun:test";
+import type { Gateway } from "@fiberplane/mcp-gateway-core";
 import { useAppStore } from "./store";
+
+// Mock Gateway for testing
+const mockGateway: Gateway = {
+  capture: {
+    append: async () => {},
+    error: async () => {},
+    sseEvent: async () => {},
+    sseJsonRpc: async () => null,
+  },
+  registry: {
+    getServer: () => undefined,
+  },
+  clientInfo: {
+    store: () => {},
+    get: async () => undefined,
+    clear: () => {},
+    clearAll: () => {},
+    getActiveSessions: () => [],
+  },
+  serverInfo: {
+    store: () => {},
+    get: async () => undefined,
+    clear: () => {},
+    clearAll: () => {},
+  },
+  requestTracker: {
+    trackRequest: () => {},
+    calculateDuration: () => 0,
+    getMethod: () => undefined,
+    hasRequest: () => false,
+  },
+  storage: {
+    getRegisteredServers: async () => [],
+    addServer: async () => {},
+    removeServer: async () => {},
+    updateServer: async () => {},
+    query: async () => ({
+      data: [],
+      pagination: {
+        count: 0,
+        limit: 100,
+        hasMore: false,
+        oldestTimestamp: null,
+        newestTimestamp: null,
+      },
+    }),
+    getServers: async () => [],
+    getSessions: async () => [],
+    getClients: async () => [],
+    getServerMetrics: async () => ({ lastActivity: null, exchangeCount: 0 }),
+    clearAll: async () => {},
+    updateServerInfoForInitializeRequest: async () => {},
+  },
+  health: {
+    start: async () => {},
+    stop: () => {},
+    check: async () => [],
+  },
+  close: async () => {},
+};
 
 describe("AppStore", () => {
   beforeEach(() => {
     // Reset store before each test
-    useAppStore.getState().initialize([], ".test-storage", 3333);
+    useAppStore.getState().initialize([], ".test-storage", 3333, mockGateway);
   });
 
   test("initialize sets servers and storageDir", () => {
@@ -18,7 +79,7 @@ describe("AppStore", () => {
       },
     ];
 
-    useAppStore.getState().initialize(servers, "/test/dir", 8080);
+    useAppStore.getState().initialize(servers, "/test/dir", 8080, mockGateway);
 
     const state = useAppStore.getState();
     expect(state.servers).toEqual(servers);
@@ -55,6 +116,7 @@ describe("AppStore", () => {
       ],
       ".test-storage",
       3333,
+      mockGateway,
     );
 
     await expect(

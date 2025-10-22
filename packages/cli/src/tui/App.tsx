@@ -1,3 +1,4 @@
+import type { Gateway } from "@fiberplane/mcp-gateway-core";
 import { logger } from "@fiberplane/mcp-gateway-core";
 import type { Context, Registry } from "@fiberplane/mcp-gateway-types";
 import { render, useKeyboard } from "@opentui/react";
@@ -173,7 +174,11 @@ export async function runOpenTUI(context: Context, registry: Registry) {
 
   // Initialize store
   const initialize = useAppStore.getState().initialize;
-  initialize(uiServers, context.storageDir, context.port);
+  const gateway = context.gateway as Gateway; // Type assertion since context.gateway is unknown type
+  if (!gateway) {
+    throw new Error("Gateway is required for TUI initialization");
+  }
+  initialize(uiServers, context.storageDir, context.port, gateway);
 
   // Setup async exit handler
   const handleExit = async () => {
