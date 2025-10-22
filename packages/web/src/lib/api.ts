@@ -1,4 +1,5 @@
 import type {
+  ClientInfo,
   ServerInfo,
   ServerStatus,
   SessionInfo,
@@ -17,11 +18,7 @@ export interface LogEntry {
     sessionId: string;
     durationMs: number;
     httpStatus: number;
-    client?: {
-      name: string;
-      version: string;
-      title?: string;
-    };
+    client?: ClientInfo;
   };
   request?: unknown;
   response?: unknown;
