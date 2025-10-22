@@ -234,8 +234,8 @@ export function LogTable({
                 tabIndex={0}
                 aria-expanded={isExpanded}
                 aria-label={`Log entry - ${log.method} ${log.direction} from ${log.metadata.serverName} at ${format(new Date(log.timestamp), "HH:mm:ss.SSS")}`}
-                className={`hover:bg-muted/50 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  isExpanded ? "bg-blue-50/50" : ""
+                className={`hover:bg-muted transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  isExpanded ? "bg-muted" : ""
                 }`}
                 onClick={() => handleRowClick(log)}
                 onKeyDown={handleRowKeyDown}
@@ -296,7 +296,7 @@ export function LogTable({
               </tr>
               {isExpanded && (
                 <tr key={`${logKey}-details`}>
-                  <td colSpan={6} className="p-5 bg-muted/30">
+                  <td colSpan={6} className="p-5 bg-card">
                     <LogDetails log={log} />
                   </td>
                 </tr>

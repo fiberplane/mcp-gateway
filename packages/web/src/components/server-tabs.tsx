@@ -202,7 +202,7 @@ export function ServerTabs({ value, onChange, panelId }: ServerTabsProps) {
                 <span className="text-xs ml-1">(offline)</span>
               )}
               {server.status === "not-found" && (
-                <span className="text-xs ml-1 opacity-70">(not found)</span>
+                <span className="text-xs ml-1">(not found)</span>
               )}
             </span>
           </button>
