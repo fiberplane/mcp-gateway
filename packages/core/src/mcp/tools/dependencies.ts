@@ -1,6 +1,8 @@
 import type {
   LogQueryOptions,
   LogQueryResult,
+  McpServer,
+  McpServerConfig,
   Registry,
 } from "@fiberplane/mcp-gateway-types";
 
@@ -9,19 +11,24 @@ import type {
  *
  * Defines the interface for functions that server tools (add_server, remove_server, list_servers)
  * need to operate. This makes the dependencies explicit and testable without needing the full Gateway.
+ *
+ * All operations delegate to the storage layer which handles persistence internally.
  */
 export interface ServerToolsDependencies {
   /**
-   * Get server metrics (activity and request count) for a specific server
+   * Get all registered servers with current metrics
    */
-  getServerMetrics(
-    serverName: string,
-  ): Promise<{ lastActivity: string | null; exchangeCount: number }>;
+  getRegisteredServers(): Promise<McpServer[]>;
 
   /**
-   * Persist registry changes to storage
+   * Add a new server to the registry
    */
-  saveRegistry(storageDir: string, registry: Registry): Promise<void>;
+  addServer(server: McpServerConfig): Promise<void>;
+
+  /**
+   * Remove a server from the registry
+   */
+  removeServer(name: string): Promise<void>;
 }
 
 /**

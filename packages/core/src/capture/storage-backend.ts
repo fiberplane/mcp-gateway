@@ -3,6 +3,8 @@ import type {
   ClientAggregation,
   LogQueryOptions,
   LogQueryResult,
+  McpServer,
+  McpServerConfig,
   ServerInfo,
   SessionInfo,
 } from "@fiberplane/mcp-gateway-types";
@@ -115,6 +117,55 @@ export interface StorageBackend {
   getServerMetrics(
     serverName: string,
   ): Promise<{ lastActivity: string | null; exchangeCount: number }>;
+
+  /**
+   * Get all registered servers with computed metrics from logs
+   *
+   * Combines server configuration from mcp.json with activity metrics
+   * computed from the logs database. Metrics are always calculated fresh
+   * from the current logs state.
+   *
+   * @returns List of registered servers with full information and metrics
+   */
+  getRegisteredServers(): Promise<McpServer[]>;
+
+  /**
+   * Add a new server to the registry
+   *
+   * Creates a new server configuration in the registry. The server name
+   * must be unique. Server metrics start at zero and are computed from
+   * subsequent log entries.
+   *
+   * @param server - Server configuration to add (without metrics)
+   * @throws Error if server name already exists
+   */
+  addServer(server: McpServerConfig): Promise<void>;
+
+  /**
+   * Remove a server from the registry
+   *
+   * Removes the server configuration. Associated logs are preserved for
+   * historical analysis.
+   *
+   * @param name - Name of the server to remove
+   * @throws Error if server doesn't exist
+   */
+  removeServer(name: string): Promise<void>;
+
+  /**
+   * Update server configuration
+   *
+   * Updates specific fields of a server's configuration. Only the provided
+   * fields are updated; omitted fields are left unchanged.
+   *
+   * @param name - Name of the server to update
+   * @param changes - Partial server configuration to apply
+   * @throws Error if server doesn't exist
+   */
+  updateServer(
+    name: string,
+    changes: Partial<Omit<McpServerConfig, "name">>,
+  ): Promise<void>;
 
   /**
    * Close/cleanup the storage backend

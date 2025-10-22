@@ -170,6 +170,31 @@ export interface Gateway {
    */
   storage: {
     /**
+     * Get all registered servers with current metrics
+     */
+    getRegisteredServers(): Promise<import("@fiberplane/mcp-gateway-types").McpServer[]>;
+
+    /**
+     * Add a new server to the registry
+     */
+    addServer(
+      server: import("@fiberplane/mcp-gateway-types").McpServerConfig,
+    ): Promise<void>;
+
+    /**
+     * Remove a server from the registry
+     */
+    removeServer(name: string): Promise<void>;
+
+    /**
+     * Update server configuration
+     */
+    updateServer(
+      name: string,
+      changes: Partial<Omit<import("@fiberplane/mcp-gateway-types").McpServerConfig, "name">>,
+    ): Promise<void>;
+
+    /**
      * Query logs with filtering and pagination
      */
     query(
@@ -712,6 +737,12 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
     },
 
     storage: {
+      getRegisteredServers: async () =>
+        await storageManager.getRegisteredServers(),
+      addServer: async (server) => await storageManager.addServer(server),
+      removeServer: async (name) => await storageManager.removeServer(name),
+      updateServer: async (name, changes) =>
+        await storageManager.updateServer(name, changes),
       query: async (options?) => await storageManager.queryLogs(options),
       getServers: async () => await storageManager.getServers(),
       getSessions: async (serverName?) =>

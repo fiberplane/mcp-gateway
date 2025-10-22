@@ -3,6 +3,8 @@ import type {
   ClientAggregation,
   LogQueryOptions,
   LogQueryResult,
+  McpServer,
+  McpServerConfig,
   ServerInfo,
   SessionInfo,
 } from "@fiberplane/mcp-gateway-types";
@@ -20,6 +22,7 @@ export class StorageManager {
   // biome-ignore lint/correctness/noUnusedPrivateClassMembers: storageDir is set in initialize() method
   private storageDir: string | null = null;
   private initialized = false;
+  private registryCache: McpServer[] | null = null;
 
   /**
    * Register a storage backend
@@ -341,5 +344,113 @@ export class StorageManager {
     }
 
     return await backend.getServerMetrics(serverName);
+  }
+
+  /**
+   * Get all registered servers with computed metrics
+   *
+   * Uses in-memory cache for performance. Cache is automatically
+   * invalidated on write operations (add, remove, update).
+   *
+   * @returns List of all registered servers with current metrics
+   */
+  async getRegisteredServers(): Promise<McpServer[]> {
+    if (!this.initialized) {
+      throw new Error(
+        "Storage manager not initialized. Call initialize() first.",
+      );
+    }
+
+    // Return cached result if available
+    if (this.registryCache) {
+      return this.registryCache;
+    }
+
+    const backend = this.backends.values().next().value as
+      | StorageBackend
+      | undefined;
+    if (!backend) {
+      throw new Error("No storage backends registered");
+    }
+
+    // Fetch from backend and cache result
+    this.registryCache = await backend.getRegisteredServers();
+    return this.registryCache;
+  }
+
+  /**
+   * Add a new server to the registry
+   *
+   * @param server - Server configuration to add
+   * @throws Error if server name already exists
+   */
+  async addServer(server: McpServerConfig): Promise<void> {
+    if (!this.initialized) {
+      throw new Error(
+        "Storage manager not initialized. Call initialize() first.",
+      );
+    }
+
+    const backend = this.backends.values().next().value as
+      | StorageBackend
+      | undefined;
+    if (!backend) {
+      throw new Error("No storage backends registered");
+    }
+
+    await backend.addServer(server);
+    this.registryCache = null; // Invalidate cache
+  }
+
+  /**
+   * Remove a server from the registry
+   *
+   * @param name - Name of the server to remove
+   * @throws Error if server doesn't exist
+   */
+  async removeServer(name: string): Promise<void> {
+    if (!this.initialized) {
+      throw new Error(
+        "Storage manager not initialized. Call initialize() first.",
+      );
+    }
+
+    const backend = this.backends.values().next().value as
+      | StorageBackend
+      | undefined;
+    if (!backend) {
+      throw new Error("No storage backends registered");
+    }
+
+    await backend.removeServer(name);
+    this.registryCache = null; // Invalidate cache
+  }
+
+  /**
+   * Update server configuration
+   *
+   * @param name - Name of the server to update
+   * @param changes - Partial configuration to apply
+   * @throws Error if server doesn't exist
+   */
+  async updateServer(
+    name: string,
+    changes: Partial<Omit<McpServerConfig, "name">>,
+  ): Promise<void> {
+    if (!this.initialized) {
+      throw new Error(
+        "Storage manager not initialized. Call initialize() first.",
+      );
+    }
+
+    const backend = this.backends.values().next().value as
+      | StorageBackend
+      | undefined;
+    if (!backend) {
+      throw new Error("No storage backends registered");
+    }
+
+    await backend.updateServer(name, changes);
+    this.registryCache = null; // Invalidate cache
   }
 }

@@ -4,7 +4,6 @@ import { cors } from "hono/cors";
 import { McpServer, RpcError, StreamableHttpTransport } from "mcp-lite";
 import { z } from "zod";
 import { logger } from "../logger";
-import { saveRegistry } from "../registry/storage";
 import { createCaptureTools } from "./tools/capture-tools";
 import { createServerTools } from "./tools/server-tools";
 
@@ -13,14 +12,14 @@ import { createServerTools } from "./tools/server-tools";
  * and capture analysis. The server exposes tools that allow MCP clients to manage
  * the gateway's server registry and analyze captured MCP traffic.
  *
- * @param registry - The gateway's server registry
- * @param storageDir - Directory where captures are stored
- * @param gateway - Gateway instance for accessing query operations
+ * @param _registry - The gateway's server registry (kept for backward compatibility, not used - operations delegate to storage layer)
+ * @param _storageDir - Directory where captures are stored (kept for backward compatibility - storage is now location-aware)
+ * @param gateway - Gateway instance for accessing query operations and server management
  * @returns MCP server instance with configured tools
  */
 export function createMcpServer(
-  registry: Registry,
-  storageDir: string,
+  _registry: Registry,
+  _storageDir: string,
   gateway: import("../gateway.js").Gateway,
 ): McpServer {
   // Create MCP server with Zod schema adapter for validation
@@ -61,14 +60,14 @@ export function createMcpServer(
   });
 
   // Register server management tools with explicit dependencies
-  createServerTools(mcp, registry, storageDir, {
-    getServerMetrics: (serverName) =>
-      gateway.storage.getServerMetrics(serverName),
-    saveRegistry,
+  createServerTools(mcp, {
+    getRegisteredServers: () => gateway.storage.getRegisteredServers(),
+    addServer: (server) => gateway.storage.addServer(server),
+    removeServer: (name) => gateway.storage.removeServer(name),
   });
 
   // Register capture analysis tools with explicit dependencies
-  createCaptureTools(mcp, registry, {
+  createCaptureTools(mcp, _registry, {
     query: (options) => gateway.storage.query(options),
   });
 
