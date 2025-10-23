@@ -96,6 +96,9 @@ export interface Gateway {
       jsonRpcMessage: JsonRpcRequest | JsonRpcResponse,
       sseEvent: SSEEvent,
       isResponse?: boolean,
+      httpContext?: HttpContext,
+      clientInfo?: ClientInfo,
+      serverInfo?: McpServerInfo,
     ): Promise<CaptureRecord | null>;
   };
 

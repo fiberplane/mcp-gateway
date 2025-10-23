@@ -806,6 +806,13 @@ export async function createProxyRoutes(options: {
               (await deps.getServerInfoForSession(sessionId))
             : await deps.getServerInfoForSession(sessionId);
 
+        logger.debug("[Capture response]", {
+          method: jsonRpcRequest.method,
+          sessionId,
+          hasUpdatedServerInfo: !!updatedServerInfo,
+          updatedServerInfo,
+        });
+
         // Capture response (both for regular requests and notifications)
         // The upstream server returns a JSON response for all requests, including notifications
         const responseRecord = deps.createResponseRecord(

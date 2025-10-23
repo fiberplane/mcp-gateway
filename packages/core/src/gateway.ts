@@ -3,6 +3,7 @@ import type {
   ClientInfo,
   Gateway,
   GatewayOptions,
+  HttpContext,
   JsonRpcRequest,
   JsonRpcResponse,
   McpServerInfo,
@@ -381,6 +382,9 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
         jsonRpcMessage: JsonRpcRequest | JsonRpcResponse,
         sseEvent: SSEEvent,
         isResponse = false,
+        httpContext?: HttpContext,
+        clientInfo?: ClientInfo,
+        serverInfo?: McpServerInfo,
       ) => {
         try {
           const record = createSSEJsonRpcCaptureRecord(
@@ -389,9 +393,9 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
             jsonRpcMessage,
             sseEvent,
             isResponse,
-            undefined, // httpContext - not available in Gateway.sseJsonRpc API
-            await clientInfoStore.get(sessionId),
-            undefined, // serverInfo - not available in Gateway.sseJsonRpc API
+            httpContext,
+            clientInfo ?? (await clientInfoStore.get(sessionId)),
+            serverInfo ?? (await serverInfoStore.get(sessionId)),
             requestTracker,
           );
           await backend.write(record);

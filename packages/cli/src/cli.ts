@@ -225,6 +225,9 @@ export async function runCli(): Promise<void> {
         jsonRpcMessage,
         sseEvent,
         isResponse,
+        httpContext,
+        clientInfo,
+        serverInfo,
       ) =>
         gateway.capture.sseJsonRpc(
           serverName,
@@ -232,6 +235,9 @@ export async function runCli(): Promise<void> {
           jsonRpcMessage,
           sseEvent,
           isResponse,
+          httpContext,
+          clientInfo,
+          serverInfo,
         ),
       storeClientInfoForSession: (sessionId, info) =>
         gateway.clientInfo.store(sessionId, info),
