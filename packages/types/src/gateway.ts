@@ -7,10 +7,10 @@ import type {
   SessionInfo,
 } from "./logs";
 import type {
+  HealthStatus,
   McpServer,
   McpServerConfig,
   Registry,
-  HealthStatus,
 } from "./registry";
 import type {
   CaptureRecord,

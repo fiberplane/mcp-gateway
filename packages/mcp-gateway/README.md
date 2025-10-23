@@ -444,7 +444,11 @@ If you're using MCP Gateway, see the user guides:
 5. **Lint** with `bun run lint`
 6. **Format** with `bun run format`
 7. **Commit** with conventional commit message
-8. **Create changeset** if this is a release-worthy change
+8. **Create changeset** if this is a release-worthy change:
+   - Run `bun changeset` to create a changeset
+   - Run `bun run changeset:check` to validate before committing
+   - Only reference `@fiberplane/mcp-gateway` (other packages are ignored)
+   - See [AGENTS.md](../../AGENTS.md#release-process) for details
 
 ## Debugging
 

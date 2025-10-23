@@ -5,7 +5,7 @@ import type {
   ServerInfo,
   SessionInfo,
 } from "./logs.js";
-import type { McpServer, McpServerConfig, HealthStatus } from "./registry.js";
+import type { HealthStatus, McpServer, McpServerConfig } from "./registry.js";
 import type { CaptureRecord } from "./schemas.js";
 
 /**

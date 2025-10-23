@@ -281,12 +281,21 @@ bun run --filter test-mcp-server dev
 # Create changeset
 bun changeset
 
+# Validate changesets (recommended before committing)
+bun run changeset:check
+
 # Version packages
 bun changeset version
 
 # Publish (done by CI)
 bun changeset publish
 ```
+
+**Important**: Always validate changesets before committing to avoid mixed changeset errors:
+- **Mixed changesets** (referencing both ignored and non-ignored packages) are not allowed
+- Ignored packages: `@fiberplane/mcp-gateway-web`, `@fiberplane/mcp-gateway-types`, etc. (see `.changeset/config.json`)
+- Only `@fiberplane/mcp-gateway` (the public wrapper) should be versioned in changesets
+- Other package changes should be described in the changeset body, not as versioned packages
 
 ## Troubleshooting
 
@@ -321,6 +330,13 @@ bun changeset publish
    - Use pattern: `await readFile(path, "utf8") as unknown as string`
    - Add comment explaining why assertion is needed
 
+7. **Mixed changeset error**
+   - Error: "Mixed changesets that contain both ignored and not ignored packages are not allowed"
+   - Run `bun run changeset:check` to validate changesets before committing
+   - Fix by removing ignored packages from changeset frontmatter
+   - Only `@fiberplane/mcp-gateway` should be versioned (other packages are ignored)
+   - Example fix: Remove `"@fiberplane/mcp-gateway-web": patch` from changeset
+
 ### Migration Notes
 
 This repository was migrated from a single-package structure to a monorepo. See `MIGRATION.md` for detailed migration steps and rationale. The migration:
@@ -339,7 +355,8 @@ This repository was migrated from a single-package structure to a monorepo. See 
 5. **Circular deps**: Check with `bun run check-circular` before committing
 6. **Building**: Build packages in dependency order (or use filtered commands)
 7. **Committing**: Use conventional commit messages
-8. **Releasing**: Use changesets workflow for versioning and publishing
+8. **Changesets**: Create with `bun changeset`, validate with `bun run changeset:check` before committing
+9. **Releasing**: Use changesets workflow for versioning and publishing
 
 ## Package Structure Benefits
 
