@@ -10,7 +10,6 @@ import {
   getServer,
   logger,
   resetMigrationState,
-  saveRegistry as saveRegistryCore,
 } from "@fiberplane/mcp-gateway-core";
 import {
   createApp as createServerApp,
@@ -42,12 +41,22 @@ export async function createApp(
   // Note: We can't use gateway.registry.getServer or requestTracker directly
   // because they're not exposed at the Gateway level. We'll use the core functions.
   const proxyDependencies: ProxyDependencies = {
-    createRequestRecord: (serverName: string, sessionId: string, request) =>
+    createRequestRecord: (
+      serverName: string,
+      sessionId: string,
+      request,
+      httpContext,
+      clientInfo,
+      serverInfo,
+    ) =>
       createRequestCaptureRecord(
         serverName,
         sessionId,
         request,
-        gateway.clientInfo.get(sessionId),
+        httpContext,
+        clientInfo,
+        serverInfo,
+        gateway.requestTracker,
       ),
 
     createResponseRecord: (
@@ -56,6 +65,9 @@ export async function createApp(
       response,
       httpStatus: number,
       method: string,
+      httpContext,
+      clientInfo,
+      serverInfo,
     ) =>
       createResponseCaptureRecord(
         serverName,
@@ -63,7 +75,10 @@ export async function createApp(
         response,
         httpStatus,
         method,
-        gateway.clientInfo.get(sessionId),
+        httpContext,
+        clientInfo,
+        serverInfo,
+        gateway.requestTracker,
       ),
 
     appendRecord: async (record) => {
@@ -128,12 +143,30 @@ export async function createApp(
       return gateway.clientInfo.get(sessionId);
     },
 
-    getServerFromRegistry: (registry: Registry, name: string) => {
-      return gateway.registry.getServer(registry, name);
+    storeServerInfoForSession: (sessionId: string, info) => {
+      gateway.serverInfo.store(sessionId, info);
     },
 
-    saveRegistryToStorage: async (storage: string, registry: Registry) => {
-      await saveRegistryCore(storage, registry);
+    getServerInfoForSession: (sessionId: string) => {
+      return gateway.serverInfo.get(sessionId);
+    },
+
+    updateServerInfoForInitializeRequest: async (
+      serverName: string,
+      sessionId: string,
+      requestId: string | number,
+      serverInfo,
+    ) => {
+      await gateway.storage.updateServerInfoForInitializeRequest(
+        serverName,
+        sessionId,
+        requestId,
+        serverInfo,
+      );
+    },
+
+    getServerFromRegistry: (registry: Registry, name: string) => {
+      return gateway.registry.getServer(registry, name);
     },
   };
 

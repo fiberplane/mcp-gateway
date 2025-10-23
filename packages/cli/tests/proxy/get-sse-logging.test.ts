@@ -327,7 +327,7 @@ describe("GET /mcp SSE Logging and Capture Tests", () => {
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       // 8. Query captured logs from the database
-      const queryResult = await gateway.instance.logs.query({
+      const queryResult = await gateway.instance.storage.query({
         serverName: "streaming-server",
         sessionId,
       });
@@ -435,7 +435,7 @@ describe("GET /mcp SSE Logging and Capture Tests", () => {
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       // 7. Query captured logs from the database
-      const queryResult = await gateway.instance.logs.query({
+      const queryResult = await gateway.instance.storage.query({
         serverName: "streaming-server",
         sessionId,
       });
@@ -554,7 +554,7 @@ describe("GET /mcp SSE Logging and Capture Tests", () => {
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       // 7. Query captured logs from the database
-      const queryResult = await gateway.instance.logs.query({
+      const queryResult = await gateway.instance.storage.query({
         serverName: "streaming-server",
         sessionId,
       });

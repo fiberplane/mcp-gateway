@@ -58,26 +58,6 @@ export function removeServer(registry: Registry, name: string): Registry {
   };
 }
 
-// Pure function to update server activity
-export function updateServerActivity(
-  registry: Registry,
-  name: string,
-  activity: { lastActivity: string; exchangeCount?: number },
-): Registry {
-  const servers = registry.servers.map((server) => {
-    if (server.name === name.toLowerCase().trim()) {
-      return {
-        ...server,
-        lastActivity: activity.lastActivity,
-        exchangeCount: activity.exchangeCount ?? server.exchangeCount,
-      };
-    }
-    return server;
-  });
-
-  return { servers };
-}
-
 // Convert registry to mcp.json format
 export function toMcpJson(registry: Registry) {
   return {

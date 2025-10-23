@@ -215,7 +215,7 @@ describe("SSE Integration Tests", () => {
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     // Query captured logs from database
-    const queryResult = await gateway.instance.logs.query({
+    const queryResult = await gateway.instance.storage.query({
       serverName: "sse-server",
       sessionId: sessionId,
     });

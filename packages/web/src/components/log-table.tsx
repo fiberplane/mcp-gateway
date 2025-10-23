@@ -1,21 +1,57 @@
+import type { ApiLogEntry } from "@fiberplane/mcp-gateway-types";
 import { format } from "date-fns";
-import { ArrowDown, ArrowUp, ArrowUpDown, Check, Copy } from "lucide-react";
-import { Fragment, useMemo, useState } from "react";
-import type { LogEntry } from "../lib/api";
+import {
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  ArrowUpDown,
+  Check,
+  Copy,
+} from "lucide-react";
+import { Fragment, type ReactNode, useMemo, useState } from "react";
+import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
 import { getMethodBadgeVariant } from "../lib/badge-color";
+import { groupLogsByTime, type TimeInterval } from "../lib/time-grouping";
 import { useHandler } from "../lib/use-handler";
 import { getLogKey } from "../lib/utils";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
 
-type SortField = "timestamp" | "server" | "session" | "method" | "duration";
+type SortField =
+  | "timestamp"
+  | "server"
+  | "session"
+  | "method"
+  | "duration"
+  | "client";
 type SortDirection = "asc" | "desc";
 
+/**
+ * Column configuration for the log table
+ */
+interface Column {
+  id: string;
+  header: string | (() => ReactNode);
+  cell: (log: ApiLogEntry) => ReactNode;
+  sortField?: SortField;
+  size?: string | number;
+  isVisible?: (logs: ApiLogEntry[]) => boolean;
+}
+
+/**
+ * Row items can be either a time divider or a log entry
+ */
+type RowItem =
+  | { type: "divider"; label: string; groupKey: string }
+  | { type: "log"; log: ApiLogEntry };
+
 interface LogTableProps {
-  logs: LogEntry[];
+  logs: ApiLogEntry[];
   selectedIds: Set<string>;
   onSelectionChange: (selectedIds: Set<string>) => void;
+  timeGrouping?: TimeInterval;
 }
 
 interface SortHeaderProps {
@@ -58,10 +94,20 @@ export function LogTable({
   logs,
   selectedIds,
   onSelectionChange,
+  timeGrouping = "day",
 }: LogTableProps) {
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [sortField, setSortField] = useState<SortField>("timestamp");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+
+  // Define columns configuration
+  const columns = useMemo(() => createColumns(), []);
+
+  // Filter visible columns
+  const visibleColumns = useMemo(
+    () => columns.filter((col) => !col.isVisible || col.isVisible(logs)),
+    [columns, logs],
+  );
 
   const handleSort = useHandler((field: SortField) => {
     if (sortField === field) {
@@ -100,6 +146,10 @@ export function LogTable({
           aValue = a.metadata.durationMs;
           bValue = b.metadata.durationMs;
           break;
+        case "client":
+          aValue = a.metadata.client?.name || "";
+          bValue = b.metadata.client?.name || "";
+          break;
       }
 
       const comparison =
@@ -111,6 +161,49 @@ export function LogTable({
     });
   }, [logs, sortField, sortDirection]);
 
+  // Group logs by time interval and create rows with dividers
+  const rowsWithDividers = useMemo(() => {
+    const { groups, config } = groupLogsByTime(sortedLogs, timeGrouping);
+    const result: RowItem[] = [];
+
+    if (sortedLogs.length === 0) {
+      return result;
+    }
+
+    // Get the current time's group key to check if a group is "current"
+    const now = new Date();
+    const currentGroupKey = config.getGroupKey(now);
+
+    // Sort group keys (respect current sort direction for display order)
+    const sortedGroupKeys = Array.from(groups.keys()).sort((a, b) => {
+      return sortDirection === "desc" ? b.localeCompare(a) : a.localeCompare(b);
+    });
+
+    for (let i = 0; i < sortedGroupKeys.length; i++) {
+      // biome-ignore lint/style/noNonNullAssertion: Array index is within bounds
+      const groupKey = sortedGroupKeys[i]!;
+      // biome-ignore lint/style/noNonNullAssertion: We know the key exists
+      const groupLogs = groups.get(groupKey)!;
+      // biome-ignore lint/style/noNonNullAssertion: Groups always have at least one log
+      const firstLog = groupLogs[0]!;
+      const label = config.formatLabel(new Date(firstLog.timestamp));
+
+      // Skip divider for the current time period
+      // Only show dividers when transitioning to older time periods
+      const isCurrentPeriod = groupKey === currentGroupKey;
+      if (!isCurrentPeriod) {
+        result.push({ type: "divider", label, groupKey });
+      }
+
+      // Add logs
+      for (const log of groupLogs) {
+        result.push({ type: "log", log });
+      }
+    }
+
+    return result;
+  }, [sortedLogs, timeGrouping, sortDirection]);
+
   const handleSelectAll = useHandler((checked: boolean) => {
     if (checked) {
       const allIds = new Set(sortedLogs.map(getLogKey));
@@ -120,7 +213,7 @@ export function LogTable({
     }
   });
 
-  const handleRowClick = useHandler((log: LogEntry) => {
+  const handleRowClick = useHandler((log: ApiLogEntry) => {
     const key = getLogKey(log);
     setExpandedKey((current) => (current === key ? null : key));
   });
@@ -158,67 +251,58 @@ export function LogTable({
               aria-label="Select all"
             />
           </th>
-          <th className="text-left p-3 text-sm font-semibold text-foreground">
-            <SortHeader
-              field="timestamp"
-              sortField={sortField}
-              sortDirection={sortDirection}
-              onSort={handleSort}
+          {visibleColumns.map((column) => (
+            <th
+              key={column.id}
+              className="text-left p-3 text-sm font-semibold text-foreground"
             >
-              Timestamp
-            </SortHeader>
-          </th>
-          <th className="text-left p-3 text-sm font-semibold text-foreground">
-            <SortHeader
-              field="server"
-              sortField={sortField}
-              sortDirection={sortDirection}
-              onSort={handleSort}
-            >
-              Server
-            </SortHeader>
-          </th>
-          <th className="text-left p-3 text-sm font-semibold text-foreground">
-            <SortHeader
-              field="session"
-              sortField={sortField}
-              sortDirection={sortDirection}
-              onSort={handleSort}
-            >
-              Session
-            </SortHeader>
-          </th>
-          <th className="text-left p-3 text-sm font-semibold text-foreground">
-            <SortHeader
-              field="method"
-              sortField={sortField}
-              sortDirection={sortDirection}
-              onSort={handleSort}
-            >
-              Method
-            </SortHeader>
-          </th>
-          <th className="text-left p-3 text-sm font-semibold text-foreground">
-            <SortHeader
-              field="duration"
-              sortField={sortField}
-              sortDirection={sortDirection}
-              onSort={handleSort}
-            >
-              Duration
-            </SortHeader>
-          </th>
+              {column.sortField ? (
+                <SortHeader
+                  field={column.sortField}
+                  sortField={sortField}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                >
+                  {typeof column.header === "function"
+                    ? column.header()
+                    : column.header}
+                </SortHeader>
+              ) : typeof column.header === "function" ? (
+                column.header()
+              ) : (
+                column.header
+              )}
+            </th>
+          ))}
         </tr>
       </thead>
       <tbody className="divide-y divide-border">
-        {sortedLogs.map((log) => {
+        {rowsWithDividers.map((item) => {
+          // Render divider row
+          if (item.type === "divider") {
+            return (
+              <tr
+                key={`divider-${item.groupKey}`}
+                className="bg-muted/30 border-t-2 border-border"
+              >
+                <td
+                  colSpan={visibleColumns.length + 1}
+                  className="p-3 text-sm font-semibold text-muted-foreground text-center"
+                >
+                  {item.label}
+                </td>
+              </tr>
+            );
+          }
+
+          // Render log row
+          const log = item.log;
           const logKey = getLogKey(log);
           const isExpanded = expandedKey === logKey;
 
           return (
             <Fragment key={logKey}>
               <tr
-                key={logKey}
                 className={`hover:bg-muted/50 transition-colors ${
                   isExpanded ? "bg-blue-50/50" : ""
                 }`}
@@ -233,56 +317,23 @@ export function LogTable({
                     aria-label={`Select log ${logKey}`}
                   />
                 </td>
-                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Table row click for expand/collapse, keyboard nav to be added */}
-                <td
-                  className="p-3 font-mono text-sm text-foreground cursor-pointer"
-                  title={log.timestamp}
-                  onClick={() => handleRowClick(log)}
-                >
-                  {format(new Date(log.timestamp), "HH:mm:ss.SSS")}
-                </td>
-                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Table row click for expand/collapse, keyboard nav to be added */}
-                <td
-                  className="p-3 text-sm text-foreground cursor-pointer"
-                  onClick={() => handleRowClick(log)}
-                >
-                  {log.metadata.serverName}
-                </td>
-                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Table row click for expand/collapse, keyboard nav to be added */}
-                <td
-                  className="p-3 font-mono text-xs text-muted-foreground cursor-pointer"
-                  onClick={() => handleRowClick(log)}
-                >
-                  {log.metadata.sessionId.slice(0, 8)}...
-                </td>
-                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Table row click for expand/collapse, keyboard nav to be added */}
-                <td
-                  className="p-3 cursor-pointer"
-                  onClick={() => handleRowClick(log)}
-                >
-                  <Badge
-                    variant={getMethodBadgeVariant(log.method)}
-                    className="inline-flex items-center gap-1"
+                {visibleColumns.map((column) => (
+                  // biome-ignore lint/a11y/useKeyWithClickEvents: Table row click for expand/collapse, keyboard nav to be added
+                  <td
+                    key={column.id}
+                    className="p-3 cursor-pointer"
+                    onClick={() => handleRowClick(log)}
                   >
-                    {log.direction === "request" ? (
-                      <ArrowDown className="w-3 h-3" />
-                    ) : (
-                      <ArrowUp className="w-3 h-3" />
-                    )}
-                    <span>{log.method}</span>
-                  </Badge>
-                </td>
-                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Table row click for expand/collapse, keyboard nav to be added */}
-                <td
-                  className="p-3 text-sm text-muted-foreground cursor-pointer"
-                  onClick={() => handleRowClick(log)}
-                >
-                  {log.metadata.durationMs}ms
-                </td>
+                    {column.cell(log)}
+                  </td>
+                ))}
               </tr>
               {isExpanded && (
                 <tr key={`${logKey}-details`}>
-                  <td colSpan={6} className="p-5 bg-muted/30">
+                  <td
+                    colSpan={visibleColumns.length + 1}
+                    className="p-5 bg-muted/30"
+                  >
                     <LogDetails log={log} />
                   </td>
                 </tr>
@@ -296,89 +347,361 @@ export function LogTable({
 }
 
 interface LogDetailsProps {
-  log: LogEntry;
+  log: ApiLogEntry;
+}
+
+function createColumns(): Column[] {
+  return [
+    {
+      id: "timestamp",
+      header: "Timestamp",
+      sortField: "timestamp",
+      cell: (log) => (
+        <span
+          className="font-mono text-sm text-foreground"
+          title={log.timestamp}
+        >
+          {format(new Date(log.timestamp), "HH:mm:ss.SSS")}
+        </span>
+      ),
+    },
+    {
+      id: "client",
+      header: "Client",
+      sortField: "client",
+      cell: (log) =>
+        log.metadata.client ? (
+          <div className="flex flex-col">
+            <span className="font-medium">{log.metadata.client.name}</span>
+            <span className="text-xs text-muted-foreground">
+              {log.metadata.client.version}
+            </span>
+          </div>
+        ) : (
+          <span className="text-muted-foreground">-</span>
+        ),
+    },
+    {
+      id: "method",
+      header: "Method",
+      sortField: "method",
+      cell: (log) => (
+        <Badge
+          variant={getMethodBadgeVariant(log.method)}
+          className="inline-flex items-center gap-1"
+        >
+          {log.direction === "request" ? (
+            <ArrowRight className="w-3 h-3" />
+          ) : log.direction === "response" ? (
+            <ArrowLeft className="w-3 h-3" />
+          ) : (
+            <ArrowDown className="w-3 h-3" />
+          )}
+          <span>{log.method}</span>
+        </Badge>
+      ),
+    },
+    {
+      id: "server",
+      header: "Server",
+      sortField: "server",
+      isVisible: (logs) => logs.some((log) => log.metadata.server),
+      cell: (log) =>
+        log.metadata.server ? (
+          <div className="flex flex-col">
+            <span className="font-medium">{log.metadata.server.name}</span>
+            <span className="text-xs text-muted-foreground">
+              {log.metadata.server.version}
+            </span>
+          </div>
+        ) : (
+          <span className="text-muted-foreground">-</span>
+        ),
+    },
+    {
+      id: "session",
+      header: "Session",
+      sortField: "session",
+      cell: (log) => (
+        <span className="font-mono text-xs text-muted-foreground">
+          {log.metadata.sessionId.slice(0, 8)}...
+        </span>
+      ),
+    },
+    {
+      id: "duration",
+      header: "Duration",
+      sortField: "duration",
+      cell: (log) => (
+        <span className="text-sm text-muted-foreground">
+          {log.metadata.durationMs}ms
+        </span>
+      ),
+    },
+  ];
 }
 
 function LogDetails({ log }: LogDetailsProps) {
-  const [copied, setCopied] = useState<"request" | "response" | null>(null);
+  const { copy: copyToClipboard, copiedType: copied } = useCopyToClipboard<
+    "request" | "response" | "sseEvent"
+  >();
 
-  // Memoize formatted JSON to avoid re-stringifying on every render
-  const formattedRequest = useMemo(
-    () => (log.request ? JSON.stringify(log.request, null, 2) : null),
-    [log.request],
-  );
+  const isNotification = log.id === null;
 
-  const formattedResponse = useMemo(
-    () => (log.response ? JSON.stringify(log.response, null, 2) : null),
-    [log.response],
-  );
+  const responseError = useMemo(() => {
+    if (log.direction !== "response") {
+      return null;
+    }
 
-  const copyToClipboard = useHandler(
-    (data: unknown, type: "request" | "response") => {
-      navigator.clipboard.writeText(JSON.stringify(data, null, 2));
-      setCopied(type);
-      setTimeout(() => setCopied(null), 2000);
-    },
-  );
+    if (!log.response || typeof log.response !== "object") {
+      return null;
+    }
+
+    return log.response.error ?? null;
+  }, [log]);
+
+  const metadataDetails = useMemo(() => {
+    const items: Array<{ label: string; value: ReactNode }> = [];
+
+    items.push({ label: "Session ID", value: log.metadata.sessionId });
+
+    items.push({
+      label: "JSON-RPC ID",
+      value: isNotification ? "Notification" : String(log.id),
+    });
+
+    if (log.direction === "response" && log.metadata.httpStatus > 0) {
+      items.push({ label: "HTTP Status", value: log.metadata.httpStatus });
+    }
+
+    if (log.direction === "sse-event") {
+      if (log.metadata.sseEventId) {
+        items.push({ label: "SSE Event ID", value: log.metadata.sseEventId });
+      }
+      if (log.metadata.sseEventType) {
+        items.push({
+          label: "SSE Event Type",
+          value: log.metadata.sseEventType,
+        });
+      }
+    }
+
+    if (log.metadata.clientIp && log.metadata.clientIp !== "unknown") {
+      items.push({ label: "Client IP", value: log.metadata.clientIp });
+    }
+
+    if (log.metadata.userAgent) {
+      items.push({ label: "User Agent", value: log.metadata.userAgent });
+    }
+
+    if (log.metadata.client?.title) {
+      items.push({ label: "Client Title", value: log.metadata.client.title });
+    }
+
+    if (log.metadata.server?.title) {
+      items.push({ label: "Server Title", value: log.metadata.server.title });
+    }
+
+    return items;
+  }, [
+    isNotification,
+    log.direction,
+    log.id,
+    log.metadata.client?.title,
+    log.metadata.clientIp,
+    log.metadata.httpStatus,
+    log.metadata.server?.title,
+    log.metadata.sessionId,
+    log.metadata.sseEventId,
+    log.metadata.sseEventType,
+    log.metadata.userAgent,
+  ]);
+
+  const formattedRequest = useMemo(() => {
+    if (log.direction !== "request") {
+      return null;
+    }
+
+    const requestLog = log;
+    return JSON.stringify(requestLog.request, null, 2);
+  }, [log]);
+
+  const formattedResponse = useMemo(() => {
+    if (log.direction !== "response") {
+      return null;
+    }
+
+    return JSON.stringify(log.response, null, 2);
+  }, [log]);
+
+  const formattedSseEvent = useMemo(() => {
+    if (log.direction !== "sse-event") {
+      return null;
+    }
+
+    return {
+      id: log.sseEvent?.id || "—",
+      event: log.sseEvent?.event || "—",
+      data: log.sseEvent?.data || "—",
+      retry: log.sseEvent?.retry ? String(log.sseEvent.retry) : "—",
+    };
+  }, [log]);
 
   return (
-    <div className="flex gap-5">
-      {formattedRequest ? (
-        <div className="flex-1">
-          <div className="flex justify-between items-center mb-2.5">
-            <h4 className="text-sm font-semibold text-foreground">Request</h4>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => copyToClipboard(log.request, "request")}
+    <div className="flex flex-col gap-5">
+      {metadataDetails.length > 0 ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {metadataDetails.map((item) => (
+            <div
+              key={`${item.label}-${String(item.value)}`}
+              className="rounded-md border border-border bg-muted/30 p-3"
             >
-              {copied === "request" ? (
-                <>
-                  <Check className="w-4 h-4 mr-1" />
-                  Copied
-                </>
-              ) : (
-                <>
-                  <Copy className="w-4 h-4 mr-1" />
-                  Copy
-                </>
-              )}
-            </Button>
-          </div>
-          <pre className="bg-card border border-border rounded-md p-4 overflow-auto max-h-96 text-xs font-mono">
-            {formattedRequest}
-          </pre>
+              <div className="text-xs font-medium uppercase text-muted-foreground">
+                {item.label}
+              </div>
+              <div className="mt-1 break-all text-sm text-foreground">
+                {item.value}
+              </div>
+            </div>
+          ))}
         </div>
       ) : null}
-      {formattedResponse ? (
-        <div className="flex-1">
-          <div className="flex justify-between items-center mb-2.5">
-            <h4 className="text-sm font-semibold text-foreground">Response</h4>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => copyToClipboard(log.response, "response")}
-            >
-              {copied === "response" ? (
-                <>
-                  <Check className="w-4 h-4 mr-1" />
-                  Copied
-                </>
-              ) : (
-                <>
-                  <Copy className="w-4 h-4 mr-1" />
-                  Copy
-                </>
-              )}
-            </Button>
+
+      {responseError ? (
+        <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+          <div className="font-semibold">JSON-RPC Error</div>
+          <div className="mt-1">
+            {responseError.code != null ? `Code ${responseError.code}: ` : null}
+            {responseError.message ?? "Unknown error"}
           </div>
-          <pre className="bg-card border border-border rounded-md p-4 overflow-auto max-h-96 text-xs font-mono">
-            {formattedResponse}
-          </pre>
         </div>
       ) : null}
+
+      <div className="flex flex-col gap-5 md:flex-row">
+        {formattedRequest && log.direction === "request" ? (
+          <div className="flex-1">
+            <div className="mb-2.5 flex items-center justify-between">
+              <h4 className="text-sm font-semibold text-foreground">Request</h4>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => copyToClipboard(log.request, "request")}
+              >
+                {copied === "request" ? (
+                  <>
+                    <Check className="mr-1 h-4 w-4" />
+                    Copied
+                  </>
+                ) : (
+                  <>
+                    <Copy className="mr-1 h-4 w-4" />
+                    Copy
+                  </>
+                )}
+              </Button>
+            </div>
+            <pre className="max-h-96 overflow-auto rounded-md border border-border bg-card p-4 text-xs font-mono">
+              {formattedRequest}
+            </pre>
+          </div>
+        ) : null}
+        {formattedResponse &&
+        !isNotification &&
+        log.direction === "response" ? (
+          <div className="flex-1">
+            <div className="mb-2.5 flex items-center justify-between">
+              <h4 className="text-sm font-semibold text-foreground">
+                Response
+              </h4>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => copyToClipboard(log.response, "response")}
+              >
+                {copied === "response" ? (
+                  <>
+                    <Check className="mr-1 h-4 w-4" />
+                    Copied
+                  </>
+                ) : (
+                  <>
+                    <Copy className="mr-1 h-4 w-4" />
+                    Copy
+                  </>
+                )}
+              </Button>
+            </div>
+            <pre className="max-h-96 overflow-auto rounded-md border border-border bg-card p-4 text-xs font-mono">
+              {formattedResponse}
+            </pre>
+          </div>
+        ) : null}
+        {formattedSseEvent && log.direction === "sse-event" ? (
+          <div className="flex-1">
+            <div className="mb-2.5 flex items-center justify-between">
+              <h4 className="text-sm font-semibold text-foreground">
+                SSE Event
+              </h4>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => copyToClipboard(formattedSseEvent, "sseEvent")}
+              >
+                {copied === "sseEvent" ? (
+                  <>
+                    <Check className="mr-1 h-4 w-4" />
+                    Copied
+                  </>
+                ) : (
+                  <>
+                    <Copy className="mr-1 h-4 w-4" />
+                    Copy
+                  </>
+                )}
+              </Button>
+            </div>
+            <div className="space-y-3">
+              <div className="rounded-md border border-border bg-card p-4">
+                <div className="text-xs font-medium uppercase text-muted-foreground">
+                  Event ID
+                </div>
+                <div className="mt-1 font-mono text-sm text-foreground">
+                  {formattedSseEvent.id}
+                </div>
+              </div>
+              <div className="rounded-md border border-border bg-card p-4">
+                <div className="text-xs font-medium uppercase text-muted-foreground">
+                  Event Type
+                </div>
+                <div className="mt-1 font-mono text-sm text-foreground">
+                  {formattedSseEvent.event}
+                </div>
+              </div>
+              <div className="rounded-md border border-border bg-card p-4">
+                <div className="text-xs font-medium uppercase text-muted-foreground">
+                  Data
+                </div>
+                <pre className="mt-1 max-h-48 overflow-auto rounded-sm bg-muted p-2 text-xs font-mono text-foreground">
+                  {formattedSseEvent.data}
+                </pre>
+              </div>
+              {formattedSseEvent.retry !== "—" && (
+                <div className="rounded-md border border-border bg-card p-4">
+                  <div className="text-xs font-medium uppercase text-muted-foreground">
+                    Retry (ms)
+                  </div>
+                  <div className="mt-1 font-mono text-sm text-foreground">
+                    {formattedSseEvent.retry}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

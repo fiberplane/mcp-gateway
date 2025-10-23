@@ -1,9 +1,16 @@
-// Gateway exports (main entry point)
+// Gateway type exports (re-exported from types package for convenience)
 
+export type {
+  Gateway,
+  GatewayOptions,
+  SSEEvent,
+  StorageBackend,
+} from "@fiberplane/mcp-gateway-types";
+export { LocalStorageBackend } from "./capture/backends/local-backend";
 // Capture exports
 export * from "./capture/index";
 export * from "./capture/sse-parser";
-export { createGateway, type Gateway, type GatewayOptions } from "./gateway";
+export { createGateway } from "./gateway";
 // Health exports
 export * from "./health";
 // Infrastructure exports
@@ -15,7 +22,8 @@ export * from "./logs/query";
 export * from "./mcp/server";
 // Registry exports
 export * from "./registry/index";
-export * from "./registry/storage";
+// Storage exports (includes getStorageRoot and internal storage functions)
+export { getStorageRoot, loadRegistry, saveRegistry } from "./registry/storage";
 
 // Utility exports
 export * from "./utils/storage";

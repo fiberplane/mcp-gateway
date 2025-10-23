@@ -1,23 +1,15 @@
 import type {
   LogEntry,
+  Logger,
   McpServer,
+  ProxyDependencies,
   Registry,
 } from "@fiberplane/mcp-gateway-types";
 import type { Hono } from "hono";
 import { Hono as HonoApp } from "hono";
 import { logger as loggerMiddleware } from "hono/logger";
 import { createOAuthRoutes } from "./routes/oauth";
-import { createProxyRoutes, type ProxyDependencies } from "./routes/proxy";
-
-/**
- * Logger interface for dependency injection
- */
-export interface Logger {
-  debug(message: string, context?: Record<string, unknown>): void;
-  info(message: string, context?: Record<string, unknown>): void;
-  warn(message: string, context?: Record<string, unknown>): void;
-  error(message: string, context?: Record<string, unknown>): void;
-}
+import { createProxyRoutes } from "./routes/proxy";
 
 /**
  * Create MCP Gateway HTTP server
@@ -35,8 +27,6 @@ export async function createApp(options: {
   registry: Registry;
   storageDir: string;
   createMcpApp: (
-    registry: Registry,
-    storage: string,
     gateway: import("@fiberplane/mcp-gateway-core").Gateway,
   ) => Hono;
   logger: Logger;
@@ -114,7 +104,7 @@ export async function createApp(options: {
   app.route("/s", proxyRoutes);
 
   // Mount the gateway's own MCP server at canonical path
-  const gatewayMcp = createMcpApp(registry, storageDir, gateway);
+  const gatewayMcp = createMcpApp(gateway);
   app.route("/gateway", gatewayMcp);
   // Short alias for gateway's own MCP server
   app.route("/g", gatewayMcp);

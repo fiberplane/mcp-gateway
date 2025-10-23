@@ -1,12 +1,12 @@
+import type { ApiLogEntry } from "@fiberplane/mcp-gateway-types";
 import { Download } from "lucide-react";
-import type { LogEntry } from "../lib/api";
 import { useHandler } from "../lib/use-handler";
 import { Button } from "./ui/button";
 
 interface ExportButtonProps {
-  logs: LogEntry[];
+  logs: ApiLogEntry[];
   selectedIds: Set<string>;
-  getLogKey: (log: LogEntry) => string;
+  getLogKey: (log: ApiLogEntry) => string;
 }
 
 export function ExportButton({

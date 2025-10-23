@@ -12,7 +12,6 @@ import { useAppStore } from "../store";
  */
 export function useExternalEvents() {
   const storageDir = useAppStore((state) => state.storageDir);
-  const servers = useAppStore((state) => state.servers);
   const setServers = useAppStore((state) => state.setServers);
   const addLog = useAppStore((state) => state.addLog);
 
@@ -32,9 +31,14 @@ export function useExternalEvents() {
       // Reload registry from disk
       const updatedRegistry = await loadRegistry(storageDir);
 
+      // Get current servers fresh from store (avoid stale closure)
+      const currentServers = useAppStore.getState().servers;
+
       // Convert to UI servers, preserving health info from current state
       const updatedServers = updatedRegistry.servers.map((server) => {
-        const currentServer = servers.find((s) => s.name === server.name);
+        const currentServer = currentServers.find(
+          (s) => s.name === server.name,
+        );
         return {
           name: server.name,
           url: server.url,
@@ -71,5 +75,5 @@ export function useExternalEvents() {
       tuiEvents.off("action", handleAction);
       logger.debug("External events cleaned up");
     };
-  }, [storageDir, servers, setServers, addLog]);
+  }, [storageDir, setServers, addLog]);
 }

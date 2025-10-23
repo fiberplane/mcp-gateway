@@ -1,45 +1,13 @@
 /**
  * Types matching the API responses
  */
-export interface LogEntry {
-  timestamp: string;
-  method: string;
-  id: string | number | null;
-  direction: "request" | "response";
-  metadata: {
-    serverName: string;
-    sessionId: string;
-    durationMs: number;
-    httpStatus: number;
-  };
-  request?: unknown;
-  response?: unknown;
-}
-
-export interface LogQueryResult {
-  data: LogEntry[];
-  pagination: {
-    count: number;
-    limit: number;
-    hasMore: boolean;
-    oldestTimestamp: string | null;
-    newestTimestamp: string | null;
-  };
-}
-
-export interface ServerInfo {
-  name: string;
-  logCount: number;
-  sessionCount: number;
-}
-
-export interface SessionInfo {
-  sessionId: string;
-  serverName: string;
-  logCount: number;
-  startTime: string;
-  endTime: string;
-}
+import type {
+  ApiLogEntry,
+  ClientAggregation,
+  LogQueryResult,
+  ServerInfo,
+  SessionInfo,
+} from "@fiberplane/mcp-gateway-types";
 
 /**
  * API Client for MCP Gateway logs
@@ -49,21 +17,29 @@ class APIClient {
 
   /**
    * Get logs with optional filters
+   *
+   * Returns ApiLogEntry records (transformed from CaptureRecords by the API).
+   * Each CaptureRecord is split into separate request/response entries with a direction field.
    */
   async getLogs(params: {
     serverName?: string;
+    clientName?: string;
     sessionId?: string;
     method?: string;
     after?: string;
     before?: string;
     limit?: number;
     order?: "asc" | "desc";
-  }): Promise<LogQueryResult> {
+  }): Promise<{
+    data: ApiLogEntry[];
+    pagination: LogQueryResult["pagination"];
+  }> {
     const url = new URL(`${this.baseURL}/logs`, window.location.origin);
 
     // Map frontend parameter names to API parameter names
     const paramMapping: Record<string, string> = {
       serverName: "server",
+      clientName: "clientName",
       sessionId: "session",
     };
 
@@ -104,6 +80,30 @@ class APIClient {
     const response = await fetch(url.toString());
     if (!response.ok) {
       throw new Error(`Failed to fetch sessions: ${response.statusText}`);
+    }
+    return response.json();
+  }
+
+  /**
+   * Get list of clients with aggregations
+   */
+  async getClients(): Promise<{ clients: ClientAggregation[] }> {
+    const response = await fetch(`${this.baseURL}/clients`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch clients: ${response.statusText}`);
+    }
+    return response.json();
+  }
+
+  /**
+   * Clear all session data (client info and server info)
+   */
+  async clearSessions(): Promise<{ success: boolean }> {
+    const response = await fetch(`${this.baseURL}/logs/clear`, {
+      method: "POST",
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to clear sessions: ${response.statusText}`);
     }
     return response.json();
   }

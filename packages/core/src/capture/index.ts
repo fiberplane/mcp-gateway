@@ -1,60 +1,62 @@
 import type {
   CaptureRecord,
   ClientInfo,
+  HttpContext,
   JsonRpcRequest,
   JsonRpcResponse,
+  McpServerInfo,
+  RequestTracker,
+  SSEEvent,
 } from "@fiberplane/mcp-gateway-types";
-import { captureRecordSchema } from "@fiberplane/mcp-gateway-types";
+import {
+  captureRecordSchema,
+  clientInfoSchema,
+  mcpServerInfoSchema,
+} from "@fiberplane/mcp-gateway-types";
 import { logger } from "../logger";
-import type { SSEEvent } from "./sse-parser";
 
-// In-memory storage for client info by session
-const sessionClientInfo = new Map<string, ClientInfo>();
-
-// Store request start times for duration calculation
+// Store request start times for duration calculation (fallback when RequestTracker not provided)
 const requestStartTimes = new Map<string | number, number>();
 
 // Store request method by request ID (for matching responses to requests)
 const requestMethods = new Map<string | number, string>();
 
-// Store client info from initialize handshake
-export function storeClientInfo(
-  sessionId: string,
-  clientInfo: ClientInfo,
-): void {
-  sessionClientInfo.set(sessionId, clientInfo);
-}
-
-// Get stored client info for session
-export function getClientInfo(sessionId: string): ClientInfo | undefined {
-  return sessionClientInfo.get(sessionId);
-}
-
-// Clear client info for session
-export function clearClientInfo(sessionId: string): void {
-  sessionClientInfo.delete(sessionId);
-}
-
-// Get all active session IDs
-export function getActiveSessions(): string[] {
-  return Array.from(sessionClientInfo.keys()).filter(
-    (id) => id !== "stateless",
-  );
-}
-
 // Reset all capture state (for testing)
 export function resetCaptureState(): void {
-  sessionClientInfo.clear();
   requestStartTimes.clear();
   requestMethods.clear();
 }
 
-// Helper interface for request tracking (used by Gateway)
-export interface RequestTracker {
-  trackRequest(id: string | number, method: string): void;
-  calculateDuration(id: string | number): number;
-  getMethod(id: string | number): string | undefined;
-  hasRequest(id: string | number): boolean;
+function sanitizeClientInfo(info?: ClientInfo): ClientInfo | undefined {
+  if (!info) {
+    return undefined;
+  }
+
+  const result = clientInfoSchema.safeParse(info);
+  if (!result.success) {
+    logger.debug("Discarding invalid client info for capture record", {
+      issues: result.error.issues,
+    });
+    return undefined;
+  }
+
+  return result.data;
+}
+
+function sanitizeServerInfo(info?: McpServerInfo): McpServerInfo | undefined {
+  if (!info) {
+    return undefined;
+  }
+
+  const result = mcpServerInfoSchema.safeParse(info);
+  if (!result.success) {
+    logger.debug("Discarding invalid server info for capture record", {
+      issues: result.error.issues,
+    });
+    return undefined;
+  }
+
+  return result.data;
 }
 
 // Create capture record for request only
@@ -62,10 +64,13 @@ export function createRequestCaptureRecord(
   serverName: string,
   sessionId: string,
   request: JsonRpcRequest,
+  httpContext?: HttpContext,
   clientInfo?: ClientInfo,
+  serverInfo?: McpServerInfo,
   requestTracker?: RequestTracker,
 ): CaptureRecord {
-  const client = clientInfo ?? getClientInfo(sessionId);
+  const client = sanitizeClientInfo(clientInfo);
+  const server = sanitizeServerInfo(serverInfo);
 
   // Store start time and method if request expects response (has id)
   if (request.id != null) {
@@ -87,6 +92,9 @@ export function createRequestCaptureRecord(
       durationMs: 0, // Unknown at request time
       httpStatus: 0, // Unknown at request time
       client,
+      server,
+      userAgent: httpContext?.userAgent,
+      clientIp: httpContext?.clientIp,
     },
     request,
   };
@@ -108,10 +116,13 @@ export function createResponseCaptureRecord(
   response: JsonRpcResponse,
   httpStatus: number,
   method: string,
+  httpContext?: HttpContext,
   clientInfo?: ClientInfo,
+  serverInfo?: McpServerInfo,
   requestTracker?: RequestTracker,
 ): CaptureRecord {
-  const client = clientInfo ?? getClientInfo(sessionId);
+  const client = sanitizeClientInfo(clientInfo);
+  const server = sanitizeServerInfo(serverInfo);
 
   // Calculate duration and cleanup if we tracked the request
   let durationMs = 0;
@@ -138,6 +149,9 @@ export function createResponseCaptureRecord(
       durationMs,
       httpStatus,
       client,
+      server,
+      userAgent: httpContext?.userAgent,
+      clientIp: httpContext?.clientIp,
     },
     response,
   };
@@ -152,43 +166,6 @@ export function createResponseCaptureRecord(
   return record;
 }
 
-/**
- * @deprecated This function uses global state and is deprecated.
- * Use Gateway.capture.append() instead.
- *
- * This function will be removed in a future version.
- */
-export async function appendCapture(
-  _storageDir: string,
-  _record: CaptureRecord,
-): Promise<string> {
-  throw new Error(
-    "appendCapture() is deprecated. Use Gateway.capture.append() instead. " +
-      "Create a Gateway instance via createGateway() and use its capture methods.",
-  );
-}
-
-/**
- * @deprecated This function uses global state and is deprecated.
- * Use Gateway.capture.error() instead.
- *
- * This function will be removed in a future version.
- */
-export async function captureError(
-  _storageDir: string,
-  _serverName: string,
-  _sessionId: string,
-  _request: JsonRpcRequest,
-  _error: { code: number; message: string; data?: unknown },
-  _httpStatus: number,
-  _durationMs: number,
-): Promise<void> {
-  throw new Error(
-    "captureError() is deprecated. Use Gateway.capture.error() instead. " +
-      "Create a Gateway instance via createGateway() and use its capture methods.",
-  );
-}
-
 // Create capture record for SSE event
 export function createSSEEventCaptureRecord(
   serverName: string,
@@ -196,9 +173,10 @@ export function createSSEEventCaptureRecord(
   sseEvent: SSEEvent,
   method?: string,
   requestId?: string | number | null,
+  httpContext?: HttpContext,
   clientInfo?: ClientInfo,
 ): CaptureRecord {
-  const client = clientInfo ?? getClientInfo(sessionId);
+  const client = sanitizeClientInfo(clientInfo);
 
   const record: CaptureRecord = {
     timestamp: new Date().toISOString(),
@@ -210,6 +188,8 @@ export function createSSEEventCaptureRecord(
       durationMs: 0, // SSE events don't have request/response timing
       httpStatus: 200, // SSE events are part of successful streaming response
       client,
+      userAgent: httpContext?.userAgent,
+      clientIp: httpContext?.clientIp,
       sseEventId: sseEvent.id,
       sseEventType: sseEvent.event,
     },
@@ -254,10 +234,13 @@ export function createSSEJsonRpcCaptureRecord(
   jsonRpcMessage: JsonRpcRequest | JsonRpcResponse,
   sseEvent: SSEEvent,
   isResponse: boolean = false,
+  httpContext?: HttpContext,
   clientInfo?: ClientInfo,
+  serverInfo?: McpServerInfo,
   requestTracker?: RequestTracker,
 ): CaptureRecord {
-  const client = clientInfo ?? getClientInfo(sessionId);
+  const client = sanitizeClientInfo(clientInfo);
+  const server = sanitizeServerInfo(serverInfo);
 
   const method = resolveJsonRpcMethod(jsonRpcMessage, requestTracker);
 
@@ -300,6 +283,9 @@ export function createSSEJsonRpcCaptureRecord(
       durationMs,
       httpStatus: 200,
       client,
+      server,
+      userAgent: httpContext?.userAgent,
+      clientIp: httpContext?.clientIp,
       sseEventId: sseEvent.id,
       sseEventType: sseEvent.event,
     },
@@ -325,44 +311,4 @@ export function createSSEJsonRpcCaptureRecord(
   }
 
   return record;
-}
-
-/**
- * @deprecated This function uses global state and is deprecated.
- * Use Gateway.capture.sseEvent() instead.
- *
- * This function will be removed in a future version.
- */
-export async function captureSSEEvent(
-  _storageDir: string,
-  _serverName: string,
-  _sessionId: string,
-  _sseEvent: SSEEvent,
-  _method?: string,
-  _requestId?: string | number | null,
-): Promise<void> {
-  throw new Error(
-    "captureSSEEvent() is deprecated. Use Gateway.capture.sseEvent() instead. " +
-      "Create a Gateway instance via createGateway() and use its capture methods.",
-  );
-}
-
-/**
- * @deprecated This function uses global state and is deprecated.
- * Use Gateway.capture.sseJsonRpc() instead.
- *
- * This function will be removed in a future version.
- */
-export async function captureSSEJsonRpc(
-  _storageDir: string,
-  _serverName: string,
-  _sessionId: string,
-  _jsonRpcMessage: JsonRpcRequest | JsonRpcResponse,
-  _sseEvent: SSEEvent,
-  _isResponse: boolean = false,
-): Promise<CaptureRecord | null> {
-  throw new Error(
-    "captureSSEJsonRpc() is deprecated. Use Gateway.capture.sseJsonRpc() instead. " +
-      "Create a Gateway instance via createGateway() and use its capture methods.",
-  );
 }

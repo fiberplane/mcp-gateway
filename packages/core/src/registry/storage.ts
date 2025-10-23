@@ -18,7 +18,11 @@ export function getStorageRoot(customDir?: string): string {
   return join(homedir(), ".mcp-gateway");
 }
 
-// Load registry from mcp.json using Node.js fs
+/**
+ * Load registry from mcp.json using Node.js fs
+ * @internal This API is for internal use by the CLI package only.
+ * External consumers should use Gateway.storage.getRegisteredServers() instead.
+ */
 export async function loadRegistry(storageDir: string): Promise<Registry> {
   const mcpPath = join(storageDir, "mcp.json");
 
@@ -42,7 +46,11 @@ export async function loadRegistry(storageDir: string): Promise<Registry> {
   }
 }
 
-// Save registry to mcp.json using Node.js fs
+/**
+ * Save registry to mcp.json using Node.js fs
+ * @internal This API is for internal use by the CLI package only.
+ * External consumers should use Gateway.storage.addServer() or Gateway.storage.removeServer() instead.
+ */
 export async function saveRegistry(
   storageDir: string,
   registry: Registry,

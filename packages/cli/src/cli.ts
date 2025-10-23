@@ -16,17 +16,14 @@ import {
   getStorageRoot,
   loadRegistry,
   logger,
-  saveRegistry,
 } from "@fiberplane/mcp-gateway-core";
-import {
-  createApp as createServerApp,
-  type ProxyDependencies,
-} from "@fiberplane/mcp-gateway-server";
-import type { Context } from "@fiberplane/mcp-gateway-types";
+
+import { createApp as createServerApp } from "@fiberplane/mcp-gateway-server";
+import type { Context, ProxyDependencies } from "@fiberplane/mcp-gateway-types";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { serveStatic } from "hono/bun";
-import { emitLog, emitRegistryUpdate } from "./events.js";
+import { emitLog, emitRegistryUpdate, tuiEvents } from "./events.js";
 import { runOpenTUI } from "./tui/App.js";
 import { useAppStore } from "./tui/store.js";
 import { getVersion } from "./utils/version.js";
@@ -153,12 +150,22 @@ export async function runCli(): Promise<void> {
 
     // Wire Gateway methods into ProxyDependencies for server
     const proxyDependencies: ProxyDependencies = {
-      createRequestRecord: (serverName, sessionId, request) =>
+      createRequestRecord: (
+        serverName,
+        sessionId,
+        request,
+        httpContext,
+        clientInfo,
+        serverInfo,
+      ) =>
         createRequestCaptureRecord(
           serverName,
           sessionId,
           request,
-          gateway.clientInfo.get(sessionId),
+          httpContext,
+          clientInfo,
+          serverInfo,
+          gateway.requestTracker,
         ),
       createResponseRecord: (
         serverName,
@@ -166,6 +173,9 @@ export async function runCli(): Promise<void> {
         response,
         httpStatus,
         method,
+        httpContext,
+        clientInfo,
+        serverInfo,
       ) =>
         createResponseCaptureRecord(
           serverName,
@@ -173,7 +183,10 @@ export async function runCli(): Promise<void> {
           response,
           httpStatus,
           method,
-          gateway.clientInfo.get(sessionId),
+          httpContext,
+          clientInfo,
+          serverInfo,
+          gateway.requestTracker,
         ),
       appendRecord: (record) => gateway.capture.append(record),
       captureErrorResponse: (
@@ -212,6 +225,9 @@ export async function runCli(): Promise<void> {
         jsonRpcMessage,
         sseEvent,
         isResponse,
+        httpContext,
+        clientInfo,
+        serverInfo,
       ) =>
         gateway.capture.sseJsonRpc(
           serverName,
@@ -219,14 +235,30 @@ export async function runCli(): Promise<void> {
           jsonRpcMessage,
           sseEvent,
           isResponse,
+          httpContext,
+          clientInfo,
+          serverInfo,
         ),
       storeClientInfoForSession: (sessionId, info) =>
         gateway.clientInfo.store(sessionId, info),
       getClientInfoForSession: (sessionId) => gateway.clientInfo.get(sessionId),
+      storeServerInfoForSession: (sessionId, info) =>
+        gateway.serverInfo.store(sessionId, info),
+      getServerInfoForSession: (sessionId) => gateway.serverInfo.get(sessionId),
+      updateServerInfoForInitializeRequest: (
+        serverName,
+        sessionId,
+        requestId,
+        serverInfo,
+      ) =>
+        gateway.storage.updateServerInfoForInitializeRequest(
+          serverName,
+          sessionId,
+          requestId,
+          serverInfo,
+        ),
       getServerFromRegistry: (registry, name) =>
         gateway.registry.getServer(registry, name),
-      saveRegistryToStorage: (storage, registry) =>
-        saveRegistry(storage, registry),
     };
 
     // Create MCP protocol server (proxy, OAuth, gateway MCP server)
@@ -389,6 +421,8 @@ export async function runCli(): Promise<void> {
         <div class="endpoint-item"><span class="endpoint-method">GET</span> /api/logs - Query captured logs</div>
         <div class="endpoint-item"><span class="endpoint-method">GET</span> /api/servers - List MCP servers</div>
         <div class="endpoint-item"><span class="endpoint-method">GET</span> /api/sessions - List sessions</div>
+        <div class="endpoint-item"><span class="endpoint-method">GET</span> /api/clients - List clients</div>
+        <div class="endpoint-item"><span class="endpoint-method">POST</span> /api/logs/clear - Clear captured logs</div>
         <div class="endpoint-item"><span class="endpoint-method">GET</span> /ui - Web interface</div>
       </div>
     </div>
@@ -402,15 +436,20 @@ export async function runCli(): Promise<void> {
     // Mount the MCP protocol server
     app.route("/", serverApp);
 
-    // Mount API for observability (query logs, servers, sessions)
-    // Wrap Gateway methods to match API's expected signature (storageDir is ignored since Gateway already knows it)
+    // Mount API for observability (query logs, servers, sessions, clients)
     const apiApp = createApiApp(
-      storageDir,
       {
-        queryLogs: (_storageDir, options) => gateway.logs.query(options),
-        getServers: (_storageDir) => gateway.logs.getServers(),
-        getSessions: (_storageDir, serverName) =>
-          gateway.logs.getSessions(serverName),
+        queryLogs: (options) => gateway.storage.query(options),
+        getServers: () => gateway.storage.getServers(),
+        getSessions: (serverName) => gateway.storage.getSessions(serverName),
+        getClients: () => gateway.storage.getClients(),
+        clearSessions: async () => {
+          // Clear in-memory session metadata
+          gateway.clientInfo.clearAll();
+          gateway.serverInfo.clearAll();
+          // Clear all logs from database
+          await gateway.storage.clearAll();
+        },
       },
       logger,
     );
@@ -519,6 +558,7 @@ export async function runCli(): Promise<void> {
     const context: Context = {
       storageDir,
       port,
+      gateway,
       onExit: async () => {
         await gateway.close(); // Close Gateway connections (includes stopping health checks)
         return new Promise<void>((resolve) => {
@@ -532,7 +572,6 @@ export async function runCli(): Promise<void> {
     // Start TUI only if running in a TTY and --no-tui flag is not set
     if (process.stdin.isTTY && !values["no-tui"]) {
       // Listen for registry updates and reload into HTTP server's registry
-      const { tuiEvents } = await import("./events.js");
       tuiEvents.on("action", async (action) => {
         if (action.type === "registry_updated") {
           logger.debug("Registry update event received in HTTP server");

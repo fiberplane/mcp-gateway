@@ -29,27 +29,23 @@ export function SessionFilter({
   );
 
   // Group sessions by sessionId and sum up log counts
-  const groupedSessions = data?.sessions.reduce(
-    (acc, session) => {
-      if (!acc[session.sessionId]) {
-        acc[session.sessionId] = {
-          sessionId: session.sessionId,
-          logCount: 0,
-          serverCount: 0,
-        };
-      }
-      const entry = acc[session.sessionId];
-      if (entry) {
-        entry.logCount += session.logCount;
-        entry.serverCount += 1;
-      }
-      return acc;
-    },
-    {} as Record<
-      string,
-      { sessionId: string; logCount: number; serverCount: number }
-    >,
-  );
+  const groupedSessions = data?.sessions.reduce<
+    Record<string, { sessionId: string; logCount: number; serverCount: number }>
+  >((acc, session) => {
+    if (!acc[session.sessionId]) {
+      acc[session.sessionId] = {
+        sessionId: session.sessionId,
+        logCount: 0,
+        serverCount: 0,
+      };
+    }
+    const entry = acc[session.sessionId];
+    if (entry) {
+      entry.logCount += session.logCount;
+      entry.serverCount += 1;
+    }
+    return acc;
+  }, {});
 
   const uniqueSessions = groupedSessions ? Object.values(groupedSessions) : [];
 

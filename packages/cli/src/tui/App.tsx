@@ -173,7 +173,10 @@ export async function runOpenTUI(context: Context, registry: Registry) {
 
   // Initialize store
   const initialize = useAppStore.getState().initialize;
-  initialize(uiServers, context.storageDir, context.port);
+  if (!context.gateway) {
+    throw new Error("Gateway is required for TUI initialization");
+  }
+  initialize(uiServers, context.storageDir, context.port, context.gateway);
 
   // Setup async exit handler
   const handleExit = async () => {

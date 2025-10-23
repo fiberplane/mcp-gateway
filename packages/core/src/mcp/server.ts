@@ -1,4 +1,4 @@
-import type { Registry } from "@fiberplane/mcp-gateway-types";
+import type { Gateway } from "@fiberplane/mcp-gateway-types";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { McpServer, RpcError, StreamableHttpTransport } from "mcp-lite";
@@ -12,16 +12,10 @@ import { createServerTools } from "./tools/server-tools";
  * and capture analysis. The server exposes tools that allow MCP clients to manage
  * the gateway's server registry and analyze captured MCP traffic.
  *
- * @param registry - The gateway's server registry
- * @param storageDir - Directory where captures are stored
- * @param gateway - Gateway instance for accessing query operations
+ * @param gateway - Gateway instance for accessing query operations and server management
  * @returns MCP server instance with configured tools
  */
-export function createMcpServer(
-  registry: Registry,
-  storageDir: string,
-  gateway: import("../gateway.js").Gateway,
-): McpServer {
+export function createMcpServer(gateway: Gateway): McpServer {
   // Create MCP server with Zod schema adapter for validation
   const mcp = new McpServer({
     name: "mcp-gateway-tools",
@@ -59,11 +53,17 @@ export function createMcpServer(
     }
   });
 
-  // Register server management tools
-  createServerTools(mcp, registry, storageDir);
+  // Register server management tools with explicit dependencies
+  createServerTools(mcp, {
+    getRegisteredServers: () => gateway.storage.getRegisteredServers(),
+    addServer: (server) => gateway.storage.addServer(server),
+    removeServer: (name) => gateway.storage.removeServer(name),
+  });
 
-  // Register capture analysis tools (search_records with SQLite queries)
-  createCaptureTools(mcp, registry, gateway);
+  // Register capture analysis tools with explicit dependencies
+  createCaptureTools(mcp, {
+    query: (options) => gateway.storage.query(options),
+  });
 
   // Set up custom error handler
   mcp.onError((error, ctx) => {
@@ -118,17 +118,11 @@ export function createMcpServer(
  * The server is mounted at /mcp endpoint. This app is meant to be mounted at
  * /gateway (canonical) or /g (short alias) in the main server.
  *
- * @param registry - The gateway's server registry
- * @param storageDir - Directory where captures are stored
  * @param gateway - Gateway instance for accessing query operations
  * @returns Hono app configured to serve the MCP server
  */
-export function createMcpApp(
-  registry: Registry,
-  storageDir: string,
-  gateway: import("../gateway.js").Gateway,
-): Hono {
-  const mcp = createMcpServer(registry, storageDir, gateway);
+export function createMcpApp(gateway: Gateway): Hono {
+  const mcp = createMcpServer(gateway);
 
   // Create HTTP transport for the MCP server
   const transport = new StreamableHttpTransport();
