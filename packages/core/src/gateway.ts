@@ -9,24 +9,24 @@ import type {
   Registry,
   ServerHealth,
   SSEEvent,
+  StorageBackend,
 } from "@fiberplane/mcp-gateway-types";
 import { mcpServerInfoSchema } from "@fiberplane/mcp-gateway-types";
-import { SqliteStorageBackend } from "./capture/backends/sqlite-backend.js";
+import { LocalStorageBackend } from "./capture/backends/local-backend.js";
 import {
   createResponseCaptureRecord,
   createSSEEventCaptureRecord,
   createSSEJsonRpcCaptureRecord,
 } from "./capture/index.js";
-import { StorageManager } from "./capture/storage-manager.js";
 import { logger } from "./logger.js";
 
 // In-memory storage for client info by session (scoped to Gateway instance)
 class ClientInfoStore {
   private sessionClientInfo = new Map<string, ClientInfo>();
-  private storageManager: StorageManager;
+  private backend: StorageBackend;
 
-  constructor(storageManager: StorageManager) {
-    this.storageManager = storageManager;
+  constructor(backend: StorageBackend) {
+    this.backend = backend;
   }
 
   store(sessionId: string, clientInfo: ClientInfo): void {
@@ -40,12 +40,12 @@ class ClientInfoStore {
       return cached;
     }
 
-    // Fall back to SQLite
+    // Fall back to storage backend
     try {
-      const metadata = await this.storageManager.getSessionMetadata(sessionId);
+      const metadata = await this.backend.getSessionMetadata(sessionId);
       return metadata?.client;
     } catch {
-      // If SQLite query fails, return undefined
+      // If storage query fails, return undefined
       return undefined;
     }
   }
@@ -68,10 +68,10 @@ class ClientInfoStore {
 // In-memory storage for server info by session (scoped to Gateway instance)
 class ServerInfoStore {
   private sessionServerInfo = new Map<string, McpServerInfo>();
-  private storageManager: StorageManager;
+  private backend: StorageBackend;
 
-  constructor(storageManager: StorageManager) {
-    this.storageManager = storageManager;
+  constructor(backend: StorageBackend) {
+    this.backend = backend;
   }
 
   private normalizeServerInfo(server: unknown): McpServerInfo | undefined {
@@ -104,20 +104,19 @@ class ServerInfoStore {
       serverInfo = this.sessionServerInfo.get("stateless");
     }
 
-    // If still not found, try SQLite
+    // If still not found, try storage backend
     if (!serverInfo) {
       try {
-        const metadata =
-          await this.storageManager.getSessionMetadata(sessionId);
+        const metadata = await this.backend.getSessionMetadata(sessionId);
         serverInfo = this.normalizeServerInfo(metadata?.server);
-        // Also try stateless as fallback in SQLite
+        // Also try stateless as fallback in storage
         if (!serverInfo && sessionId !== "stateless") {
           const statelessMetadata =
-            await this.storageManager.getSessionMetadata("stateless");
+            await this.backend.getSessionMetadata("stateless");
           serverInfo = this.normalizeServerInfo(statelessMetadata?.server);
         }
       } catch {
-        // If SQLite query fails, return undefined
+        // If storage query fails, return undefined
         return undefined;
       }
     }
@@ -293,16 +292,14 @@ class HealthCheckManager {
 export async function createGateway(options: GatewayOptions): Promise<Gateway> {
   const { storageDir } = options;
 
-  // Create scoped storage manager (not global)
-  const storageManager = new StorageManager();
-  storageManager.registerBackend(new SqliteStorageBackend());
-  await storageManager.initialize(storageDir);
+  // Create scoped storage backend (not global)
+  const backend: StorageBackend = new LocalStorageBackend(storageDir);
 
-  // Create scoped client info store with SQLite fallback
-  const clientInfoStore = new ClientInfoStore(storageManager);
+  // Create scoped client info store with storage fallback
+  const clientInfoStore = new ClientInfoStore(backend);
 
-  // Create scoped server info store with SQLite fallback
-  const serverInfoStore = new ServerInfoStore(storageManager);
+  // Create scoped server info store with storage fallback
+  const serverInfoStore = new ServerInfoStore(backend);
 
   // Create scoped request tracker
   const requestTracker = new RequestTracker();
@@ -313,7 +310,7 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
   return {
     capture: {
       append: async (record: CaptureRecord) => {
-        await storageManager.write(record);
+        await backend.write(record);
       },
 
       error: async (
@@ -350,7 +347,7 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
         // Override the calculated duration with the provided one
         record.metadata.durationMs = durationMs;
 
-        await storageManager.write(record);
+        await backend.write(record);
       },
 
       sseEvent: async (
@@ -370,7 +367,7 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
             undefined, // httpContext - not available in Gateway.sseEvent API
             await clientInfoStore.get(sessionId),
           );
-          await storageManager.write(record);
+          await backend.write(record);
         } catch (error) {
           logger.error("Failed to capture SSE event", { error: String(error) });
           // Don't throw - SSE capture failures shouldn't break streaming
@@ -396,7 +393,7 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
             undefined, // serverInfo - not available in Gateway.sseJsonRpc API
             requestTracker,
           );
-          await storageManager.write(record);
+          await backend.write(record);
           return record;
         } catch (error) {
           logger.error("Failed to capture SSE JSON-RPC", {
@@ -441,27 +438,25 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
     },
 
     storage: {
-      getRegisteredServers: async () =>
-        await storageManager.getRegisteredServers(),
-      addServer: async (server) => await storageManager.addServer(server),
-      removeServer: async (name) => await storageManager.removeServer(name),
+      getRegisteredServers: async () => await backend.getRegisteredServers(),
+      addServer: async (server) => await backend.addServer(server),
+      removeServer: async (name) => await backend.removeServer(name),
       updateServer: async (name, changes) =>
-        await storageManager.updateServer(name, changes),
-      query: async (options?) => await storageManager.queryLogs(options),
-      getServers: async () => await storageManager.getServers(),
-      getSessions: async (serverName?) =>
-        await storageManager.getSessions(serverName),
-      getClients: async () => await storageManager.getClients(),
+        await backend.updateServer(name, changes),
+      query: async (options?) => await backend.queryLogs(options),
+      getServers: async () => await backend.getServers(),
+      getSessions: async (serverName?) => await backend.getSessions(serverName),
+      getClients: async () => await backend.getClients(),
       getServerMetrics: async (serverName: string) =>
-        await storageManager.getServerMetrics(serverName),
-      clearAll: async () => await storageManager.clearAll(),
+        await backend.getServerMetrics(serverName),
+      clearAll: async () => await backend.clearAll(),
       updateServerInfoForInitializeRequest: async (
         serverName: string,
         sessionId: string,
         requestId: string | number,
         serverInfo: { name?: string; version: string; title?: string },
       ) =>
-        await storageManager.updateServerInfoForInitializeRequest(
+        await backend.updateServerInfoForInitializeRequest(
           serverName,
           sessionId,
           requestId,
@@ -493,7 +488,7 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
 
     close: async () => {
       healthCheckManager.stop();
-      await storageManager.close();
+      await backend.close?.();
     },
   };
 }

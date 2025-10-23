@@ -1,7 +1,9 @@
-import type { Registry } from "@fiberplane/mcp-gateway-types";
+import type {
+  CaptureToolsDependencies,
+  Registry,
+} from "@fiberplane/mcp-gateway-types";
 import type { McpServer } from "mcp-lite";
 import { z } from "zod";
-import type { CaptureToolsDependencies } from "./dependencies.js";
 
 /**
  * Schema for search_records tool input

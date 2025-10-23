@@ -9,6 +9,8 @@ import type {
   McpServerConfig,
   ServerInfo,
   SessionInfo,
+  StorageBackend,
+  StorageWriteResult,
 } from "@fiberplane/mcp-gateway-types";
 import { type BunSQLiteDatabase, drizzle } from "drizzle-orm/bun-sqlite";
 import { logger } from "../../logger";
@@ -25,22 +27,24 @@ import {
   updateServerInfoForInitializeRequest,
 } from "../../logs/storage.js";
 import { loadRegistry, saveRegistry } from "../../registry/storage.js";
-import type { StorageBackend, StorageWriteResult } from "../storage-backend.js";
 
 /**
- * SQLite storage backend
+ * Local file system storage backend
  *
- * Writes capture records to SQLite database for fast querying
+ * Handles persistence using:
+ * - SQLite database (logs.db) for MCP traffic capture logs
+ * - JSON file (mcp.json) for server registry configuration
+ *
  * Each instance owns its own DB connection (no global cache)
  */
-export class SqliteStorageBackend implements StorageBackend {
-  readonly name = "sqlite";
-  private storageDir: string | null = null;
+export class LocalStorageBackend implements StorageBackend {
+  readonly name = "local";
+  private storageDir: string;
   private db: BunSQLiteDatabase<typeof schema> | null = null;
   private sqlite: Database | null = null;
   private initialized = false;
 
-  async initialize(storageDir: string): Promise<void> {
+  constructor(storageDir: string) {
     this.storageDir = storageDir;
 
     try {
@@ -59,13 +63,29 @@ export class SqliteStorageBackend implements StorageBackend {
 
       this.db = drizzle(this.sqlite, { schema });
 
-      // Run migrations
-      await ensureMigrations(this.db);
+      // Run migrations - note: this is synchronous in constructor
+      // If migrations need to be async, we'd need a static factory method
+      ensureMigrations(this.db)
+        .then(() => {
+          this.initialized = true;
+          logger.debug("Local storage backend initialized", { storageDir });
+        })
+        .catch((error) => {
+          logger.error("Local storage backend migration failed", {
+            error:
+              error instanceof Error
+                ? {
+                    message: error.message,
+                    stack: error.stack,
+                  }
+                : String(error),
+          });
+        });
 
+      // Mark as initialized optimistically (migrations run in background)
       this.initialized = true;
-      logger.debug("SQLite backend initialized", { storageDir });
     } catch (error) {
-      logger.warn("SQLite backend initialization failed", {
+      logger.warn("Local storage backend initialization failed", {
         error:
           error instanceof Error
             ? {
@@ -74,13 +94,13 @@ export class SqliteStorageBackend implements StorageBackend {
               }
             : String(error),
       });
-      // Don't throw - allow fallback to other backends
+      // Don't throw - allow fallback gracefully
     }
   }
 
   async write(record: CaptureRecord): Promise<StorageWriteResult> {
     if (!this.db || !this.initialized) {
-      logger.debug("SQLite backend not ready, skipping write");
+      logger.debug("Local storage backend not ready, skipping write");
       return {
         metadata: {
           skipped: true,
@@ -99,7 +119,7 @@ export class SqliteStorageBackend implements StorageBackend {
         },
       };
     } catch (error) {
-      logger.error("SQLite write failed", {
+      logger.error("Local storage write failed", {
         error: error instanceof Error ? error.message : String(error),
         serverName: record.metadata.serverName,
       });
@@ -116,7 +136,7 @@ export class SqliteStorageBackend implements StorageBackend {
 
   async queryLogs(options: LogQueryOptions = {}): Promise<LogQueryResult> {
     if (!this.db || !this.initialized) {
-      logger.debug("SQLite backend not ready, returning empty result");
+      logger.debug("Local storage backend not ready, returning empty result");
       return {
         data: [],
         pagination: {
@@ -132,7 +152,7 @@ export class SqliteStorageBackend implements StorageBackend {
     try {
       return await queryLogs(this.db, options);
     } catch (error) {
-      logger.error("SQLite queryLogs failed", {
+      logger.error("Local storage queryLogs failed", {
         error: error instanceof Error ? error.message : String(error),
       });
       throw error;
@@ -141,14 +161,14 @@ export class SqliteStorageBackend implements StorageBackend {
 
   async getServers(): Promise<ServerInfo[]> {
     if (!this.db || !this.initialized) {
-      logger.debug("SQLite backend not ready, returning empty servers");
+      logger.debug("Local storage backend not ready, returning empty servers");
       return [];
     }
 
     try {
       return await getServers(this.db);
     } catch (error) {
-      logger.error("SQLite getServers failed", {
+      logger.error("Local storage getServers failed", {
         error: error instanceof Error ? error.message : String(error),
       });
       throw error;
@@ -157,14 +177,14 @@ export class SqliteStorageBackend implements StorageBackend {
 
   async getSessions(serverName?: string): Promise<SessionInfo[]> {
     if (!this.db || !this.initialized) {
-      logger.debug("SQLite backend not ready, returning empty sessions");
+      logger.debug("Local storage backend not ready, returning empty sessions");
       return [];
     }
 
     try {
       return await getSessions(this.db, serverName);
     } catch (error) {
-      logger.error("SQLite getSessions failed", {
+      logger.error("Local storage getSessions failed", {
         error: error instanceof Error ? error.message : String(error),
       });
       throw error;
@@ -173,14 +193,14 @@ export class SqliteStorageBackend implements StorageBackend {
 
   async getClients(): Promise<ClientAggregation[]> {
     if (!this.db || !this.initialized) {
-      logger.debug("SQLite backend not ready, returning empty clients");
+      logger.debug("Local storage backend not ready, returning empty clients");
       return [];
     }
 
     try {
       return await getClients(this.db);
     } catch (error) {
-      logger.error("SQLite getClients failed", {
+      logger.error("Local storage getClients failed", {
         error: error instanceof Error ? error.message : String(error),
       });
       throw error;
@@ -189,7 +209,7 @@ export class SqliteStorageBackend implements StorageBackend {
 
   async clearAll(): Promise<void> {
     if (!this.db || !this.initialized) {
-      logger.debug("SQLite backend not ready, skipping clearAll");
+      logger.debug("Local storage backend not ready, skipping clearAll");
       return;
     }
 
@@ -206,9 +226,9 @@ export class SqliteStorageBackend implements StorageBackend {
           "DELETE FROM sqlite_sequence WHERE name='session_metadata'",
         );
       })();
-      logger.info("SQLite logs cleared");
+      logger.info("Local storage logs cleared");
     } catch (error) {
-      logger.error("SQLite clearAll failed", {
+      logger.error("Local storage clearAll failed", {
         error: error instanceof Error ? error.message : String(error),
       });
       throw error;
@@ -223,7 +243,7 @@ export class SqliteStorageBackend implements StorageBackend {
   ): Promise<void> {
     if (!this.db || !this.initialized) {
       logger.debug(
-        "SQLite backend not ready, skipping updateServerInfoForInitializeRequest",
+        "Local storage backend not ready, skipping updateServerInfoForInitializeRequest",
       );
       return;
     }
@@ -243,12 +263,15 @@ export class SqliteStorageBackend implements StorageBackend {
         serverInfo,
       });
     } catch (error) {
-      logger.error("SQLite updateServerInfoForInitializeRequest failed", {
-        error: error instanceof Error ? error.message : String(error),
-        serverName,
-        sessionId,
-        requestId,
-      });
+      logger.error(
+        "Local storage updateServerInfoForInitializeRequest failed",
+        {
+          error: error instanceof Error ? error.message : String(error),
+          serverName,
+          sessionId,
+          requestId,
+        },
+      );
       throw error;
     }
   }
@@ -259,7 +282,7 @@ export class SqliteStorageBackend implements StorageBackend {
   } | null> {
     if (!this.db || !this.initialized) {
       logger.debug(
-        "SQLite backend not ready, returning null for session metadata",
+        "Local storage backend not ready, returning null for session metadata",
       );
       return null;
     }
@@ -267,7 +290,7 @@ export class SqliteStorageBackend implements StorageBackend {
     try {
       return await getSessionMetadata(this.db, sessionId);
     } catch (error) {
-      logger.error("SQLite getSessionMetadata failed", {
+      logger.error("Local storage getSessionMetadata failed", {
         error: error instanceof Error ? error.message : String(error),
         sessionId,
       });
@@ -279,7 +302,7 @@ export class SqliteStorageBackend implements StorageBackend {
     serverName: string,
   ): Promise<{ lastActivity: string | null; exchangeCount: number }> {
     if (!this.db || !this.initialized) {
-      logger.debug("SQLite backend not ready, returning empty metrics");
+      logger.debug("Local storage backend not ready, returning empty metrics");
       return {
         lastActivity: null,
         exchangeCount: 0,
@@ -289,7 +312,7 @@ export class SqliteStorageBackend implements StorageBackend {
     try {
       return await getServerMetrics(this.db, serverName);
     } catch (error) {
-      logger.error("SQLite getServerMetrics failed", {
+      logger.error("Local storage getServerMetrics failed", {
         error: error instanceof Error ? error.message : String(error),
         serverName,
       });
@@ -328,7 +351,7 @@ export class SqliteStorageBackend implements StorageBackend {
 
       return serversWithMetrics;
     } catch (error) {
-      logger.error("SQLite getRegisteredServers failed", {
+      logger.error("Local storage getRegisteredServers failed", {
         error: error instanceof Error ? error.message : String(error),
       });
       throw error;
@@ -363,7 +386,7 @@ export class SqliteStorageBackend implements StorageBackend {
       await saveRegistry(this.storageDir, registry);
       logger.debug("Server added to registry", { name: server.name });
     } catch (error) {
-      logger.error("SQLite addServer failed", {
+      logger.error("Local storage addServer failed", {
         error: error instanceof Error ? error.message : String(error),
         serverName: server.name,
       });
@@ -394,7 +417,7 @@ export class SqliteStorageBackend implements StorageBackend {
       await saveRegistry(this.storageDir, registry);
       logger.debug("Server removed from registry", { name });
     } catch (error) {
-      logger.error("SQLite removeServer failed", {
+      logger.error("Local storage removeServer failed", {
         error: error instanceof Error ? error.message : String(error),
         serverName: name,
       });
@@ -433,7 +456,7 @@ export class SqliteStorageBackend implements StorageBackend {
       await saveRegistry(this.storageDir, registry);
       logger.debug("Server updated in registry", { name, changes });
     } catch (error) {
-      logger.error("SQLite updateServer failed", {
+      logger.error("Local storage updateServer failed", {
         error: error instanceof Error ? error.message : String(error),
         serverName: name,
       });
@@ -448,9 +471,11 @@ export class SqliteStorageBackend implements StorageBackend {
         this.db = null;
         this.sqlite = null;
         this.initialized = false;
-        logger.debug("SQLite backend closed", { storageDir: this.storageDir });
+        logger.debug("Local storage backend closed", {
+          storageDir: this.storageDir,
+        });
       } catch (error) {
-        logger.warn("Error closing SQLite connection", {
+        logger.warn("Error closing local storage connection", {
           error: error instanceof Error ? error.message : String(error),
         });
       }

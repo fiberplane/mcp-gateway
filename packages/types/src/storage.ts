@@ -26,12 +26,6 @@ export interface StorageBackend {
   readonly name: string;
 
   /**
-   * Initialize the storage backend
-   * Called once when the backend is registered
-   */
-  initialize(storageDir: string): Promise<void>;
-
-  /**
    * Write a capture record to storage
    *
    * @param record - The capture record to store

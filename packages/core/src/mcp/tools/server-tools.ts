@@ -1,7 +1,6 @@
+import type { ServerToolsDependencies } from "@fiberplane/mcp-gateway-types";
 import type { McpServer } from "mcp-lite";
 import { z } from "zod";
-
-import type { ServerToolsDependencies } from "./dependencies.js";
 
 // Schema for adding a new server
 const AddServerSchema = z.object({
