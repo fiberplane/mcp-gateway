@@ -1,5 +1,9 @@
 import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
+// Define the health status enum values
+export const healthStatusValues = ["up", "down", "unknown"] as const;
+export type HealthStatus = (typeof healthStatusValues)[number];
+
 /**
  * SQLite table schema for MCP log entries
  *
@@ -104,7 +108,7 @@ export type NewSessionMetadata = typeof sessionMetadata.$inferInsert;
  */
 export const serverHealth = sqliteTable("server_health", {
   serverName: text("server_name").primaryKey(),
-  health: text("health").notNull(), // "up" | "down"
+  health: text("health", { enum: healthStatusValues }).notNull(),
   lastCheck: text("last_check").notNull(),
   url: text("url").notNull(),
 });
