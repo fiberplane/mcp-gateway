@@ -1,5 +1,17 @@
 import type { McpServer, Registry } from "@fiberplane/mcp-gateway-types";
 
+/**
+ * Pure registry manipulation functions
+ *
+ * These functions operate on Registry objects without side effects.
+ * They are exported primarily for testing purposes.
+ *
+ * External consumers should use Gateway methods instead:
+ * - gateway.storage.addServer() instead of addServer()
+ * - gateway.storage.removeServer() instead of removeServer()
+ * - gateway.storage.getServer() instead of getServer()
+ */
+
 // URL normalization helper
 function normalizeUrl(url: string): string {
   try {
@@ -117,12 +129,6 @@ export function fromMcpJson(data: unknown): Registry {
     );
 
   return { servers };
-}
-
-// Get server by name
-export function getServer(registry: Registry, name: string): McpServer | null {
-  const normalizedName = name.toLowerCase().trim();
-  return registry.servers.find((s) => s.name === normalizedName) || null;
 }
 
 // Validate URL format
