@@ -164,8 +164,8 @@ export async function createApp(
       );
     },
 
-    getServerFromRegistry: (registry: Registry, name: string) => {
-      return getServer(registry, name) ?? undefined;
+    getServer: (name: string) => {
+      return gateway.storage.getServer(name);
     },
   };
 

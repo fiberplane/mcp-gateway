@@ -100,11 +100,8 @@ export interface ProxyDependencies {
     serverInfo: McpServerInfo,
   ) => Promise<void>;
 
-  /** Get a server from the registry */
-  getServerFromRegistry: (
-    registry: { servers: McpServer[] },
-    name: string,
-  ) => McpServer | undefined;
+  /** Get a server by name */
+  getServer: (name: string) => Promise<McpServer | undefined>;
 }
 
 /**

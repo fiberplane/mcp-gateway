@@ -309,7 +309,7 @@ export async function createProxyRoutes(options: {
   onLog?: (entry: LogEntry) => void;
   onRegistryUpdate?: () => void;
 }): Promise<Hono<{ Variables: Variables }>> {
-  const { registry, dependencies: deps, onLog, onRegistryUpdate } = options;
+  const { dependencies: deps, onLog, onRegistryUpdate } = options;
   const app = new Hono<{ Variables: Variables }>();
 
   /**
@@ -327,7 +327,7 @@ export async function createProxyRoutes(options: {
       const { server: serverName } = c.req.valid("param");
 
       // Find server in registry
-      const server = deps.getServerFromRegistry(registry, serverName);
+      const server = await deps.getServer(serverName);
       if (!server) {
         return c.notFound();
       }
@@ -492,7 +492,7 @@ export async function createProxyRoutes(options: {
     sValidator("header", sessionHeaderSchema),
     async (c) => {
       const { server: serverName } = c.req.valid("param");
-      const server = deps.getServerFromRegistry(registry, serverName);
+      const server = await deps.getServer(serverName);
       if (!server) {
         return c.notFound();
       }
@@ -523,7 +523,7 @@ export async function createProxyRoutes(options: {
       const jsonRpcMessage = c.req.valid("json");
 
       // Find server in registry
-      const server = deps.getServerFromRegistry(registry, serverName);
+      const server = await deps.getServer(serverName);
       if (!server) {
         return c.notFound();
       }

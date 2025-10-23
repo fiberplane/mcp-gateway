@@ -258,8 +258,7 @@ export async function runCli(): Promise<void> {
           requestId,
           serverInfo,
         ),
-      getServerFromRegistry: (registry, name) =>
-        getServer(registry, name) ?? undefined,
+      getServer: (name) => gateway.storage.getServer(name),
     };
 
     // Create MCP protocol server (proxy, OAuth, gateway MCP server)
