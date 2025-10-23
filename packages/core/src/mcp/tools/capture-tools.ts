@@ -1,6 +1,6 @@
+import type { CaptureToolsDependencies } from "@fiberplane/mcp-gateway-types";
 import type { McpServer } from "mcp-lite";
 import { z } from "zod";
-import type { Gateway } from "../../gateway.js";
 
 /**
  * Schema for search_records tool input
@@ -25,8 +25,14 @@ const SearchRecordsSchema = z.object({
 /**
  * Registers capture analysis tools with the MCP server.
  * These tools allow clients to search and analyze captured MCP traffic.
+ *
+ * @param mcp - The MCP server instance to register tools with
+ * @param deps - Dependencies for capture analysis
  */
-export function createCaptureTools(mcp: McpServer, gateway: Gateway): void {
+export function createCaptureTools(
+  mcp: McpServer,
+  deps: CaptureToolsDependencies,
+): void {
   mcp.tool("search_records", {
     description: `Search captured MCP traffic records with filtering and pagination.
 
@@ -49,7 +55,7 @@ Examples:
     inputSchema: SearchRecordsSchema,
     handler: async (args) => {
       try {
-        const result = await gateway.logs.query(args);
+        const result = await deps.query(args);
 
         // Format results for MCP output
         const summary = `Found ${result.data.length} records (limit: ${result.pagination.limit}, hasMore: ${result.pagination.hasMore})`;

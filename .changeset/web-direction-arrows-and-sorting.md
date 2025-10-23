@@ -1,6 +1,5 @@
 ---
 "@fiberplane/mcp-gateway": minor
-"@fiberplane/mcp-gateway-api": minor
 "@fiberplane/mcp-gateway-web": minor
 ---
 

@@ -1,6 +1,7 @@
 import type {
   JsonRpcRequest,
   JsonRpcResponse,
+  SSEEvent,
 } from "@fiberplane/mcp-gateway-types";
 
 interface SSEReadableStreamReadValue<T> {
@@ -20,13 +21,6 @@ type SSEReadableStreamReadResult<T> =
 interface SSEReadableStreamReader<T> {
   read(): Promise<SSEReadableStreamReadResult<T>>;
   cancel(reason?: unknown): Promise<void>;
-}
-
-export interface SSEEvent {
-  id?: string;
-  event?: string;
-  data?: string;
-  retry?: number;
 }
 
 /**

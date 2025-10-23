@@ -1,5 +1,5 @@
-import type { McpServer } from "@fiberplane/mcp-gateway-types";
-import type { McpServer as MCP_LiteServer } from "mcp-lite";
+import type { ServerToolsDependencies } from "@fiberplane/mcp-gateway-types";
+import type { McpServer } from "mcp-lite";
 import { z } from "zod";
 
 // Schema for adding a new server
@@ -68,39 +68,14 @@ const ListServersSchema = z.object({
 });
 
 /**
- * Dependencies for server management tools
- */
-export interface ServerToolsDependencies {
-  /**
-   * Get a server by name from the registry
-   */
-  getServer: (name: string) => McpServer | undefined;
-
-  /**
-   * Add a new server to the registry and persist changes
-   */
-  addServer: (server: McpServer) => Promise<void>;
-
-  /**
-   * Remove a server from the registry and persist changes
-   */
-  removeServer: (name: string) => Promise<void>;
-
-  /**
-   * Get all servers from the registry
-   */
-  listServers: () => Promise<McpServer[]>;
-}
-
-/**
  * Registers server management tools with the MCP server.
  * These tools allow clients to manage the gateway's server registry.
  *
  * @param mcp - The MCP server instance to register tools with
- * @param deps - Dependencies for server management operations
+ * @param deps - Dependencies for server management (getRegisteredServers, addServer, removeServer)
  */
 export function createServerTools(
-  mcp: MCP_LiteServer,
+  mcp: McpServer,
   deps: ServerToolsDependencies,
 ): void {
   mcp.tool("add_server", {
@@ -124,41 +99,19 @@ The tool will return success confirmation with the server's configuration detail
     inputSchema: AddServerSchema,
     handler: async (args) => {
       try {
-        // Validate that server doesn't already exist
-        if (deps.getServer(args.name)) {
-          return {
-            content: [
-              {
-                type: "text",
-                text: `❌ Server '${args.name}' already exists in the registry. Use remove_server first if you want to replace it, or choose a different name.`,
-              },
-            ],
-            isError: true,
-          };
-        }
-
-        // Add server to registry
+        // Add server via storage API (which handles duplicate checking and persistence)
         await deps.addServer({
           name: args.name,
           url: args.url,
           type: "http",
           headers: args.headers || {},
-        } as McpServer);
+        });
 
         return {
           content: [
             {
               type: "text",
-              text: `✅ Successfully added server '${args.name}'
-
-**Server Details:**
-- Name: ${args.name}
-- URL: ${args.url}
-- Type: HTTP
-- Headers: ${Object.keys(args.headers || {}).length} configured
-- Status: Ready for requests
-
-The server is now available at the gateway endpoint: /${args.name}/mcp`,
+              text: `✅ Successfully added server '${args.name}'\n\n**Server Details:**\n- Name: ${args.name}\n- URL: ${args.url}\n- Type: HTTP\n- Headers: ${Object.keys(args.headers || {}).length} configured\n- Status: Ready for requests\n\nThe server is now available at the gateway endpoint: /${args.name}/mcp`,
             },
           ],
         };
@@ -201,21 +154,7 @@ The tool will confirm successful removal or provide an error if the server doesn
     inputSchema: RemoveServerSchema,
     handler: async (args) => {
       try {
-        // Check if server exists
-        const existingServer = deps.getServer(args.name);
-        if (!existingServer) {
-          return {
-            content: [
-              {
-                type: "text",
-                text: `❌ Server '${args.name}' not found in the registry. Use list_servers to see available servers.`,
-              },
-            ],
-            isError: true,
-          };
-        }
-
-        // Remove server from registry
+        // Remove server via storage API
         await deps.removeServer(args.name);
 
         return {
@@ -223,12 +162,6 @@ The tool will confirm successful removal or provide an error if the server doesn
             {
               type: "text",
               text: `✅ Successfully removed server '${args.name}'
-
-**Removed Server:**
-- Name: ${existingServer.name}
-- URL: ${existingServer.url}
-- Last Activity: ${existingServer.lastActivity || "Never"}
-- Total Requests: ${existingServer.exchangeCount}
 
 The server is no longer accessible at /${args.name}/mcp. Historical capture data has been preserved for analysis.`,
             },
@@ -274,68 +207,71 @@ The response includes operational metrics like request counts, last activity tim
 For large deployments, use the 'concise' format first to get an overview, then query specific servers in 'detailed' mode for deeper analysis.`,
     inputSchema: ListServersSchema,
     handler: async (args) => {
-      const servers = await deps.listServers();
+      try {
+        // Get all registered servers with metrics
+        const servers = await deps.getRegisteredServers();
 
-      if (servers.length === 0) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: "📭 No servers registered in the gateway.\n\nUse add_server to register your first MCP server.",
-            },
-          ],
-        };
-      }
+        if (servers.length === 0) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: "📭 No servers registered in the gateway.\n\nUse add_server to register your first MCP server.",
+              },
+            ],
+          };
+        }
 
-      // Apply filtering
-      let filteredServers = servers;
-      const now = Date.now();
-      const oneHourAgo = now - 60 * 60 * 1000;
+        // Apply filtering based on metrics
+        let filteredServers = servers;
+        const now = Date.now();
+        const oneHourAgo = now - 60 * 60 * 1000;
 
-      if (args.filter === "active") {
-        filteredServers = servers.filter(
-          (server) =>
-            server.lastActivity &&
-            new Date(server.lastActivity).getTime() > oneHourAgo,
-        );
-      } else if (args.filter === "inactive") {
-        filteredServers = servers.filter(
-          (server) =>
-            !server.lastActivity ||
-            new Date(server.lastActivity).getTime() <= oneHourAgo,
-        );
-      }
+        if (args.filter === "active") {
+          filteredServers = servers.filter(
+            (server) =>
+              server.lastActivity &&
+              new Date(server.lastActivity).getTime() > oneHourAgo,
+          );
+        } else if (args.filter === "inactive") {
+          filteredServers = servers.filter(
+            (server) =>
+              !server.lastActivity ||
+              new Date(server.lastActivity).getTime() <= oneHourAgo,
+          );
+        }
 
-      // Format response based on requested detail level
-      if (args.format === "concise") {
-        const serverList = filteredServers
-          .map((server) => {
-            const status = server.lastActivity
-              ? new Date(server.lastActivity).getTime() > oneHourAgo
-                ? "🟢 Active"
-                : "🟡 Inactive"
-              : "⚫ Never used";
+        // Format response based on requested detail level
+        if (args.format === "concise") {
+          const serverList = filteredServers
+            .map((server) => {
+              const status = server.lastActivity
+                ? new Date(server.lastActivity).getTime() > oneHourAgo
+                  ? "🟢 Active"
+                  : "🟡 Inactive"
+                : "⚫ Never used";
 
-            return `**${server.name}**
+              return `**${server.name}**
   URL: ${server.url}
   Status: ${status}
   Requests: ${server.exchangeCount}`;
-          })
-          .join("\n\n");
+            })
+            .join("\n\n");
 
-        return {
-          content: [
-            {
-              type: "text",
-              text: `📊 **Gateway Server Registry** (${filteredServers.length} of ${servers.length} servers)
+          return {
+            content: [
+              {
+                type: "text",
+                text: `📊 **Gateway Server Registry** (${filteredServers.length} of ${servers.length} servers)
 
 ${serverList}
 
 💡 Use format=detailed for comprehensive server information.`,
-            },
-          ],
-        };
-      } else {
+              },
+            ],
+          };
+        }
+
         // Detailed format
         const serverDetails = filteredServers
           .map((server) => {
@@ -396,6 +332,16 @@ ${"─".repeat(50)}
 - Total Requests Processed: ${servers.reduce((sum, s) => sum + s.exchangeCount, 0)}`,
             },
           ],
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `❌ Failed to list servers: ${error instanceof Error ? error.message : "Unknown error occurred"}`,
+            },
+          ],
+          isError: true,
         };
       }
     },

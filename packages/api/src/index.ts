@@ -5,5 +5,6 @@
  * Exposes HTTP endpoints for log queries, server aggregations, and session data.
  */
 
+export type { QueryFunctions } from "@fiberplane/mcp-gateway-types";
 export { createApp } from "./app.js";
-export { createApiRoutes, type QueryFunctions } from "./routes/index.js";
+export { createApiRoutes } from "./routes/index.js";

@@ -1,4 +1,4 @@
-import { loadRegistry, saveRegistry } from "@fiberplane/mcp-gateway-core";
+import { checkServerHealth, type Gateway } from "@fiberplane/mcp-gateway-core";
 import type {
   LogEntry,
   Registry,
@@ -41,6 +41,7 @@ interface AppStore {
   logs: LogEntry[];
   storageDir: string;
   port: number;
+  gateway: Gateway | null;
   activeModal: ModalType;
   viewMode: ViewMode;
   showCommandMenu: boolean;
@@ -58,7 +59,12 @@ interface AppStore {
   serverManagementShowConfig: string | null;
 
   // Actions
-  initialize: (servers: UIServer[], storageDir: string, port: number) => void;
+  initialize: (
+    servers: UIServer[],
+    storageDir: string,
+    port: number,
+    gateway: Gateway,
+  ) => void;
   addServer: (name: string, url: string) => Promise<void>;
   removeServer: (name: string) => Promise<void>;
   setServers: (servers: UIServer[]) => void;
@@ -113,6 +119,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   logs: [],
   storageDir: "",
   port: 3333,
+  gateway: null,
   activeModal: null,
   viewMode: "activity-log",
   showCommandMenu: false,
@@ -130,10 +137,15 @@ export const useAppStore = create<AppStore>((set, get) => ({
   serverManagementShowConfig: null,
 
   // Actions
-  initialize: (servers, storageDir, port) => set({ servers, storageDir, port }),
+  initialize: (servers, storageDir, port, gateway) =>
+    set({ servers, storageDir, port, gateway }),
 
   addServer: async (name, url) => {
-    const { storageDir, servers } = get();
+    const { gateway, servers } = get();
+
+    if (!gateway) {
+      throw new Error("Gateway not initialized");
+    }
 
     // Normalize inputs
     const normalizedUrl = new URL(url).toString().replace(/\/$/, "");
@@ -144,63 +156,45 @@ export const useAppStore = create<AppStore>((set, get) => ({
       throw new Error(`Server '${name}' already exists`);
     }
 
-    // Load current registry from disk
-    const registry = await loadRegistry(storageDir);
+    // Perform health check BEFORE persisting (to ensure we have health status)
+    const health = await checkServerHealth(normalizedUrl);
+    const lastHealthCheck = new Date().toISOString();
 
-    // Add server to registry
-    const newServer = {
+    // Add server via storage API (which handles persistence)
+    await gateway.storage.addServer({
       name: normalizedName,
       url: normalizedUrl,
-      type: "http" as const,
+      type: "http",
       headers: {},
-      lastActivity: null,
-      exchangeCount: 0,
-    };
-    registry.servers.push(newServer);
+    });
 
-    // Save to disk
-    await saveRegistry(storageDir, registry);
-
-    // Emit event so HTTP server updates
-    emitRegistryUpdate();
-
-    // Add to UI state
+    // Create UI server with complete health info
     const uiServer: UIServer = {
       name: normalizedName,
       url: normalizedUrl,
       type: "http",
       headers: {},
-      health: "unknown",
+      health,
+      lastHealthCheck,
     };
+
+    // Update UI state with complete data
     set({ servers: [...servers, uiServer] });
 
-    // Trigger immediate health check for the new server
-    const { checkServerHealth } = await import("@fiberplane/mcp-gateway-core");
-    const health = await checkServerHealth(normalizedUrl);
-    const lastHealthCheck = new Date().toISOString();
-
-    // Update UI with health status
-    set((state) => ({
-      servers: state.servers.map((s) =>
-        s.name === normalizedName ? { ...s, health, lastHealthCheck } : s,
-      ),
-    }));
+    // Emit event only after all UI updates are complete
+    // This prevents race condition where registry reload overwrites health status
+    emitRegistryUpdate();
   },
 
   removeServer: async (name) => {
-    const { storageDir, servers } = get();
+    const { gateway, servers } = get();
 
-    // Load current registry from disk
-    const registry = await loadRegistry(storageDir);
-
-    // Remove server from registry
-    const index = registry.servers.findIndex((s) => s.name === name);
-    if (index !== -1) {
-      registry.servers.splice(index, 1);
+    if (!gateway) {
+      throw new Error("Gateway not initialized");
     }
 
-    // Save to disk
-    await saveRegistry(storageDir, registry);
+    // Remove server via storage API (which handles persistence)
+    await gateway.storage.removeServer(name);
 
     // Emit event so HTTP server updates
     emitRegistryUpdate();

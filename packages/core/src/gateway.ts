@@ -1,204 +1,55 @@
 import type {
   CaptureRecord,
   ClientInfo,
+  Gateway,
+  GatewayOptions,
+  HttpContext,
   JsonRpcRequest,
   JsonRpcResponse,
-  McpServer,
+  McpServerInfo,
   Registry,
+  RequestTracker,
   ServerHealth,
+  SSEEvent,
+  StorageBackend,
 } from "@fiberplane/mcp-gateway-types";
-import { SqliteStorageBackend } from "./capture/backends/sqlite-backend.js";
-import type { SSEEvent } from "./capture/sse-parser.js";
-import { StorageManager } from "./capture/storage-manager.js";
-
-/**
- * Gateway instance - scoped to a single storage directory
- *
- * Provides all core functionality without global state:
- * - Capture operations (write logs, handle errors, SSE events)
- * - Registry operations (get server, manage registry)
- * - Storage management (lifecycle)
- *
- * Created via `createGateway()` factory function.
- */
-export interface Gateway {
-  /**
-   * Capture operations for logging MCP traffic
-   */
-  capture: {
-    /**
-     * Append a capture record to storage
-     */
-    append(record: CaptureRecord): Promise<void>;
-
-    /**
-     * Capture an error response
-     */
-    error(
-      serverName: string,
-      sessionId: string,
-      request: JsonRpcRequest,
-      error: { code: number; message: string; data?: unknown },
-      httpStatus: number,
-      durationMs: number,
-    ): Promise<void>;
-
-    /**
-     * Capture an SSE event
-     */
-    sseEvent(
-      serverName: string,
-      sessionId: string,
-      sseEvent: SSEEvent,
-      method?: string,
-      requestId?: string | number | null,
-    ): Promise<void>;
-
-    /**
-     * Capture JSON-RPC message from SSE
-     */
-    sseJsonRpc(
-      serverName: string,
-      sessionId: string,
-      jsonRpcMessage: JsonRpcRequest | JsonRpcResponse,
-      sseEvent: SSEEvent,
-      isResponse?: boolean,
-    ): Promise<CaptureRecord | null>;
-  };
-
-  /**
-   * Registry operations for server management
-   */
-  registry: {
-    /**
-     * Get a server from the registry by name
-     */
-    getServer(registry: Registry, name: string): McpServer | undefined;
-  };
-
-  /**
-   * Client info management for sessions
-   */
-  clientInfo: {
-    /**
-     * Store client info for a session
-     */
-    store(sessionId: string, info: ClientInfo): void;
-
-    /**
-     * Get client info for a session
-     */
-    get(sessionId: string): ClientInfo | undefined;
-
-    /**
-     * Clear client info for a session
-     */
-    clear(sessionId: string): void;
-
-    /**
-     * Get all active session IDs
-     */
-    getActiveSessions(): string[];
-  };
-
-  /**
-   * Log query operations for retrieving captured traffic
-   */
-  logs: {
-    /**
-     * Query logs with filtering and pagination
-     */
-    query(
-      options?: import("@fiberplane/mcp-gateway-types").LogQueryOptions,
-    ): Promise<import("@fiberplane/mcp-gateway-types").LogQueryResult>;
-
-    /**
-     * Get server aggregations
-     * @param registryServers - Optional list of server names from registry for status determination
-     * @param serverHealthMap - Optional map of server names (lowercase) to health status
-     */
-    getServers(
-      registryServers?: string[],
-      serverHealthMap?: Map<
-        string,
-        import("@fiberplane/mcp-gateway-types").ServerHealth
-      >,
-    ): Promise<import("@fiberplane/mcp-gateway-types").ServerInfo[]>;
-
-    /**
-     * Get session aggregations
-     */
-    getSessions(
-      serverName?: string,
-    ): Promise<import("@fiberplane/mcp-gateway-types").SessionInfo[]>;
-  };
-
-  /**
-   * Health check operations for monitoring server availability
-   */
-  health: {
-    /**
-     * Start periodic health checks
-     * @param registry - Registry containing servers to check
-     * @param intervalMs - Check interval in milliseconds (default 30000)
-     * @param onUpdate - Optional callback called with health updates
-     */
-    start(
-      registry: Registry,
-      intervalMs?: number,
-      onUpdate?: (
-        updates: Array<{
-          name: string;
-          health: ServerHealth;
-          lastHealthCheck: string;
-        }>,
-      ) => void,
-    ): Promise<void>;
-
-    /**
-     * Stop periodic health checks
-     */
-    stop(): void;
-
-    /**
-     * Manually trigger a health check for all servers
-     * @param registry - Registry containing servers to check
-     */
-    check(registry: Registry): Promise<
-      Array<{
-        name: string;
-        health: ServerHealth;
-        lastHealthCheck: string;
-      }>
-    >;
-  };
-
-  /**
-   * Close all connections and clean up resources
-   */
-  close(): Promise<void>;
-}
-
-/**
- * Options for creating a Gateway instance
- */
-export interface GatewayOptions {
-  /**
-   * Storage directory for logs and registry
-   */
-  storageDir: string;
-}
+import { mcpServerInfoSchema } from "@fiberplane/mcp-gateway-types";
+import { LocalStorageBackend } from "./capture/backends/local-backend.js";
+import {
+  createResponseCaptureRecord,
+  createSSEEventCaptureRecord,
+  createSSEJsonRpcCaptureRecord,
+} from "./capture/index.js";
+import { logger } from "./logger.js";
 
 // In-memory storage for client info by session (scoped to Gateway instance)
 class ClientInfoStore {
   private sessionClientInfo = new Map<string, ClientInfo>();
+  private backend: StorageBackend;
+
+  constructor(backend: StorageBackend) {
+    this.backend = backend;
+  }
 
   store(sessionId: string, clientInfo: ClientInfo): void {
     this.sessionClientInfo.set(sessionId, clientInfo);
   }
 
-  get(sessionId: string): ClientInfo | undefined {
-    return this.sessionClientInfo.get(sessionId);
+  async get(sessionId: string): Promise<ClientInfo | undefined> {
+    // Try in-memory first
+    const cached = this.sessionClientInfo.get(sessionId);
+    if (cached) {
+      return cached;
+    }
+
+    // Fall back to storage backend
+    try {
+      const metadata = await this.backend.getSessionMetadata(sessionId);
+      return metadata?.client;
+    } catch {
+      // If storage query fails, return undefined
+      return undefined;
+    }
   }
 
   clear(sessionId: string): void {
@@ -210,10 +61,82 @@ class ClientInfoStore {
       (id) => id !== "stateless",
     );
   }
+
+  clearAll(): void {
+    this.sessionClientInfo.clear();
+  }
+}
+
+// In-memory storage for server info by session (scoped to Gateway instance)
+class ServerInfoStore {
+  private sessionServerInfo = new Map<string, McpServerInfo>();
+  private backend: StorageBackend;
+
+  constructor(backend: StorageBackend) {
+    this.backend = backend;
+  }
+
+  private normalizeServerInfo(server: unknown): McpServerInfo | undefined {
+    if (!server) {
+      return undefined;
+    }
+
+    const result = mcpServerInfoSchema.safeParse(server);
+    if (!result.success) {
+      logger.debug("Discarding invalid server info from session metadata", {
+        issues: result.error.issues,
+      });
+      return undefined;
+    }
+
+    return result.data;
+  }
+
+  store(sessionId: string, serverInfo: McpServerInfo): void {
+    this.sessionServerInfo.set(sessionId, serverInfo);
+  }
+
+  async get(sessionId: string): Promise<McpServerInfo | undefined> {
+    // Try to get serverInfo for this session from in-memory first
+    let serverInfo = this.sessionServerInfo.get(sessionId);
+
+    // If not found and this isn't the stateless session, try falling back to stateless in-memory
+    // This ensures server metadata is always available even if session transition fails
+    if (!serverInfo && sessionId !== "stateless") {
+      serverInfo = this.sessionServerInfo.get("stateless");
+    }
+
+    // If still not found, try storage backend
+    if (!serverInfo) {
+      try {
+        const metadata = await this.backend.getSessionMetadata(sessionId);
+        serverInfo = this.normalizeServerInfo(metadata?.server);
+        // Also try stateless as fallback in storage
+        if (!serverInfo && sessionId !== "stateless") {
+          const statelessMetadata =
+            await this.backend.getSessionMetadata("stateless");
+          serverInfo = this.normalizeServerInfo(statelessMetadata?.server);
+        }
+      } catch {
+        // If storage query fails, return undefined
+        return undefined;
+      }
+    }
+
+    return serverInfo;
+  }
+
+  clear(sessionId: string): void {
+    this.sessionServerInfo.delete(sessionId);
+  }
+
+  clearAll(): void {
+    this.sessionServerInfo.clear();
+  }
 }
 
 // Store request start times for duration calculation (scoped to Gateway instance)
-class RequestTracker {
+class InMemoryRequestTracker implements RequestTracker {
   private requestStartTimes = new Map<string | number, number>();
   private requestMethods = new Map<string | number, string>();
 
@@ -371,27 +294,25 @@ class HealthCheckManager {
 export async function createGateway(options: GatewayOptions): Promise<Gateway> {
   const { storageDir } = options;
 
-  // Create scoped storage manager (not global)
-  const storageManager = new StorageManager();
-  storageManager.registerBackend(new SqliteStorageBackend());
-  await storageManager.initialize(storageDir);
+  // Create scoped storage backend (await initialization)
+  const backend: StorageBackend = await LocalStorageBackend.create(storageDir);
 
-  // Create scoped client info store
-  const clientInfoStore = new ClientInfoStore();
+  // Create scoped client info store with storage fallback
+  const clientInfoStore = new ClientInfoStore(backend);
+
+  // Create scoped server info store with storage fallback
+  const serverInfoStore = new ServerInfoStore(backend);
 
   // Create scoped request tracker
-  const requestTracker = new RequestTracker();
+  const requestTracker = new InMemoryRequestTracker();
 
   // Create scoped health check manager
   const healthCheckManager = new HealthCheckManager();
 
-  // Import capture functions dynamically to avoid circular dependencies
-  const captureModule = await import("./capture/index.js");
-
   return {
     capture: {
       append: async (record: CaptureRecord) => {
-        await storageManager.write(record);
+        await backend.write(record);
       },
 
       error: async (
@@ -413,20 +334,22 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
           error,
         };
 
-        const record = captureModule.createResponseCaptureRecord(
+        const record = createResponseCaptureRecord(
           serverName,
           sessionId,
           errorResponse,
           httpStatus,
           request.method,
-          clientInfoStore.get(sessionId),
+          undefined, // httpContext - not available in Gateway.error API
+          await clientInfoStore.get(sessionId),
+          undefined, // serverInfo - not available in Gateway.error API
           requestTracker,
         );
 
         // Override the calculated duration with the provided one
         record.metadata.durationMs = durationMs;
 
-        await storageManager.write(record);
+        await backend.write(record);
       },
 
       sseEvent: async (
@@ -437,18 +360,17 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
         requestId?: string | number | null,
       ) => {
         try {
-          const record = captureModule.createSSEEventCaptureRecord(
+          const record = createSSEEventCaptureRecord(
             serverName,
             sessionId,
             sseEvent,
             method,
             requestId,
-            clientInfoStore.get(sessionId),
+            undefined, // httpContext - not available in Gateway.sseEvent API
+            await clientInfoStore.get(sessionId),
           );
-          await storageManager.write(record);
+          await backend.write(record);
         } catch (error) {
-          // Import logger dynamically to avoid circular deps
-          const { logger } = await import("./logger.js");
           logger.error("Failed to capture SSE event", { error: String(error) });
           // Don't throw - SSE capture failures shouldn't break streaming
         }
@@ -460,21 +382,25 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
         jsonRpcMessage: JsonRpcRequest | JsonRpcResponse,
         sseEvent: SSEEvent,
         isResponse = false,
+        httpContext?: HttpContext,
+        clientInfo?: ClientInfo,
+        serverInfo?: McpServerInfo,
       ) => {
         try {
-          const record = captureModule.createSSEJsonRpcCaptureRecord(
+          const record = createSSEJsonRpcCaptureRecord(
             serverName,
             sessionId,
             jsonRpcMessage,
             sseEvent,
             isResponse,
-            clientInfoStore.get(sessionId),
+            httpContext,
+            clientInfo ?? (await clientInfoStore.get(sessionId)),
+            serverInfo ?? (await serverInfoStore.get(sessionId)),
             requestTracker,
           );
-          await storageManager.write(record);
+          await backend.write(record);
           return record;
         } catch (error) {
-          const { logger } = await import("./logger.js");
           logger.error("Failed to capture SSE JSON-RPC", {
             error: String(error),
           });
@@ -495,15 +421,52 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
         clientInfoStore.store(sessionId, info),
       get: (sessionId: string) => clientInfoStore.get(sessionId),
       clear: (sessionId: string) => clientInfoStore.clear(sessionId),
+      clearAll: () => clientInfoStore.clearAll(),
       getActiveSessions: () => clientInfoStore.getActiveSessions(),
     },
 
-    logs: {
-      query: async (options?) => await storageManager.queryLogs(options),
-      getServers: async (registryServers?, serverHealthMap?) =>
-        await storageManager.getServers(registryServers, serverHealthMap),
-      getSessions: async (serverName?) =>
-        await storageManager.getSessions(serverName),
+    serverInfo: {
+      store: (sessionId: string, info: McpServerInfo) =>
+        serverInfoStore.store(sessionId, info),
+      get: (sessionId: string) => serverInfoStore.get(sessionId),
+      clear: (sessionId: string) => serverInfoStore.clear(sessionId),
+      clearAll: () => serverInfoStore.clearAll(),
+    },
+
+    requestTracker: {
+      trackRequest: (id: string | number, method: string) =>
+        requestTracker.trackRequest(id, method),
+      calculateDuration: (id: string | number) =>
+        requestTracker.calculateDuration(id),
+      getMethod: (id: string | number) => requestTracker.getMethod(id),
+      hasRequest: (id: string | number) => requestTracker.hasRequest(id),
+    },
+
+    storage: {
+      getRegisteredServers: async () => await backend.getRegisteredServers(),
+      addServer: async (server) => await backend.addServer(server),
+      removeServer: async (name) => await backend.removeServer(name),
+      updateServer: async (name, changes) =>
+        await backend.updateServer(name, changes),
+      query: async (options?) => await backend.queryLogs(options),
+      getServers: async () => await backend.getServers(),
+      getSessions: async (serverName?) => await backend.getSessions(serverName),
+      getClients: async () => await backend.getClients(),
+      getServerMetrics: async (serverName: string) =>
+        await backend.getServerMetrics(serverName),
+      clearAll: async () => await backend.clearAll(),
+      updateServerInfoForInitializeRequest: async (
+        serverName: string,
+        sessionId: string,
+        requestId: string | number,
+        serverInfo: { name?: string; version: string; title?: string },
+      ) =>
+        await backend.updateServerInfoForInitializeRequest(
+          serverName,
+          sessionId,
+          requestId,
+          serverInfo,
+        ),
     },
 
     health: {
@@ -530,7 +493,7 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
 
     close: async () => {
       healthCheckManager.stop();
-      await storageManager.close();
+      await backend.close?.();
     },
   };
 }

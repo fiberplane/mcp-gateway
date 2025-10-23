@@ -1,9 +1,12 @@
+import type { Gateway } from "./gateway";
 import type { JsonRpcRequest, JsonRpcResponse } from "./schemas";
 
 // Context holds configuration and dependencies (read-only)
 export type Context = {
   storageDir: string;
   port: number;
+  // Gateway instance for TUI initialization
+  gateway?: Gateway;
   onExit?: () => void | Promise<void>;
 };
 
@@ -20,3 +23,16 @@ export type LogEntry = {
   request?: JsonRpcRequest;
   response?: JsonRpcResponse;
 };
+
+/**
+ * Logger interface for dependency injection
+ *
+ * Used by both server and API packages for error/debug logging.
+ * Implementations can provide different log levels and destinations.
+ */
+export interface Logger {
+  debug(message: string, context?: Record<string, unknown>): void;
+  info(message: string, context?: Record<string, unknown>): void;
+  warn(message: string, context?: Record<string, unknown>): void;
+  error(message: string, context?: Record<string, unknown>): void;
+}

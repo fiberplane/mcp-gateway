@@ -1,21 +1,11 @@
-import type { Registry } from "@fiberplane/mcp-gateway-types";
+import type { Gateway } from "@fiberplane/mcp-gateway-types";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { McpServer, RpcError, StreamableHttpTransport } from "mcp-lite";
 import { z } from "zod";
-import type { Gateway } from "../gateway.js";
 import { logger } from "../logger";
-import {
-  addServer as addServerToRegistry,
-  getServer,
-  removeServer as removeServerFromRegistry,
-} from "../registry";
-import { saveRegistry } from "../registry/storage";
 import { createCaptureTools } from "./tools/capture-tools";
-import {
-  createServerTools,
-  type ServerToolsDependencies,
-} from "./tools/server-tools";
+import { createServerTools } from "./tools/server-tools";
 
 /**
  * Creates an MCP server instance for the gateway with tools for server management
@@ -23,15 +13,9 @@ import {
  * the gateway's server registry and analyze captured MCP traffic.
  *
  * @param gateway - Gateway instance for accessing query operations and server management
- * @param registry - The gateway's server registry (needed for server management tools)
- * @param storageDir - Directory where captures are stored (needed for server management tools)
  * @returns MCP server instance with configured tools
  */
-export function createMcpServer(
-  gateway: Gateway,
-  registry: Registry,
-  storageDir: string,
-): McpServer {
+export function createMcpServer(gateway: Gateway): McpServer {
   // Create MCP server with Zod schema adapter for validation
   const mcp = new McpServer({
     name: "mcp-gateway-tools",
@@ -69,25 +53,17 @@ export function createMcpServer(
     }
   });
 
-  // Register server management tools
-  const serverToolsDeps: ServerToolsDependencies = {
-    getServer: (name: string) => getServer(registry, name) ?? undefined,
-    addServer: async (server) => {
-      const updatedRegistry = addServerToRegistry(registry, server);
-      registry.servers = updatedRegistry.servers;
-      await saveRegistry(storageDir, registry);
-    },
-    removeServer: async (name: string) => {
-      const updatedRegistry = removeServerFromRegistry(registry, name);
-      registry.servers = updatedRegistry.servers;
-      await saveRegistry(storageDir, registry);
-    },
-    listServers: async () => registry.servers,
-  };
-  createServerTools(mcp, serverToolsDeps);
+  // Register server management tools with explicit dependencies
+  createServerTools(mcp, {
+    getRegisteredServers: () => gateway.storage.getRegisteredServers(),
+    addServer: (server) => gateway.storage.addServer(server),
+    removeServer: (name) => gateway.storage.removeServer(name),
+  });
 
-  // Register capture analysis tools (search_records with SQLite queries)
-  createCaptureTools(mcp, gateway);
+  // Register capture analysis tools with explicit dependencies
+  createCaptureTools(mcp, {
+    query: (options) => gateway.storage.query(options),
+  });
 
   // Set up custom error handler
   mcp.onError((error, ctx) => {
@@ -143,16 +119,10 @@ export function createMcpServer(
  * /gateway (canonical) or /g (short alias) in the main server.
  *
  * @param gateway - Gateway instance for accessing query operations
- * @param registry - The gateway's server registry
- * @param storageDir - Directory where captures are stored
  * @returns Hono app configured to serve the MCP server
  */
-export function createMcpApp(
-  gateway: Gateway,
-  registry: Registry,
-  storageDir: string,
-): Hono {
-  const mcp = createMcpServer(gateway, registry, storageDir);
+export function createMcpApp(gateway: Gateway): Hono {
+  const mcp = createMcpServer(gateway);
 
   // Create HTTP transport for the MCP server
   const transport = new StreamableHttpTransport();

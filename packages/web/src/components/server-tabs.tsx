@@ -1,6 +1,7 @@
+import type { ServerStatus } from "@fiberplane/mcp-gateway-types";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef } from "react";
-import { api, type ServerStatus } from "../lib/api";
+import { api } from "../lib/api";
 
 interface ServerTabsProps {
   value?: string;
@@ -15,6 +16,8 @@ function getStatusColor(status: ServerStatus): string {
     case "offline":
       return "bg-red-500";
     case "not-found":
+      return "bg-gray-400";
+    default:
       return "bg-gray-400";
   }
 }

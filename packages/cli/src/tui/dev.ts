@@ -7,6 +7,6 @@
 
 import { runCli } from "../cli.js";
 
-runCli().catch((_error) => {
+runCli().catch(() => {
   process.exit(1);
 });

@@ -1,4 +1,8 @@
-import type { CaptureRecord } from "./schemas.js";
+import type {
+  CaptureRecord,
+  JsonRpcRequest,
+  JsonRpcResponse,
+} from "./schemas.js";
 
 /**
  * Standard API error response
@@ -12,12 +16,65 @@ export interface ApiError {
 }
 
 /**
+ * API log entry - transformed from CaptureRecord
+ *
+ * The API endpoint transforms CaptureRecords into separate entries:
+ * - Request/response pairs are split into individual entries with direction field
+ * - SSE events are included as standalone entries with direction: "sse-event"
+ *
+ * This is a discriminated union where direction field determines which fields are present.
+ */
+
+/**
+ * Request log entry (from CaptureRecord.request)
+ */
+export interface ApiRequestLogEntry
+  extends Omit<CaptureRecord, "response" | "sseEvent"> {
+  direction: "request";
+  request: JsonRpcRequest;
+}
+
+/**
+ * Response log entry (from CaptureRecord.response)
+ */
+export interface ApiResponseLogEntry
+  extends Omit<CaptureRecord, "request" | "sseEvent"> {
+  direction: "response";
+  response: JsonRpcResponse;
+}
+
+/**
+ * SSE event log entry (from CaptureRecord.sseEvent)
+ */
+export interface ApiSseEventLogEntry
+  extends Omit<CaptureRecord, "request" | "response"> {
+  direction: "sse-event";
+  sseEvent: {
+    id?: string;
+    event?: string;
+    data?: string;
+    retry?: number;
+  };
+}
+
+/**
+ * Union type representing all possible API log entries
+ */
+export type ApiLogEntry =
+  | ApiRequestLogEntry
+  | ApiResponseLogEntry
+  | ApiSseEventLogEntry;
+
+/**
  * Query options for log filtering and pagination
  */
 export interface LogQueryOptions {
   serverName?: string;
   sessionId?: string;
   method?: string;
+  clientName?: string; // Filter by client name
+  clientVersion?: string; // Filter by client version
+  clientIp?: string; // Filter by client IP
   after?: string; // ISO timestamp
   before?: string; // ISO timestamp
   limit?: number;
@@ -65,4 +122,14 @@ export interface SessionInfo {
   logCount: number;
   startTime: string;
   endTime: string;
+}
+
+/**
+ * Client aggregation info
+ */
+export interface ClientAggregation {
+  clientName: string;
+  clientVersion: string | null;
+  logCount: number;
+  sessionCount: number;
 }

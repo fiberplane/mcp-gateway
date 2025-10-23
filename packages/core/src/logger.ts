@@ -4,7 +4,13 @@ import { ensureStorageDir } from "./utils/storage";
 
 type LogLevel = "debug" | "info" | "warn" | "error";
 
-interface LogEntry {
+/**
+ * File log entry for gateway debug logs
+ *
+ * Different from the captured MCP traffic logs (LogEntry in types package).
+ * These are debug/diagnostic logs written to files in the storage directory.
+ */
+interface LogFileEntry {
   timestamp: string;
   level: LogLevel;
   message: string;
@@ -108,7 +114,7 @@ class Logger {
     }
 
     try {
-      const entry: LogEntry = {
+      const entry: LogFileEntry = {
         timestamp: new Date().toISOString(),
         level,
         message,
