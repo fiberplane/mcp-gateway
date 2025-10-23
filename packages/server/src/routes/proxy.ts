@@ -45,7 +45,7 @@ type Variables = {
   tempServerInfo?: McpServerInfo;
 };
 
-// Re-export ProxyDependencies from types package for backward compatibility
+// Re-export ProxyDependencies type for convenience
 export type ProxyDependencies = _ProxyDependencies;
 
 // Headers that are automatically managed by fetch/proxy and should not be manually set

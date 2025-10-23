@@ -18,11 +18,8 @@ import {
   logger,
 } from "@fiberplane/mcp-gateway-core";
 
-import {
-  createApp as createServerApp,
-  type ProxyDependencies,
-} from "@fiberplane/mcp-gateway-server";
-import type { Context } from "@fiberplane/mcp-gateway-types";
+import { createApp as createServerApp } from "@fiberplane/mcp-gateway-server";
+import type { Context, ProxyDependencies } from "@fiberplane/mcp-gateway-types";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { serveStatic } from "hono/bun";

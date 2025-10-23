@@ -1,6 +1,10 @@
-import type { ApiError, Logger } from "@fiberplane/mcp-gateway-types";
+import type {
+  ApiError,
+  Logger,
+  QueryFunctions,
+} from "@fiberplane/mcp-gateway-types";
 import type { Hono } from "hono";
-import { createApiRoutes, type QueryFunctions } from "./routes/index.js";
+import { createApiRoutes } from "./routes/index.js";
 
 /**
  * Create a standalone API server for querying MCP Gateway logs

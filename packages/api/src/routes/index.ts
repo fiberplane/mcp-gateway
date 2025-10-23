@@ -41,9 +41,6 @@ const sessionsQuerySchema = z.object({
   server: z.string().optional(),
 });
 
-// Re-export QueryFunctions type for convenience
-export type { QueryFunctions };
-
 /**
  * Create API routes for querying logs
  *

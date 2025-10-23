@@ -15,13 +15,6 @@ import {
 } from "@fiberplane/mcp-gateway-types";
 import { logger } from "../logger";
 
-// Re-export types for backward compatibility
-export type {
-  HttpContext,
-  RequestTracker,
-  SSEEvent,
-} from "@fiberplane/mcp-gateway-types";
-
 // In-memory storage for client info by session
 const sessionClientInfo = new Map<string, ClientInfo>();
 
