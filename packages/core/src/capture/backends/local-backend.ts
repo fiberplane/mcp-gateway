@@ -40,52 +40,59 @@ import { loadRegistry, saveRegistry } from "../../registry/storage.js";
 export class LocalStorageBackend implements StorageBackend {
   readonly name = "local";
   private storageDir: string;
-  private db: BunSQLiteDatabase<typeof schema> | null = null;
-  private sqlite: Database | null = null;
-  private initialized = false;
+  private db: BunSQLiteDatabase<typeof schema>;
+  private sqlite: Database;
 
-  constructor(storageDir: string) {
+  /**
+   * Private constructor - use LocalStorageBackend.create() instead
+   */
+  private constructor(
+    storageDir: string,
+    db: BunSQLiteDatabase<typeof schema>,
+    sqlite: Database,
+  ) {
     this.storageDir = storageDir;
+    this.db = db;
+    this.sqlite = sqlite;
+  }
+
+  /**
+   * Create and initialize a LocalStorageBackend instance
+   *
+   * This factory method ensures the database is fully initialized
+   * (including migrations) before returning the instance.
+   *
+   * @param storageDir - Directory for storing logs and registry
+   * @returns Fully initialized LocalStorageBackend instance
+   * @throws Error if database initialization fails
+   */
+  static async create(storageDir: string): Promise<LocalStorageBackend> {
+    const dbPath = join(storageDir, "logs.db");
 
     try {
-      // Create DB connection (owned by this instance, not global cache)
-      const dbPath = join(storageDir, "logs.db");
-      this.sqlite = new Database(dbPath, { create: true });
+      // Create database connection
+      const sqlite = new Database(dbPath, { create: true });
 
-      // Enable WAL mode for better concurrency (multiple readers, single writer)
-      this.sqlite.exec("PRAGMA journal_mode = WAL;");
+      // Configure SQLite for performance and concurrency
+      sqlite.exec("PRAGMA journal_mode = WAL;");
+      sqlite.exec("PRAGMA busy_timeout = 5000;");
+      sqlite.exec("PRAGMA synchronous = NORMAL;");
 
-      // Set busy timeout to 5 seconds to wait for locks instead of failing immediately
-      this.sqlite.exec("PRAGMA busy_timeout = 5000;");
+      // Create Drizzle instance
+      const db = drizzle(sqlite, { schema });
 
-      // Use NORMAL synchronous mode for better performance (WAL provides safety)
-      this.sqlite.exec("PRAGMA synchronous = NORMAL;");
+      // Ensure migrations are applied before returning
+      await ensureMigrations(db);
 
-      this.db = drizzle(this.sqlite, { schema });
+      logger.debug("LocalStorageBackend initialized successfully", {
+        storageDir,
+        dbPath,
+      });
 
-      // Run migrations - note: this is synchronous in constructor
-      // If migrations need to be async, we'd need a static factory method
-      ensureMigrations(this.db)
-        .then(() => {
-          this.initialized = true;
-          logger.debug("Local storage backend initialized", { storageDir });
-        })
-        .catch((error) => {
-          logger.error("Local storage backend migration failed", {
-            error:
-              error instanceof Error
-                ? {
-                    message: error.message,
-                    stack: error.stack,
-                  }
-                : String(error),
-          });
-        });
-
-      // Mark as initialized optimistically (migrations run in background)
-      this.initialized = true;
+      return new LocalStorageBackend(storageDir, db, sqlite);
     } catch (error) {
-      logger.warn("Local storage backend initialization failed", {
+      logger.error("Failed to initialize LocalStorageBackend", {
+        storageDir,
         error:
           error instanceof Error
             ? {
@@ -94,23 +101,12 @@ export class LocalStorageBackend implements StorageBackend {
               }
             : String(error),
       });
-      // Don't throw - allow fallback gracefully
+      throw error;
     }
   }
 
   async write(record: CaptureRecord): Promise<StorageWriteResult> {
-    if (!this.db || !this.initialized) {
-      logger.debug("Local storage backend not ready, skipping write");
-      return {
-        metadata: {
-          skipped: true,
-          reason: "Backend not initialized",
-        },
-      };
-    }
-
     try {
-      // Use owned DB connection
       await insertLog(this.db, record);
 
       return {
@@ -135,20 +131,6 @@ export class LocalStorageBackend implements StorageBackend {
   }
 
   async queryLogs(options: LogQueryOptions = {}): Promise<LogQueryResult> {
-    if (!this.db || !this.initialized) {
-      logger.debug("Local storage backend not ready, returning empty result");
-      return {
-        data: [],
-        pagination: {
-          count: 0,
-          limit: options.limit || 100,
-          hasMore: false,
-          oldestTimestamp: null,
-          newestTimestamp: null,
-        },
-      };
-    }
-
     try {
       return await queryLogs(this.db, options);
     } catch (error) {
@@ -160,11 +142,6 @@ export class LocalStorageBackend implements StorageBackend {
   }
 
   async getServers(): Promise<ServerInfo[]> {
-    if (!this.db || !this.initialized) {
-      logger.debug("Local storage backend not ready, returning empty servers");
-      return [];
-    }
-
     try {
       return await getServers(this.db);
     } catch (error) {
@@ -176,11 +153,6 @@ export class LocalStorageBackend implements StorageBackend {
   }
 
   async getSessions(serverName?: string): Promise<SessionInfo[]> {
-    if (!this.db || !this.initialized) {
-      logger.debug("Local storage backend not ready, returning empty sessions");
-      return [];
-    }
-
     try {
       return await getSessions(this.db, serverName);
     } catch (error) {
@@ -192,11 +164,6 @@ export class LocalStorageBackend implements StorageBackend {
   }
 
   async getClients(): Promise<ClientAggregation[]> {
-    if (!this.db || !this.initialized) {
-      logger.debug("Local storage backend not ready, returning empty clients");
-      return [];
-    }
-
     try {
       return await getClients(this.db);
     } catch (error) {
@@ -208,21 +175,13 @@ export class LocalStorageBackend implements StorageBackend {
   }
 
   async clearAll(): Promise<void> {
-    if (!this.db || !this.initialized) {
-      logger.debug("Local storage backend not ready, skipping clearAll");
-      return;
-    }
-
     try {
       // Wrap all deletions in a transaction to ensure atomicity
-      this.sqlite?.transaction(() => {
-        // Delete all rows from the logs table
-        this.sqlite?.run("DELETE FROM logs");
-        // Delete all rows from session metadata table
-        this.sqlite?.run("DELETE FROM session_metadata");
-        // Reset auto-increment counter
-        this.sqlite?.run("DELETE FROM sqlite_sequence WHERE name='logs'");
-        this.sqlite?.run(
+      this.sqlite.transaction(() => {
+        this.sqlite.run("DELETE FROM logs");
+        this.sqlite.run("DELETE FROM session_metadata");
+        this.sqlite.run("DELETE FROM sqlite_sequence WHERE name='logs'");
+        this.sqlite.run(
           "DELETE FROM sqlite_sequence WHERE name='session_metadata'",
         );
       })();
@@ -241,13 +200,6 @@ export class LocalStorageBackend implements StorageBackend {
     requestId: string | number,
     serverInfo: { name?: string; version: string; title?: string },
   ): Promise<void> {
-    if (!this.db || !this.initialized) {
-      logger.debug(
-        "Local storage backend not ready, skipping updateServerInfoForInitializeRequest",
-      );
-      return;
-    }
-
     try {
       await updateServerInfoForInitializeRequest(
         this.db,
@@ -280,13 +232,6 @@ export class LocalStorageBackend implements StorageBackend {
     client?: { name: string; version: string; title?: string };
     server?: { name?: string; version: string; title?: string };
   } | null> {
-    if (!this.db || !this.initialized) {
-      logger.debug(
-        "Local storage backend not ready, returning null for session metadata",
-      );
-      return null;
-    }
-
     try {
       return await getSessionMetadata(this.db, sessionId);
     } catch (error) {
@@ -301,14 +246,6 @@ export class LocalStorageBackend implements StorageBackend {
   async getServerMetrics(
     serverName: string,
   ): Promise<{ lastActivity: string | null; exchangeCount: number }> {
-    if (!this.db || !this.initialized) {
-      logger.debug("Local storage backend not ready, returning empty metrics");
-      return {
-        lastActivity: null,
-        exchangeCount: 0,
-      };
-    }
-
     try {
       return await getServerMetrics(this.db, serverName);
     } catch (error) {
@@ -321,25 +258,9 @@ export class LocalStorageBackend implements StorageBackend {
   }
 
   async getRegisteredServers(): Promise<McpServer[]> {
-    if (!this.storageDir) {
-      throw new Error(
-        "Storage directory not initialized. Call initialize() first.",
-      );
-    }
-
     try {
       // Load server configuration from mcp.json
       const registry = await loadRegistry(this.storageDir);
-
-      // Enrich each server with computed metrics from database
-      if (!this.db || !this.initialized) {
-        // If database not ready, return config with zero metrics
-        return registry.servers.map((server) => ({
-          ...server,
-          lastActivity: null,
-          exchangeCount: 0,
-        }));
-      }
 
       // Get metrics for all servers
       const serversWithMetrics = await Promise.all(
@@ -359,12 +280,6 @@ export class LocalStorageBackend implements StorageBackend {
   }
 
   async addServer(server: McpServerConfig): Promise<void> {
-    if (!this.storageDir) {
-      throw new Error(
-        "Storage directory not initialized. Call initialize() first.",
-      );
-    }
-
     try {
       const registry = await loadRegistry(this.storageDir);
 
@@ -395,12 +310,6 @@ export class LocalStorageBackend implements StorageBackend {
   }
 
   async removeServer(name: string): Promise<void> {
-    if (!this.storageDir) {
-      throw new Error(
-        "Storage directory not initialized. Call initialize() first.",
-      );
-    }
-
     try {
       const registry = await loadRegistry(this.storageDir);
 
@@ -429,12 +338,6 @@ export class LocalStorageBackend implements StorageBackend {
     name: string,
     changes: Partial<Omit<McpServerConfig, "name">>,
   ): Promise<void> {
-    if (!this.storageDir) {
-      throw new Error(
-        "Storage directory not initialized. Call initialize() first.",
-      );
-    }
-
     try {
       const registry = await loadRegistry(this.storageDir);
 
@@ -465,20 +368,15 @@ export class LocalStorageBackend implements StorageBackend {
   }
 
   async close(): Promise<void> {
-    if (this.sqlite) {
-      try {
-        this.sqlite.close();
-        this.db = null;
-        this.sqlite = null;
-        this.initialized = false;
-        logger.debug("Local storage backend closed", {
-          storageDir: this.storageDir,
-        });
-      } catch (error) {
-        logger.warn("Error closing local storage connection", {
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
+    try {
+      this.sqlite.close();
+      logger.debug("Local storage backend closed", {
+        storageDir: this.storageDir,
+      });
+    } catch (error) {
+      logger.warn("Error closing local storage connection", {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 }

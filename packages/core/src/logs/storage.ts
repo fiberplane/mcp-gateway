@@ -52,18 +52,21 @@ export async function insertLog(
     clientIp: record.metadata.clientIp ?? null,
   };
 
-  await db.insert(logs).values(newLog);
+  // Use transaction to ensure atomicity of log insert and metadata upsert
+  await db.transaction(async (tx) => {
+    await tx.insert(logs).values(newLog);
 
-  // Also persist session metadata for this session
-  // This ensures metadata survives restarts and cache clears
-  if (record.metadata.client || record.metadata.server) {
-    await upsertSessionMetadata(db, {
-      sessionId: record.metadata.sessionId,
-      serverName: record.metadata.serverName,
-      client: record.metadata.client,
-      server: record.metadata.server,
-    });
-  }
+    // Also persist session metadata for this session
+    // This ensures metadata survives restarts and cache clears
+    if (record.metadata.client || record.metadata.server) {
+      await upsertSessionMetadata(tx, {
+        sessionId: record.metadata.sessionId,
+        serverName: record.metadata.serverName,
+        client: record.metadata.client,
+        server: record.metadata.server,
+      });
+    }
+  });
 }
 
 /**

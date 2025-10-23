@@ -10,6 +10,7 @@ import {
   Copy,
 } from "lucide-react";
 import { Fragment, type ReactNode, useMemo, useState } from "react";
+import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
 import { getMethodBadgeVariant } from "../lib/badge-color";
 import { groupLogsByTime, type TimeInterval } from "../lib/time-grouping";
 import { useHandler } from "../lib/use-handler";
@@ -441,9 +442,9 @@ function createColumns(): Column[] {
 }
 
 function LogDetails({ log }: LogDetailsProps) {
-  const [copied, setCopied] = useState<
-    "request" | "response" | "sseEvent" | null
-  >(null);
+  const { copy: copyToClipboard, copiedType: copied } = useCopyToClipboard<
+    "request" | "response" | "sseEvent"
+  >();
 
   const isNotification = log.id === null;
 
@@ -545,14 +546,6 @@ function LogDetails({ log }: LogDetailsProps) {
       retry: log.sseEvent?.retry ? String(log.sseEvent.retry) : "—",
     };
   }, [log]);
-
-  const copyToClipboard = useHandler(
-    (data: unknown, type: "request" | "response" | "sseEvent") => {
-      navigator.clipboard.writeText(JSON.stringify(data, null, 2));
-      setCopied(type);
-      setTimeout(() => setCopied(null), 2000);
-    },
-  );
 
   return (
     <div className="flex flex-col gap-5">

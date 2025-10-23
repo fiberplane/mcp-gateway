@@ -293,8 +293,8 @@ class HealthCheckManager {
 export async function createGateway(options: GatewayOptions): Promise<Gateway> {
   const { storageDir } = options;
 
-  // Create scoped storage backend (not global)
-  const backend: StorageBackend = new LocalStorageBackend(storageDir);
+  // Create scoped storage backend (await initialization)
+  const backend: StorageBackend = await LocalStorageBackend.create(storageDir);
 
   // Create scoped client info store with storage fallback
   const clientInfoStore = new ClientInfoStore(backend);
