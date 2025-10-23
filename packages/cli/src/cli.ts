@@ -438,7 +438,11 @@ export async function runCli(): Promise<void> {
     const apiApp = createApiApp(
       {
         queryLogs: (options) => gateway.storage.query(options),
-        getServers: () => gateway.storage.getServers(),
+        getServers: async () => {
+          // Map ServerInfo[] to Omit<ServerInfo, 'status'>[] by removing status field
+          const servers = await gateway.storage.getServers();
+          return servers.map(({ status: _, ...rest }) => rest);
+        },
         getSessions: (serverName) => gateway.storage.getSessions(serverName),
         getClients: () => gateway.storage.getClients(),
         clearSessions: async () => {

@@ -7,6 +7,7 @@ import type {
   HttpContext,
   JsonRpcRequest,
   JsonRpcResponse,
+  McpServer,
   McpServerInfo,
   RequestTracker,
   SSEEvent,
@@ -182,14 +183,7 @@ class HealthCheckManager {
     lastCheck: string,
     url: string,
   ) => Promise<void>;
-  private getServers: () => Promise<
-    {
-      name: string;
-      url: string;
-      health?: HealthStatus;
-      lastHealthCheck?: string;
-    }[]
-  >;
+  private getServers: () => Promise<McpServer[]>;
 
   constructor(
     persistHealth: (
@@ -198,14 +192,7 @@ class HealthCheckManager {
       lastCheck: string,
       url: string,
     ) => Promise<void>,
-    getServers: () => Promise<
-      {
-        name: string;
-        url: string;
-        health?: HealthStatus;
-        lastHealthCheck?: string;
-      }[]
-    >,
+    getServers: () => Promise<McpServer[]>,
   ) {
     this.persistHealth = persistHealth;
     this.getServers = getServers;

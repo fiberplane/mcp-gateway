@@ -1,5 +1,5 @@
 import type { HttpContext } from "./gateway.js";
-import type { LogQueryOptions, LogQueryResult } from "./logs.js";
+import type { LogQueryOptions, LogQueryResult, ServerInfo } from "./logs.js";
 import type { McpServer, McpServerConfig } from "./registry.js";
 import type {
   CaptureRecord,
@@ -117,15 +117,9 @@ export interface QueryFunctions {
   queryLogs: (options?: LogQueryOptions) => Promise<LogQueryResult>;
 
   /**
-   * Get all servers with aggregated stats
+   * Get all servers with aggregated stats (without status field)
    */
-  getServers: () => Promise<
-    Array<{
-      name: string;
-      logCount: number;
-      sessionCount: number;
-    }>
-  >;
+  getServers: () => Promise<Array<Omit<ServerInfo, "status">>>;
 
   /**
    * Get all sessions with aggregated stats
