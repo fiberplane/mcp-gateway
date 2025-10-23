@@ -13,6 +13,7 @@ import {
   createMcpApp,
   createRequestCaptureRecord,
   createResponseCaptureRecord,
+  getServer,
   getStorageRoot,
   loadRegistry,
   logger,
@@ -258,7 +259,7 @@ export async function runCli(): Promise<void> {
           serverInfo,
         ),
       getServerFromRegistry: (registry, name) =>
-        gateway.registry.getServer(registry, name),
+        getServer(registry, name) ?? undefined,
     };
 
     // Create MCP protocol server (proxy, OAuth, gateway MCP server)
@@ -268,7 +269,7 @@ export async function runCli(): Promise<void> {
       createMcpApp,
       logger,
       proxyDependencies,
-      getServer: (registry, name) => gateway.registry.getServer(registry, name),
+      getServer: (registry, name) => getServer(registry, name) ?? undefined,
       gateway,
       onLog: emitLog,
       onRegistryUpdate: emitRegistryUpdate,
@@ -546,7 +547,7 @@ export async function runCli(): Promise<void> {
     logger.info("MCP Gateway server started", { port });
 
     // Start health checks with callback to update store
-    await gateway.health.start(registry, 30000, (updates) => {
+    await gateway.health.start(30000, (updates) => {
       const updateServerHealth = useAppStore.getState().updateServerHealth;
       // Update UI state for each health check result
       for (const update of updates) {

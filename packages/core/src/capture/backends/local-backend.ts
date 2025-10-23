@@ -286,6 +286,19 @@ export class LocalStorageBackend implements StorageBackend {
     }
   }
 
+  async getServer(name: string): Promise<McpServer | undefined> {
+    try {
+      const servers = await this.getRegisteredServers();
+      return servers.find((s) => s.name === name);
+    } catch (error) {
+      logger.error("Local storage getServer failed", {
+        error: error instanceof Error ? error.message : String(error),
+        serverName: name,
+      });
+      throw error;
+    }
+  }
+
   async addServer(server: McpServerConfig): Promise<void> {
     try {
       const registry = await loadRegistry(this.storageDir);

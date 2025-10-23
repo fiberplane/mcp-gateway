@@ -39,8 +39,6 @@ export async function createApp(
   const gateway = await createGateway({ storageDir });
 
   // Wire up proxy dependencies using Gateway methods
-  // Note: We can't use gateway.registry.getServer or requestTracker directly
-  // because they're not exposed at the Gateway level. We'll use the core functions.
   const proxyDependencies: ProxyDependencies = {
     createRequestRecord: (
       serverName: string,
@@ -167,7 +165,7 @@ export async function createApp(
     },
 
     getServerFromRegistry: (registry: Registry, name: string) => {
-      return gateway.registry.getServer(registry, name);
+      return getServer(registry, name) ?? undefined;
     },
   };
 

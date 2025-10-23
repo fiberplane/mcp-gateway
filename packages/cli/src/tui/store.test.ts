@@ -10,9 +10,6 @@ const mockGateway: Gateway = {
     sseEvent: async () => {},
     sseJsonRpc: async () => null,
   },
-  registry: {
-    getServer: () => undefined,
-  },
   clientInfo: {
     store: () => {},
     get: async () => undefined,
@@ -34,6 +31,7 @@ const mockGateway: Gateway = {
   },
   storage: {
     getRegisteredServers: async () => [],
+    getServer: async () => undefined,
     addServer: async () => {},
     removeServer: async () => {},
     updateServer: async () => {},

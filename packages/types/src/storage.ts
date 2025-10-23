@@ -123,6 +123,14 @@ export interface StorageBackend {
   getRegisteredServers(): Promise<McpServer[]>;
 
   /**
+   * Get a specific registered server by name
+   *
+   * @param name - Server name to lookup
+   * @returns Server if found, undefined otherwise
+   */
+  getServer(name: string): Promise<McpServer | undefined>;
+
+  /**
    * Add a new server to the registry
    *
    * Creates a new server configuration in the registry. The server name

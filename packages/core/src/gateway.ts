@@ -8,7 +8,6 @@ import type {
   JsonRpcRequest,
   JsonRpcResponse,
   McpServerInfo,
-  Registry,
   RequestTracker,
   SSEEvent,
   StorageBackend,
@@ -183,6 +182,14 @@ class HealthCheckManager {
     lastCheck: string,
     url: string,
   ) => Promise<void>;
+  private getServers: () => Promise<
+    {
+      name: string;
+      url: string;
+      health?: HealthStatus;
+      lastHealthCheck?: string;
+    }[]
+  >;
 
   constructor(
     persistHealth: (
@@ -191,8 +198,17 @@ class HealthCheckManager {
       lastCheck: string,
       url: string,
     ) => Promise<void>,
+    getServers: () => Promise<
+      {
+        name: string;
+        url: string;
+        health?: HealthStatus;
+        lastHealthCheck?: string;
+      }[]
+    >,
   ) {
     this.persistHealth = persistHealth;
+    this.getServers = getServers;
   }
 
   async checkServerHealth(url: string): Promise<HealthStatus> {
@@ -216,17 +232,18 @@ class HealthCheckManager {
     }
   }
 
-  async check(
-    registry: Registry,
-  ): Promise<
+  async check(): Promise<
     Array<{ name: string; health: HealthStatus; lastHealthCheck: string }>
   > {
+    // Fetch servers internally
+    const servers = await this.getServers();
+
     const updates = await Promise.all(
-      registry.servers.map(async (server) => {
+      servers.map(async (server) => {
         const health = await this.checkServerHealth(server.url);
         const lastHealthCheck = new Date().toISOString();
 
-        // Update the registry object (for backward compatibility)
+        // Update the server object (for backward compatibility)
         server.health = health;
         server.lastHealthCheck = lastHealthCheck;
 
@@ -263,7 +280,6 @@ class HealthCheckManager {
   }
 
   async start(
-    registry: Registry,
     intervalMs = 30000,
     onUpdate?: (
       updates: Array<{
@@ -280,11 +296,11 @@ class HealthCheckManager {
     this.onUpdate = onUpdate || null;
 
     // Initial check (await to ensure it completes before returning)
-    await this.check(registry);
+    await this.check();
 
     // Periodic checks
     this.timer = setInterval(() => {
-      this.check(registry).catch((error) => {
+      this.check().catch((error) => {
         // Log error but don't stop health checks
         // biome-ignore lint/suspicious/noConsole: Needed to log background health check errors
         console.error("Health check failed:", error);
@@ -317,8 +333,8 @@ class HealthCheckManager {
  * // Use capture operations
  * await gateway.capture.append(record);
  *
- * // Use registry operations
- * const server = gateway.registry.getServer(registry, "my-server");
+ * // Get a server
+ * const server = await gateway.storage.getServer("my-server");
  *
  * // Cleanup on shutdown
  * await gateway.close();
@@ -342,6 +358,7 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
   // Create scoped health check manager with database persistence
   const healthCheckManager = new HealthCheckManager(
     backend.upsertServerHealth.bind(backend),
+    backend.getRegisteredServers.bind(backend),
   );
 
   return {
@@ -445,12 +462,6 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
       },
     },
 
-    registry: {
-      getServer: (registry: Registry, name: string) => {
-        return registry.servers.find((s) => s.name === name);
-      },
-    },
-
     clientInfo: {
       store: (sessionId: string, info: ClientInfo) =>
         clientInfoStore.store(sessionId, info),
@@ -479,6 +490,7 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
 
     storage: {
       getRegisteredServers: async () => await backend.getRegisteredServers(),
+      getServer: async (name) => await backend.getServer(name),
       addServer: async (server) => await backend.addServer(server),
       removeServer: async (name) => await backend.removeServer(name),
       updateServer: async (name, changes) =>
@@ -506,7 +518,6 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
 
     health: {
       start: async (
-        registry: Registry,
         intervalMs?: number,
         onUpdate?: (
           updates: Array<{
@@ -516,13 +527,13 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
           }>,
         ) => void,
       ) => {
-        await healthCheckManager.start(registry, intervalMs, onUpdate);
+        await healthCheckManager.start(intervalMs, onUpdate);
       },
       stop: () => {
         healthCheckManager.stop();
       },
-      check: async (registry: Registry) => {
-        return await healthCheckManager.check(registry);
+      check: async () => {
+        return await healthCheckManager.check();
       },
     },
 
