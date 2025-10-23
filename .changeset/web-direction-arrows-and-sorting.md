@@ -1,6 +1,5 @@
 ---
 "@fiberplane/mcp-gateway": minor
-"@fiberplane/mcp-gateway-web": minor
 ---
 
 Add web UI MVP with SQLite storage, query API, and interactive log viewer
