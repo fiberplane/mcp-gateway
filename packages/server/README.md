@@ -46,20 +46,21 @@ The CLI package orchestrates this server with the API package and Web UI.
 ```typescript
 import { createApp } from "@fiberplane/mcp-gateway-server";
 import { createMcpApp, logger } from "@fiberplane/mcp-gateway-core";
-import type { Registry } from "@fiberplane/mcp-gateway-types";
+import type { McpServer } from "@fiberplane/mcp-gateway-types";
 
-const registry: Registry = {
-  servers: [
-    {
-      name: "demo",
-      url: "http://localhost:3000/mcp",
-      type: "http",
-    },
-  ],
-};
+const servers: McpServer[] = [
+  {
+    name: "demo",
+    url: "http://localhost:3000/mcp",
+    type: "http",
+    headers: {},
+    lastActivity: null,
+    exchangeCount: 0,
+  },
+];
 
 const { app } = await createApp({
-  registry,
+  servers,
   storageDir: "~/.mcp-gateway",
   createMcpApp,
   logger,
@@ -86,7 +87,7 @@ import { Hono } from "hono";
 
 // Create MCP protocol server with dependency injection
 const { app: serverApp } = await createServerApp({
-  registry,
+  servers,
   storageDir,
   createMcpApp,
   logger,
@@ -164,7 +165,7 @@ The server uses dependency injection for flexibility and testability:
 
 ```typescript
 const { app } = await createApp({
-  registry,                    // Registry with server configurations
+  servers,                     // McpServer[] - Server configurations
   storageDir,                  // Storage directory (absolute path)
   createMcpApp,                // Factory for creating gateway MCP server
   logger,                      // Logger instance for request logging

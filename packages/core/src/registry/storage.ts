@@ -2,7 +2,7 @@ import { constants } from "node:fs";
 import { access, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import type { Registry } from "@fiberplane/mcp-gateway-types";
+import type { McpServer } from "@fiberplane/mcp-gateway-types";
 import { logger } from "../logger";
 import { ensureStorageDir } from "../utils/storage";
 import { fromMcpJson, toMcpJson } from "./index";
@@ -19,18 +19,18 @@ export function getStorageRoot(customDir?: string): string {
 }
 
 /**
- * Load registry from mcp.json using Node.js fs
+ * Load server list from mcp.json using Node.js fs
  * @internal This API is for internal use by the CLI package only.
  * External consumers should use Gateway.storage.getRegisteredServers() instead.
  */
-export async function loadRegistry(storageDir: string): Promise<Registry> {
+export async function loadRegistry(storageDir: string): Promise<McpServer[]> {
   const mcpPath = join(storageDir, "mcp.json");
 
   try {
     await access(mcpPath, constants.F_OK);
   } catch {
     // File doesn't exist
-    return { servers: [] };
+    return [];
   }
 
   try {
@@ -42,23 +42,23 @@ export async function loadRegistry(storageDir: string): Promise<Registry> {
     logger.warn("Invalid mcp.json, starting with empty registry", {
       path: mcpPath,
     });
-    return { servers: [] };
+    return [];
   }
 }
 
 /**
- * Save registry to mcp.json using Node.js fs
+ * Save server list to mcp.json using Node.js fs
  * @internal This API is for internal use by the CLI package only.
  * External consumers should use Gateway.storage.addServer() or Gateway.storage.removeServer() instead.
  */
 export async function saveRegistry(
   storageDir: string,
-  registry: Registry,
+  servers: McpServer[],
 ): Promise<void> {
   await ensureStorageDir(storageDir);
 
   const mcpPath = join(storageDir, "mcp.json");
-  const data = toMcpJson(registry);
+  const data = toMcpJson(servers);
 
   try {
     await writeFile(mcpPath, JSON.stringify(data, null, 2), "utf8");

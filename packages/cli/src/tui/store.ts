@@ -2,7 +2,7 @@ import { checkServerHealth, type Gateway } from "@fiberplane/mcp-gateway-core";
 import type {
   HealthStatus,
   LogEntry,
-  Registry,
+  McpServer,
 } from "@fiberplane/mcp-gateway-types";
 import { create } from "zustand";
 import { emitRegistryUpdate } from "../events";
@@ -100,9 +100,9 @@ interface AppStore {
 }
 
 /**
- * Helper: Transform Registry server to UIServer
+ * Helper: Transform MCP server to UIServer
  */
-export function toUIServer(server: Registry["servers"][number]): UIServer {
+export function toUIServer(server: McpServer): UIServer {
   return {
     name: server.name,
     url: server.url,

@@ -3,7 +3,6 @@ import type {
   LogEntry,
   Logger,
   ProxyDependencies,
-  Registry,
 } from "@fiberplane/mcp-gateway-types";
 import type { Hono } from "hono";
 import { Hono as HonoApp } from "hono";
@@ -24,7 +23,6 @@ import { createProxyRoutes } from "./routes/proxy";
  * mounted separately by the CLI package for observability/management.
  */
 export async function createApp(options: {
-  registry: Registry;
   storageDir: string;
   createMcpApp: (gateway: Gateway) => Hono;
   logger: Logger;
@@ -32,9 +30,8 @@ export async function createApp(options: {
   gateway: Gateway;
   onLog?: (entry: LogEntry) => void;
   onRegistryUpdate?: () => void;
-}): Promise<{ app: Hono; registry: Registry }> {
+}): Promise<{ app: Hono }> {
   const {
-    registry,
     storageDir,
     createMcpApp,
     logger,
@@ -57,20 +54,22 @@ export async function createApp(options: {
   );
 
   // Health check endpoint
-  app.get("/", (c) => {
+  app.get("/", async (c) => {
+    const servers = await gateway.storage.getRegisteredServers();
     return c.json({
       name: "mcp-gateway",
       version: "0.1.1",
-      servers: registry.servers.length,
+      servers: servers.length,
       uptime: process.uptime(),
     });
   });
 
   // Registry status endpoint
-  app.get("/status", (c) => {
+  app.get("/status", async (c) => {
+    const servers = await gateway.storage.getRegisteredServers();
     return c.json({
       registry: {
-        servers: registry.servers.map((s) => ({
+        servers: servers.map((s) => ({
           name: s.name,
           url: s.url,
           type: s.type,
@@ -105,5 +104,5 @@ export async function createApp(options: {
   // Short alias for gateway's own MCP server
   app.route("/g", gatewayMcp);
 
-  return { app, registry };
+  return { app };
 }

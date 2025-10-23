@@ -4,13 +4,13 @@ import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { Registry } from "@fiberplane/mcp-gateway-types";
 import {
   InMemorySessionAdapter,
   McpServer,
   StreamableHttpTransport,
 } from "mcp-lite";
 import { createApp, saveRegistry } from "../helpers/test-app.js";
+import type { Registry } from "./helpers/test-app.js";
 
 // Test harness for MCP server
 interface TestServer {
@@ -170,10 +170,10 @@ describe("DELETE /mcp Session Termination Tests", () => {
     };
 
     // Save registry to storage
-    await saveRegistry(storageDir, registry);
+    await saveRegistry(storageDir, registry.servers);
 
     // Create and start gateway app
-    const { app } = await createApp(registry, storageDir);
+    const { app } = await createApp(registry.servers, storageDir);
     const server = Bun.serve({
       port: 8200,
       fetch: app.fetch,

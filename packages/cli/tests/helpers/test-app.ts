@@ -15,19 +15,25 @@ import {
   createApp as createServerApp,
   type ProxyDependencies,
 } from "@fiberplane/mcp-gateway-server";
-import type { Registry } from "@fiberplane/mcp-gateway-types";
+import type { McpServer } from "@fiberplane/mcp-gateway-types";
 import type { Hono } from "hono";
+
+/**
+ * Registry type for test data organization
+ * @deprecated Only for test use - production code uses McpServer[] directly
+ */
+export type Registry = { servers: McpServer[] };
 
 /**
  * Create a fully configured gateway app for testing
  * This wires up all the dependencies that would normally be done in cli.ts
  */
 export async function createApp(
-  registry: Registry,
+  servers: McpServer[],
   storageDir: string,
 ): Promise<{
   app: Hono;
-  registry: Registry;
+  servers: McpServer[];
   gateway: Gateway;
 }> {
   // Reset migration state before creating new Gateway instance
@@ -36,6 +42,17 @@ export async function createApp(
 
   // Create Gateway instance
   const gateway = await createGateway({ storageDir });
+
+  // Add servers to Gateway storage (for tests to pre-populate servers)
+  // Skip servers that already exist (tests may have pre-populated via saveRegistry)
+  const existingServers = await gateway.storage.getRegisteredServers();
+  const existingNames = new Set(existingServers.map((s) => s.name));
+
+  for (const server of servers) {
+    if (!existingNames.has(server.name)) {
+      await gateway.storage.addServer(server);
+    }
+  }
 
   // Wire up proxy dependencies using Gateway methods
   const proxyDependencies: ProxyDependencies = {
@@ -170,7 +187,6 @@ export async function createApp(
 
   // Create server app with all dependencies
   const result = await createServerApp({
-    registry,
     storageDir,
     createMcpApp,
     logger,
@@ -178,13 +194,54 @@ export async function createApp(
     gateway,
   });
 
+  // Get servers from Gateway storage
+  const savedServers = await gateway.storage.getRegisteredServers();
+
   return {
     ...result,
+    servers: savedServers,
     gateway,
   };
 }
 
 /**
- * Re-export saveRegistry from core for convenience
+ * Test helper to load servers from storage
+ * Uses Gateway storage API internally
  */
-export { saveRegistry } from "@fiberplane/mcp-gateway-core";
+export async function loadRegistry(storageDir: string): Promise<McpServer[]> {
+  // Create a temporary gateway instance to access storage
+  resetMigrationState();
+  const gateway = await createGateway({ storageDir });
+
+  try {
+    return await gateway.storage.getRegisteredServers();
+  } finally {
+    await gateway.close();
+  }
+}
+
+/**
+ * Test helper to save servers to storage
+ * Uses Gateway storage API internally
+ */
+export async function saveRegistry(
+  storageDir: string,
+  servers: McpServer[],
+): Promise<void> {
+  // Create a temporary gateway instance to access storage
+  resetMigrationState();
+  const gateway = await createGateway({ storageDir });
+
+  try {
+    // Clear existing servers and add new ones
+    const existingServers = await gateway.storage.getRegisteredServers();
+    for (const server of existingServers) {
+      await gateway.storage.removeServer(server.name);
+    }
+    for (const server of servers) {
+      await gateway.storage.addServer(server);
+    }
+  } finally {
+    await gateway.close();
+  }
+}

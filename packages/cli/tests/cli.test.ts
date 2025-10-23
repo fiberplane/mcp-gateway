@@ -5,10 +5,10 @@ import { join } from "node:path";
 import {
   addServer,
   isValidUrl,
-  loadRegistry,
   removeServer,
-  saveRegistry,
 } from "@fiberplane/mcp-gateway-core";
+import type { McpServer } from "@fiberplane/mcp-gateway-types";
+import { loadRegistry, saveRegistry } from "./helpers/test-app.js";
 
 let tempDir: string;
 
@@ -24,49 +24,47 @@ afterEach(async () => {
 
 // Unit tests for registry functions
 test("addServer creates new server entry", () => {
-  const registry = { servers: [] };
-  const newRegistry = addServer(registry, {
+  const servers: McpServer[] = [];
+  const newServers = addServer(servers, {
     name: "test-server",
     url: "https://api.example.com/mcp",
     type: "http",
     headers: {},
   });
 
-  expect(newRegistry.servers).toHaveLength(1);
-  expect(newRegistry.servers[0]?.name).toBe("test-server");
-  expect(newRegistry.servers[0]?.url).toBe("https://api.example.com/mcp");
-  expect(newRegistry.servers[0]?.lastActivity).toBe(null);
-  expect(newRegistry.servers[0]?.exchangeCount).toBe(0);
+  expect(newServers).toHaveLength(1);
+  expect(newServers[0]?.name).toBe("test-server");
+  expect(newServers[0]?.url).toBe("https://api.example.com/mcp");
+  expect(newServers[0]?.lastActivity).toBe(null);
+  expect(newServers[0]?.exchangeCount).toBe(0);
 });
 
 test("addServer normalizes server names to lowercase", () => {
-  const registry = { servers: [] };
-  const newRegistry = addServer(registry, {
+  const servers: McpServer[] = [];
+  const newServers = addServer(servers, {
     name: "Test-Server",
     url: "https://api.example.com/mcp",
     type: "http",
     headers: {},
   });
 
-  expect(newRegistry.servers[0]?.name).toBe("test-server");
+  expect(newServers[0]?.name).toBe("test-server");
 });
 
 test("addServer prevents duplicate server names", () => {
-  const registry = {
-    servers: [
-      {
-        name: "existing-server",
-        url: "https://existing.com/mcp",
-        type: "http" as const,
-        headers: {},
-        lastActivity: null,
-        exchangeCount: 0,
-      },
-    ],
-  };
+  const servers = [
+    {
+      name: "existing-server",
+      url: "https://existing.com/mcp",
+      type: "http" as const,
+      headers: {},
+      lastActivity: null,
+      exchangeCount: 0,
+    },
+  ];
 
   expect(() => {
-    addServer(registry, {
+    addServer(servers, {
       name: "Existing-Server", // Case insensitive
       url: "https://new.com/mcp",
       type: "http",
@@ -76,38 +74,36 @@ test("addServer prevents duplicate server names", () => {
 });
 
 test("removeServer removes existing server", () => {
-  const registry = {
-    servers: [
-      {
-        name: "server1",
-        url: "https://api1.example.com/mcp",
-        type: "http" as const,
-        headers: {},
-        lastActivity: null,
-        exchangeCount: 0,
-      },
-      {
-        name: "server2",
-        url: "https://api2.example.com/mcp",
-        type: "http" as const,
-        headers: {},
-        lastActivity: null,
-        exchangeCount: 0,
-      },
-    ],
-  };
+  const servers = [
+    {
+      name: "server1",
+      url: "https://api1.example.com/mcp",
+      type: "http" as const,
+      headers: {},
+      lastActivity: null,
+      exchangeCount: 0,
+    },
+    {
+      name: "server2",
+      url: "https://api2.example.com/mcp",
+      type: "http" as const,
+      headers: {},
+      lastActivity: null,
+      exchangeCount: 0,
+    },
+  ];
 
-  const newRegistry = removeServer(registry, "server1");
+  const newServers = removeServer(servers, "server1");
 
-  expect(newRegistry.servers).toHaveLength(1);
-  expect(newRegistry.servers[0]?.name).toBe("server2");
+  expect(newServers).toHaveLength(1);
+  expect(newServers[0]?.name).toBe("server2");
 });
 
 test("removeServer throws error for non-existent server", () => {
-  const registry = { servers: [] };
+  const servers: McpServer[] = [];
 
   expect(() => {
-    removeServer(registry, "non-existent");
+    removeServer(servers, "non-existent");
   }).toThrow("not found");
 });
 
@@ -120,41 +116,39 @@ test("isValidUrl validates HTTP/HTTPS URLs", () => {
 });
 
 // Storage tests
-test("loadRegistry returns empty registry for non-existent file", async () => {
-  const registry = await loadRegistry(tempDir);
-  expect(registry.servers).toHaveLength(0);
+test("loadRegistry returns empty server list for non-existent file", async () => {
+  const servers = await loadRegistry(tempDir);
+  expect(servers).toHaveLength(0);
 });
 
 test("saveRegistry and loadRegistry persist data correctly", async () => {
-  const originalRegistry = {
-    servers: [
-      {
-        name: "test-server",
-        url: "https://api.example.com/mcp",
-        type: "http" as const,
-        headers: { Authorization: "Bearer token" },
-        lastActivity: null,
-        exchangeCount: 0,
-      },
-    ],
-  };
+  const originalServers = [
+    {
+      name: "test-server",
+      url: "https://api.example.com/mcp",
+      type: "http" as const,
+      headers: { Authorization: "Bearer token" },
+      lastActivity: null,
+      exchangeCount: 0,
+    },
+  ];
 
-  await saveRegistry(tempDir, originalRegistry);
-  const loadedRegistry = await loadRegistry(tempDir);
+  await saveRegistry(tempDir, originalServers);
+  const loadedServers = await loadRegistry(tempDir);
 
-  expect(loadedRegistry.servers).toHaveLength(1);
-  expect(loadedRegistry.servers[0]?.name).toBe("test-server");
-  expect(loadedRegistry.servers[0]?.url).toBe("https://api.example.com/mcp");
-  expect(loadedRegistry.servers[0]?.headers.Authorization).toBe("Bearer token");
+  expect(loadedServers).toHaveLength(1);
+  expect(loadedServers[0]?.name).toBe("test-server");
+  expect(loadedServers[0]?.url).toBe("https://api.example.com/mcp");
+  expect(loadedServers[0]?.headers.Authorization).toBe("Bearer token");
 });
 
 test("loadRegistry handles invalid JSON gracefully", async () => {
   const mcpPath = join(tempDir, "mcp.json");
   await Bun.write(mcpPath, "invalid json");
 
-  // Should warn and return empty registry
-  const registry = await loadRegistry(tempDir);
-  expect(registry.servers).toHaveLength(0);
+  // Should warn and return empty server list
+  const servers = await loadRegistry(tempDir);
+  expect(servers).toHaveLength(0);
 });
 
 // CLI integration tests

@@ -1,4 +1,6 @@
 import { Database } from "bun:sqlite";
+import { constants } from "node:fs";
+import { access, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type {
   CaptureRecord,
@@ -28,7 +30,8 @@ import {
   updateServerInfoForInitializeRequest,
   upsertServerHealth,
 } from "../../logs/storage.js";
-import { loadRegistry, saveRegistry } from "../../registry/storage.js";
+import { fromMcpJson, toMcpJson } from "../../registry/index";
+import { ensureStorageDir } from "../../utils/storage";
 
 /**
  * Local file system storage backend
@@ -56,6 +59,50 @@ export class LocalStorageBackend implements StorageBackend {
     this.storageDir = storageDir;
     this.db = db;
     this.sqlite = sqlite;
+  }
+
+  /**
+   * Load server list from mcp.json
+   * @private Internal method for registry persistence
+   */
+  private async loadRegistry(): Promise<McpServer[]> {
+    const mcpPath = join(this.storageDir, "mcp.json");
+
+    try {
+      await access(mcpPath, constants.F_OK);
+    } catch {
+      // File doesn't exist
+      return [];
+    }
+
+    try {
+      // Type assertion needed: Bun's readFile with "utf8" encoding returns string, not Buffer
+      const content = (await readFile(mcpPath, "utf8")) as unknown as string;
+      const data = JSON.parse(content);
+      return fromMcpJson(data);
+    } catch (_error) {
+      logger.warn("Invalid mcp.json, starting with empty registry", {
+        path: mcpPath,
+      });
+      return [];
+    }
+  }
+
+  /**
+   * Save server list to mcp.json
+   * @private Internal method for registry persistence
+   */
+  private async saveRegistry(servers: McpServer[]): Promise<void> {
+    await ensureStorageDir(this.storageDir);
+
+    const mcpPath = join(this.storageDir, "mcp.json");
+    const data = toMcpJson(servers);
+
+    try {
+      await writeFile(mcpPath, JSON.stringify(data, null, 2), "utf8");
+    } catch (error) {
+      throw new Error(`Failed to save registry: ${error}`);
+    }
   }
 
   /**
@@ -146,8 +193,8 @@ export class LocalStorageBackend implements StorageBackend {
   async getServers(): Promise<ServerInfo[]> {
     try {
       // Load registry to get registered server names
-      const registry = await loadRegistry(this.storageDir);
-      const registryServers = registry.servers.map((s) => s.name);
+      const servers = await this.loadRegistry();
+      const registryServers = servers.map((s) => s.name);
 
       // Health status is now read from the database by getServers()
       return await getServers(this.db, registryServers);
@@ -267,11 +314,11 @@ export class LocalStorageBackend implements StorageBackend {
   async getRegisteredServers(): Promise<McpServer[]> {
     try {
       // Load server configuration from mcp.json
-      const registry = await loadRegistry(this.storageDir);
+      const servers = await this.loadRegistry();
 
       // Get metrics for all servers
       const serversWithMetrics = await Promise.all(
-        registry.servers.map(async (server) => {
+        servers.map(async (server) => {
           const metrics = await this.getServerMetrics(server.name);
           return { ...server, ...metrics };
         }),
@@ -301,24 +348,24 @@ export class LocalStorageBackend implements StorageBackend {
 
   async addServer(server: McpServerConfig): Promise<void> {
     try {
-      const registry = await loadRegistry(this.storageDir);
+      const servers = await this.loadRegistry();
 
       // Check for duplicate server name
-      if (registry.servers.some((s) => s.name === server.name)) {
+      if (servers.some((s) => s.name === server.name)) {
         throw new Error(
           `Server '${server.name}' already exists in the registry`,
         );
       }
 
       // Add new server with zero metrics (will be computed from logs)
-      registry.servers.push({
+      servers.push({
         ...server,
         lastActivity: null,
         exchangeCount: 0,
       });
 
       // Persist to file
-      await saveRegistry(this.storageDir, registry);
+      await this.saveRegistry(servers);
       logger.debug("Server added to registry", { name: server.name });
     } catch (error) {
       logger.error("Local storage addServer failed", {
@@ -331,19 +378,19 @@ export class LocalStorageBackend implements StorageBackend {
 
   async removeServer(name: string): Promise<void> {
     try {
-      const registry = await loadRegistry(this.storageDir);
+      const servers = await this.loadRegistry();
 
       // Find server to remove
-      const index = registry.servers.findIndex((s) => s.name === name);
+      const index = servers.findIndex((s) => s.name === name);
       if (index === -1) {
         throw new Error(`Server '${name}' not found in the registry`);
       }
 
       // Remove server from registry
-      registry.servers.splice(index, 1);
+      servers.splice(index, 1);
 
       // Persist to file (logs are preserved for historical analysis)
-      await saveRegistry(this.storageDir, registry);
+      await this.saveRegistry(servers);
       logger.debug("Server removed from registry", { name });
     } catch (error) {
       logger.error("Local storage removeServer failed", {
@@ -359,10 +406,10 @@ export class LocalStorageBackend implements StorageBackend {
     changes: Partial<Omit<McpServerConfig, "name">>,
   ): Promise<void> {
     try {
-      const registry = await loadRegistry(this.storageDir);
+      const servers = await this.loadRegistry();
 
       // Find server to update
-      const server = registry.servers.find((s) => s.name === name);
+      const server = servers.find((s) => s.name === name);
       if (!server) {
         throw new Error(`Server '${name}' not found in the registry`);
       }
@@ -376,7 +423,7 @@ export class LocalStorageBackend implements StorageBackend {
       }
 
       // Persist to file
-      await saveRegistry(this.storageDir, registry);
+      await this.saveRegistry(servers);
       logger.debug("Server updated in registry", { name, changes });
     } catch (error) {
       logger.error("Local storage updateServer failed", {

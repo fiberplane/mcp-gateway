@@ -10,7 +10,7 @@ import {
   resetCaptureState,
   type SSEEvent,
 } from "@fiberplane/mcp-gateway-core";
-import type { Registry } from "@fiberplane/mcp-gateway-types";
+import type { Registry } from "./helpers/test-app.js";
 import { createApp, saveRegistry } from "./helpers/test-app.js";
 
 // Real SSE server for testing
@@ -104,11 +104,11 @@ describe("SSE Integration Tests", () => {
       ],
     };
 
-    await saveRegistry(storageDir, registry);
+    await saveRegistry(storageDir, registry.servers);
 
     // Create and start gateway app
     const { app, gateway: gatewayInstance } = await createApp(
-      registry,
+      registry.servers,
       storageDir,
     );
     const server = Bun.serve({

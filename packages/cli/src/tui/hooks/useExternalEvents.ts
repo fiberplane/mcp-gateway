@@ -1,4 +1,4 @@
-import { loadRegistry, logger } from "@fiberplane/mcp-gateway-core";
+import { logger } from "@fiberplane/mcp-gateway-core";
 import type { LogEntry } from "@fiberplane/mcp-gateway-types";
 import { useEffect } from "react";
 import type { Action } from "../../events";
@@ -11,7 +11,7 @@ import { useAppStore } from "../store";
  * - log_added: When MCP requests/responses occur
  */
 export function useExternalEvents() {
-  const storageDir = useAppStore((state) => state.storageDir);
+  const gateway = useAppStore((state) => state.gateway);
   const setServers = useAppStore((state) => state.setServers);
   const addLog = useAppStore((state) => state.addLog);
 
@@ -26,16 +26,21 @@ export function useExternalEvents() {
     };
 
     const handleRegistryUpdate = async () => {
-      logger.debug("Registry update event received, reloading from disk");
+      logger.debug("Registry update event received, reloading from gateway");
 
-      // Reload registry from disk
-      const updatedRegistry = await loadRegistry(storageDir);
+      if (!gateway) {
+        logger.warn("Gateway not initialized, skipping registry reload");
+        return;
+      }
+
+      // Reload servers from Gateway storage
+      const servers = await gateway.storage.getRegisteredServers();
 
       // Get current servers fresh from store (avoid stale closure)
       const currentServers = useAppStore.getState().servers;
 
       // Convert to UI servers, preserving health info from current state
-      const updatedServers = updatedRegistry.servers.map((server) => {
+      const updatedServers = servers.map((server) => {
         const currentServer = currentServers.find(
           (s) => s.name === server.name,
         );
@@ -75,5 +80,5 @@ export function useExternalEvents() {
       tuiEvents.off("action", handleAction);
       logger.debug("External events cleaned up");
     };
-  }, [storageDir, setServers, addLog]);
+  }, [gateway, setServers, addLog]);
 }

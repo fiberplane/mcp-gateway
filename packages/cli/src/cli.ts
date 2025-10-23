@@ -14,7 +14,6 @@ import {
   createRequestCaptureRecord,
   createResponseCaptureRecord,
   getStorageRoot,
-  loadRegistry,
   logger,
 } from "@fiberplane/mcp-gateway-core";
 
@@ -23,7 +22,7 @@ import type { Context, ProxyDependencies } from "@fiberplane/mcp-gateway-types";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { serveStatic } from "hono/bun";
-import { emitLog, emitRegistryUpdate, tuiEvents } from "./events.js";
+import { emitLog, emitRegistryUpdate } from "./events.js";
 import { runOpenTUI } from "./tui/App.js";
 import { useAppStore } from "./tui/store.js";
 import { getVersion } from "./utils/version.js";
@@ -142,9 +141,6 @@ export async function runCli(): Promise<void> {
     // Initialize logger
     await logger.initialize(storageDir);
 
-    // Load registry once and share it between server and CLI
-    const registry = await loadRegistry(storageDir);
-
     // Create Gateway instance with scoped storage and state
     const gateway = await createGateway({ storageDir });
 
@@ -262,7 +258,6 @@ export async function runCli(): Promise<void> {
 
     // Create MCP protocol server (proxy, OAuth, gateway MCP server)
     const { app: serverApp } = await createServerApp({
-      registry,
       storageDir,
       createMcpApp,
       logger,
@@ -573,24 +568,10 @@ export async function runCli(): Promise<void> {
 
     // Start TUI only if running in a TTY and --no-tui flag is not set
     if (process.stdin.isTTY && !values["no-tui"]) {
-      // Listen for registry updates and reload into HTTP server's registry
-      tuiEvents.on("action", async (action) => {
-        if (action.type === "registry_updated") {
-          logger.debug("Registry update event received in HTTP server");
-          const updatedRegistry = await loadRegistry(storageDir);
-
-          // Mutate the registry object in place so HTTP server sees the changes
-          registry.servers.length = 0;
-          registry.servers.push(...updatedRegistry.servers);
-
-          logger.debug("Registry reloaded in HTTP server", {
-            serverCount: registry.servers.length,
-          });
-        }
-      });
-
       logger.info("Starting UI", { version: getVersion() });
-      await runOpenTUI(context, registry);
+      // Load servers from Gateway storage for TUI initialization
+      const servers = await gateway.storage.getRegisteredServers();
+      await runOpenTUI(context, servers);
     } else {
       const reason = !process.stdin.isTTY
         ? "no TTY detected"

@@ -38,7 +38,3 @@ export interface McpServer extends McpServerConfig {
   /** Last health check timestamp (persisted in server_health table) */
   lastHealthCheck?: string;
 }
-
-export interface Registry {
-  servers: McpServer[];
-}

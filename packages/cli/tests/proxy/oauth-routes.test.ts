@@ -4,8 +4,8 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { Registry } from "@fiberplane/mcp-gateway-types";
 import { createApp, saveRegistry } from "../helpers/test-app.js";
+import type { Registry } from "./helpers/test-app.js";
 
 describe("OAuth Routes Integration Tests", () => {
   let storageDir: string;
@@ -105,10 +105,10 @@ describe("OAuth Routes Integration Tests", () => {
       ],
     };
 
-    await saveRegistry(storageDir, registry);
+    await saveRegistry(storageDir, registry.servers);
 
     // Create and start gateway app
-    const { app } = await createApp(registry, storageDir);
+    const { app } = await createApp(registry.servers, storageDir);
     const gatewayServer = Bun.serve({
       port: 8301,
       fetch: app.fetch,

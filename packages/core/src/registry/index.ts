@@ -1,9 +1,9 @@
-import type { McpServer, Registry } from "@fiberplane/mcp-gateway-types";
+import type { McpServer } from "@fiberplane/mcp-gateway-types";
 
 /**
  * Pure registry manipulation functions
  *
- * These functions operate on Registry objects without side effects.
+ * These functions operate on McpServer arrays without side effects.
  * They are exported primarily for testing purposes.
  *
  * External consumers should use Gateway methods instead:
@@ -24,17 +24,15 @@ function normalizeUrl(url: string): string {
 }
 
 // Check if server exists (case-insensitive)
-export function hasServer(registry: Registry, name: string): boolean {
-  return registry.servers.some(
-    (s) => s.name.toLowerCase() === name.toLowerCase(),
-  );
+export function hasServer(servers: McpServer[], name: string): boolean {
+  return servers.some((s) => s.name.toLowerCase() === name.toLowerCase());
 }
 
-// Pure function to add server to registry
+// Pure function to add server to servers array
 export function addServer(
-  registry: Registry,
+  servers: McpServer[],
   server: Omit<McpServer, "lastActivity" | "exchangeCount">,
-): Registry {
+): McpServer[] {
   const normalized = {
     ...server,
     name: server.name.toLowerCase().trim(),
@@ -43,7 +41,7 @@ export function addServer(
     exchangeCount: 0,
   };
 
-  if (hasServer(registry, normalized.name)) {
+  if (hasServer(servers, normalized.name)) {
     throw new Error(`Server '${server.name}' already exists`);
   }
 
@@ -51,30 +49,26 @@ export function addServer(
     throw new Error("Server name cannot be empty");
   }
 
-  return {
-    servers: [...registry.servers, normalized],
-  };
+  return [...servers, normalized];
 }
 
-// Pure function to remove server from registry
-export function removeServer(registry: Registry, name: string): Registry {
+// Pure function to remove server from servers array
+export function removeServer(servers: McpServer[], name: string): McpServer[] {
   const normalizedName = name.toLowerCase().trim();
-  const filtered = registry.servers.filter((s) => s.name !== normalizedName);
+  const filtered = servers.filter((s) => s.name !== normalizedName);
 
-  if (filtered.length === registry.servers.length) {
+  if (filtered.length === servers.length) {
     throw new Error(`Server '${name}' not found`);
   }
 
-  return {
-    servers: filtered,
-  };
+  return filtered;
 }
 
-// Convert registry to mcp.json format
-export function toMcpJson(registry: Registry) {
+// Convert servers array to mcp.json format
+export function toMcpJson(servers: McpServer[]) {
   return {
     mcpServers: Object.fromEntries(
-      registry.servers.map((s) => [
+      servers.map((s) => [
         s.name,
         {
           type: s.type,
@@ -98,15 +92,15 @@ interface McpJsonData {
   >;
 }
 
-// Convert mcp.json format to registry
-export function fromMcpJson(data: unknown): Registry {
+// Convert mcp.json format to servers array
+export function fromMcpJson(data: unknown): McpServer[] {
   if (!data || typeof data !== "object" || !data) {
-    return { servers: [] };
+    return [];
   }
 
   const typedData = data as McpJsonData;
   if (!typedData.mcpServers) {
-    return { servers: [] };
+    return [];
   }
 
   const servers: McpServer[] = Object.entries(typedData.mcpServers)
@@ -128,7 +122,7 @@ export function fromMcpJson(data: unknown): Registry {
       (server): server is McpServer => server !== null && server.url !== "",
     );
 
-  return { servers };
+  return servers;
 }
 
 // Validate URL format

@@ -1,4 +1,4 @@
-import type { HealthStatus, Registry } from "@fiberplane/mcp-gateway-types";
+import type { HealthStatus } from "@fiberplane/mcp-gateway-types";
 
 export async function checkServerHealth(url: string): Promise<HealthStatus> {
   try {
@@ -19,49 +19,4 @@ export async function checkServerHealth(url: string): Promise<HealthStatus> {
     // Network errors, timeouts, DNS failures = down
     return "down";
   }
-}
-
-export async function startHealthChecks(
-  registry: Registry,
-  intervalMs_ms: number = 30000,
-  onHealthUpdate?: (
-    updates: Array<{
-      name: string;
-      health: HealthStatus;
-      lastHealthCheck: string;
-    }>,
-  ) => void,
-): Promise<() => void> {
-  const checkAll = async () => {
-    const updates = await Promise.all(
-      registry.servers.map(async (server) => {
-        const health = await checkServerHealth(server.url);
-        const lastHealthCheck = new Date().toISOString();
-
-        // Update the registry object for non-TUI usage
-        server.health = health;
-        server.lastHealthCheck = lastHealthCheck;
-
-        return {
-          name: server.name,
-          health,
-          lastHealthCheck,
-        };
-      }),
-    );
-
-    // Call custom update handler if provided (for TUI)
-    if (onHealthUpdate) {
-      onHealthUpdate(updates);
-    }
-  };
-
-  // Initial check (await to ensure it completes before returning)
-  await checkAll();
-
-  // Periodic checks
-  const timer = setInterval(checkAll, intervalMs_ms);
-
-  // Return cleanup function
-  return () => clearInterval(timer);
 }

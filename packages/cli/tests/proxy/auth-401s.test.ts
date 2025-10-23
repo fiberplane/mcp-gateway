@@ -4,9 +4,9 @@ import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { Registry } from "@fiberplane/mcp-gateway-types";
 import { McpServer, StreamableHttpTransport } from "mcp-lite";
 import { createApp, saveRegistry } from "../helpers/test-app.js";
+import type { Registry } from "./helpers/test-app.js";
 
 // JSON-RPC response type
 interface JsonRpcResponse {
@@ -154,10 +154,10 @@ describe("Proxy Integration Tests", () => {
     };
 
     // Save registry to storage
-    await saveRegistry(storageDir, registry);
+    await saveRegistry(storageDir, registry.servers);
 
     // Create and start gateway app
-    const { app } = await createApp(registry, storageDir);
+    const { app } = await createApp(registry.servers, storageDir);
     const server = Bun.serve({
       port: 8000,
       fetch: app.fetch,
@@ -253,10 +253,10 @@ describe("Proxy Integration Tests", () => {
           ],
         };
 
-        await saveRegistry(storageDir, authRegistry);
+        await saveRegistry(storageDir, authRegistry.servers);
 
         // Create gateway with auth server
-        const { app } = await createApp(authRegistry, storageDir);
+        const { app } = await createApp(authRegistry.servers, storageDir);
         const authGateway = Bun.serve({
           port: 8204,
           fetch: app.fetch,
@@ -368,9 +368,9 @@ describe("Proxy Integration Tests", () => {
           ],
         };
 
-        await saveRegistry(storageDir, authRegistry);
+        await saveRegistry(storageDir, authRegistry.servers);
 
-        const { app } = await createApp(authRegistry, storageDir);
+        const { app } = await createApp(authRegistry.servers, storageDir);
         const authGateway = Bun.serve({
           port: 8206,
           fetch: app.fetch,
