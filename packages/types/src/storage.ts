@@ -5,7 +5,7 @@ import type {
   ServerInfo,
   SessionInfo,
 } from "./logs.js";
-import type { McpServer, McpServerConfig } from "./registry.js";
+import type { McpServer, McpServerConfig, ServerHealth } from "./registry.js";
 import type { CaptureRecord } from "./schemas.js";
 
 /**
@@ -158,6 +158,24 @@ export interface StorageBackend {
   updateServer(
     name: string,
     changes: Partial<Omit<McpServerConfig, "name">>,
+  ): Promise<void>;
+
+  /**
+   * Upsert server health status
+   *
+   * Updates the health status of a server in the database.
+   * Used by health check manager to persist health status.
+   *
+   * @param serverName - Name of the server
+   * @param health - Health status ("up" | "down" | "unknown")
+   * @param lastCheck - ISO timestamp of the health check
+   * @param url - Server URL
+   */
+  upsertServerHealth(
+    serverName: string,
+    health: ServerHealth,
+    lastCheck: string,
+    url: string,
   ): Promise<void>;
 
   /**

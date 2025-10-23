@@ -95,3 +95,19 @@ export const sessionMetadata = sqliteTable(
 
 export type SessionMetadata = typeof sessionMetadata.$inferSelect;
 export type NewSessionMetadata = typeof sessionMetadata.$inferInsert;
+
+/**
+ * SQLite table schema for server health status
+ *
+ * This table stores the latest health check results for each registered server.
+ * Updated periodically by the HealthCheckManager.
+ */
+export const serverHealth = sqliteTable("server_health", {
+  serverName: text("server_name").primaryKey(),
+  health: text("health").notNull(), // "up" | "down"
+  lastCheck: text("last_check").notNull(),
+  url: text("url").notNull(),
+});
+
+export type ServerHealth = typeof serverHealth.$inferSelect;
+export type NewServerHealth = typeof serverHealth.$inferInsert;

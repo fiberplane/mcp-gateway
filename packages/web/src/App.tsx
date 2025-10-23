@@ -171,6 +171,7 @@ function App() {
           </div>
         ) : (
           <>
+            {/* biome-ignore lint/correctness/useUniqueElementIds: Static ID needed for ARIA tabpanel association */}
             <div
               id="logs-panel"
               role="tabpanel"

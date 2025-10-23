@@ -177,6 +177,23 @@ class HealthCheckManager {
         }>,
       ) => void)
     | null = null;
+  private persistHealth: (
+    serverName: string,
+    health: ServerHealth,
+    lastCheck: string,
+    url: string,
+  ) => Promise<void>;
+
+  constructor(
+    persistHealth: (
+      serverName: string,
+      health: ServerHealth,
+      lastCheck: string,
+      url: string,
+    ) => Promise<void>,
+  ) {
+    this.persistHealth = persistHealth;
+  }
 
   async checkServerHealth(url: string): Promise<ServerHealth> {
     try {
@@ -209,9 +226,25 @@ class HealthCheckManager {
         const health = await this.checkServerHealth(server.url);
         const lastHealthCheck = new Date().toISOString();
 
-        // Update the registry object for non-TUI usage
+        // Update the registry object (for backward compatibility)
         server.health = health;
         server.lastHealthCheck = lastHealthCheck;
+
+        // Persist health to database
+        try {
+          await this.persistHealth(
+            server.name,
+            health,
+            lastHealthCheck,
+            server.url,
+          );
+        } catch (error) {
+          logger.warn("Failed to persist health check to database", {
+            serverName: server.name,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          // Don't throw - health check persistence failures shouldn't break health checking
+        }
 
         return {
           name: server.name,
@@ -306,8 +339,10 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
   // Create scoped request tracker
   const requestTracker = new InMemoryRequestTracker();
 
-  // Create scoped health check manager
-  const healthCheckManager = new HealthCheckManager();
+  // Create scoped health check manager with database persistence
+  const healthCheckManager = new HealthCheckManager(
+    backend.upsertServerHealth.bind(backend),
+  );
 
   return {
     capture: {

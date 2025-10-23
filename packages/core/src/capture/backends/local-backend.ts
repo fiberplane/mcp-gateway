@@ -25,6 +25,7 @@ import {
   insertLog,
   queryLogs,
   updateServerInfoForInitializeRequest,
+  upsertServerHealth,
 } from "../../logs/storage.js";
 import { loadRegistry, saveRegistry } from "../../registry/storage.js";
 
@@ -143,7 +144,12 @@ export class LocalStorageBackend implements StorageBackend {
 
   async getServers(): Promise<ServerInfo[]> {
     try {
-      return await getServers(this.db);
+      // Load registry to get registered server names
+      const registry = await loadRegistry(this.storageDir);
+      const registryServers = registry.servers.map((s) => s.name);
+
+      // Health status is now read from the database by getServers()
+      return await getServers(this.db, registryServers);
     } catch (error) {
       logger.error("Local storage getServers failed", {
         error: error instanceof Error ? error.message : String(error),
@@ -362,6 +368,29 @@ export class LocalStorageBackend implements StorageBackend {
       logger.error("Local storage updateServer failed", {
         error: error instanceof Error ? error.message : String(error),
         serverName: name,
+      });
+      throw error;
+    }
+  }
+
+  async upsertServerHealth(
+    serverName: string,
+    health: import("@fiberplane/mcp-gateway-types").ServerHealth,
+    lastCheck: string,
+    url: string,
+  ): Promise<void> {
+    try {
+      await upsertServerHealth(this.db, {
+        serverName,
+        health,
+        lastCheck,
+        url,
+      });
+      logger.debug("Server health updated", { serverName, health });
+    } catch (error) {
+      logger.error("Local storage upsertServerHealth failed", {
+        error: error instanceof Error ? error.message : String(error),
+        serverName,
       });
       throw error;
     }

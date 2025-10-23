@@ -15,7 +15,9 @@ import {
   type Log,
   logs,
   type NewLog,
+  type NewServerHealth,
   type NewSessionMetadata,
+  serverHealth,
   sessionMetadata,
 } from "./schema.js";
 
@@ -188,23 +190,23 @@ export async function queryLogs(
  *
  * @param db - Database instance
  * @param registryServers - Optional list of registered server names
- * @param serverHealthMap - Optional map of server names to health status
- * @returns Server information with status (online/offline/deleted)
+ * @returns Server information with status (online/offline/not-found)
  */
 export async function getServers(
   db: BunSQLiteDatabase<typeof schema>,
   registryServers?: string[],
-  serverHealthMap?: Map<string, ServerHealth>,
 ): Promise<ServerInfo[]> {
-  // Get servers that have logs in the database
+  // Get servers that have logs in the database, with health data
   const logsResult = await db
     .select({
       name: logs.serverName,
       logCount: count(logs.id),
       sessionCount: sql<number>`COUNT(DISTINCT ${logs.sessionId})`,
+      health: serverHealth.health,
     })
     .from(logs)
-    .groupBy(logs.serverName)
+    .leftJoin(serverHealth, eq(logs.serverName, serverHealth.serverName))
+    .groupBy(logs.serverName, serverHealth.health)
     .orderBy(sql`LOWER(${logs.serverName}) COLLATE NOCASE`);
 
   // Create a map of registry servers (normalized name -> original name)
@@ -229,7 +231,7 @@ export async function getServers(
     let status: "online" | "offline" | "not-found";
     if (registryProvided && registryName) {
       // Server is in registry - check health to determine online vs offline
-      const health = serverHealthMap?.get(normalizedName);
+      const health = server.health as ServerHealth | null;
       status =
         health === "down"
           ? "offline"
@@ -243,9 +245,9 @@ export async function getServers(
     }
 
     serverMap.set(normalizedName, {
-      ...server,
-      // Use registry name for consistency if server is registered, otherwise use log name
       name: registryName || server.name,
+      logCount: server.logCount,
+      sessionCount: server.sessionCount,
       status,
     });
   }
@@ -255,9 +257,9 @@ export async function getServers(
     for (const serverName of registryServers || []) {
       const normalizedName = serverName.toLowerCase();
       if (!serverMap.has(normalizedName)) {
-        // New server in registry with no logs yet - check health
-        const health = serverHealthMap?.get(normalizedName);
-        const status = health === "down" ? "offline" : "online";
+        // New server in registry with no logs yet - check health from database
+        const healthData = await getServerHealth(db, serverName);
+        const status = healthData?.health === "down" ? "offline" : "online";
 
         serverMap.set(normalizedName, {
           name: serverName,
@@ -348,6 +350,72 @@ export async function getServerMetrics(
   return {
     lastActivity: row?.lastActivity ?? null,
     exchangeCount: row?.exchangeCount ?? 0,
+  };
+}
+
+/**
+ * Upsert server health (insert or update)
+ *
+ * This persists server health check results to SQLite,
+ * allowing queries to access live health status.
+ */
+export async function upsertServerHealth(
+  db: BunSQLiteDatabase<typeof schema>,
+  data: {
+    serverName: string;
+    health: ServerHealth;
+    lastCheck: string;
+    url: string;
+  },
+): Promise<void> {
+  const health: NewServerHealth = {
+    serverName: data.serverName,
+    health: data.health,
+    lastCheck: data.lastCheck,
+    url: data.url,
+  };
+
+  await db
+    .insert(serverHealth)
+    .values(health)
+    .onConflictDoUpdate({
+      target: serverHealth.serverName,
+      set: {
+        health: health.health,
+        lastCheck: health.lastCheck,
+        url: health.url,
+      },
+    });
+}
+
+/**
+ * Get server health by server name
+ *
+ * Returns null if health data doesn't exist in the database.
+ */
+export async function getServerHealth(
+  db: BunSQLiteDatabase<typeof schema>,
+  serverName: string,
+): Promise<{
+  health: ServerHealth;
+  lastCheck: string;
+  url: string;
+} | null> {
+  const result = await db
+    .select()
+    .from(serverHealth)
+    .where(eq(serverHealth.serverName, serverName))
+    .limit(1);
+
+  const row = result[0];
+  if (!row) {
+    return null;
+  }
+
+  return {
+    health: row.health as ServerHealth,
+    lastCheck: row.lastCheck,
+    url: row.url,
   };
 }
 
