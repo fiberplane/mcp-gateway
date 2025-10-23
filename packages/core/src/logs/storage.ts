@@ -1,9 +1,9 @@
 import type {
   CaptureRecord,
   ClientAggregation,
+  HealthStatus,
   LogQueryOptions,
   LogQueryResult,
-  ServerHealth,
   ServerInfo,
   SessionInfo,
 } from "@fiberplane/mcp-gateway-types";
@@ -231,7 +231,7 @@ export async function getServers(
     let status: "online" | "offline" | "not-found";
     if (registryProvided && registryName) {
       // Server is in registry - check health to determine online vs offline
-      const health = server.health as ServerHealth | null;
+      const health = server.health as HealthStatus | null;
       status =
         health === "down"
           ? "offline"
@@ -363,7 +363,7 @@ export async function upsertServerHealth(
   db: BunSQLiteDatabase<typeof schema>,
   data: {
     serverName: string;
-    health: ServerHealth;
+    health: HealthStatus;
     lastCheck: string;
     url: string;
   },
@@ -397,7 +397,7 @@ export async function getServerHealth(
   db: BunSQLiteDatabase<typeof schema>,
   serverName: string,
 ): Promise<{
-  health: ServerHealth;
+  health: HealthStatus;
   lastCheck: string;
   url: string;
 } | null> {
@@ -413,7 +413,7 @@ export async function getServerHealth(
   }
 
   return {
-    health: row.health as ServerHealth,
+    health: row.health as HealthStatus,
     lastCheck: row.lastCheck,
     url: row.url,
   };

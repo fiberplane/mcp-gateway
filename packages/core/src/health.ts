@@ -1,6 +1,6 @@
-import type { Registry, ServerHealth } from "@fiberplane/mcp-gateway-types";
+import type { HealthStatus, Registry } from "@fiberplane/mcp-gateway-types";
 
-export async function checkServerHealth(url: string): Promise<ServerHealth> {
+export async function checkServerHealth(url: string): Promise<HealthStatus> {
   try {
     // Try OPTIONS first (lightweight), fallback to HEAD
     const response = await fetch(url, {
@@ -27,7 +27,7 @@ export async function startHealthChecks(
   onHealthUpdate?: (
     updates: Array<{
       name: string;
-      health: ServerHealth;
+      health: HealthStatus;
       lastHealthCheck: string;
     }>,
   ) => void,

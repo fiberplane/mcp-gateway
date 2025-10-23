@@ -1,5 +1,5 @@
 // Health status for servers
-export type ServerHealth = "up" | "down" | "unknown";
+export type HealthStatus = "up" | "down" | "unknown";
 
 /**
  * MCP Server configuration (persisted to mcp.json)
@@ -24,7 +24,7 @@ export interface McpServerConfig {
  * **Field categories:**
  * - **Persisted (saved to mcp.json):** name, url, type, headers
  * - **Computed (derived from SQLite logs):** lastActivity, exchangeCount
- * - **Runtime-only (in-memory, reset on restart):** health, lastHealthCheck
+ * - **Persisted (saved to SQLite server_health table):** health, lastHealthCheck
  *
  * Extends McpServerConfig with computed metrics and runtime state.
  */
@@ -33,9 +33,9 @@ export interface McpServer extends McpServerConfig {
   lastActivity: string | null;
   /** Total number of requests handled (computed from logs table) */
   exchangeCount: number;
-  /** Current health status (runtime-only, not persisted) */
-  health?: ServerHealth;
-  /** Last health check timestamp (runtime-only, not persisted) */
+  /** Current health status (persisted in server_health table) */
+  health?: HealthStatus;
+  /** Last health check timestamp (persisted in server_health table) */
   lastHealthCheck?: string;
 }
 

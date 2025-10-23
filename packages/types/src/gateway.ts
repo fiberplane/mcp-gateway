@@ -10,7 +10,7 @@ import type {
   McpServer,
   McpServerConfig,
   Registry,
-  ServerHealth,
+  HealthStatus,
 } from "./registry";
 import type {
   CaptureRecord,
@@ -277,7 +277,7 @@ export interface Gateway {
       onUpdate?: (
         updates: Array<{
           name: string;
-          health: ServerHealth;
+          health: HealthStatus;
           lastHealthCheck: string;
         }>,
       ) => void,
@@ -295,7 +295,7 @@ export interface Gateway {
     check(registry: Registry): Promise<
       Array<{
         name: string;
-        health: ServerHealth;
+        health: HealthStatus;
         lastHealthCheck: string;
       }>
     >;

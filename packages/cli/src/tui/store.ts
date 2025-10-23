@@ -1,8 +1,8 @@
 import { checkServerHealth, type Gateway } from "@fiberplane/mcp-gateway-core";
 import type {
+  HealthStatus,
   LogEntry,
   Registry,
-  ServerHealth,
 } from "@fiberplane/mcp-gateway-types";
 import { create } from "zustand";
 import { emitRegistryUpdate } from "../events";
@@ -31,7 +31,7 @@ export interface UIServer {
   url: string;
   type: "http";
   headers: Record<string, string>;
-  health: ServerHealth;
+  health: HealthStatus;
   lastHealthCheck?: string;
 }
 
@@ -70,7 +70,7 @@ interface AppStore {
   setServers: (servers: UIServer[]) => void;
   updateServerHealth: (
     name: string,
-    health: ServerHealth,
+    health: HealthStatus,
     lastHealthCheck: string,
   ) => void;
   addLog: (entry: LogEntry) => void;

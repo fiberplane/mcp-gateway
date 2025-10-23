@@ -5,7 +5,7 @@ import type {
   ServerInfo,
   SessionInfo,
 } from "./logs.js";
-import type { McpServer, McpServerConfig, ServerHealth } from "./registry.js";
+import type { McpServer, McpServerConfig, HealthStatus } from "./registry.js";
 import type { CaptureRecord } from "./schemas.js";
 
 /**
@@ -173,7 +173,7 @@ export interface StorageBackend {
    */
   upsertServerHealth(
     serverName: string,
-    health: ServerHealth,
+    health: HealthStatus,
     lastCheck: string,
     url: string,
   ): Promise<void>;

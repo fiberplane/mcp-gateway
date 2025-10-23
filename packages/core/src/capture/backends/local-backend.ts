@@ -375,7 +375,7 @@ export class LocalStorageBackend implements StorageBackend {
 
   async upsertServerHealth(
     serverName: string,
-    health: import("@fiberplane/mcp-gateway-types").ServerHealth,
+    health: import("@fiberplane/mcp-gateway-types").HealthStatus,
     lastCheck: string,
     url: string,
   ): Promise<void> {

@@ -3,13 +3,13 @@ import type {
   ClientInfo,
   Gateway,
   GatewayOptions,
+  HealthStatus,
   HttpContext,
   JsonRpcRequest,
   JsonRpcResponse,
   McpServerInfo,
   Registry,
   RequestTracker,
-  ServerHealth,
   SSEEvent,
   StorageBackend,
 } from "@fiberplane/mcp-gateway-types";
@@ -172,14 +172,14 @@ class HealthCheckManager {
     | ((
         updates: Array<{
           name: string;
-          health: ServerHealth;
+          health: HealthStatus;
           lastHealthCheck: string;
         }>,
       ) => void)
     | null = null;
   private persistHealth: (
     serverName: string,
-    health: ServerHealth,
+    health: HealthStatus,
     lastCheck: string,
     url: string,
   ) => Promise<void>;
@@ -187,7 +187,7 @@ class HealthCheckManager {
   constructor(
     persistHealth: (
       serverName: string,
-      health: ServerHealth,
+      health: HealthStatus,
       lastCheck: string,
       url: string,
     ) => Promise<void>,
@@ -195,7 +195,7 @@ class HealthCheckManager {
     this.persistHealth = persistHealth;
   }
 
-  async checkServerHealth(url: string): Promise<ServerHealth> {
+  async checkServerHealth(url: string): Promise<HealthStatus> {
     try {
       // Try OPTIONS first (lightweight), fallback to HEAD
       const response = await fetch(url, {
@@ -219,7 +219,7 @@ class HealthCheckManager {
   async check(
     registry: Registry,
   ): Promise<
-    Array<{ name: string; health: ServerHealth; lastHealthCheck: string }>
+    Array<{ name: string; health: HealthStatus; lastHealthCheck: string }>
   > {
     const updates = await Promise.all(
       registry.servers.map(async (server) => {
@@ -268,7 +268,7 @@ class HealthCheckManager {
     onUpdate?: (
       updates: Array<{
         name: string;
-        health: ServerHealth;
+        health: HealthStatus;
         lastHealthCheck: string;
       }>,
     ) => void,
@@ -511,7 +511,7 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
         onUpdate?: (
           updates: Array<{
             name: string;
-            health: ServerHealth;
+            health: HealthStatus;
             lastHealthCheck: string;
           }>,
         ) => void,
