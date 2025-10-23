@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { Gateway } from "@fiberplane/mcp-gateway-core";
 import type { Registry } from "@fiberplane/mcp-gateway-types";
 import {
   InMemorySessionAdapter,
@@ -162,7 +163,7 @@ describe("GET /mcp SSE Logging and Capture Tests", () => {
   let gateway: {
     port: number;
     stop: () => void;
-    instance: import("@fiberplane/mcp-gateway-core").Gateway;
+    instance: Gateway;
   };
 
   beforeAll(async () => {

@@ -1,3 +1,4 @@
+import type { Gateway } from "@fiberplane/mcp-gateway-core";
 import type {
   LogEntry,
   Logger,
@@ -26,13 +27,11 @@ import { createProxyRoutes } from "./routes/proxy";
 export async function createApp(options: {
   registry: Registry;
   storageDir: string;
-  createMcpApp: (
-    gateway: import("@fiberplane/mcp-gateway-core").Gateway,
-  ) => Hono;
+  createMcpApp: (gateway: Gateway) => Hono;
   logger: Logger;
   proxyDependencies: ProxyDependencies;
   getServer: (registry: Registry, name: string) => McpServer | undefined;
-  gateway: import("@fiberplane/mcp-gateway-core").Gateway;
+  gateway: Gateway;
   onLog?: (entry: LogEntry) => void;
   onRegistryUpdate?: () => void;
 }): Promise<{ app: Hono; registry: Registry }> {

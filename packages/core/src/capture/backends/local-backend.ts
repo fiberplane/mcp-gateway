@@ -3,6 +3,7 @@ import { join } from "node:path";
 import type {
   CaptureRecord,
   ClientAggregation,
+  HealthStatus,
   LogQueryOptions,
   LogQueryResult,
   McpServer,
@@ -375,7 +376,7 @@ export class LocalStorageBackend implements StorageBackend {
 
   async upsertServerHealth(
     serverName: string,
-    health: import("@fiberplane/mcp-gateway-types").HealthStatus,
+    health: HealthStatus,
     lastCheck: string,
     url: string,
   ): Promise<void> {

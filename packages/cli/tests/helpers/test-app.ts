@@ -7,6 +7,7 @@ import {
   createMcpApp,
   createRequestCaptureRecord,
   createResponseCaptureRecord,
+  type Gateway,
   getServer,
   logger,
   resetMigrationState,
@@ -28,7 +29,7 @@ export async function createApp(
 ): Promise<{
   app: Hono;
   registry: Registry;
-  gateway: import("@fiberplane/mcp-gateway-core").Gateway;
+  gateway: Gateway;
 }> {
   // Reset migration state before creating new Gateway instance
   // This ensures migrations run for each new storage directory in tests

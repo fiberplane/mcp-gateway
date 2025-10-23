@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   createSSEEventStream,
+  type Gateway,
   resetCaptureState,
   type SSEEvent,
 } from "@fiberplane/mcp-gateway-core";
@@ -75,7 +76,7 @@ describe("SSE Integration Tests", () => {
   let gateway: {
     port: number;
     stop: () => void;
-    instance: import("@fiberplane/mcp-gateway-core").Gateway;
+    instance: Gateway;
   };
   let storageDir: string;
 
