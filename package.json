@@ -20,6 +20,7 @@
     "check-circular": "madge --circular --extensions ts,tsx --ts-config ./tsconfig.madge.json packages/*/src",
     "deps-graph": "madge --image deps.svg --extensions ts,tsx --ts-config ./tsconfig.madge.json packages/*/src",
     "changeset": "changeset",
+    "changeset:check": "changeset status",
     "release": "changeset publish",
     "ci:version": "changeset version && bun update",
     "ci:publish": "bun run scripts/ci-publish.ts"
