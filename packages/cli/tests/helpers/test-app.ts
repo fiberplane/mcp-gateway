@@ -8,7 +8,6 @@ import {
   createRequestCaptureRecord,
   createResponseCaptureRecord,
   type Gateway,
-  getServer,
   logger,
   resetMigrationState,
 } from "@fiberplane/mcp-gateway-core";
@@ -169,11 +168,6 @@ export async function createApp(
     },
   };
 
-  // Wrap getServer to return undefined instead of null for type compatibility
-  const getServerWrapper = (registry: Registry, name: string) => {
-    return getServer(registry, name) ?? undefined;
-  };
-
   // Create server app with all dependencies
   const result = await createServerApp({
     registry,
@@ -181,7 +175,6 @@ export async function createApp(
     createMcpApp,
     logger,
     proxyDependencies,
-    getServer: getServerWrapper,
     gateway,
   });
 

@@ -15,7 +15,6 @@ import type {
   McpServer,
   McpServerInfo,
   ProxyDependencies,
-  Registry,
 } from "@fiberplane/mcp-gateway-types";
 import {
   clientInfoSchema,
@@ -303,8 +302,6 @@ async function captureAuthError(
  * This can be mounted at `/servers` or `/s` (short alias route) in the main server
  */
 export async function createProxyRoutes(options: {
-  registry: Registry;
-  storageDir: string;
   dependencies: ProxyDependencies;
   onLog?: (entry: LogEntry) => void;
   onRegistryUpdate?: () => void;

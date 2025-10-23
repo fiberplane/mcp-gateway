@@ -2,7 +2,6 @@ import type { Gateway } from "@fiberplane/mcp-gateway-core";
 import type {
   LogEntry,
   Logger,
-  McpServer,
   ProxyDependencies,
   Registry,
 } from "@fiberplane/mcp-gateway-types";
@@ -30,7 +29,6 @@ export async function createApp(options: {
   createMcpApp: (gateway: Gateway) => Hono;
   logger: Logger;
   proxyDependencies: ProxyDependencies;
-  getServer: (registry: Registry, name: string) => McpServer | undefined;
   gateway: Gateway;
   onLog?: (entry: LogEntry) => void;
   onRegistryUpdate?: () => void;
@@ -41,7 +39,6 @@ export async function createApp(options: {
     createMcpApp,
     logger,
     proxyDependencies,
-    getServer,
     gateway,
     onLog,
     onRegistryUpdate,
@@ -87,13 +84,13 @@ export async function createApp(options: {
 
   // Mount OAuth discovery and registration routes
   // These need to be mounted BEFORE the proxy routes to handle .well-known paths
-  const oauthRoutes = await createOAuthRoutes(registry, getServer);
+  const oauthRoutes = await createOAuthRoutes((name) =>
+    gateway.storage.getServer(name),
+  );
   app.route("/", oauthRoutes);
 
   // Mount the proxy routes for server connections
   const proxyRoutes = await createProxyRoutes({
-    registry,
-    storageDir,
     dependencies: proxyDependencies,
     onLog,
     onRegistryUpdate,
