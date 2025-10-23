@@ -1,7 +1,4 @@
-import type {
-  CaptureToolsDependencies,
-  Registry,
-} from "@fiberplane/mcp-gateway-types";
+import type { CaptureToolsDependencies } from "@fiberplane/mcp-gateway-types";
 import type { McpServer } from "mcp-lite";
 import { z } from "zod";
 
@@ -30,12 +27,10 @@ const SearchRecordsSchema = z.object({
  * These tools allow clients to search and analyze captured MCP traffic.
  *
  * @param mcp - The MCP server instance to register tools with
- * @param _registry - The gateway's server registry (not used by capture tools)
  * @param deps - Dependencies for capture analysis
  */
 export function createCaptureTools(
   mcp: McpServer,
-  _registry: Registry,
   deps: CaptureToolsDependencies,
 ): void {
   mcp.tool("search_records", {

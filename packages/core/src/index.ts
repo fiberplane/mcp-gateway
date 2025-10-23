@@ -1,4 +1,4 @@
-// Gateway exports (main entry point, re-exported from types for backward compatibility)
+// Gateway type exports (re-exported from types package for convenience)
 
 export type {
   Gateway,

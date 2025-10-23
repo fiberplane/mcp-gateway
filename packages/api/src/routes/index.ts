@@ -41,7 +41,7 @@ const sessionsQuerySchema = z.object({
   server: z.string().optional(),
 });
 
-// QueryFunctions is imported above and re-exported for backward compatibility
+// Re-export QueryFunctions type for convenience
 export type { QueryFunctions };
 
 /**

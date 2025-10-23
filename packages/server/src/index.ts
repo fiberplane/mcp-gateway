@@ -1,6 +1,6 @@
 // Main server application factory
 
-// Re-export Logger from types for backward compatibility
+// Re-export Logger type for convenience
 export type { Logger } from "@fiberplane/mcp-gateway-types";
 export { createApp } from "./app";
 

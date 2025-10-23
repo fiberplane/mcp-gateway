@@ -1,4 +1,4 @@
-import type { Gateway, Registry } from "@fiberplane/mcp-gateway-types";
+import type { Gateway } from "@fiberplane/mcp-gateway-types";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { McpServer, RpcError, StreamableHttpTransport } from "mcp-lite";
@@ -12,16 +12,10 @@ import { createServerTools } from "./tools/server-tools";
  * and capture analysis. The server exposes tools that allow MCP clients to manage
  * the gateway's server registry and analyze captured MCP traffic.
  *
- * @param _registry - The gateway's server registry (kept for backward compatibility, not used - operations delegate to storage layer)
- * @param _storageDir - Directory where captures are stored (kept for backward compatibility - storage is now location-aware)
  * @param gateway - Gateway instance for accessing query operations and server management
  * @returns MCP server instance with configured tools
  */
-export function createMcpServer(
-  _registry: Registry,
-  _storageDir: string,
-  gateway: Gateway,
-): McpServer {
+export function createMcpServer(gateway: Gateway): McpServer {
   // Create MCP server with Zod schema adapter for validation
   const mcp = new McpServer({
     name: "mcp-gateway-tools",
@@ -67,7 +61,7 @@ export function createMcpServer(
   });
 
   // Register capture analysis tools with explicit dependencies
-  createCaptureTools(mcp, _registry, {
+  createCaptureTools(mcp, {
     query: (options) => gateway.storage.query(options),
   });
 
@@ -124,17 +118,11 @@ export function createMcpServer(
  * The server is mounted at /mcp endpoint. This app is meant to be mounted at
  * /gateway (canonical) or /g (short alias) in the main server.
  *
- * @param registry - The gateway's server registry
- * @param storageDir - Directory where captures are stored
  * @param gateway - Gateway instance for accessing query operations
  * @returns Hono app configured to serve the MCP server
  */
-export function createMcpApp(
-  registry: Registry,
-  storageDir: string,
-  gateway: Gateway,
-): Hono {
-  const mcp = createMcpServer(registry, storageDir, gateway);
+export function createMcpApp(gateway: Gateway): Hono {
+  const mcp = createMcpServer(gateway);
 
   // Create HTTP transport for the MCP server
   const transport = new StreamableHttpTransport();

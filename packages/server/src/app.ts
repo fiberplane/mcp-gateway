@@ -26,8 +26,6 @@ export async function createApp(options: {
   registry: Registry;
   storageDir: string;
   createMcpApp: (
-    registry: Registry,
-    storage: string,
     gateway: import("@fiberplane/mcp-gateway-core").Gateway,
   ) => Hono;
   logger: Logger;
@@ -105,7 +103,7 @@ export async function createApp(options: {
   app.route("/s", proxyRoutes);
 
   // Mount the gateway's own MCP server at canonical path
-  const gatewayMcp = createMcpApp(registry, storageDir, gateway);
+  const gatewayMcp = createMcpApp(gateway);
   app.route("/gateway", gatewayMcp);
   // Short alias for gateway's own MCP server
   app.route("/g", gatewayMcp);
