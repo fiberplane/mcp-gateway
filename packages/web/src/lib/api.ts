@@ -9,18 +9,6 @@ import type {
   SessionInfo,
 } from "@fiberplane/mcp-gateway-types";
 
-// Re-export types from types package
-export type { ClientAggregation, LogQueryResult, ServerInfo, SessionInfo };
-
-// Type alias for convenience - use ApiLogEntry from types package
-export type LogEntry = ApiLogEntry;
-
-// Re-export specific entry types for narrowing in components
-export type {
-  ApiRequestLogEntry,
-  ApiResponseLogEntry,
-} from "@fiberplane/mcp-gateway-types";
-
 /**
  * API Client for MCP Gateway logs
  */

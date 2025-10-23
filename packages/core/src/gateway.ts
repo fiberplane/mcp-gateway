@@ -7,6 +7,7 @@ import type {
   JsonRpcResponse,
   McpServerInfo,
   Registry,
+  RequestTracker,
   ServerHealth,
   SSEEvent,
   StorageBackend,
@@ -134,7 +135,7 @@ class ServerInfoStore {
 }
 
 // Store request start times for duration calculation (scoped to Gateway instance)
-class RequestTracker {
+class InMemoryRequestTracker implements RequestTracker {
   private requestStartTimes = new Map<string | number, number>();
   private requestMethods = new Map<string | number, string>();
 
@@ -302,7 +303,7 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
   const serverInfoStore = new ServerInfoStore(backend);
 
   // Create scoped request tracker
-  const requestTracker = new RequestTracker();
+  const requestTracker = new InMemoryRequestTracker();
 
   // Create scoped health check manager
   const healthCheckManager = new HealthCheckManager();

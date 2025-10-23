@@ -1,3 +1,4 @@
+import type { ApiLogEntry } from "@fiberplane/mcp-gateway-types";
 import {
   format,
   isSameDay,
@@ -5,7 +6,6 @@ import {
   startOfWeek,
   subDays,
 } from "date-fns";
-import type { LogEntry } from "./api";
 
 /**
  * Time interval options for grouping logs
@@ -110,14 +110,14 @@ export const TIME_GROUP_CONFIGS: Record<TimeInterval, TimeGroupConfig> = {
  * @returns Map of group keys to log arrays and the config used
  */
 export function groupLogsByTime(
-  logs: LogEntry[],
+  logs: ApiLogEntry[],
   interval: TimeInterval,
 ): {
-  groups: Map<string, LogEntry[]>;
+  groups: Map<string, ApiLogEntry[]>;
   config: TimeGroupConfig;
 } {
   const config = TIME_GROUP_CONFIGS[interval];
-  const groups = new Map<string, LogEntry[]>();
+  const groups = new Map<string, ApiLogEntry[]>();
 
   for (const log of logs) {
     const date = new Date(log.timestamp);

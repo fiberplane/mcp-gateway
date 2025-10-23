@@ -6,7 +6,6 @@ import {
   resolveJsonRpcMethod,
 } from "@fiberplane/mcp-gateway-core";
 import type {
-  ProxyDependencies as _ProxyDependencies,
   CaptureRecord,
   ClientInfo,
   HttpContext,
@@ -15,6 +14,7 @@ import type {
   LogEntry,
   McpServer,
   McpServerInfo,
+  ProxyDependencies,
   Registry,
 } from "@fiberplane/mcp-gateway-types";
 import {
@@ -44,9 +44,6 @@ type Variables = {
   tempClientInfo?: ClientInfo;
   tempServerInfo?: McpServerInfo;
 };
-
-// Re-export ProxyDependencies type for convenience
-export type ProxyDependencies = _ProxyDependencies;
 
 // Headers that are automatically managed by fetch/proxy and should not be manually set
 const AUTO_HEADERS = ["content-length", "transfer-encoding", "connection"];

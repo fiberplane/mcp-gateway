@@ -1,3 +1,4 @@
+import type { ApiLogEntry } from "@fiberplane/mcp-gateway-types";
 import { format } from "date-fns";
 import {
   ArrowDown,
@@ -9,11 +10,6 @@ import {
   Copy,
 } from "lucide-react";
 import { Fragment, type ReactNode, useMemo, useState } from "react";
-import type {
-  ApiRequestLogEntry,
-  ApiResponseLogEntry,
-  LogEntry,
-} from "../lib/api";
 import { getMethodBadgeVariant } from "../lib/badge-color";
 import { groupLogsByTime, type TimeInterval } from "../lib/time-grouping";
 import { useHandler } from "../lib/use-handler";
@@ -37,10 +33,10 @@ type SortDirection = "asc" | "desc";
 interface Column {
   id: string;
   header: string | (() => ReactNode);
-  cell: (log: LogEntry) => ReactNode;
+  cell: (log: ApiLogEntry) => ReactNode;
   sortField?: SortField;
   size?: string | number;
-  isVisible?: (logs: LogEntry[]) => boolean;
+  isVisible?: (logs: ApiLogEntry[]) => boolean;
 }
 
 /**
@@ -48,10 +44,10 @@ interface Column {
  */
 type RowItem =
   | { type: "divider"; label: string; groupKey: string }
-  | { type: "log"; log: LogEntry };
+  | { type: "log"; log: ApiLogEntry };
 
 interface LogTableProps {
-  logs: LogEntry[];
+  logs: ApiLogEntry[];
   selectedIds: Set<string>;
   onSelectionChange: (selectedIds: Set<string>) => void;
   timeGrouping?: TimeInterval;
@@ -216,7 +212,7 @@ export function LogTable({
     }
   });
 
-  const handleRowClick = useHandler((log: LogEntry) => {
+  const handleRowClick = useHandler((log: ApiLogEntry) => {
     const key = getLogKey(log);
     setExpandedKey((current) => (current === key ? null : key));
   });
@@ -350,7 +346,7 @@ export function LogTable({
 }
 
 interface LogDetailsProps {
-  log: LogEntry;
+  log: ApiLogEntry;
 }
 
 function createColumns(): Column[] {
@@ -456,17 +452,11 @@ function LogDetails({ log }: LogDetailsProps) {
       return null;
     }
 
-    const responseLog = log as ApiResponseLogEntry;
-
-    if (!responseLog.response || typeof responseLog.response !== "object") {
+    if (!log.response || typeof log.response !== "object") {
       return null;
     }
 
-    const candidate = responseLog.response as {
-      error?: { code?: number; message?: string; data?: unknown };
-    };
-
-    return candidate.error ?? null;
+    return log.response.error ?? null;
   }, [log]);
 
   const metadataDetails = useMemo(() => {
@@ -531,7 +521,7 @@ function LogDetails({ log }: LogDetailsProps) {
       return null;
     }
 
-    const requestLog = log as ApiRequestLogEntry;
+    const requestLog = log;
     return JSON.stringify(requestLog.request, null, 2);
   }, [log]);
 
@@ -540,8 +530,7 @@ function LogDetails({ log }: LogDetailsProps) {
       return null;
     }
 
-    const responseLog = log as ApiResponseLogEntry;
-    return JSON.stringify(responseLog.response, null, 2);
+    return JSON.stringify(log.response, null, 2);
   }, [log]);
 
   const formattedSseEvent = useMemo(() => {
@@ -549,21 +538,11 @@ function LogDetails({ log }: LogDetailsProps) {
       return null;
     }
 
-    // Type narrowing for SSE event log entry
-    const sseLog = log as {
-      sseEvent?: {
-        id?: string;
-        event?: string;
-        data?: string;
-        retry?: number;
-      };
-    };
-
     return {
-      id: sseLog.sseEvent?.id || "—",
-      event: sseLog.sseEvent?.event || "—",
-      data: sseLog.sseEvent?.data || "—",
-      retry: sseLog.sseEvent?.retry ? String(sseLog.sseEvent.retry) : "—",
+      id: log.sseEvent?.id || "—",
+      event: log.sseEvent?.event || "—",
+      data: log.sseEvent?.data || "—",
+      retry: log.sseEvent?.retry ? String(log.sseEvent.retry) : "—",
     };
   }, [log]);
 
@@ -614,12 +593,7 @@ function LogDetails({ log }: LogDetailsProps) {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() =>
-                  copyToClipboard(
-                    (log as ApiRequestLogEntry).request,
-                    "request",
-                  )
-                }
+                onClick={() => copyToClipboard(log.request, "request")}
               >
                 {copied === "request" ? (
                   <>
@@ -651,12 +625,7 @@ function LogDetails({ log }: LogDetailsProps) {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() =>
-                  copyToClipboard(
-                    (log as ApiResponseLogEntry).response,
-                    "response",
-                  )
-                }
+                onClick={() => copyToClipboard(log.response, "response")}
               >
                 {copied === "response" ? (
                   <>

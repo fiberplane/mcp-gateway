@@ -1,3 +1,4 @@
+import type { RequestTracker } from "./capture";
 import type {
   ClientAggregation,
   LogQueryOptions,
@@ -171,28 +172,10 @@ export interface Gateway {
 
   /**
    * Request tracker for correlating requests and responses
+   *
+   * Tracks requests and calculates response times for JSON-RPC request/response pairs.
    */
-  requestTracker: {
-    /**
-     * Track a request for duration calculation
-     */
-    trackRequest(id: string | number, method: string): void;
-
-    /**
-     * Calculate duration and cleanup tracked request
-     */
-    calculateDuration(id: string | number): number;
-
-    /**
-     * Get method for a tracked request
-     */
-    getMethod(id: string | number): string | undefined;
-
-    /**
-     * Check if request is being tracked
-     */
-    hasRequest(id: string | number): boolean;
-  };
+  requestTracker: RequestTracker;
 
   /**
    * Storage and database operations for querying captured traffic and metadata

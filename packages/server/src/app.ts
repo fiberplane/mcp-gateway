@@ -2,13 +2,14 @@ import type {
   LogEntry,
   Logger,
   McpServer,
+  ProxyDependencies,
   Registry,
 } from "@fiberplane/mcp-gateway-types";
 import type { Hono } from "hono";
 import { Hono as HonoApp } from "hono";
 import { logger as loggerMiddleware } from "hono/logger";
 import { createOAuthRoutes } from "./routes/oauth";
-import { createProxyRoutes, type ProxyDependencies } from "./routes/proxy";
+import { createProxyRoutes } from "./routes/proxy";
 
 /**
  * Create MCP Gateway HTTP server
