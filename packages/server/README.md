@@ -63,8 +63,8 @@ const { app } = await createApp({
   servers,
   storageDir: "~/.mcp-gateway",
   createMcpApp,
-  logger,
-  onLog: (entry) => console.log(entry),
+  appLogger: logger,
+  onProxyEvent: (entry) => console.log(entry),
   onRegistryUpdate: () => console.log("Registry updated"),
 });
 
@@ -90,8 +90,8 @@ const { app: serverApp } = await createServerApp({
   servers,
   storageDir,
   createMcpApp,
-  logger,
-  onLog: (entry) => console.log(entry),
+  appLogger: logger,
+  onProxyEvent: (entry) => console.log(entry),
   onRegistryUpdate: () => console.log("Registry updated"),
 });
 
@@ -168,8 +168,8 @@ const { app } = await createApp({
   servers,                     // McpServer[] - Server configurations
   storageDir,                  // Storage directory (absolute path)
   createMcpApp,                // Factory for creating gateway MCP server
-  logger,                      // Logger instance for request logging
-  onLog: (entry) => {          // Optional: Called for each request/response
+  appLogger: logger,           // Internal logger for diagnostics
+  onProxyEvent: (entry) => {   // Optional: Called for each proxied request/response
     console.log(`${entry.method} - ${entry.httpStatus}`);
   },
   onRegistryUpdate: () => {    // Optional: Called when servers are modified

@@ -189,7 +189,7 @@ export async function createApp(
   const result = await createServerApp({
     storageDir,
     createMcpApp,
-    logger,
+    appLogger: logger,
     proxyDependencies,
     gateway,
   });

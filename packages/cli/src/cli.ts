@@ -260,10 +260,10 @@ export async function runCli(): Promise<void> {
     const { app: serverApp } = await createServerApp({
       storageDir,
       createMcpApp,
-      logger,
+      appLogger: logger,
       proxyDependencies,
       gateway,
-      onLog: emitLog,
+      onProxyEvent: emitLog,
       onRegistryUpdate: emitRegistryUpdate,
     });
 

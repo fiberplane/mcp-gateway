@@ -25,19 +25,19 @@ import { createProxyRoutes } from "./routes/proxy";
 export async function createApp(options: {
   storageDir: string;
   createMcpApp: (gateway: Gateway) => Hono;
-  logger: Logger;
+  appLogger: Logger;
   proxyDependencies: ProxyDependencies;
   gateway: Gateway;
-  onLog?: (entry: LogEntry) => void;
+  onProxyEvent?: (entry: LogEntry) => void;
   onRegistryUpdate?: () => void;
 }): Promise<{ app: Hono }> {
   const {
     storageDir,
     createMcpApp,
-    logger,
+    appLogger,
     proxyDependencies,
     gateway,
-    onLog,
+    onProxyEvent,
     onRegistryUpdate,
   } = options;
   const app = new HonoApp();
@@ -46,9 +46,9 @@ export async function createApp(options: {
   app.use(
     loggerMiddleware((message: string, ...rest: string[]) => {
       if (rest.length > 0) {
-        logger.debug(message, { honoLoggerArgs: rest });
+        appLogger.debug(message, { honoLoggerArgs: rest });
       } else {
-        logger.debug(message);
+        appLogger.debug(message);
       }
     }),
   );
@@ -91,7 +91,7 @@ export async function createApp(options: {
   // Mount the proxy routes for server connections
   const proxyRoutes = await createProxyRoutes({
     dependencies: proxyDependencies,
-    onLog,
+    onProxyEvent,
     onRegistryUpdate,
   });
   app.route("/servers", proxyRoutes);

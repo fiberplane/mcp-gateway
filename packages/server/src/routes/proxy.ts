@@ -179,9 +179,9 @@ function logRequest(options: {
   server: McpServer;
   sessionId: string;
   request: JsonRpcRequest;
-  onLog?: (entry: LogEntry) => void;
+  onProxyEvent?: (entry: LogEntry) => void;
 }): void {
-  const { server, sessionId, request, onLog } = options;
+  const { server, sessionId, request, onProxyEvent } = options;
 
   const logEntry: LogEntry = {
     timestamp: new Date().toISOString(),
@@ -195,7 +195,7 @@ function logRequest(options: {
     request,
   };
 
-  onLog?.(logEntry);
+  onProxyEvent?.(logEntry);
 }
 
 // Helper: Log response
@@ -206,10 +206,17 @@ function logResponse(options: {
   httpStatus: number;
   duration: number;
   response?: JsonRpcResponse;
-  onLog?: (entry: LogEntry) => void;
+  onProxyEvent?: (entry: LogEntry) => void;
 }): void {
-  const { server, sessionId, method, httpStatus, duration, response, onLog } =
-    options;
+  const {
+    server,
+    sessionId,
+    method,
+    httpStatus,
+    duration,
+    response,
+    onProxyEvent,
+  } = options;
 
   const errorMessage = response?.error
     ? `JSON-RPC ${response.error.code}: ${response.error.message}`
@@ -227,8 +234,8 @@ function logResponse(options: {
     response,
   };
 
-  // Emit log to TUI (if handler provided)
-  onLog?.(logEntry);
+  // Emit proxy event to TUI (if handler provided)
+  onProxyEvent?.(logEntry);
 }
 
 // Helper: Capture authentication error with full response
@@ -303,10 +310,10 @@ async function captureAuthError(
  */
 export async function createProxyRoutes(options: {
   dependencies: ProxyDependencies;
-  onLog?: (entry: LogEntry) => void;
+  onProxyEvent?: (entry: LogEntry) => void;
   onRegistryUpdate?: () => void;
 }): Promise<Hono<{ Variables: Variables }>> {
-  const { dependencies: deps, onLog, onRegistryUpdate } = options;
+  const { dependencies: deps, onProxyEvent, onRegistryUpdate } = options;
   const app = new Hono<{ Variables: Variables }>();
 
   /**
@@ -390,7 +397,7 @@ export async function createProxyRoutes(options: {
             httpStatus: 401,
             duration,
             response: undefined,
-            onLog,
+            onProxyEvent,
           });
 
           return new Response(responseText, {
@@ -426,7 +433,7 @@ export async function createProxyRoutes(options: {
             null, // no request ID for GET
             deps,
             httpContext,
-            onLog,
+            onProxyEvent,
           ).catch((error) => {
             // Log capture errors but don't let them crash the server
             // Note: ECONNRESET errors are common when the client or server closes the SSE stream
@@ -470,7 +477,7 @@ export async function createProxyRoutes(options: {
           httpStatus: 500,
           duration,
           response: undefined,
-          onLog,
+          onProxyEvent,
         });
 
         // Return error response (not JSON-RPC format for GET)
@@ -585,7 +592,7 @@ export async function createProxyRoutes(options: {
           httpStatus: 200,
           duration: responseRecord.metadata.durationMs,
           response: jsonRpcResponse,
-          onLog,
+          onProxyEvent,
         });
 
         // Trigger cache invalidation so metrics are recomputed from logs
@@ -633,7 +640,7 @@ export async function createProxyRoutes(options: {
       await deps.appendRecord(requestRecord);
 
       // Log incoming request from client
-      logRequest({ server, sessionId, request: jsonRpcRequest, onLog });
+      logRequest({ server, sessionId, request: jsonRpcRequest, onProxyEvent });
 
       let response: JsonRpcResponse;
       let httpStatus = 200;
@@ -671,7 +678,7 @@ export async function createProxyRoutes(options: {
             httpStatus: 401,
             duration,
             response: undefined,
-            onLog,
+            onProxyEvent,
           });
 
           // Capture the 401 response with full details
@@ -715,7 +722,7 @@ export async function createProxyRoutes(options: {
             jsonRpcRequest.id,
             deps,
             httpContext,
-            onLog,
+            onProxyEvent,
           ).catch((error) => {
             // Log capture errors but don't let them crash the server
             // Note: ECONNRESET errors are common when the client or server closes the SSE stream
@@ -834,7 +841,7 @@ export async function createProxyRoutes(options: {
           httpStatus,
           duration,
           response,
-          onLog,
+          onProxyEvent,
         });
 
         // Create new response with the same data and headers
@@ -868,7 +875,7 @@ export async function createProxyRoutes(options: {
           httpStatus,
           duration,
           response: errorResponse,
-          onLog,
+          onProxyEvent,
         });
 
         // Capture error
@@ -905,7 +912,7 @@ async function processSSECapture(
   requestId: string | number | null | undefined,
   deps: ProxyDependencies,
   httpContext?: HttpContext,
-  onLog?: (entry: LogEntry) => void,
+  onProxyEvent?: (entry: LogEntry) => void,
 ): Promise<void> {
   try {
     const reader = stream.getReader();
@@ -955,7 +962,7 @@ async function processSSECapture(
               httpStatus,
               duration: durationMs,
               response: jsonRpcMessage,
-              onLog,
+              onProxyEvent,
             });
           }
         } else {
