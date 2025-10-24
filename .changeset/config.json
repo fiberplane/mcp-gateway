@@ -3,7 +3,13 @@
   "changelog": "@changesets/cli/changelog",
   "commit": false,
   "fixed": [],
-  "linked": [],
+  "linked": [
+    [
+      "@fiberplane/mcp-gateway",
+      "@fiberplane/mcp-gateway-darwin-arm64",
+      "@fiberplane/mcp-gateway-linux-x64"
+    ]
+  ],
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
