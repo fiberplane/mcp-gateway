@@ -351,7 +351,7 @@ Create/update:
 
 Last updated: 2025-10-24
 
-**Current Phase:** Phase 1.2 - Create Filter Utilities
+**Current Phase:** Phase 1.2 - Unit Tests for Filter Utilities
 **Status:** In Progress
 
 ### Completed
@@ -359,3 +359,7 @@ Last updated: 2025-10-24
   - filters.ts with Zod schemas + inferred types
   - TypeScript expert review (9/10)
   - All validation passed
+- ✅ Phase 1.2 - Create Filter Utilities (commit 2c77fcf)
+  - filter-utils.ts with URL serialization and filtering
+  - All functions pure and testable
+  - Typecheck and lint passed
