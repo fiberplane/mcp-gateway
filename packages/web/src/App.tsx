@@ -1,6 +1,8 @@
+import type { FilterState } from "@fiberplane/mcp-gateway-types";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ExportButton } from "./components/export-button";
+import { FilterBar } from "./components/filter-bar";
 import { LogTable } from "./components/log-table";
 import { Pagination } from "./components/pagination";
 import { ServerTabs } from "./components/server-tabs";
@@ -9,6 +11,7 @@ import { StreamingToggle } from "./components/streaming-toggle";
 import { TopNavigation } from "./components/top-navigation";
 import { Button } from "./components/ui/button";
 import { api } from "./lib/api";
+import { applyFilterState } from "./lib/filter-utils";
 import { useHandler } from "./lib/use-handler";
 import { getLogKey } from "./lib/utils";
 
@@ -20,11 +23,20 @@ function App() {
   const [isClearing, setIsClearing] = useState(false);
   const [clearError, setClearError] = useState<string | null>(null);
 
+  // Filter state managed by FilterBar component
+  const [filterState, setFilterState] = useState<FilterState>({
+    search: "",
+    filters: [],
+  });
+
   // Streaming: ON = auto-refresh with new logs, OFF = manual load more
   const [isStreaming, setIsStreaming] = useState(true);
 
+  // Extract client name from filter state for API query
+  const clientFilter = filterState.filters.find((f) => f.field === "client");
+  const clientName = clientFilter?.value as string | undefined;
+
   // Fixed values (no UI controls)
-  const clientName = undefined; // All clients
   const timeGrouping = "day" as const; // Group by day
 
   const {
@@ -58,8 +70,11 @@ function App() {
     refetchIntervalInBackground: false, // Only poll when tab is active
   });
 
-  // Flatten all pages into single array for display
+  // Flatten all pages into single array
   const allLogs = data?.pages.flatMap((page) => page.data) ?? [];
+
+  // Apply client-side filters (for filters not supported by API yet)
+  const filteredLogs = applyFilterState(allLogs, filterState);
 
   const handleLoadMore = useHandler(() => {
     fetchNextPage();
@@ -74,6 +89,11 @@ function App() {
   const handleSessionChange = useHandler((value: string | undefined) => {
     setSessionId(value);
     setSelectedIds(new Set()); // Reset selection
+  });
+
+  const handleFilterChange = useHandler((state: FilterState) => {
+    setFilterState(state);
+    setSelectedIds(new Set()); // Reset selection when filters change
   });
 
   const handleStreamingToggle = useHandler((enabled: boolean) => {
@@ -127,6 +147,12 @@ function App() {
             panelId="logs-panel"
           />
         </div>
+
+        {/* Filter Bar - Phase 1 */}
+        <div className="mb-5">
+          <FilterBar onChange={handleFilterChange} />
+        </div>
+
         <div className="mb-5 flex gap-3 items-center flex-wrap">
           <SessionFilter
             serverName={serverName}
@@ -146,7 +172,7 @@ function App() {
               {isClearing ? "Clearing..." : "Clear Sessions"}
             </Button>
             <ExportButton
-              logs={allLogs}
+              logs={filteredLogs}
               selectedIds={selectedIds}
               getLogKey={getLogKey}
             />
@@ -178,7 +204,7 @@ function App() {
               className="bg-card rounded-lg overflow-auto border border-border max-h-[calc(100vh-16rem)]"
             >
               <LogTable
-                logs={allLogs}
+                logs={filteredLogs}
                 selectedIds={selectedIds}
                 onSelectionChange={setSelectedIds}
                 timeGrouping={timeGrouping}
