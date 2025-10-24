@@ -204,12 +204,13 @@ export const useAppStore = create<AppStore>((set, get) => ({
   },
 
   setServers: (servers) => set({ servers }),
-  updateServerHealth: (name, health, lastHealthCheck) =>
+  updateServerHealth: (name, health, lastHealthCheck) => {
     set((state) => ({
       servers: state.servers.map((s) =>
         s.name === name ? { ...s, health, lastHealthCheck } : s,
       ),
-    })),
+    }));
+  },
   addLog: (entry) => set((state) => ({ logs: [...state.logs, entry] })),
   clearLogs: () => set({ logs: [] }),
   openModal: (modal) => set({ activeModal: modal }),

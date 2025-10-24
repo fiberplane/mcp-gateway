@@ -434,9 +434,8 @@ export async function runCli(): Promise<void> {
       {
         queryLogs: (options) => gateway.storage.query(options),
         getServers: async () => {
-          // Map ServerInfo[] to Omit<ServerInfo, 'status'>[] by removing status field
-          const servers = await gateway.storage.getServers();
-          return servers.map(({ status: _, ...rest }) => rest);
+          // Return ServerInfo[] including status for Web UI
+          return await gateway.storage.getServers();
         },
         getSessions: (serverName) => gateway.storage.getSessions(serverName),
         getClients: () => gateway.storage.getClients(),
@@ -487,6 +486,17 @@ export async function runCli(): Promise<void> {
         }
       });
     }
+
+    // Start health checks BEFORE server starts to ensure accurate initial status
+    // This runs the first health check synchronously before any Web UI requests can be made
+    // Health check interval: 5 seconds (5000ms)
+    await gateway.health.start(5000, (updates) => {
+      const updateServerHealth = useAppStore.getState().updateServerHealth;
+      // Update UI state for each health check result
+      for (const update of updates) {
+        updateServerHealth(update.name, update.health, update.lastHealthCheck);
+      }
+    });
 
     // Start server and wait for it to be listening or error
     const server = serve({
@@ -541,15 +551,6 @@ export async function runCli(): Promise<void> {
     // biome-ignore lint/suspicious/noConsole: actually want to print to console
     console.log(`✓ MCP Gateway server started at http://localhost:${port}`);
     logger.info("MCP Gateway server started", { port });
-
-    // Start health checks with callback to update store
-    await gateway.health.start(30000, (updates) => {
-      const updateServerHealth = useAppStore.getState().updateServerHealth;
-      // Update UI state for each health check result
-      for (const update of updates) {
-        updateServerHealth(update.name, update.health, update.lastHealthCheck);
-      }
-    });
 
     // Create context for TUI
     const context: Context = {

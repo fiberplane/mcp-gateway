@@ -266,14 +266,19 @@ test("Headless mode: CLI server responds to SIGTERM gracefully", async () => {
   await Promise.race([
     (async () => {
       while (
-        !(stdoutData.includes("MCP Gateway server started") &&
-          stdoutData.includes("Running in headless mode"))
+        !(
+          stdoutData.includes("MCP Gateway server started") &&
+          stdoutData.includes("Running in headless mode")
+        )
       ) {
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise((resolve) => setTimeout(resolve, 50));
       }
     })(),
     new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Timeout waiting for server start")), 3000),
+      setTimeout(
+        () => reject(new Error("Timeout waiting for server start")),
+        3000,
+      ),
     ),
   ]);
 
@@ -281,7 +286,7 @@ test("Headless mode: CLI server responds to SIGTERM gracefully", async () => {
   proc.kill("SIGTERM");
 
   // Give the process a moment to handle SIGTERM and write output
-  await new Promise(resolve => setTimeout(resolve, 100));
+  await new Promise((resolve) => setTimeout(resolve, 100));
 
   // Wait for process to exit and output collection to complete
   await Promise.all([proc.exited, outputCollector]);

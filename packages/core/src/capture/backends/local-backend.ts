@@ -15,6 +15,7 @@ import type {
   StorageBackend,
   StorageWriteResult,
 } from "@fiberplane/mcp-gateway-types";
+import { eq } from "drizzle-orm";
 import { type BunSQLiteDatabase, drizzle } from "drizzle-orm/bun-sqlite";
 import { logger } from "../../logger";
 import { ensureMigrations } from "../../logs/migrations.js";
@@ -346,15 +347,28 @@ export class LocalStorageBackend implements StorageBackend {
       // Load server configuration from mcp.json
       const servers = await this.loadRegistry();
 
-      // Get metrics for all servers
-      const serversWithMetrics = await Promise.all(
+      // Get metrics and health for all servers
+      const serversWithData = await Promise.all(
         servers.map(async (server) => {
           const metrics = await this.getServerMetrics(server.name);
-          return { ...server, ...metrics };
+          // Also load health status from database
+          const healthResult = await this.db
+            .select()
+            .from(schema.serverHealth)
+            .where(eq(schema.serverHealth.serverName, server.name))
+            .limit(1);
+
+          const healthData = healthResult[0];
+          return {
+            ...server,
+            ...metrics,
+            health: healthData?.health as HealthStatus | undefined,
+            lastHealthCheck: healthData?.lastCheck,
+          };
         }),
       );
 
-      return serversWithMetrics;
+      return serversWithData;
     } catch (error) {
       logger.error("Local storage getRegisteredServers failed", {
         error: error instanceof Error ? error.message : String(error),
