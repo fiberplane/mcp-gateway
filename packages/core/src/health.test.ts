@@ -16,25 +16,25 @@ import { resetMigrationState } from "./logs/migrations.js";
 describe("Health Check System", () => {
   let storageDir: string;
   let healthyServer: { url: string; stop: () => void } | null = null;
-  let unhealthyPort: number;
+  let unreachableUrl: string;
 
   beforeAll(async () => {
     // Create a simple healthy HTTP server for testing
-    const healthyPort = 8101;
-    healthyServer = {
-      url: `http://localhost:${healthyPort}`,
-      stop: () => {},
-    };
-
+    // Use port 0 to let OS assign an available port
     const server = Bun.serve({
-      port: healthyPort,
+      port: 0,
       fetch: () => new Response("OK", { status: 200 }),
     });
 
-    healthyServer.stop = () => server.stop();
+    healthyServer = {
+      url: `http://localhost:${server.port}`,
+      stop: () => server.stop(),
+    };
 
-    // Pick a port that nothing is listening on for unhealthy tests
-    unhealthyPort = 8102;
+    // Use a high ephemeral port that's very unlikely to be in use
+    // Fails quickly with "connection refused" instead of timing out
+    // Port 59999 is in the dynamic/private port range and unlikely to conflict
+    unreachableUrl = "http://127.0.0.1:59999";
   });
 
   afterAll(() => {
@@ -90,7 +90,7 @@ describe("Health Check System", () => {
       // Add a server pointing to a port with no listener
       await gateway.storage.addServer({
         name: "unhealthy-server",
-        url: `http://localhost:${unhealthyPort}`,
+        url: unreachableUrl,
         type: "http",
         headers: {},
       });
@@ -117,7 +117,7 @@ describe("Health Check System", () => {
       });
       await gateway.storage.addServer({
         name: "unhealthy-server",
-        url: `http://localhost:${unhealthyPort}`,
+        url: unreachableUrl,
         type: "http",
         headers: {},
       });
@@ -182,7 +182,7 @@ describe("Health Check System", () => {
 
       // Update server to point to unhealthy endpoint
       await gateway.storage.updateServer("test-server", {
-        url: `http://localhost:${unhealthyPort}`,
+        url: unreachableUrl,
       });
 
       // Second health check - should be "down"
@@ -294,9 +294,8 @@ describe("Health Check System", () => {
   describe("health check edge cases", () => {
     test("should handle server returning 500 error as up", async () => {
       // Create a server that returns 500
-      const errorPort = 8103;
       const errorServer = Bun.serve({
-        port: errorPort,
+        port: 0,
         fetch: () => new Response("Server Error", { status: 500 }),
       });
 
@@ -304,7 +303,7 @@ describe("Health Check System", () => {
 
       await gateway.storage.addServer({
         name: "error-server",
-        url: `http://localhost:${errorPort}`,
+        url: `http://localhost:${errorServer.port}`,
         type: "http",
         headers: {},
       });
@@ -320,9 +319,8 @@ describe("Health Check System", () => {
 
     test("should handle server returning 404 as up", async () => {
       // Create a server that returns 404
-      const notFoundPort = 8104;
       const notFoundServer = Bun.serve({
-        port: notFoundPort,
+        port: 0,
         fetch: () => new Response("Not Found", { status: 404 }),
       });
 
@@ -330,7 +328,7 @@ describe("Health Check System", () => {
 
       await gateway.storage.addServer({
         name: "not-found-server",
-        url: `http://localhost:${notFoundPort}`,
+        url: `http://localhost:${notFoundServer.port}`,
         type: "http",
         headers: {},
       });
@@ -348,9 +346,8 @@ describe("Health Check System", () => {
       "should timeout on slow server",
       async () => {
         // Create a server that takes longer than timeout
-        const slowPort = 8105;
         const slowServer = Bun.serve({
-          port: slowPort,
+          port: 0,
           fetch: async () => {
             await new Promise((resolve) => setTimeout(resolve, 10000)); // 10s delay
             return new Response("OK");
@@ -361,7 +358,7 @@ describe("Health Check System", () => {
 
         await gateway.storage.addServer({
           name: "slow-server",
-          url: `http://localhost:${slowPort}`,
+          url: `http://localhost:${slowServer.port}`,
           type: "http",
           headers: {},
         });

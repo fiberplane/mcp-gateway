@@ -35,14 +35,14 @@ describe("Health Check → API Integration", () => {
     await logger.initialize(storageDir);
 
     // Create a test HTTP server
-    const port = 8201;
+    // Use port 0 to let OS assign an available port
     const server = Bun.serve({
-      port,
+      port: 0,
       fetch: () => new Response("OK", { status: 200 }),
     });
 
     testServer = {
-      url: `http://localhost:${port}`,
+      url: `http://localhost:${server.port}`,
       stop: () => server.stop(),
     };
 
@@ -105,9 +105,10 @@ describe("Health Check → API Integration", () => {
   });
 
   test("health status updates when server goes down", async () => {
-    // Update server to point to a definitely non-listening port
+    // Update server to point to unreachable address
+    // Use a high ephemeral port that's very unlikely to be in use
     await gateway.storage.updateServer("test-server", {
-      url: "http://localhost:9999", // Port that nothing is listening on
+      url: "http://127.0.0.1:59999",
     });
 
     // Run health check again
@@ -139,16 +140,15 @@ describe("Health Check → API Integration", () => {
 
   test("multiple servers show different statuses correctly", async () => {
     // Start a second test server
-    const port2 = 8202;
     const server2 = Bun.serve({
-      port: port2,
+      port: 0,
       fetch: () => new Response("OK", { status: 200 }),
     });
 
     // Add both servers
     await gateway.storage.addServer({
       name: "server-up",
-      url: `http://localhost:${port2}`,
+      url: `http://localhost:${server2.port}`,
       type: "http",
       headers: {},
     });
@@ -192,15 +192,14 @@ describe("Health Check → API Integration", () => {
 
   test("servers without logs show correct status from health checks", async () => {
     // Add a new server that has no logs
-    const port3 = 8203;
     const server3 = Bun.serve({
-      port: port3,
+      port: 0,
       fetch: () => new Response("OK", { status: 200 }),
     });
 
     await gateway.storage.addServer({
       name: "new-server-no-logs",
-      url: `http://localhost:${port3}`,
+      url: `http://localhost:${server3.port}`,
       type: "http",
       headers: {},
     });
