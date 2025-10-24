@@ -59,10 +59,14 @@ describe("Health Check → API Integration", () => {
   });
 
   test("servers show correct initial status on startup", async () => {
+    if (!testServer) {
+      throw new Error("Test server not found");
+    }
+
     // Add a server
     await gateway.storage.addServer({
       name: "test-server",
-      url: testServer!.url,
+      url: testServer.url,
       type: "http",
       headers: {},
     });

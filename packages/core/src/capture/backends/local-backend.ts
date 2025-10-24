@@ -176,9 +176,9 @@ export class LocalStorageBackend implements StorageBackend {
         error:
           error instanceof Error
             ? {
-                message: error.message,
-                stack: error.stack,
-              }
+              message: error.message,
+              stack: error.stack,
+            }
             : String(error),
       });
       throw error;
@@ -362,7 +362,7 @@ export class LocalStorageBackend implements StorageBackend {
           return {
             ...server,
             ...metrics,
-            health: healthData?.health as HealthStatus | undefined,
+            health: healthData?.health,
             lastHealthCheck: healthData?.lastCheck,
           };
         }),
