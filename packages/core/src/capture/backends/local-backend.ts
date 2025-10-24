@@ -30,7 +30,7 @@ import {
   updateServerInfoForInitializeRequest,
   upsertServerHealth,
 } from "../../logs/storage.js";
-import { fromMcpJson, toMcpJson } from "../../registry/index";
+import { fromMcpJson, isValidUrl, toMcpJson } from "../../registry/index";
 import { ensureStorageDir } from "../../utils/storage";
 
 /**
@@ -41,6 +41,14 @@ import { ensureStorageDir } from "../../utils/storage";
  * - JSON file (mcp.json) for server registry configuration
  *
  * Each instance owns its own DB connection (no global cache)
+ *
+ * ⚠️ **Concurrency Limitation**: Registry modifications (addServer, removeServer,
+ * updateServer) are NOT atomic across multiple processes. The read-modify-write
+ * pattern used for mcp.json can lead to lost updates if multiple processes modify
+ * the registry simultaneously.
+ *
+ * For single-user CLI usage, this is acceptable. For multi-process deployments,
+ * consider implementing file locking or using a database-backed storage implementation.
  */
 export class LocalStorageBackend implements StorageBackend {
   readonly name = "local";
@@ -71,7 +79,7 @@ export class LocalStorageBackend implements StorageBackend {
     try {
       await access(mcpPath, constants.F_OK);
     } catch {
-      // File doesn't exist
+      // File doesn't exist - this is normal for first run
       return [];
     }
 
@@ -79,11 +87,33 @@ export class LocalStorageBackend implements StorageBackend {
       // Type assertion needed: Bun's readFile with "utf8" encoding returns string, not Buffer
       const content = (await readFile(mcpPath, "utf8")) as unknown as string;
       const data = JSON.parse(content);
-      return fromMcpJson(data);
-    } catch (_error) {
-      logger.warn("Invalid mcp.json, starting with empty registry", {
-        path: mcpPath,
-      });
+      const servers = fromMcpJson(data);
+
+      // Detect configuration that exists but has no valid servers
+      if (
+        servers.length === 0 &&
+        Object.keys(data.mcpServers || {}).length > 0
+      ) {
+        logger.error("mcp.json exists but contains no valid servers", {
+          path: mcpPath,
+          serverCount: Object.keys(data.mcpServers || {}).length,
+        });
+      }
+
+      return servers;
+    } catch (error) {
+      // Distinguish between parse errors and other errors
+      if (error instanceof SyntaxError) {
+        logger.error("mcp.json is not valid JSON", {
+          path: mcpPath,
+          error: error.message,
+        });
+      } else {
+        logger.error("Failed to load mcp.json", {
+          path: mcpPath,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
       return [];
     }
   }
@@ -416,6 +446,9 @@ export class LocalStorageBackend implements StorageBackend {
 
       // Update the server's mutable fields (url, headers)
       if (changes.url !== undefined) {
+        if (!isValidUrl(changes.url)) {
+          throw new Error(`Invalid URL format: ${changes.url}`);
+        }
         server.url = changes.url;
       }
       if (changes.headers !== undefined) {
