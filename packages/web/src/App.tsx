@@ -1,6 +1,6 @@
 import type { FilterState } from "@fiberplane/mcp-gateway-types";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ExportButton } from "./components/export-button";
 import { FilterBar } from "./components/filter-bar";
 import { LogTable } from "./components/log-table";
@@ -74,7 +74,11 @@ function App() {
   const allLogs = data?.pages.flatMap((page) => page.data) ?? [];
 
   // Apply client-side filters (for filters not supported by API yet)
-  const filteredLogs = applyFilterState(allLogs, filterState);
+  // Memoized to prevent unnecessary re-filtering on every render
+  const filteredLogs = useMemo(
+    () => applyFilterState(allLogs, filterState),
+    [allLogs, filterState],
+  );
 
   const handleLoadMore = useHandler(() => {
     fetchNextPage();

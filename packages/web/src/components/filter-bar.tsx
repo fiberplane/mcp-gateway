@@ -19,7 +19,7 @@
 
 import { createFilter, type FilterState } from "@fiberplane/mcp-gateway-types";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../lib/api";
 import {
   parseFilterStateFromUrl,
@@ -43,8 +43,15 @@ export function FilterBar({ onChange }: FilterBarProps) {
 
   // Parse initial state from URL
   const [filterState, setFilterState] = useState<FilterState>(() => {
-    const params = new URLSearchParams(window.location.search);
-    return parseFilterStateFromUrl(params);
+    try {
+      const params = new URLSearchParams(window.location.search);
+      return parseFilterStateFromUrl(params);
+    } catch (error) {
+      // Gracefully handle malformed URLs or invalid filter parameters
+      // biome-ignore lint/suspicious/noConsole: Error logging for debugging
+      console.warn("Failed to parse filters from URL, using defaults:", error);
+      return { search: "", filters: [] };
+    }
   });
 
   // Fetch available clients for the dropdown
@@ -54,21 +61,38 @@ export function FilterBar({ onChange }: FilterBarProps) {
     refetchInterval: 5000,
   });
 
+  // Use ref to keep latest onChange without causing effect re-runs
+  // This prevents infinite loops if parent doesn't memoize onChange
+  const onChangeRef = useRef(onChange);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
   // Sync URL when filter state changes
   useEffect(() => {
     const params = serializeFilterStateToUrl(filterState);
     const newUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`;
     window.history.replaceState({}, "", newUrl);
 
-    // Notify parent of changes
-    onChange(filterState);
-  }, [filterState, onChange]);
+    // Notify parent of changes using latest callback
+    onChangeRef.current(filterState);
+  }, [filterState]); // Only depend on filterState, not onChange
 
   // Listen for browser back/forward navigation
   useEffect(() => {
     const handlePopState = () => {
-      const params = new URLSearchParams(window.location.search);
-      setFilterState(parseFilterStateFromUrl(params));
+      try {
+        const params = new URLSearchParams(window.location.search);
+        setFilterState(parseFilterStateFromUrl(params));
+      } catch (error) {
+        // Gracefully handle malformed URLs during navigation
+        // biome-ignore lint/suspicious/noConsole: Error logging for debugging
+        console.warn(
+          "Failed to parse filters during navigation, using defaults:",
+          error,
+        );
+        setFilterState({ search: "", filters: [] });
+      }
     };
 
     window.addEventListener("popstate", handlePopState);
