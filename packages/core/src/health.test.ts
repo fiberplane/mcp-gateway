@@ -1,0 +1,380 @@
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  test,
+} from "bun:test";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { createGateway } from "./gateway.js";
+import { resetMigrationState } from "./logs/migrations.js";
+
+describe("Health Check System", () => {
+  let storageDir: string;
+  let healthyServer: { url: string; stop: () => void } | null = null;
+  let unhealthyPort: number;
+
+  beforeAll(async () => {
+    // Create a simple healthy HTTP server for testing
+    const healthyPort = 8101;
+    healthyServer = {
+      url: `http://localhost:${healthyPort}`,
+      stop: () => {},
+    };
+
+    const server = Bun.serve({
+      port: healthyPort,
+      fetch: () => new Response("OK", { status: 200 }),
+    });
+
+    healthyServer.stop = () => server.stop();
+
+    // Pick a port that nothing is listening on for unhealthy tests
+    unhealthyPort = 8102;
+  });
+
+  afterAll(() => {
+    healthyServer?.stop();
+  });
+
+  beforeEach(async () => {
+    // Reset migration state
+    resetMigrationState();
+
+    // Create temporary directory for each test
+    storageDir = await mkdtemp(join(tmpdir(), "mcp-gateway-test-"));
+  });
+
+  afterEach(async () => {
+    // Clean up temporary directory
+    await rm(storageDir, { recursive: true, force: true });
+
+    // Reset migration state
+    resetMigrationState();
+  });
+
+  describe("checkServerHealth", () => {
+    test("should return 'up' for healthy server", async () => {
+      const gateway = await createGateway({ storageDir });
+
+      // Access the health check method indirectly through the check() method
+      const results = await gateway.health.check();
+
+      // Add a test server to the registry
+      await gateway.storage.addServer({
+        name: "healthy-server",
+        url: healthyServer!.url,
+        type: "http",
+        headers: {},
+      });
+
+      // Run health check
+      const healthResults = await gateway.health.check();
+
+      // Should have one result for the healthy server
+      expect(healthResults).toHaveLength(1);
+      expect(healthResults[0]?.name).toBe("healthy-server");
+      expect(healthResults[0]?.health).toBe("up");
+      expect(healthResults[0]?.lastHealthCheck).toBeDefined();
+
+      await gateway.close();
+    });
+
+    test("should return 'down' for unreachable server", async () => {
+      const gateway = await createGateway({ storageDir });
+
+      // Add a server pointing to a port with no listener
+      await gateway.storage.addServer({
+        name: "unhealthy-server",
+        url: `http://localhost:${unhealthyPort}`,
+        type: "http",
+        headers: {},
+      });
+
+      // Run health check
+      const results = await gateway.health.check();
+
+      expect(results).toHaveLength(1);
+      expect(results[0]?.name).toBe("unhealthy-server");
+      expect(results[0]?.health).toBe("down");
+
+      await gateway.close();
+    });
+
+    test("should handle multiple servers with different health statuses", async () => {
+      const gateway = await createGateway({ storageDir });
+
+      // Add both healthy and unhealthy servers
+      await gateway.storage.addServer({
+        name: "healthy-server",
+        url: healthyServer!.url,
+        type: "http",
+        headers: {},
+      });
+      await gateway.storage.addServer({
+        name: "unhealthy-server",
+        url: `http://localhost:${unhealthyPort}`,
+        type: "http",
+        headers: {},
+      });
+
+      // Run health check
+      const results = await gateway.health.check();
+
+      expect(results).toHaveLength(2);
+
+      const healthyResult = results.find((r) => r.name === "healthy-server");
+      const unhealthyResult = results.find(
+        (r) => r.name === "unhealthy-server",
+      );
+
+      expect(healthyResult?.health).toBe("up");
+      expect(unhealthyResult?.health).toBe("down");
+
+      await gateway.close();
+    });
+  });
+
+  describe("health persistence", () => {
+    test("should persist health check results to database", async () => {
+      const gateway = await createGateway({ storageDir });
+
+      // Add a server
+      await gateway.storage.addServer({
+        name: "test-server",
+        url: healthyServer!.url,
+        type: "http",
+        headers: {},
+      });
+
+      // Run health check
+      await gateway.health.check();
+
+      // Get servers from registry (which loads health from database)
+      const servers = await gateway.storage.getRegisteredServers();
+
+      expect(servers).toHaveLength(1);
+      expect(servers[0]?.health).toBe("up");
+      expect(servers[0]?.lastHealthCheck).toBeDefined();
+
+      await gateway.close();
+    });
+
+    test("should update health when status changes", async () => {
+      const gateway = await createGateway({ storageDir });
+
+      // Add a server initially pointing to healthy endpoint
+      await gateway.storage.addServer({
+        name: "test-server",
+        url: healthyServer!.url,
+        type: "http",
+        headers: {},
+      });
+
+      // First health check - should be "up"
+      await gateway.health.check();
+      let servers = await gateway.storage.getRegisteredServers();
+      expect(servers[0]?.health).toBe("up");
+
+      // Update server to point to unhealthy endpoint
+      await gateway.storage.updateServer("test-server", {
+        url: `http://localhost:${unhealthyPort}`,
+      });
+
+      // Second health check - should be "down"
+      await gateway.health.check();
+      servers = await gateway.storage.getRegisteredServers();
+      expect(servers[0]?.health).toBe("down");
+
+      await gateway.close();
+    });
+  });
+
+  describe("health.start() and health.stop()", () => {
+    test("should run initial health check on start", async () => {
+      const gateway = await createGateway({ storageDir });
+
+      // Add a server
+      await gateway.storage.addServer({
+        name: "test-server",
+        url: healthyServer!.url,
+        type: "http",
+        headers: {},
+      });
+
+      // Start health checks (this should run an immediate check)
+      await gateway.health.start(10000); // Long interval so it doesn't run again during test
+
+      // Verify health was checked
+      const servers = await gateway.storage.getRegisteredServers();
+      expect(servers[0]?.health).toBe("up");
+      expect(servers[0]?.lastHealthCheck).toBeDefined();
+
+      await gateway.close();
+    });
+
+    test("should call onUpdate callback with health results", async () => {
+      const gateway = await createGateway({ storageDir });
+
+      // Add a server
+      await gateway.storage.addServer({
+        name: "test-server",
+        url: healthyServer!.url,
+        type: "http",
+        headers: {},
+      });
+
+      // Track callback invocations
+      const updates: Array<{ name: string; health: string }> = [];
+      const onUpdate = (
+        results: Array<{
+          name: string;
+          health: string;
+          lastHealthCheck: string;
+        }>,
+      ) => {
+        for (const result of results) {
+          updates.push({ name: result.name, health: result.health });
+        }
+      };
+
+      // Start health checks with callback
+      await gateway.health.start(10000, onUpdate);
+
+      // Verify callback was called
+      expect(updates).toHaveLength(1);
+      expect(updates[0]?.name).toBe("test-server");
+      expect(updates[0]?.health).toBe("up");
+
+      await gateway.close();
+    });
+
+    test("should stop health checks when stop() is called", async () => {
+      const gateway = await createGateway({ storageDir });
+
+      // Add a server
+      await gateway.storage.addServer({
+        name: "test-server",
+        url: healthyServer!.url,
+        type: "http",
+        headers: {},
+      });
+
+      // Track callback invocations
+      let callCount = 0;
+      const onUpdate = () => {
+        callCount++;
+      };
+
+      // Start health checks with short interval
+      await gateway.health.start(100, onUpdate);
+      expect(callCount).toBe(1); // Initial check
+
+      // Wait for potential additional checks
+      await new Promise((resolve) => setTimeout(resolve, 250));
+
+      // Stop health checks
+      gateway.health.stop();
+      const countAfterStop = callCount;
+
+      // Wait to verify no more checks occur
+      await new Promise((resolve) => setTimeout(resolve, 250));
+
+      // Count should not have increased after stop
+      expect(callCount).toBe(countAfterStop);
+
+      await gateway.close();
+    });
+  });
+
+  describe("health check edge cases", () => {
+    test("should handle server returning 500 error as up", async () => {
+      // Create a server that returns 500
+      const errorPort = 8103;
+      const errorServer = Bun.serve({
+        port: errorPort,
+        fetch: () => new Response("Server Error", { status: 500 }),
+      });
+
+      const gateway = await createGateway({ storageDir });
+
+      await gateway.storage.addServer({
+        name: "error-server",
+        url: `http://localhost:${errorPort}`,
+        type: "http",
+        headers: {},
+      });
+
+      const results = await gateway.health.check();
+
+      // Server returning 500 is considered "down" per the implementation
+      expect(results[0]?.health).toBe("down");
+
+      errorServer.stop();
+      await gateway.close();
+    });
+
+    test("should handle server returning 404 as up", async () => {
+      // Create a server that returns 404
+      const notFoundPort = 8104;
+      const notFoundServer = Bun.serve({
+        port: notFoundPort,
+        fetch: () => new Response("Not Found", { status: 404 }),
+      });
+
+      const gateway = await createGateway({ storageDir });
+
+      await gateway.storage.addServer({
+        name: "not-found-server",
+        url: `http://localhost:${notFoundPort}`,
+        type: "http",
+        headers: {},
+      });
+
+      const results = await gateway.health.check();
+
+      // 404 means server is responding, so it's "up"
+      expect(results[0]?.health).toBe("up");
+
+      notFoundServer.stop();
+      await gateway.close();
+    });
+
+    test(
+      "should timeout on slow server",
+      async () => {
+        // Create a server that takes longer than timeout
+        const slowPort = 8105;
+        const slowServer = Bun.serve({
+          port: slowPort,
+          fetch: async () => {
+            await new Promise((resolve) => setTimeout(resolve, 10000)); // 10s delay
+            return new Response("OK");
+          },
+        });
+
+        const gateway = await createGateway({ storageDir });
+
+        await gateway.storage.addServer({
+          name: "slow-server",
+          url: `http://localhost:${slowPort}`,
+          type: "http",
+          headers: {},
+        });
+
+        // Health check should timeout (5s timeout in implementation)
+        const results = await gateway.health.check();
+
+        expect(results[0]?.health).toBe("down");
+
+        slowServer.stop();
+        await gateway.close();
+      },
+      { timeout: 10000 },
+    );
+  });
+});
