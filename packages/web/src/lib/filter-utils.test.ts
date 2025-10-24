@@ -118,6 +118,78 @@ describe("parseFiltersFromUrl", () => {
 
     expect(filters).toEqual([]);
   });
+
+  // Critical edge cases from test-automator review
+  describe("edge cases", () => {
+    it("should handle special characters in values", () => {
+      const params = new URLSearchParams("client=is:user@domain.com");
+      const filters = parseFiltersFromUrl(params);
+
+      expect(filters).toHaveLength(1);
+      expect(filters[0]?.value).toBe("user@domain.com");
+    });
+
+    it("should handle URL-encoded values", () => {
+      const params = new URLSearchParams("client=is:user%20name");
+      const filters = parseFiltersFromUrl(params);
+
+      expect(filters).toHaveLength(1);
+      expect(filters[0]?.value).toBe("user name");
+    });
+
+    it("should skip empty filter values", () => {
+      const params = new URLSearchParams("client=is:");
+      const filters = parseFiltersFromUrl(params);
+
+      expect(filters).toHaveLength(0);
+    });
+
+    it("should skip empty operator values", () => {
+      const params = new URLSearchParams("duration=gt:");
+      const filters = parseFiltersFromUrl(params);
+
+      expect(filters).toHaveLength(0);
+    });
+
+    it("should handle negative numbers", () => {
+      const params = new URLSearchParams("duration=gt:-100");
+      const filters = parseFiltersFromUrl(params);
+
+      // Negative numbers should be skipped (validation fails)
+      expect(filters).toHaveLength(0);
+    });
+
+    it("should handle float values (rounds to integer)", () => {
+      const params = new URLSearchParams("duration=gt:100.5");
+      const filters = parseFiltersFromUrl(params);
+
+      expect(filters).toHaveLength(1);
+      expect(filters[0]?.value).toBe(100);
+    });
+
+    it("should skip filters with wrong operator for field type", () => {
+      // String operator on numeric field
+      const params1 = new URLSearchParams("duration=contains:100");
+      const filters1 = parseFiltersFromUrl(params1);
+      expect(filters1).toHaveLength(0);
+
+      // Numeric operator on string field
+      const params2 = new URLSearchParams("client=gt:value");
+      const filters2 = parseFiltersFromUrl(params2);
+      expect(filters2).toHaveLength(0);
+    });
+
+    it("should handle duplicate fields (first one wins)", () => {
+      const params = new URLSearchParams(
+        "client=is:first&client=is:second&client=is:third",
+      );
+      const filters = parseFiltersFromUrl(params);
+
+      // URLSearchParams.get() returns the first value for duplicate keys
+      expect(filters).toHaveLength(1);
+      expect(filters[0]?.value).toBe("first");
+    });
+  });
 });
 
 describe("serializeFiltersToUrl", () => {
@@ -438,36 +510,68 @@ describe("matchesFilter", () => {
     });
 
     it("should not match when duration is undefined", () => {
-      const logWithoutDuration: ApiLogEntry = {
+      const logWithoutDuration = {
         ...mockLog,
         metadata: {
           serverName: "everything-server",
           sessionId: "session-123",
-          durationMs: 0, // Duration of 0 is technically defined, so this tests the matching logic
+          durationMs: undefined,
           httpStatus: 200,
         },
-      };
+      } as unknown as ApiLogEntry;
       const filter = createFilter({
         field: "duration",
         operator: "gt",
         value: 100,
       });
 
-      // Since we can't actually have undefined durationMs, test with 0
       expect(matchesFilter(logWithoutDuration, filter)).toBe(false);
     });
   });
 
-  describe("tokens filter", () => {
-    it("should return true (placeholder)", () => {
+  describe("tokens filter (placeholder - not implemented)", () => {
+    it("should return true for all operators", () => {
+      const operators = ["eq", "gt", "lt", "gte", "lte"] as const;
+
+      for (const operator of operators) {
+        const filter = createFilter({
+          field: "tokens",
+          operator,
+          value: 100,
+        });
+        expect(matchesFilter(mockLog, filter)).toBe(true);
+      }
+    });
+
+    it("should return true with any value", () => {
+      const values = [0, 100, 1000, Number.MAX_SAFE_INTEGER];
+
+      for (const value of values) {
+        const filter = createFilter({
+          field: "tokens",
+          operator: "eq",
+          value,
+        });
+        expect(matchesFilter(mockLog, filter)).toBe(true);
+      }
+    });
+
+    it("should return true even when tokens field doesn't exist", () => {
+      const logWithoutTokens = {
+        ...mockLog,
+        metadata: {
+          ...mockLog.metadata,
+          // No tokens field
+        },
+      };
       const filter = createFilter({
         field: "tokens",
         operator: "gt",
         value: 100,
       });
 
-      // Tokens not implemented yet, always returns true
-      expect(matchesFilter(mockLog, filter)).toBe(true);
+      // Placeholder always returns true
+      expect(matchesFilter(logWithoutTokens, filter)).toBe(true);
     });
   });
 });
