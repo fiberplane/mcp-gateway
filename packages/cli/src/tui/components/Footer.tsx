@@ -26,7 +26,9 @@ export function Footer() {
         <text fg={labelColor}>
           {viewMode === "activity-log"
             ? `Activity Log • ${logs.length} entries`
-            : "Server Management"}
+            : viewMode === "optimization"
+              ? "Optimization"
+              : "Server Management"}
         </text>
       </box>
 

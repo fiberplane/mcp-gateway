@@ -10,6 +10,7 @@ import { EmptyState } from "./components/EmptyState";
 import { Footer } from "./components/Footer";
 import { Header } from "./components/Header";
 import { McpInstructionsModal } from "./components/McpInstructionsModal";
+import { OptimizationView } from "./components/Optimization";
 import { ServerManagementView } from "./components/ServerManagement";
 import { useExternalEvents } from "./hooks/useExternalEvents";
 import { commandShortcuts, globalShortcuts } from "./shortcuts";
@@ -98,6 +99,12 @@ function App() {
       return;
     }
 
+    if (key.name === commandShortcuts.optimization.key) {
+      logger.debug("Navigating to optimization view");
+      setViewMode("optimization");
+      return;
+    }
+
     if (key.name === commandShortcuts.addServer.key) {
       logger.debug("Opening add server modal");
       openModal("add-server");
@@ -139,6 +146,7 @@ function App() {
         {viewMode === "activity-log" &&
           (logs.length === 0 ? <EmptyState /> : <ActivityLog />)}
         {viewMode === "server-management" && <ServerManagementView />}
+        {viewMode === "optimization" && <OptimizationView />}
       </box>
 
       <Footer />

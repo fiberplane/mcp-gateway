@@ -1,6 +1,12 @@
-import { loadRegistry, saveRegistry } from "@fiberplane/mcp-gateway-core";
+import {
+  loadRegistry,
+  logger,
+  saveRegistry,
+} from "@fiberplane/mcp-gateway-core";
+import type { ClientManager } from "@fiberplane/mcp-gateway-core";
 import type {
   LogEntry,
+  PromotedTool,
   Registry,
   ServerHealth,
 } from "@fiberplane/mcp-gateway-types";
@@ -15,7 +21,7 @@ type ModalType =
   | "activity-log-detail"
   | null;
 
-export type ViewMode = "activity-log" | "server-management";
+export type ViewMode = "activity-log" | "server-management" | "optimization";
 
 export interface Toast {
   message: string;
@@ -33,6 +39,43 @@ export interface UIServer {
   headers: Record<string, string>;
   health: ServerHealth;
   lastHealthCheck?: string;
+  authUrl?: string;
+  authError?: string;
+  oauthClientId?: string;
+  oauthClientSecret?: string;
+}
+
+/**
+ * Optimization data for a single tool
+ */
+export interface ToolOptimization {
+  toolName: string;
+  promoted: PromotedTool | null;
+  candidateCount: number;
+  promptCount: number;
+  lastOptimized?: string;
+}
+
+/**
+ * Optimization data for an entire server
+ */
+export interface ServerOptimization {
+  serverName: string;
+  toolCount: number;
+  optimizedCount: number;
+  tools: Map<string, ToolOptimization>;
+}
+
+/**
+ * Live progress tracking for optimization runs
+ */
+export interface OptimizationProgress {
+  serverName: string;
+  phase: "generating" | "evaluating" | "promoting" | "complete";
+  currentTool: string;
+  totalTools: number;
+  completedTools: number;
+  currentProgress: number; // 0-100 for current tool
 }
 
 interface AppStore {
@@ -41,6 +84,7 @@ interface AppStore {
   logs: LogEntry[];
   storageDir: string;
   port: number;
+  clientManager?: ClientManager; // MCP client manager (only present when --enable-mcp-client is used)
   activeModal: ModalType;
   viewMode: ViewMode;
   showCommandMenu: boolean;
@@ -56,6 +100,10 @@ interface AppStore {
   // Server Management view state
   serverManagementSelectedIndex: number;
   serverManagementShowConfig: string | null;
+
+  // Optimization state
+  optimizations: Map<string, ServerOptimization>;
+  optimizationProgress: OptimizationProgress | null;
 
   // Actions
   initialize: (servers: UIServer[], storageDir: string, port: number) => void;
@@ -91,6 +139,10 @@ interface AppStore {
     index: number | ((prev: number) => number),
   ) => void;
   setServerManagementShowConfig: (serverName: string | null) => void;
+
+  // Optimization actions
+  loadOptimizations: () => Promise<void>;
+  setOptimizationProgress: (progress: OptimizationProgress | null) => void;
 }
 
 /**
@@ -104,6 +156,10 @@ export function toUIServer(server: Registry["servers"][number]): UIServer {
     headers: server.headers,
     health: server.health ?? "unknown",
     lastHealthCheck: server.lastHealthCheck,
+    authUrl: server.authUrl,
+    authError: server.authError,
+    oauthClientId: server.oauthClientId,
+    oauthClientSecret: server.oauthClientSecret,
   };
 }
 
@@ -128,6 +184,10 @@ export const useAppStore = create<AppStore>((set, get) => ({
   // Server Management view state
   serverManagementSelectedIndex: 0,
   serverManagementShowConfig: null,
+
+  // Optimization state
+  optimizations: new Map(),
+  optimizationProgress: null,
 
   // Actions
   initialize: (servers, storageDir, port) => set({ servers, storageDir, port }),
@@ -252,4 +312,77 @@ export const useAppStore = create<AppStore>((set, get) => ({
     })),
   setServerManagementShowConfig: (serverName) =>
     set({ serverManagementShowConfig: serverName }),
+
+  // Optimization actions
+  loadOptimizations: async () => {
+    const { port, servers } = get();
+
+    if (servers.length === 0) {
+      set({ optimizations: new Map() });
+      return;
+    }
+
+    try {
+      const { callGatewayTool } = await import("./utils/gateway-mcp-client");
+
+      // Get optimization report for all servers
+      const report = await callGatewayTool(port, "get_optimization_report", {});
+
+      // Parse the report and build optimization map
+      const optimizations = new Map<string, ServerOptimization>();
+
+      if (Array.isArray(report)) {
+        for (const serverReport of report as Array<{
+          serverName: string;
+          toolCount: number;
+          optimizedCount: number;
+          tools: Array<{
+            name: string;
+            status: "optimized" | "baseline" | "unoptimized";
+            metrics?: {
+              directSuccess: number;
+              indirectSuccess: number;
+              negativeSuccess: number;
+              overall: number;
+            };
+          }>;
+        }>) {
+          const toolsMap = new Map<string, ToolOptimization>();
+
+          for (const tool of serverReport.tools) {
+            toolsMap.set(tool.name, {
+              toolName: tool.name,
+              promoted: tool.status === "optimized" && tool.metrics
+                ? {
+                    toolName: tool.name,
+                    candidateId: "unknown", // We don't have this from the report
+                    promotedAt: new Date().toISOString(),
+                    description: "", // We don't have this from the report
+                    metrics: tool.metrics,
+                  }
+                : null,
+              candidateCount: 0, // We don't track this in the report
+              promptCount: 0, // We don't track this in the report
+            });
+          }
+
+          optimizations.set(serverReport.serverName, {
+            serverName: serverReport.serverName,
+            toolCount: serverReport.toolCount,
+            optimizedCount: serverReport.optimizedCount,
+            tools: toolsMap,
+          });
+        }
+      }
+
+      set({ optimizations });
+    } catch (error) {
+      logger.error("Failed to load optimizations", { error });
+      // Set empty map on error
+      set({ optimizations: new Map() });
+    }
+  },
+
+  setOptimizationProgress: (progress) =>
+    set({ optimizationProgress: progress }),
 }));

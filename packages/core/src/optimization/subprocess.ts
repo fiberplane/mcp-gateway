@@ -1,3 +1,7 @@
+import { mkdtemp, writeFile, rm } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+
 /**
  * Subprocess evaluation infrastructure for tool description optimization
  *
@@ -5,20 +9,63 @@
  */
 
 /**
- * Build Claude CLI command for evaluation
+ * Create a temporary directory with .mcp.json configuration
+ *
+ * @param serverName - Temporary server name in the gateway
+ * @param gatewayPort - Port where the gateway is running
+ * @returns Path to temporary directory
+ */
+async function createTempMcpConfig(
+	serverName: string,
+	gatewayPort: number,
+): Promise<string> {
+	const tempDir = await mkdtemp(join(tmpdir(), "mcp-eval-"));
+	const mcpUrl = `http://localhost:${gatewayPort}/servers/${serverName}/mcp`;
+
+	const mcpConfig = {
+		mcpServers: {
+			[serverName]: {
+				transport: "http",
+				url: mcpUrl,
+			},
+		},
+	};
+
+	await writeFile(
+		join(tempDir, ".mcp.json"),
+		JSON.stringify(mcpConfig, null, 2),
+		"utf8",
+	);
+
+	return tempDir;
+}
+
+/**
+ * Build Claude CLI command for evaluation with MCP server connection
  *
  * @param testPrompt - User prompt to test with
- * @returns Command array to pass to runEvaluation
+ * @param serverName - Temporary server name in the gateway
+ * @param gatewayPort - Port where the gateway is running
+ * @returns Object with command array and temp directory path
  */
-export function buildClaudeCommand(testPrompt: string): string[] {
-  return [
-    "claude",
-    "-p",
-    "--output-format",
-    "stream-json",
-    "--verbose",
-    testPrompt,
-  ];
+export async function buildClaudeCommand(
+	testPrompt: string,
+	serverName: string,
+	gatewayPort: number,
+): Promise<{ command: string[]; tempDir: string }> {
+	const tempDir = await createTempMcpConfig(serverName, gatewayPort);
+
+	return {
+		command: [
+			"claude",
+			"-p",
+			"--output-format",
+			"stream-json",
+			"--verbose",
+			testPrompt,
+		],
+		tempDir,
+	};
 }
 
 /**
@@ -66,6 +113,7 @@ interface ClaudeStreamEvent {
  * @param command - Command array to spawn (e.g., ["echo", "test"] or ["claude", "-p", ...])
  * @param toolName - Name of tool to detect in output
  * @param expectedBehavior - Expected outcome (should tool be called or not)
+ * @param cwd - Working directory for the subprocess
  * @param timeout - Maximum time to wait in milliseconds (default: 60 seconds)
  * @returns Evaluation result with tool call detection and correctness
  */
@@ -73,6 +121,7 @@ export async function runEvaluation(
   command: string[],
   toolName: string,
   expectedBehavior: { shouldCallTool: boolean; notes?: string },
+  cwd: string,
   timeout = 60000,
 ): Promise<EvaluationResult> {
   const startTime = Date.now();
@@ -82,7 +131,7 @@ export async function runEvaluation(
     const proc = Bun.spawn(command, {
       stdout: "pipe",
       stderr: "pipe",
-      cwd: process.cwd(),
+      cwd,
     });
 
     // Set up timeout

@@ -11,6 +11,10 @@ export interface McpServer {
   exchangeCount: number;
   health?: ServerHealth;
   lastHealthCheck?: string;
+  authUrl?: string; // OAuth authorization URL (if server requires auth)
+  authError?: string; // Error message from auth failure
+  oauthClientId?: string; // Client ID from Dynamic Client Registration
+  oauthClientSecret?: string; // Client secret from Dynamic Client Registration
 }
 
 export interface Registry {

@@ -408,24 +408,18 @@ Use this tool to:
 						content: [
 							{
 								type: "text",
-								text: "No optimization data found. Add servers and start optimizing tools!",
+								text: JSON.stringify([]),
 							},
 						],
 					};
 				}
 
-				const reportText = reports
-					.map((r) => {
-						const progress = r.toolCount > 0 ? (r.optimizedCount / r.toolCount) * 100 : 0;
-						return `**${r.serverName}**\n  Tools: ${r.optimizedCount}/${r.toolCount} optimized (${progress.toFixed(0)}%)\n  Evaluations: ${r.totalEvals}\n  Avg Improvement: ${(r.avgImprovement * 100).toFixed(1)}%`;
-					})
-					.join("\n\n");
-
+				// Return JSON data for programmatic consumption
 				return {
 					content: [
 						{
 							type: "text",
-							text: `📈 **Optimization Report**\n\n${reportText}`,
+							text: JSON.stringify(reports),
 						},
 					],
 				};

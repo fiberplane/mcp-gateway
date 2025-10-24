@@ -3,12 +3,17 @@ import {
   getStorageRoot,
   logger,
   ClientManager,
+  OAuthRequiredError,
   saveCanonicalTools,
+  saveRegistry,
+  fetchOAuthDiscovery,
+  registerOAuthClient,
 } from "@fiberplane/mcp-gateway-core";
 import type { LogEntry, Registry } from "@fiberplane/mcp-gateway-types";
 import { Hono } from "hono";
 import { logger as loggerMiddleware } from "hono/logger";
 import { createOAuthRoutes } from "./routes/oauth";
+import { createOAuthCallbackRoutes } from "./routes/oauth-callback";
 import { createProxyRoutes } from "./routes/proxy";
 
 // Create main application
@@ -19,6 +24,7 @@ export async function createApp(
     onLog?: (entry: LogEntry) => void;
     onRegistryUpdate?: () => void;
     enableMcpClient?: boolean;
+    port?: number;
   },
 ): Promise<{ app: Hono; registry: Registry; clientManager?: ClientManager }> {
   const app = new Hono();
@@ -68,6 +74,37 @@ export async function createApp(
   const oauthRoutes = await createOAuthRoutes(registry);
   app.route("/", oauthRoutes);
 
+  // Mount OAuth callback routes for authorization flow
+  const oauthCallbackRoutes = createOAuthCallbackRoutes(registry, storage, {
+    onRegistryUpdate: eventHandlers?.onRegistryUpdate,
+    onAuthComplete: async (serverName, token) => {
+      // Reconnect to server after successful auth
+      if (clientManager) {
+        logger.info(`Reconnecting to ${serverName} after OAuth`);
+        const server = registry.servers.find((s) => s.name === serverName);
+        if (server) {
+          try {
+            // Disconnect existing connection (which doesn't have the token)
+            await clientManager.disconnectServer(serverName);
+
+            // Connect with the updated server object (which now has the token)
+            await clientManager.connectServer(server);
+            const tools = await clientManager.discoverTools(serverName);
+            await saveCanonicalTools(storage, serverName, tools);
+            logger.info(`Reconnected to ${serverName} successfully`, {
+              toolCount: tools.length,
+            });
+          } catch (error) {
+            logger.error(`Failed to reconnect to ${serverName}`, {
+              error: String(error),
+            });
+          }
+        }
+      }
+    },
+  });
+  app.route("/oauth", oauthCallbackRoutes);
+
   // Initialize ClientManager if enabled
   let clientManager: ClientManager | undefined;
 
@@ -85,9 +122,53 @@ export async function createApp(
           toolCount: tools.length,
         });
       } catch (error) {
-        logger.error(`Failed to connect to ${server.name}`, {
-          error: String(error),
-        });
+        // Handle OAuth authentication requirement
+        if (error instanceof OAuthRequiredError) {
+          logger.info(`Server ${server.name} requires OAuth`, {
+            authUrl: error.authUrl,
+          });
+
+          // Fetch full OAuth discovery document
+          const discovery = await fetchOAuthDiscovery(server.url);
+
+          // Perform Dynamic Client Registration if supported
+          if (discovery?.registration_endpoint && !server.oauthClientId) {
+            const port = eventHandlers?.port || 3333;
+            const redirectUri = `http://localhost:${port}/oauth/callback`;
+            const clientCreds = await registerOAuthClient(
+              discovery.registration_endpoint,
+              redirectUri,
+            );
+
+            if (clientCreds) {
+              server.oauthClientId = clientCreds.clientId;
+              server.oauthClientSecret = clientCreds.clientSecret;
+              logger.info(`Registered OAuth client for ${server.name}`, {
+                clientId: clientCreds.clientId,
+              });
+            }
+          }
+
+          // Store auth info in registry
+          server.authUrl = error.authUrl;
+          server.authError = error.message;
+          await saveRegistry(storage, registry);
+
+          // Notify TUI of registry update
+          if (eventHandlers?.onRegistryUpdate) {
+            eventHandlers.onRegistryUpdate();
+          }
+        } else {
+          logger.error(`Failed to connect to ${server.name}`, {
+            error: String(error),
+            errorType: typeof error,
+            errorConstructor: error?.constructor?.name,
+            errorMessage:
+              error && typeof error === "object" && "message" in error
+                ? error.message
+                : undefined,
+          });
+        }
       }
     }
   }

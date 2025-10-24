@@ -96,6 +96,22 @@ export function CommandMenu() {
       ],
     },
     {
+      id: "Optimization",
+      title: "Optimization",
+      commands: [
+        {
+          id: "optimization-view",
+          label: commandShortcuts.optimization.description,
+          shortcut: commandShortcuts.optimization.key,
+          statusInfo: "Tool description optimization",
+          action: () => {
+            setViewMode("optimization");
+            closeCommandMenu();
+          },
+        },
+      ],
+    },
+    {
       id: "other",
       commands: [
         {

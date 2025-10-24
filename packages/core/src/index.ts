@@ -18,3 +18,4 @@ export * from "./registry/storage";
 
 // Utility exports
 export * from "./utils/storage";
+export * from "./utils/oauth";

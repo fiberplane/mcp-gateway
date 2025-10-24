@@ -3,7 +3,7 @@ import type { LogEntry } from "@fiberplane/mcp-gateway-types";
 import { useEffect } from "react";
 import type { Action } from "../../events";
 import { tuiEvents } from "../../events";
-import { useAppStore } from "../store";
+import { toUIServer, useAppStore } from "../store";
 
 /**
  * Hook to listen to external events from the gateway server
@@ -32,17 +32,19 @@ export function useExternalEvents() {
       // Reload registry from disk
       const updatedRegistry = await loadRegistry(storageDir);
 
-      // Convert to UI servers, preserving health info from current state
+      // Convert to UI servers using helper (includes authUrl, authError)
+      // Preserve health info from current state
       const updatedServers = updatedRegistry.servers.map((server) => {
         const currentServer = servers.find((s) => s.name === server.name);
-        return {
-          name: server.name,
-          url: server.url,
-          type: server.type,
-          headers: server.headers,
-          health: currentServer?.health ?? ("unknown" as const),
-          lastHealthCheck: currentServer?.lastHealthCheck,
-        };
+        const uiServer = toUIServer(server);
+
+        // Preserve health from current state if available
+        if (currentServer) {
+          uiServer.health = currentServer.health;
+          uiServer.lastHealthCheck = currentServer.lastHealthCheck;
+        }
+
+        return uiServer;
       });
 
       logger.debug("Registry reloaded", {

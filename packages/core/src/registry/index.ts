@@ -88,6 +88,10 @@ export function toMcpJson(registry: Registry) {
           type: s.type,
           url: s.url,
           headers: s.headers,
+          ...(s.authUrl && { authUrl: s.authUrl }),
+          ...(s.authError && { authError: s.authError }),
+          ...(s.oauthClientId && { oauthClientId: s.oauthClientId }),
+          ...(s.oauthClientSecret && { oauthClientSecret: s.oauthClientSecret }),
         },
       ]),
     ),
@@ -102,6 +106,10 @@ interface McpJsonData {
       type?: string;
       url?: string;
       headers?: Record<string, string>;
+      authUrl?: string;
+      authError?: string;
+      oauthClientId?: string;
+      oauthClientSecret?: string;
     }
   >;
 }
@@ -130,6 +138,10 @@ export function fromMcpJson(data: unknown): Registry {
         headers: config.headers || {},
         lastActivity: null as string | null,
         exchangeCount: 0,
+        ...(config.authUrl && { authUrl: config.authUrl }),
+        ...(config.authError && { authError: config.authError }),
+        ...(config.oauthClientId && { oauthClientId: config.oauthClientId }),
+        ...(config.oauthClientSecret && { oauthClientSecret: config.oauthClientSecret }),
       };
     })
     .filter(

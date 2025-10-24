@@ -11,6 +11,209 @@ import type {
 } from "@fiberplane/mcp-gateway-types";
 import { logger } from "../logger";
 
+/**
+ * Custom error for OAuth authentication requirements
+ */
+export class OAuthRequiredError extends Error {
+	constructor(
+		public authUrl: string,
+		message: string,
+	) {
+		super(message);
+		this.name = "OAuthRequiredError";
+	}
+}
+
+/**
+ * Fetch OAuth information from server's well-known endpoints
+ */
+export interface OAuthDiscovery {
+	authorization_endpoint: string;
+	token_endpoint: string;
+	registration_endpoint?: string;
+}
+
+export async function fetchOAuthDiscovery(
+	serverUrl: string,
+): Promise<OAuthDiscovery | null> {
+	try {
+		// Remove /mcp suffix if present
+		const baseUrl = serverUrl.replace(/\/mcp\/?$/, "");
+
+		// Try OAuth Authorization Server discovery
+		const discoveryUrl = `${baseUrl}/.well-known/oauth-authorization-server`;
+		logger.debug("Fetching OAuth discovery", { url: discoveryUrl });
+
+		const response = await fetch(discoveryUrl);
+		if (response.ok) {
+			const data = (await response.json()) as Record<string, unknown>;
+			if (
+				data.authorization_endpoint &&
+				typeof data.authorization_endpoint === "string" &&
+				data.token_endpoint &&
+				typeof data.token_endpoint === "string"
+			) {
+				logger.info("Found OAuth endpoints", {
+					authUrl: data.authorization_endpoint,
+					tokenUrl: data.token_endpoint,
+					hasRegistration: !!data.registration_endpoint,
+				});
+				return {
+					authorization_endpoint: data.authorization_endpoint,
+					token_endpoint: data.token_endpoint,
+					registration_endpoint:
+						typeof data.registration_endpoint === "string"
+							? data.registration_endpoint
+							: undefined,
+				};
+			}
+		}
+	} catch (error) {
+		logger.debug("Failed to fetch OAuth discovery", { error: String(error) });
+	}
+
+	return null;
+}
+
+export async function registerOAuthClient(
+	registrationEndpoint: string,
+	redirectUri: string,
+): Promise<{ clientId: string; clientSecret?: string } | null> {
+	try {
+		logger.info("Registering OAuth client via DCR", {
+			registrationEndpoint,
+			redirectUri,
+		});
+
+		const response = await fetch(registrationEndpoint, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				client_name: "MCP Gateway",
+				redirect_uris: [redirectUri],
+				grant_types: ["authorization_code"],
+				response_types: ["code"],
+				token_endpoint_auth_method: "none", // Public client (no secret needed for PKCE)
+			}),
+		});
+
+		if (!response.ok) {
+			logger.error("DCR registration failed", {
+				status: response.status,
+				statusText: response.statusText,
+			});
+			return null;
+		}
+
+		const data = (await response.json()) as Record<string, unknown>;
+		if (data.client_id && typeof data.client_id === "string") {
+			logger.info("DCR registration successful", {
+				clientId: data.client_id,
+				hasSecret: !!data.client_secret,
+			});
+			return {
+				clientId: data.client_id,
+				clientSecret:
+					typeof data.client_secret === "string"
+						? data.client_secret
+						: undefined,
+			};
+		}
+
+		logger.error("DCR response missing client_id", { data });
+		return null;
+	} catch (error) {
+		logger.error("DCR registration error", { error: String(error) });
+		return null;
+	}
+}
+
+async function fetchOAuthInfo(
+	serverUrl: string,
+): Promise<{ authUrl: string; message?: string } | null> {
+	const discovery = await fetchOAuthDiscovery(serverUrl);
+	if (discovery) {
+		return {
+			authUrl: discovery.authorization_endpoint,
+			message: "OAuth authentication required",
+		};
+	}
+
+	return null;
+}
+
+/**
+ * Extract OAuth information from an error
+ * Returns null if not an OAuth error
+ */
+function extractOAuthInfo(
+	error: unknown,
+): { authUrl: string; message?: string } | null {
+	logger.debug("Attempting to extract OAuth info from error", {
+		errorType: typeof error,
+		errorConstructor: error?.constructor?.name,
+		errorKeys: error && typeof error === "object" ? Object.keys(error) : [],
+	});
+
+	// Check if error has response data
+	if (
+		error &&
+		typeof error === "object" &&
+		"message" in error &&
+		typeof error.message === "string"
+	) {
+		logger.debug("Error message content", { message: error.message });
+
+		// Try to parse error message for auth_url in various formats
+		try {
+			// Pattern 1: JSON with auth_url field
+			const jsonMatch = error.message.match(/\{[^}]*"auth_url"\s*:\s*"([^"]+)"/);
+			if (jsonMatch?.[1]) {
+				logger.info("Found auth_url via JSON pattern", { authUrl: jsonMatch[1] });
+				return {
+					authUrl: jsonMatch[1],
+					message: error.message,
+				};
+			}
+
+			// Pattern 2: auth_url without quotes
+			const simpleMatch = error.message.match(/auth_url[:\s]+([^\s,}]+)/);
+			if (simpleMatch?.[1]) {
+				logger.info("Found auth_url via simple pattern", {
+					authUrl: simpleMatch[1],
+				});
+				return {
+					authUrl: simpleMatch[1],
+					message: error.message,
+				};
+			}
+
+			// Pattern 3: Try to parse entire message as JSON
+			try {
+				const parsed = JSON.parse(error.message);
+				if (parsed.auth_url) {
+					logger.info("Found auth_url via full JSON parse", {
+						authUrl: parsed.auth_url,
+					});
+					return {
+						authUrl: parsed.auth_url,
+						message: error.message,
+					};
+				}
+			} catch {
+				// Not valid JSON, continue
+			}
+		} catch (parseError) {
+			logger.debug("Failed to parse auth_url from error", { parseError });
+		}
+	}
+
+	logger.debug("No OAuth info found in error");
+	return null;
+}
+
 // Infer result types from Connection methods
 type ListResourcesResult = Awaited<ReturnType<Connection["listResources"]>>;
 type ResourceReadResult = Awaited<ReturnType<Connection["readResource"]>>;
@@ -42,6 +245,7 @@ export class ClientManager {
 
 	/**
 	 * Connect to an MCP server and establish a session
+	 * @throws {OAuthRequiredError} if server requires OAuth authentication
 	 */
 	async connectServer(server: McpServer): Promise<Connection> {
 		if (this.connections.has(server.name)) {
@@ -52,33 +256,87 @@ export class ClientManager {
 		logger.info("Connecting to MCP server via client", {
 			serverName: server.name,
 			url: server.url,
+			hasAuthHeader: !!server.headers.Authorization,
 		});
 
-		// Create client
-		const client = new McpClient({
-			name: "mcp-gateway",
-			version: "1.0.0",
-		});
+		try {
+			// Create client
+			const client = new McpClient({
+				name: "mcp-gateway",
+				version: "1.0.0",
+			});
 
-		// Create transport and bind to client
-		const transport = new StreamableHttpClientTransport();
-		const connect = transport.bind(client);
+			// Create transport and bind to client
+			const transport = new StreamableHttpClientTransport();
+			const connect = transport.bind(client);
 
-		// Connect to server
-		const connection = await connect(server.url);
+			// Connect to server with custom headers (including Authorization if present)
+			const connection = await connect(server.url, {
+				headers: server.headers,
+			});
 
-		// Store connection info
-		this.connections.set(server.name, {
-			client,
-			connection,
-			transport,
-		});
+			// Store connection info
+			this.connections.set(server.name, {
+				client,
+				connection,
+				transport,
+			});
 
-		logger.info("Successfully connected to MCP server", {
-			serverName: server.name,
-		});
+			logger.info("Successfully connected to MCP server", {
+				serverName: server.name,
+			});
 
-		return connection;
+			return connection;
+		} catch (error) {
+			// Log the full error object for debugging
+			logger.debug("Connection error details", {
+				serverName: server.name,
+				errorString: String(error),
+				errorJSON: JSON.stringify(error, Object.getOwnPropertyNames(error)),
+			});
+
+			// Check if this is a 401 error - we need to fetch auth info
+			if (
+				error &&
+				typeof error === "object" &&
+				"message" in error &&
+				typeof error.message === "string" &&
+				error.message.includes("401")
+			) {
+				logger.info("Detected 401 error, fetching OAuth details", {
+					serverName: server.name,
+				});
+
+				// Try to fetch OAuth discovery document
+				const oauthInfo = await fetchOAuthInfo(server.url);
+				if (oauthInfo) {
+					logger.info("Server requires OAuth authentication", {
+						serverName: server.name,
+						authUrl: oauthInfo.authUrl,
+					});
+					throw new OAuthRequiredError(
+						oauthInfo.authUrl,
+						oauthInfo.message || "Authentication required",
+					);
+				}
+			}
+
+			// Check if this is an OAuth error from response body
+			const oauthInfo = extractOAuthInfo(error);
+			if (oauthInfo) {
+				logger.info("Server requires OAuth authentication", {
+					serverName: server.name,
+					authUrl: oauthInfo.authUrl,
+				});
+				throw new OAuthRequiredError(
+					oauthInfo.authUrl,
+					oauthInfo.message || "Authentication required",
+				);
+			}
+
+			// Re-throw other errors
+			throw error;
+		}
 	}
 
 	/**

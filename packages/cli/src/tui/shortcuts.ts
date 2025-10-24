@@ -72,6 +72,11 @@ export const commandShortcuts = {
     label: "v",
     description: "View Logs",
   },
+  optimization: {
+    key: "o",
+    label: "o",
+    description: "Optimization",
+  },
   addServer: {
     key: "a",
     label: "a",

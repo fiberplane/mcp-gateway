@@ -112,11 +112,17 @@ export async function runCli(): Promise<void> {
     const registry = await loadRegistry(storageDir);
 
     // Start HTTP server with event handlers for TUI
-    const { app } = await createApp(registry, storageDir, {
+    const { app, clientManager } = await createApp(registry, storageDir, {
       onLog: emitLog,
       onRegistryUpdate: emitRegistryUpdate,
       enableMcpClient: values["enable-mcp-client"],
+      port,
     });
+
+    // Store clientManager in app store for optimization evaluations
+    if (clientManager) {
+      useAppStore.setState({ clientManager });
+    }
 
     // Start server and wait for it to be listening or error
     const server = serve({
