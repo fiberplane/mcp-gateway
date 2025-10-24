@@ -52,6 +52,21 @@ export const mcpServerInfoSchema = z.object({
   title: z.string().optional(),
 });
 
+// MCP method parameter schemas (for parsing and validation)
+export const toolsCallParamsSchema = z.object({
+  name: z.string(),
+  arguments: z.unknown().optional(),
+});
+
+export const resourcesReadParamsSchema = z.object({
+  uri: z.string(),
+});
+
+export const promptsGetParamsSchema = z.object({
+  name: z.string(),
+  arguments: z.unknown().optional(),
+});
+
 // Tool call metadata
 export const captureMetadataSchema = z.object({
   serverName: z.string(),
@@ -64,6 +79,8 @@ export const captureMetadataSchema = z.object({
   clientIp: z.string().optional(),
   sseEventId: z.string().optional(), // For SSE events
   sseEventType: z.string().optional(), // For SSE events
+  inputTokens: z.number().optional(), // Estimated tokens for request
+  outputTokens: z.number().optional(), // Estimated tokens for response
 });
 
 // Capture record stored in SQLite database
@@ -125,6 +142,9 @@ export type JsonRpcRequest = z.infer<typeof jsonRpcRequestSchema>;
 export type JsonRpcResponse = z.infer<typeof jsonRpcResponseSchema>;
 export type ClientInfo = z.infer<typeof clientInfoSchema>;
 export type McpServerInfo = z.infer<typeof mcpServerInfoSchema>;
+export type ToolsCallParams = z.infer<typeof toolsCallParamsSchema>;
+export type ResourcesReadParams = z.infer<typeof resourcesReadParamsSchema>;
+export type PromptsGetParams = z.infer<typeof promptsGetParamsSchema>;
 export type CaptureMetadata = z.infer<typeof captureMetadataSchema>;
 export type CaptureRecord = z.infer<typeof captureRecordSchema>;
 export type ServerParam = z.infer<typeof serverParamSchema>;

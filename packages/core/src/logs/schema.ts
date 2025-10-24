@@ -35,6 +35,9 @@ export const logs = sqliteTable(
     // HTTP context for fallback identification
     userAgent: text("user_agent"),
     clientIp: text("client_ip"),
+    // Token estimation for cost tracking
+    inputTokens: integer("input_tokens"),
+    outputTokens: integer("output_tokens"),
   },
   (table) => ({
     // Index for time-based queries (newest first)
