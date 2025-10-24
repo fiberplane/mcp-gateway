@@ -12,6 +12,7 @@ import {
 import { Fragment, type ReactNode, useMemo, useState } from "react";
 import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
 import { getMethodBadgeVariant } from "../lib/badge-color";
+import { getMethodDetail } from "../lib/method-detail";
 import { groupLogsByTime, type TimeInterval } from "../lib/time-grouping";
 import { useHandler } from "../lib/use-handler";
 import { getLogKey } from "../lib/utils";
@@ -25,7 +26,8 @@ type SortField =
   | "session"
   | "method"
   | "duration"
-  | "client";
+  | "client"
+  | "tokens";
 type SortDirection = "asc" | "desc";
 
 /**
@@ -150,6 +152,16 @@ export function LogTable({
           aValue = a.metadata.client?.name || "";
           bValue = b.metadata.client?.name || "";
           break;
+        case "tokens": {
+          const aTokens =
+            (a.metadata.inputTokens ?? 0) + (a.metadata.outputTokens ?? 0);
+          const bTokens =
+            (b.metadata.inputTokens ?? 0) + (b.metadata.outputTokens ?? 0);
+          // Sort 0/undefined to end
+          aValue = aTokens || Number.POSITIVE_INFINITY;
+          bValue = bTokens || Number.POSITIVE_INFINITY;
+          break;
+        }
       }
 
       const comparison =
@@ -402,6 +414,26 @@ function createColumns(): Column[] {
       ),
     },
     {
+      id: "methodDetail",
+      header: "Method detail",
+      cell: (log) => {
+        const detail = getMethodDetail(log);
+        if (!detail) {
+          return <span className="text-muted-foreground">−</span>;
+        }
+
+        const isLong = detail.length > 40;
+        return (
+          <span
+            className="text-sm text-muted-foreground truncate max-w-[200px] inline-block"
+            title={isLong ? detail : undefined}
+          >
+            {detail}
+          </span>
+        );
+      },
+    },
+    {
       id: "server",
       header: "Server",
       sortField: "server",
@@ -437,6 +469,29 @@ function createColumns(): Column[] {
           {log.metadata.durationMs}ms
         </span>
       ),
+    },
+    {
+      id: "tokens",
+      header: "Tokens",
+      sortField: "tokens",
+      cell: (log) => {
+        const inputTokens = log.metadata.inputTokens ?? 0;
+        const outputTokens = log.metadata.outputTokens ?? 0;
+        const total = inputTokens + outputTokens;
+
+        if (total === 0) {
+          return <span className="text-muted-foreground">−</span>;
+        }
+
+        return (
+          <span
+            className="text-sm text-muted-foreground tabular-nums text-right"
+            title={`Input: ${inputTokens}, Output: ${outputTokens}`}
+          >
+            {total.toLocaleString()}
+          </span>
+        );
+      },
     },
   ];
 }

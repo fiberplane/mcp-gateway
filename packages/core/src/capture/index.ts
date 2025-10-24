@@ -13,7 +13,8 @@ import {
   clientInfoSchema,
   mcpServerInfoSchema,
 } from "@fiberplane/mcp-gateway-types";
-import { logger } from "../logger";
+import { logger } from "../logger.js";
+import { estimateInputTokens, estimateOutputTokens } from "../utils/tokens.js";
 
 // Store request start times for duration calculation (fallback when RequestTracker not provided)
 const requestStartTimes = new Map<string | number, number>();
@@ -95,6 +96,7 @@ export function createRequestCaptureRecord(
       server,
       userAgent: httpContext?.userAgent,
       clientIp: httpContext?.clientIp,
+      inputTokens: estimateInputTokens(request.method, request.params),
     },
     request,
   };
@@ -152,6 +154,8 @@ export function createResponseCaptureRecord(
       server,
       userAgent: httpContext?.userAgent,
       clientIp: httpContext?.clientIp,
+      // Estimate tokens from either result (success) or error (failure)
+      outputTokens: estimateOutputTokens(response.result ?? response.error),
     },
     response,
   };
@@ -288,6 +292,20 @@ export function createSSEJsonRpcCaptureRecord(
       clientIp: httpContext?.clientIp,
       sseEventId: sseEvent.id,
       sseEventType: sseEvent.event,
+      // Add token estimation for SSE JSON-RPC messages
+      inputTokens:
+        !isResponse && "method" in jsonRpcMessage
+          ? estimateInputTokens(
+              jsonRpcMessage.method,
+              (jsonRpcMessage as JsonRpcRequest).params,
+            )
+          : undefined,
+      outputTokens: isResponse
+        ? estimateOutputTokens(
+            (jsonRpcMessage as JsonRpcResponse).result ??
+              (jsonRpcMessage as JsonRpcResponse).error,
+          )
+        : undefined,
     },
     sseEvent: {
       id: sseEvent.id,

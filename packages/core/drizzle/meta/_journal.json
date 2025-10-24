@@ -22,6 +22,13 @@
       "when": 1729700000000,
       "tag": "0002_server_health",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1761314122259,
+      "tag": "0003_motionless_pete_wisdom",
+      "breakpoints": true
     }
   ]
 }
