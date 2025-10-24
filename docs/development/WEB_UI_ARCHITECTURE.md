@@ -104,6 +104,8 @@ This document outlines the architecture for adding a web-based UI to the MCP Gat
 - Server tabs for quick filtering
 - Export functionality
 - Responsive design
+- **Token estimation** - Display approximate token costs for LLM operations (see `packages/core/src/utils/tokens.ts`)
+- **Method detail preview** - Human-readable summaries of request/response content (see `packages/web/src/lib/method-detail.ts`)
 
 ### 3. Core Package Extensions
 
