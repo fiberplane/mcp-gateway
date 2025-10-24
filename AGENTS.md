@@ -297,6 +297,129 @@ bun changeset publish
 - Only `@fiberplane/mcp-gateway` (the public wrapper) should be versioned in changesets
 - Other package changes should be described in the changeset body, not as versioned packages
 
+### Changeset Workflow
+
+**CRITICAL**: When making changes to ANY internal package, ALWAYS create a changeset for `@fiberplane/mcp-gateway`, not for the package you modified.
+
+#### Why This Matters
+
+All internal packages (`types`, `core`, `api`, `server`, `web`, `cli`) are:
+- ✅ **Private** - Not published to npm independently
+- ✅ **Ignored by changesets** - See `.changeset/config.json`
+- ✅ **Bundled into binaries** - Distributed as part of the compiled CLI
+
+The only packages that get versioned and published are:
+- `@fiberplane/mcp-gateway` (public wrapper)
+- `@fiberplane/mcp-gateway-darwin-arm64` (binary)
+- `@fiberplane/mcp-gateway-linux-x64` (binary)
+- And other platform binaries
+
+The `fixed` configuration in changesets ensures these three packages always version together.
+
+#### How to Create Changesets
+
+**Rule**: Changes to internal packages → Create changeset for `@fiberplane/mcp-gateway`
+
+**Examples:**
+
+1. **Web UI changes:**
+```bash
+# You edited packages/web/src/components/LogTable.tsx
+bun changeset
+# Select: @fiberplane/mcp-gateway
+# Select: patch (or minor/major)
+# Description: "Improved log table accessibility and keyboard navigation"
+```
+
+Resulting changeset:
+```md
+---
+"@fiberplane/mcp-gateway": patch
+---
+
+Improved log table accessibility and keyboard navigation in web UI
+```
+
+2. **Core logic changes:**
+```bash
+# You edited packages/core/src/health.ts
+bun changeset
+# Select: @fiberplane/mcp-gateway
+# Select: minor
+# Description: "Added health check support for MCP servers"
+```
+
+Resulting changeset:
+```md
+---
+"@fiberplane/mcp-gateway": minor
+---
+
+Added health check support for MCP servers
+```
+
+3. **Multiple package changes:**
+```bash
+# You edited packages/web/, packages/core/, and packages/cli/
+bun changeset
+# Select: @fiberplane/mcp-gateway
+# Select: minor
+```
+
+Resulting changeset:
+```md
+---
+"@fiberplane/mcp-gateway": minor
+---
+
+**Web**: Improved accessibility with better focus indicators and keyboard navigation
+**Core**: Added health check support for MCP servers
+**CLI**: Updated TUI to display server health status
+```
+
+#### Version Bump Guidelines
+
+- **patch** (0.4.2 → 0.4.3): Bug fixes, small improvements, internal refactoring
+- **minor** (0.4.2 → 0.5.0): New features, enhancements (backward compatible)
+- **major** (0.4.2 → 1.0.0): Breaking changes, major architectural changes
+
+#### What NOT to Do
+
+❌ **Wrong**: Creating changesets for internal packages
+```md
+---
+"@fiberplane/mcp-gateway-web": patch
+---
+```
+This will cause a "mixed changeset" error since `web` is ignored.
+
+❌ **Wrong**: Referencing multiple packages
+```md
+---
+"@fiberplane/mcp-gateway": patch
+"@fiberplane/mcp-gateway-web": patch
+---
+```
+This will also cause a "mixed changeset" error.
+
+✅ **Correct**: Always reference only `@fiberplane/mcp-gateway`
+```md
+---
+"@fiberplane/mcp-gateway": patch
+---
+
+Improved web UI (describe the change in the body)
+```
+
+#### Validation
+
+Always run validation before committing:
+```bash
+bun run changeset:check
+```
+
+This ensures your changesets are correctly formatted and won't cause CI failures.
+
 ## Troubleshooting
 
 ### Common Issues
