@@ -6,12 +6,7 @@ import type {
   ServerInfo,
   SessionInfo,
 } from "./logs";
-import type {
-  McpServer,
-  McpServerConfig,
-  Registry,
-  ServerHealth,
-} from "./registry";
+import type { HealthStatus, McpServer, McpServerConfig } from "./registry";
 import type {
   CaptureRecord,
   ClientInfo,
@@ -103,16 +98,6 @@ export interface Gateway {
   };
 
   /**
-   * Registry operations for server management
-   */
-  registry: {
-    /**
-     * Get a server from the registry by name
-     */
-    getServer(registry: Registry, name: string): McpServer | undefined;
-  };
-
-  /**
    * Client info management for sessions
    */
   clientInfo: {
@@ -188,6 +173,14 @@ export interface Gateway {
      * Get all registered servers with current metrics
      */
     getRegisteredServers(): Promise<McpServer[]>;
+
+    /**
+     * Get a specific server by name
+     *
+     * @param name - Server name to lookup
+     * @returns Server if found, undefined otherwise
+     */
+    getServer(name: string): Promise<McpServer | undefined>;
 
     /**
      * Add a new server to the registry
@@ -267,17 +260,15 @@ export interface Gateway {
   health: {
     /**
      * Start periodic health checks
-     * @param registry - Registry containing servers to check
      * @param intervalMs - Check interval in milliseconds (default 30000)
      * @param onUpdate - Optional callback called with health updates
      */
     start(
-      registry: Registry,
       intervalMs?: number,
       onUpdate?: (
         updates: Array<{
           name: string;
-          health: ServerHealth;
+          health: HealthStatus;
           lastHealthCheck: string;
         }>,
       ) => void,
@@ -290,12 +281,11 @@ export interface Gateway {
 
     /**
      * Manually trigger a health check for all servers
-     * @param registry - Registry containing servers to check
      */
-    check(registry: Registry): Promise<
+    check(): Promise<
       Array<{
         name: string;
-        health: ServerHealth;
+        health: HealthStatus;
         lastHealthCheck: string;
       }>
     >;

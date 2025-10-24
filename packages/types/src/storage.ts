@@ -5,7 +5,7 @@ import type {
   ServerInfo,
   SessionInfo,
 } from "./logs.js";
-import type { McpServer, McpServerConfig } from "./registry.js";
+import type { HealthStatus, McpServer, McpServerConfig } from "./registry.js";
 import type { CaptureRecord } from "./schemas.js";
 
 /**
@@ -123,6 +123,14 @@ export interface StorageBackend {
   getRegisteredServers(): Promise<McpServer[]>;
 
   /**
+   * Get a specific registered server by name
+   *
+   * @param name - Server name to lookup
+   * @returns Server if found, undefined otherwise
+   */
+  getServer(name: string): Promise<McpServer | undefined>;
+
+  /**
    * Add a new server to the registry
    *
    * Creates a new server configuration in the registry. The server name
@@ -158,6 +166,24 @@ export interface StorageBackend {
   updateServer(
     name: string,
     changes: Partial<Omit<McpServerConfig, "name">>,
+  ): Promise<void>;
+
+  /**
+   * Upsert server health status
+   *
+   * Updates the health status of a server in the database.
+   * Used by health check manager to persist health status.
+   *
+   * @param serverName - Name of the server
+   * @param health - Health status ("up" | "down" | "unknown")
+   * @param lastCheck - ISO timestamp of the health check
+   * @param url - Server URL
+   */
+  upsertServerHealth(
+    serverName: string,
+    health: HealthStatus,
+    lastCheck: string,
+    url: string,
   ): Promise<void>;
 
   /**

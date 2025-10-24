@@ -1,4 +1,4 @@
-import type { McpServer, Registry } from "@fiberplane/mcp-gateway-types";
+import type { McpServer } from "@fiberplane/mcp-gateway-types";
 import { serverParamSchema } from "@fiberplane/mcp-gateway-types";
 import { sValidator } from "@hono/standard-validator";
 import { Hono } from "hono";
@@ -15,8 +15,7 @@ import { proxy } from "hono/proxy";
  * - /register (OAuth Dynamic Client Registration)
  */
 export async function createOAuthRoutes(
-  registry: Registry,
-  getServer: (registry: Registry, name: string) => McpServer | undefined,
+  getServer: (name: string) => Promise<McpServer | undefined>,
 ): Promise<Hono> {
   const app = new Hono();
 
@@ -66,7 +65,7 @@ export async function createOAuthRoutes(
     sValidator("param", serverParamSchema),
     async (c) => {
       const { server: serverName } = c.req.valid("param");
-      const server = getServer(registry, serverName);
+      const server = await getServer(serverName);
 
       if (!server) {
         return c.notFound();
@@ -87,7 +86,7 @@ export async function createOAuthRoutes(
     sValidator("param", serverParamSchema),
     async (c) => {
       const { server: serverName } = c.req.valid("param");
-      const server = getServer(registry, serverName);
+      const server = await getServer(serverName);
 
       if (!server) {
         return c.notFound();
@@ -108,7 +107,7 @@ export async function createOAuthRoutes(
     sValidator("param", serverParamSchema),
     async (c) => {
       const { server: serverName } = c.req.valid("param");
-      const server = getServer(registry, serverName);
+      const server = await getServer(serverName);
 
       if (!server) {
         return c.notFound();
@@ -130,7 +129,7 @@ export async function createOAuthRoutes(
     sValidator("param", serverParamSchema),
     async (c) => {
       const { server: serverName } = c.req.valid("param");
-      const server = getServer(registry, serverName);
+      const server = await getServer(serverName);
 
       if (!server) {
         return c.notFound();
@@ -190,7 +189,7 @@ export async function createOAuthRoutes(
     sValidator("param", serverParamSchema),
     async (c) => {
       const { server: serverName } = c.req.valid("param");
-      const server = getServer(registry, serverName);
+      const server = await getServer(serverName);
 
       if (!server) {
         return c.notFound();

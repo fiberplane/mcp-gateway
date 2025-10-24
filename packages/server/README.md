@@ -46,24 +46,25 @@ The CLI package orchestrates this server with the API package and Web UI.
 ```typescript
 import { createApp } from "@fiberplane/mcp-gateway-server";
 import { createMcpApp, logger } from "@fiberplane/mcp-gateway-core";
-import type { Registry } from "@fiberplane/mcp-gateway-types";
+import type { McpServer } from "@fiberplane/mcp-gateway-types";
 
-const registry: Registry = {
-  servers: [
-    {
-      name: "demo",
-      url: "http://localhost:3000/mcp",
-      type: "http",
-    },
-  ],
-};
+const servers: McpServer[] = [
+  {
+    name: "demo",
+    url: "http://localhost:3000/mcp",
+    type: "http",
+    headers: {},
+    lastActivity: null,
+    exchangeCount: 0,
+  },
+];
 
 const { app } = await createApp({
-  registry,
+  servers,
   storageDir: "~/.mcp-gateway",
   createMcpApp,
-  logger,
-  onLog: (entry) => console.log(entry),
+  appLogger: logger,
+  onProxyEvent: (entry) => console.log(entry),
   onRegistryUpdate: () => console.log("Registry updated"),
 });
 
@@ -86,11 +87,11 @@ import { Hono } from "hono";
 
 // Create MCP protocol server with dependency injection
 const { app: serverApp } = await createServerApp({
-  registry,
+  servers,
   storageDir,
   createMcpApp,
-  logger,
-  onLog: (entry) => console.log(entry),
+  appLogger: logger,
+  onProxyEvent: (entry) => console.log(entry),
   onRegistryUpdate: () => console.log("Registry updated"),
 });
 
@@ -164,11 +165,11 @@ The server uses dependency injection for flexibility and testability:
 
 ```typescript
 const { app } = await createApp({
-  registry,                    // Registry with server configurations
+  servers,                     // McpServer[] - Server configurations
   storageDir,                  // Storage directory (absolute path)
   createMcpApp,                // Factory for creating gateway MCP server
-  logger,                      // Logger instance for request logging
-  onLog: (entry) => {          // Optional: Called for each request/response
+  appLogger: logger,           // Internal logger for diagnostics
+  onProxyEvent: (entry) => {   // Optional: Called for each proxied request/response
     console.log(`${entry.method} - ${entry.httpStatus}`);
   },
   onRegistryUpdate: () => {    // Optional: Called when servers are modified

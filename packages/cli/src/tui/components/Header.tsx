@@ -1,4 +1,4 @@
-import type { ServerHealth } from "@fiberplane/mcp-gateway-types";
+import type { HealthStatus } from "@fiberplane/mcp-gateway-types";
 import type { BoxProps } from "@opentui/react";
 import { getVersion } from "../../utils/version";
 import { useCompactHeight } from "../hooks/useCompactHeight";
@@ -94,7 +94,7 @@ function HeaderSection({
 
 function ServerEntry({ server }: { server: UIServer }) {
   const theme = useTheme();
-  const getHealthColor = (health?: ServerHealth) => {
+  const getHealthColor = (health?: HealthStatus) => {
     switch (health) {
       case "up":
         return theme.success;

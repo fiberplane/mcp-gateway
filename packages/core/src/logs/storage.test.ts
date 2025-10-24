@@ -5,7 +5,13 @@ import { join } from "node:path";
 import type { CaptureRecord } from "@fiberplane/mcp-gateway-types";
 import { getDb } from "./db.js";
 import { ensureMigrations, resetMigrationState } from "./migrations.js";
-import { getServers, getSessions, insertLog, queryLogs } from "./storage.js";
+import {
+  getServers,
+  getSessions,
+  insertLog,
+  queryLogs,
+  upsertServerHealth,
+} from "./storage.js";
 
 // Test data factory
 function createTestRecord(
@@ -302,6 +308,49 @@ describe("Storage Functions", () => {
 
       expect(serverA?.sessionCount).toBe(2);
       expect(serverB?.sessionCount).toBe(1);
+    });
+
+    test("should default statuses to not-found when registry data is unavailable", async () => {
+      const db = getDb(storageDir);
+      const result = await getServers(db);
+
+      for (const server of result) {
+        expect(server.status).toBe("not-found");
+      }
+    });
+
+    test("should derive statuses using registry membership and health data", async () => {
+      const db = getDb(storageDir);
+      const registryServers = ["server-a", "server-c"];
+
+      // Insert health records into database
+      await upsertServerHealth(db, {
+        serverName: "server-a",
+        health: "down",
+        lastCheck: new Date().toISOString(),
+        url: "http://localhost:3001/mcp",
+      });
+      await upsertServerHealth(db, {
+        serverName: "server-c",
+        health: "up",
+        lastCheck: new Date().toISOString(),
+        url: "http://localhost:3002/mcp",
+      });
+
+      const result = await getServers(db, registryServers);
+
+      const serverA = result.find((s) => s.name === "server-a");
+      const serverB = result.find((s) => s.name === "server-b");
+      const serverC = result.find((s) => s.name === "server-c");
+
+      expect(serverA?.status).toBe("offline");
+      expect(serverB?.status).toBe("not-found");
+      expect(serverC).toEqual({
+        name: "server-c",
+        logCount: 0,
+        sessionCount: 0,
+        status: "online",
+      });
     });
   });
 

@@ -1,8 +1,8 @@
 import { checkServerHealth, type Gateway } from "@fiberplane/mcp-gateway-core";
 import type {
+  HealthStatus,
   LogEntry,
-  Registry,
-  ServerHealth,
+  McpServer,
 } from "@fiberplane/mcp-gateway-types";
 import { create } from "zustand";
 import { emitRegistryUpdate } from "../events";
@@ -31,7 +31,7 @@ export interface UIServer {
   url: string;
   type: "http";
   headers: Record<string, string>;
-  health: ServerHealth;
+  health: HealthStatus;
   lastHealthCheck?: string;
 }
 
@@ -70,7 +70,7 @@ interface AppStore {
   setServers: (servers: UIServer[]) => void;
   updateServerHealth: (
     name: string,
-    health: ServerHealth,
+    health: HealthStatus,
     lastHealthCheck: string,
   ) => void;
   addLog: (entry: LogEntry) => void;
@@ -100,9 +100,9 @@ interface AppStore {
 }
 
 /**
- * Helper: Transform Registry server to UIServer
+ * Helper: Transform MCP server to UIServer
  */
-export function toUIServer(server: Registry["servers"][number]): UIServer {
+export function toUIServer(server: McpServer): UIServer {
   return {
     name: server.name,
     url: server.url,
@@ -204,12 +204,13 @@ export const useAppStore = create<AppStore>((set, get) => ({
   },
 
   setServers: (servers) => set({ servers }),
-  updateServerHealth: (name, health, lastHealthCheck) =>
+  updateServerHealth: (name, health, lastHealthCheck) => {
     set((state) => ({
       servers: state.servers.map((s) =>
         s.name === name ? { ...s, health, lastHealthCheck } : s,
       ),
-    })),
+    }));
+  },
   addLog: (entry) => set((state) => ({ logs: [...state.logs, entry] })),
   clearLogs: () => set({ logs: [] }),
   openModal: (modal) => set({ activeModal: modal }),

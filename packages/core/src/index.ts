@@ -22,8 +22,8 @@ export * from "./logs/query";
 export * from "./mcp/server";
 // Registry exports
 export * from "./registry/index";
-// Storage exports (includes getStorageRoot and internal storage functions)
-export { getStorageRoot, loadRegistry, saveRegistry } from "./registry/storage";
+// Storage exports
+export { getStorageRoot } from "./registry/storage";
 
 // Utility exports
 export * from "./utils/storage";

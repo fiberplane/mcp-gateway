@@ -150,9 +150,6 @@ bun run typecheck
 
 # Build
 bun run --filter @fiberplane/your-package-name build
-
-# Test imports
-bun -e "console.log(await import('./packages/your-package-name/dist/index.js'))"
 ```
 
 ### Integration Testing

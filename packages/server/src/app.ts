@@ -1,9 +1,8 @@
+import type { Gateway } from "@fiberplane/mcp-gateway-core";
 import type {
   LogEntry,
   Logger,
-  McpServer,
   ProxyDependencies,
-  Registry,
 } from "@fiberplane/mcp-gateway-types";
 import type { Hono } from "hono";
 import { Hono as HonoApp } from "hono";
@@ -24,27 +23,21 @@ import { createProxyRoutes } from "./routes/proxy";
  * mounted separately by the CLI package for observability/management.
  */
 export async function createApp(options: {
-  registry: Registry;
   storageDir: string;
-  createMcpApp: (
-    gateway: import("@fiberplane/mcp-gateway-core").Gateway,
-  ) => Hono;
-  logger: Logger;
+  createMcpApp: (gateway: Gateway) => Hono;
+  appLogger: Logger;
   proxyDependencies: ProxyDependencies;
-  getServer: (registry: Registry, name: string) => McpServer | undefined;
-  gateway: import("@fiberplane/mcp-gateway-core").Gateway;
-  onLog?: (entry: LogEntry) => void;
+  gateway: Gateway;
+  onProxyEvent?: (entry: LogEntry) => void;
   onRegistryUpdate?: () => void;
-}): Promise<{ app: Hono; registry: Registry }> {
+}): Promise<{ app: Hono }> {
   const {
-    registry,
     storageDir,
     createMcpApp,
-    logger,
+    appLogger,
     proxyDependencies,
-    getServer,
     gateway,
-    onLog,
+    onProxyEvent,
     onRegistryUpdate,
   } = options;
   const app = new HonoApp();
@@ -53,28 +46,30 @@ export async function createApp(options: {
   app.use(
     loggerMiddleware((message: string, ...rest: string[]) => {
       if (rest.length > 0) {
-        logger.debug(message, { honoLoggerArgs: rest });
+        appLogger.debug(message, { honoLoggerArgs: rest });
       } else {
-        logger.debug(message);
+        appLogger.debug(message);
       }
     }),
   );
 
   // Health check endpoint
-  app.get("/", (c) => {
+  app.get("/", async (c) => {
+    const servers = await gateway.storage.getRegisteredServers();
     return c.json({
       name: "mcp-gateway",
       version: "0.1.1",
-      servers: registry.servers.length,
+      servers: servers.length,
       uptime: process.uptime(),
     });
   });
 
   // Registry status endpoint
-  app.get("/status", (c) => {
+  app.get("/status", async (c) => {
+    const servers = await gateway.storage.getRegisteredServers();
     return c.json({
       registry: {
-        servers: registry.servers.map((s) => ({
+        servers: servers.map((s) => ({
           name: s.name,
           url: s.url,
           type: s.type,
@@ -88,15 +83,15 @@ export async function createApp(options: {
 
   // Mount OAuth discovery and registration routes
   // These need to be mounted BEFORE the proxy routes to handle .well-known paths
-  const oauthRoutes = await createOAuthRoutes(registry, getServer);
+  const oauthRoutes = await createOAuthRoutes((name) =>
+    gateway.storage.getServer(name),
+  );
   app.route("/", oauthRoutes);
 
   // Mount the proxy routes for server connections
   const proxyRoutes = await createProxyRoutes({
-    registry,
-    storageDir,
     dependencies: proxyDependencies,
-    onLog,
+    onProxyEvent,
     onRegistryUpdate,
   });
   app.route("/servers", proxyRoutes);
@@ -109,5 +104,5 @@ export async function createApp(options: {
   // Short alias for gateway's own MCP server
   app.route("/g", gatewayMcp);
 
-  return { app, registry };
+  return { app };
 }

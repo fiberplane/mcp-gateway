@@ -39,18 +39,15 @@ Manages server configuration and registration.
 - **Persistence**: Registry stored in `~/.mcp-gateway/mcp.json`
 
 **Main Exports:**
-- `Registry` - Type definition for server registry
-- `McpServer` - Type for individual server
-- `ServerHealth` - Health status type
-- `createRegistry()` - Factory to create registry instance
+- `loadRegistry()` - Load servers from storage
+- `saveRegistry()` - Persist servers to storage
 - `checkServerHealth()` - Perform health check on server
 
 **Example:**
 ```typescript
-import { createRegistry, checkServerHealth } from "@fiberplane/mcp-gateway-core";
+import { loadRegistry, saveRegistry, checkServerHealth } from "@fiberplane/mcp-gateway-core";
 
-const registry = createRegistry();
-const servers = registry.getServers();
+const servers = await loadRegistry(storageDir);
 const health = await checkServerHealth("http://localhost:5000");
 ```
 
@@ -129,7 +126,7 @@ Creates an MCP server that provides built-in tools for log querying.
 ```typescript
 import { createMcpServer } from "@fiberplane/mcp-gateway-core";
 
-const server = createMcpServer(registry, storageDir, gateway);
+const server = createMcpServer(storageDir, gateway);
 // Server exposes tools like "list_servers", "get_logs", etc.
 ```
 
@@ -156,7 +153,7 @@ const gateway = await createGateway({
 });
 
 // Use gateway
-const servers = await gateway.registry.getServers();
+const servers = await gateway.storage.getServers();
 await gateway.capture.write(captureRecord);
 const logs = await gateway.storage.query(options);
 
@@ -228,15 +225,11 @@ interface CaptureRecord {
 }
 ```
 
-### Registry
+### McpServer
 
-Server configuration storage:
+Server configuration:
 
 ```typescript
-interface Registry {
-  servers: McpServer[];
-}
-
 interface McpServer {
   name: string;
   url: string;

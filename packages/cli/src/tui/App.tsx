@@ -1,5 +1,5 @@
 import { logger } from "@fiberplane/mcp-gateway-core";
-import type { Context, Registry } from "@fiberplane/mcp-gateway-types";
+import type { Context, McpServer } from "@fiberplane/mcp-gateway-types";
 import { render, useKeyboard } from "@opentui/react";
 import { ActivityLog } from "./components/ActivityLog";
 import { ActivityLogDetailModal } from "./components/ActivityLogDetailModal";
@@ -155,14 +155,14 @@ function App() {
   );
 }
 
-export async function runOpenTUI(context: Context, registry: Registry) {
+export async function runOpenTUI(context: Context, servers: McpServer[]) {
   logger.debug("Initializing OpenTUI app", {
-    serverCount: registry.servers.length,
+    serverCount: servers.length,
     storageDir: context.storageDir,
   });
 
-  // Convert registry servers to UI servers
-  const uiServers = registry.servers.map((server) => ({
+  // Convert servers to UI servers
+  const uiServers = servers.map((server) => ({
     name: server.name,
     url: server.url,
     type: server.type,

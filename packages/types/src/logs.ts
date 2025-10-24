@@ -96,12 +96,21 @@ export interface LogQueryResult {
 }
 
 /**
+ * Server status determined by registry membership and health checks
+ * - online: Server is in registry and responding to health checks (health = "up")
+ * - offline: Server is in registry but failing health checks (health = "down")
+ * - not-found: Server not in registry, health unknown, or imported from external source
+ */
+export type ServerStatus = "online" | "offline" | "not-found";
+
+/**
  * Server aggregation info
  */
 export interface ServerInfo {
   name: string;
   logCount: number;
   sessionCount: number;
+  status: ServerStatus;
 }
 
 /**

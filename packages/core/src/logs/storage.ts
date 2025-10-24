@@ -1,6 +1,7 @@
 import type {
   CaptureRecord,
   ClientAggregation,
+  HealthStatus,
   LogQueryOptions,
   LogQueryResult,
   ServerInfo,
@@ -14,7 +15,9 @@ import {
   type Log,
   logs,
   type NewLog,
+  type NewServerHealth,
   type NewSessionMetadata,
+  serverHealth,
   sessionMetadata,
 } from "./schema.js";
 
@@ -183,22 +186,97 @@ export async function queryLogs(
 }
 
 /**
- * Get server aggregations
+ * Get server aggregations with status
+ *
+ * @param db - Database instance
+ * @param registryServers - Optional list of registered server names
+ * @returns Server information with status (online/offline/not-found)
  */
 export async function getServers(
   db: BunSQLiteDatabase<typeof schema>,
+  registryServers?: string[],
 ): Promise<ServerInfo[]> {
-  const result = await db
+  // Get servers that have logs in the database, with health data
+  const logsResult = await db
     .select({
       name: logs.serverName,
       logCount: count(logs.id),
       sessionCount: sql<number>`COUNT(DISTINCT ${logs.sessionId})`,
+      health: serverHealth.health,
     })
     .from(logs)
-    .groupBy(logs.serverName)
-    .orderBy(logs.serverName);
+    .leftJoin(serverHealth, eq(logs.serverName, serverHealth.serverName))
+    .groupBy(logs.serverName, serverHealth.health)
+    .orderBy(sql`LOWER(${logs.serverName}) COLLATE NOCASE`);
 
-  return result as ServerInfo[];
+  // Create a map of registry servers (normalized name -> original name)
+  // This preserves the registry's casing as the source of truth
+  const registryMap = new Map<string, string>();
+  const registryProvided = Array.isArray(registryServers);
+  if (registryProvided) {
+    for (const serverName of registryServers || []) {
+      registryMap.set(serverName.toLowerCase(), serverName);
+    }
+  }
+
+  // Create a map of servers from logs
+  const serverMap = new Map<string, ServerInfo>();
+
+  // Add servers from logs with their counts
+  for (const server of logsResult) {
+    const normalizedName = server.name.toLowerCase();
+    const registryName = registryMap.get(normalizedName);
+
+    // Determine status based on registry membership and health
+    let status: "online" | "offline" | "not-found";
+    if (registryProvided && registryName) {
+      // Server is in registry - check health to determine online vs offline
+      const health = server.health;
+      status =
+        health === "down"
+          ? "offline"
+          : health === "up"
+            ? "online"
+            : "not-found";
+    } else {
+      // Server not in registry or no health data = not-found
+      // Could be: deleted from registry, imported from external source, etc.
+      status = "not-found";
+    }
+
+    serverMap.set(normalizedName, {
+      name: registryName || server.name,
+      logCount: server.logCount,
+      sessionCount: server.sessionCount,
+      status,
+    });
+  }
+
+  // Add servers from registry that don't have logs yet
+  if (registryProvided) {
+    for (const serverName of registryServers || []) {
+      const normalizedName = serverName.toLowerCase();
+      if (!serverMap.has(normalizedName)) {
+        // New server in registry with no logs yet - check health from database
+        const healthData = await getServerHealth(db, serverName);
+        const status = healthData?.health === "down" ? "offline" : "online";
+
+        serverMap.set(normalizedName, {
+          name: serverName,
+          logCount: 0,
+          sessionCount: 0,
+          status,
+        });
+      }
+    }
+  }
+
+  // Convert to array and sort by name
+  // Database already sorted by LOWER(name), but we apply localeCompare as a safety net
+  // for consistency in case the map operations affect the order
+  return Array.from(serverMap.values()).sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
 }
 
 /**
@@ -272,6 +350,72 @@ export async function getServerMetrics(
   return {
     lastActivity: row?.lastActivity ?? null,
     exchangeCount: row?.exchangeCount ?? 0,
+  };
+}
+
+/**
+ * Upsert server health (insert or update)
+ *
+ * This persists server health check results to SQLite,
+ * allowing queries to access live health status.
+ */
+export async function upsertServerHealth(
+  db: BunSQLiteDatabase<typeof schema>,
+  data: {
+    serverName: string;
+    health: HealthStatus;
+    lastCheck: string;
+    url: string;
+  },
+): Promise<void> {
+  const health: NewServerHealth = {
+    serverName: data.serverName,
+    health: data.health,
+    lastCheck: data.lastCheck,
+    url: data.url,
+  };
+
+  await db
+    .insert(serverHealth)
+    .values(health)
+    .onConflictDoUpdate({
+      target: serverHealth.serverName,
+      set: {
+        health: health.health,
+        lastCheck: health.lastCheck,
+        url: health.url,
+      },
+    });
+}
+
+/**
+ * Get server health by server name
+ *
+ * Returns null if health data doesn't exist in the database.
+ */
+export async function getServerHealth(
+  db: BunSQLiteDatabase<typeof schema>,
+  serverName: string,
+): Promise<{
+  health: HealthStatus;
+  lastCheck: string;
+  url: string;
+} | null> {
+  const result = await db
+    .select()
+    .from(serverHealth)
+    .where(eq(serverHealth.serverName, serverName))
+    .limit(1);
+
+  const row = result[0];
+  if (!row) {
+    return null;
+  }
+
+  return {
+    health: row.health as HealthStatus,
+    lastCheck: row.lastCheck,
+    url: row.url,
   };
 }
 

@@ -1,3 +1,4 @@
+import type { HealthStatus } from "@fiberplane/mcp-gateway-types";
 import type { UIServer } from "../../store";
 
 export type Server = UIServer;
@@ -5,14 +6,21 @@ export type Server = UIServer;
 /**
  * Get human-readable status text from health status
  */
-export function getStatusText(health?: string): string {
+export function getStatusText(health?: HealthStatus): string {
   switch (health) {
     case "up":
       return "✓ up";
     case "down":
       return "✗ down";
-    default:
+    case "unknown":
       return "? unknown";
+    case undefined:
+      return "? unknown";
+    default: {
+      // Exhaustiveness check: if a new HealthStatus is added, this will cause a compile error
+      const _exhaustive: never = health;
+      throw new Error(`Unhandled health status: ${_exhaustive}`);
+    }
   }
 }
 

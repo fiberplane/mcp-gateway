@@ -7,7 +7,7 @@ import {
   createMcpApp,
   createRequestCaptureRecord,
   createResponseCaptureRecord,
-  getServer,
+  type Gateway,
   logger,
   resetMigrationState,
 } from "@fiberplane/mcp-gateway-core";
@@ -15,20 +15,26 @@ import {
   createApp as createServerApp,
   type ProxyDependencies,
 } from "@fiberplane/mcp-gateway-server";
-import type { Registry } from "@fiberplane/mcp-gateway-types";
+import type { McpServer } from "@fiberplane/mcp-gateway-types";
 import type { Hono } from "hono";
+
+/**
+ * Registry type for test data organization
+ * @deprecated Only for test use - production code uses McpServer[] directly
+ */
+export type Registry = { servers: McpServer[] };
 
 /**
  * Create a fully configured gateway app for testing
  * This wires up all the dependencies that would normally be done in cli.ts
  */
 export async function createApp(
-  registry: Registry,
+  servers: McpServer[],
   storageDir: string,
 ): Promise<{
   app: Hono;
-  registry: Registry;
-  gateway: import("@fiberplane/mcp-gateway-core").Gateway;
+  servers: McpServer[];
+  gateway: Gateway;
 }> {
   // Reset migration state before creating new Gateway instance
   // This ensures migrations run for each new storage directory in tests
@@ -37,9 +43,18 @@ export async function createApp(
   // Create Gateway instance
   const gateway = await createGateway({ storageDir });
 
+  // Add servers to Gateway storage (for tests to pre-populate servers)
+  // Skip servers that already exist (tests may have pre-populated via saveRegistry)
+  const existingServers = await gateway.storage.getRegisteredServers();
+  const existingNames = new Set(existingServers.map((s) => s.name));
+
+  for (const server of servers) {
+    if (!existingNames.has(server.name)) {
+      await gateway.storage.addServer(server);
+    }
+  }
+
   // Wire up proxy dependencies using Gateway methods
-  // Note: We can't use gateway.registry.getServer or requestTracker directly
-  // because they're not exposed at the Gateway level. We'll use the core functions.
   const proxyDependencies: ProxyDependencies = {
     createRequestRecord: (
       serverName: string,
@@ -165,34 +180,68 @@ export async function createApp(
       );
     },
 
-    getServerFromRegistry: (registry: Registry, name: string) => {
-      return gateway.registry.getServer(registry, name);
+    getServer: (name: string) => {
+      return gateway.storage.getServer(name);
     },
-  };
-
-  // Wrap getServer to return undefined instead of null for type compatibility
-  const getServerWrapper = (registry: Registry, name: string) => {
-    return getServer(registry, name) ?? undefined;
   };
 
   // Create server app with all dependencies
   const result = await createServerApp({
-    registry,
     storageDir,
     createMcpApp,
-    logger,
+    appLogger: logger,
     proxyDependencies,
-    getServer: getServerWrapper,
     gateway,
   });
 
+  // Get servers from Gateway storage
+  const savedServers = await gateway.storage.getRegisteredServers();
+
   return {
     ...result,
+    servers: savedServers,
     gateway,
   };
 }
 
 /**
- * Re-export saveRegistry from core for convenience
+ * Test helper to load servers from storage
+ * Uses Gateway storage API internally
  */
-export { saveRegistry } from "@fiberplane/mcp-gateway-core";
+export async function loadRegistry(storageDir: string): Promise<McpServer[]> {
+  // Create a temporary gateway instance to access storage
+  resetMigrationState();
+  const gateway = await createGateway({ storageDir });
+
+  try {
+    return await gateway.storage.getRegisteredServers();
+  } finally {
+    await gateway.close();
+  }
+}
+
+/**
+ * Test helper to save servers to storage
+ * Uses Gateway storage API internally
+ */
+export async function saveRegistry(
+  storageDir: string,
+  servers: McpServer[],
+): Promise<void> {
+  // Create a temporary gateway instance to access storage
+  resetMigrationState();
+  const gateway = await createGateway({ storageDir });
+
+  try {
+    // Clear existing servers and add new ones
+    const existingServers = await gateway.storage.getRegisteredServers();
+    for (const server of existingServers) {
+      await gateway.storage.removeServer(server.name);
+    }
+    for (const server of servers) {
+      await gateway.storage.addServer(server);
+    }
+  } finally {
+    await gateway.close();
+  }
+}

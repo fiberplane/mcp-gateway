@@ -227,9 +227,6 @@ bun tsc --noEmit --project packages/mcp-gateway/tsconfig.json
 
 # Check build output
 ls -la packages/mcp-gateway/dist/
-
-# Verify exports
-bun -e "console.log(await import('./packages/mcp-gateway/dist/index.js'))"
 ```
 
 ### Test Debugging

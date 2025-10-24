@@ -3,9 +3,10 @@ import { useState } from "react";
 import { ExportButton } from "./components/export-button";
 import { LogTable } from "./components/log-table";
 import { Pagination } from "./components/pagination";
-import { ServerFilter } from "./components/server-filter";
+import { ServerTabs } from "./components/server-tabs";
 import { SessionFilter } from "./components/session-filter";
 import { StreamingToggle } from "./components/streaming-toggle";
+import { TopNavigation } from "./components/top-navigation";
 import { Button } from "./components/ui/button";
 import { api } from "./lib/api";
 import { useHandler } from "./lib/use-handler";
@@ -116,15 +117,17 @@ function App() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="bg-card border-b border-border px-6 py-5">
-        <h1 className="text-2xl font-semibold text-foreground">
-          MCP Gateway Logs
-        </h1>
-      </header>
+      <TopNavigation />
 
       <main className="max-w-7xl mx-auto px-6 py-6">
+        <div className="mb-6">
+          <ServerTabs
+            value={serverName}
+            onChange={handleServerChange}
+            panelId="logs-panel"
+          />
+        </div>
         <div className="mb-5 flex gap-3 items-center flex-wrap">
-          <ServerFilter value={serverName} onChange={handleServerChange} />
           <SessionFilter
             serverName={serverName}
             value={sessionId}
@@ -168,7 +171,12 @@ function App() {
           </div>
         ) : (
           <>
-            <div className="bg-card rounded-lg overflow-auto border border-border max-h-[calc(100vh-16rem)]">
+            {/* biome-ignore lint/correctness/useUniqueElementIds: Static ID needed for ARIA tabpanel association */}
+            <div
+              id="logs-panel"
+              role="tabpanel"
+              className="bg-card rounded-lg overflow-auto border border-border max-h-[calc(100vh-16rem)]"
+            >
               <LogTable
                 logs={allLogs}
                 selectedIds={selectedIds}

@@ -4,9 +4,10 @@ import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { Registry } from "@fiberplane/mcp-gateway-types";
+import type { Gateway } from "@fiberplane/mcp-gateway-core";
 import { McpServer, StreamableHttpTransport } from "mcp-lite";
 import { createApp, saveRegistry } from "../helpers/test-app.js";
+import type { Registry } from "./helpers/test-app.js";
 
 // JSON-RPC response type
 interface JsonRpcResponse {
@@ -122,7 +123,7 @@ describe("Proxy Integration Tests", () => {
   let gateway: {
     port: number;
     stop: () => void;
-    instance: import("@fiberplane/mcp-gateway-core").Gateway;
+    instance: Gateway;
   };
 
   beforeAll(async () => {
@@ -158,11 +159,11 @@ describe("Proxy Integration Tests", () => {
     };
 
     // Save registry to storage
-    await saveRegistry(storageDir, registry);
+    await saveRegistry(storageDir, registry.servers);
 
     // Create and start gateway app
     const { app, gateway: gatewayInstance } = await createApp(
-      registry,
+      registry.servers,
       storageDir,
     );
     const server = Bun.serve({

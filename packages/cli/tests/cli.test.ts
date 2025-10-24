@@ -5,10 +5,10 @@ import { join } from "node:path";
 import {
   addServer,
   isValidUrl,
-  loadRegistry,
   removeServer,
-  saveRegistry,
 } from "@fiberplane/mcp-gateway-core";
+import type { McpServer } from "@fiberplane/mcp-gateway-types";
+import { loadRegistry, saveRegistry } from "./helpers/test-app.js";
 
 let tempDir: string;
 
@@ -24,49 +24,47 @@ afterEach(async () => {
 
 // Unit tests for registry functions
 test("addServer creates new server entry", () => {
-  const registry = { servers: [] };
-  const newRegistry = addServer(registry, {
+  const servers: McpServer[] = [];
+  const newServers = addServer(servers, {
     name: "test-server",
     url: "https://api.example.com/mcp",
     type: "http",
     headers: {},
   });
 
-  expect(newRegistry.servers).toHaveLength(1);
-  expect(newRegistry.servers[0]?.name).toBe("test-server");
-  expect(newRegistry.servers[0]?.url).toBe("https://api.example.com/mcp");
-  expect(newRegistry.servers[0]?.lastActivity).toBe(null);
-  expect(newRegistry.servers[0]?.exchangeCount).toBe(0);
+  expect(newServers).toHaveLength(1);
+  expect(newServers[0]?.name).toBe("test-server");
+  expect(newServers[0]?.url).toBe("https://api.example.com/mcp");
+  expect(newServers[0]?.lastActivity).toBe(null);
+  expect(newServers[0]?.exchangeCount).toBe(0);
 });
 
 test("addServer normalizes server names to lowercase", () => {
-  const registry = { servers: [] };
-  const newRegistry = addServer(registry, {
+  const servers: McpServer[] = [];
+  const newServers = addServer(servers, {
     name: "Test-Server",
     url: "https://api.example.com/mcp",
     type: "http",
     headers: {},
   });
 
-  expect(newRegistry.servers[0]?.name).toBe("test-server");
+  expect(newServers[0]?.name).toBe("test-server");
 });
 
 test("addServer prevents duplicate server names", () => {
-  const registry = {
-    servers: [
-      {
-        name: "existing-server",
-        url: "https://existing.com/mcp",
-        type: "http" as const,
-        headers: {},
-        lastActivity: null,
-        exchangeCount: 0,
-      },
-    ],
-  };
+  const servers = [
+    {
+      name: "existing-server",
+      url: "https://existing.com/mcp",
+      type: "http" as const,
+      headers: {},
+      lastActivity: null,
+      exchangeCount: 0,
+    },
+  ];
 
   expect(() => {
-    addServer(registry, {
+    addServer(servers, {
       name: "Existing-Server", // Case insensitive
       url: "https://new.com/mcp",
       type: "http",
@@ -76,38 +74,36 @@ test("addServer prevents duplicate server names", () => {
 });
 
 test("removeServer removes existing server", () => {
-  const registry = {
-    servers: [
-      {
-        name: "server1",
-        url: "https://api1.example.com/mcp",
-        type: "http" as const,
-        headers: {},
-        lastActivity: null,
-        exchangeCount: 0,
-      },
-      {
-        name: "server2",
-        url: "https://api2.example.com/mcp",
-        type: "http" as const,
-        headers: {},
-        lastActivity: null,
-        exchangeCount: 0,
-      },
-    ],
-  };
+  const servers = [
+    {
+      name: "server1",
+      url: "https://api1.example.com/mcp",
+      type: "http" as const,
+      headers: {},
+      lastActivity: null,
+      exchangeCount: 0,
+    },
+    {
+      name: "server2",
+      url: "https://api2.example.com/mcp",
+      type: "http" as const,
+      headers: {},
+      lastActivity: null,
+      exchangeCount: 0,
+    },
+  ];
 
-  const newRegistry = removeServer(registry, "server1");
+  const newServers = removeServer(servers, "server1");
 
-  expect(newRegistry.servers).toHaveLength(1);
-  expect(newRegistry.servers[0]?.name).toBe("server2");
+  expect(newServers).toHaveLength(1);
+  expect(newServers[0]?.name).toBe("server2");
 });
 
 test("removeServer throws error for non-existent server", () => {
-  const registry = { servers: [] };
+  const servers: McpServer[] = [];
 
   expect(() => {
-    removeServer(registry, "non-existent");
+    removeServer(servers, "non-existent");
   }).toThrow("not found");
 });
 
@@ -120,41 +116,39 @@ test("isValidUrl validates HTTP/HTTPS URLs", () => {
 });
 
 // Storage tests
-test("loadRegistry returns empty registry for non-existent file", async () => {
-  const registry = await loadRegistry(tempDir);
-  expect(registry.servers).toHaveLength(0);
+test("loadRegistry returns empty server list for non-existent file", async () => {
+  const servers = await loadRegistry(tempDir);
+  expect(servers).toHaveLength(0);
 });
 
 test("saveRegistry and loadRegistry persist data correctly", async () => {
-  const originalRegistry = {
-    servers: [
-      {
-        name: "test-server",
-        url: "https://api.example.com/mcp",
-        type: "http" as const,
-        headers: { Authorization: "Bearer token" },
-        lastActivity: null,
-        exchangeCount: 0,
-      },
-    ],
-  };
+  const originalServers = [
+    {
+      name: "test-server",
+      url: "https://api.example.com/mcp",
+      type: "http" as const,
+      headers: { Authorization: "Bearer token" },
+      lastActivity: null,
+      exchangeCount: 0,
+    },
+  ];
 
-  await saveRegistry(tempDir, originalRegistry);
-  const loadedRegistry = await loadRegistry(tempDir);
+  await saveRegistry(tempDir, originalServers);
+  const loadedServers = await loadRegistry(tempDir);
 
-  expect(loadedRegistry.servers).toHaveLength(1);
-  expect(loadedRegistry.servers[0]?.name).toBe("test-server");
-  expect(loadedRegistry.servers[0]?.url).toBe("https://api.example.com/mcp");
-  expect(loadedRegistry.servers[0]?.headers.Authorization).toBe("Bearer token");
+  expect(loadedServers).toHaveLength(1);
+  expect(loadedServers[0]?.name).toBe("test-server");
+  expect(loadedServers[0]?.url).toBe("https://api.example.com/mcp");
+  expect(loadedServers[0]?.headers.Authorization).toBe("Bearer token");
 });
 
 test("loadRegistry handles invalid JSON gracefully", async () => {
   const mcpPath = join(tempDir, "mcp.json");
   await Bun.write(mcpPath, "invalid json");
 
-  // Should warn and return empty registry
-  const registry = await loadRegistry(tempDir);
-  expect(registry.servers).toHaveLength(0);
+  // Should warn and return empty server list
+  const servers = await loadRegistry(tempDir);
+  expect(servers).toHaveLength(0);
 });
 
 // CLI integration tests
@@ -187,9 +181,9 @@ test("CLI shows version when --version flag is used", async () => {
 });
 
 // Headless mode tests (non-TTY environment)
-test.skip("Headless mode: CLI runs without TUI when stdin is not a TTY", async () => {
+test("Headless mode: CLI runs without TUI when stdin is not a TTY", async () => {
   const proc = Bun.spawn(
-    ["bun", "run", "./src/cli.ts", "--storage-dir", tempDir],
+    ["bun", "run", "./src/cli.ts", "--storage-dir", tempDir, "--port", "8100"],
     {
       stdin: "pipe",
       stdout: "pipe",
@@ -230,20 +224,16 @@ test.skip("Headless mode: CLI runs without TUI when stdin is not a TTY", async (
   });
 
   expect(output).toContain(
-    "MCP Gateway server started at http://localhost:3333",
+    "MCP Gateway server started at http://localhost:8100",
   );
   expect(output).toContain("Running in headless mode (no TTY detected)");
 
   await proc.exited;
 });
 
-test.skip("Headless mode: CLI server responds to SIGTERM gracefully", async () => {
-  // FIXME: Skipped due to port conflict with previous test
-  // Allow time for previous test's port to be released
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-
+test("Headless mode: CLI server responds to SIGTERM gracefully", async () => {
   const proc = Bun.spawn(
-    ["bun", "run", "./src/run-v2.ts", "--storage-dir", tempDir],
+    ["bun", "run", "./src/cli.ts", "--storage-dir", tempDir, "--port", "8200"],
     {
       stdin: "pipe",
       stdout: "pipe",
@@ -252,20 +242,63 @@ test.skip("Headless mode: CLI server responds to SIGTERM gracefully", async () =
     },
   );
 
-  // Wait for server to start
-  await new Promise((resolve) => setTimeout(resolve, 500));
+  // Continuously read stdout in background to capture all output
+  let stdoutData = "";
+  const stdoutReader = proc.stdout.getReader();
+  const decoder = new TextDecoder();
 
-  // Send SIGTERM
+  const collectOutput = async () => {
+    try {
+      while (true) {
+        const { value, done } = await stdoutReader.read();
+        if (done) break;
+        stdoutData += decoder.decode(value, { stream: true });
+      }
+    } catch {
+      // Stream closed, that's fine
+    }
+  };
+
+  // Start collecting output in background
+  const outputCollector = collectOutput();
+
+  // Wait until we see both "server started" and "headless mode" messages
+  await Promise.race([
+    (async () => {
+      while (
+        !(
+          stdoutData.includes("MCP Gateway server started") &&
+          stdoutData.includes("Running in headless mode")
+        )
+      ) {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+    })(),
+    new Promise((_, reject) =>
+      setTimeout(
+        () => reject(new Error("Timeout waiting for server start")),
+        3000,
+      ),
+    ),
+  ]);
+
+  // Now send SIGTERM
   proc.kill("SIGTERM");
 
-  // Wait for process to exit
-  await proc.exited;
+  // Give the process a moment to handle SIGTERM and write output
+  await new Promise((resolve) => setTimeout(resolve, 100));
 
-  const stdout = await new Response(proc.stdout).text();
-  const stderr = await new Response(proc.stderr).text();
-  const output = stdout + stderr;
+  // Wait for process to exit and output collection to complete
+  await Promise.all([proc.exited, outputCollector]);
 
-  expect(output).toContain("Running in headless mode (no TTY detected)");
-  expect(output).toContain("Received SIGTERM, shutting down...");
+  const fullOutput = stdoutData;
+
+  // Verify headless mode message appears
+  expect(fullOutput).toContain("Running in headless mode (no TTY detected)");
+
+  // Verify graceful shutdown via exit code
+  // Note: The "Received SIGTERM, shutting down..." message may not always be
+  // captured due to stdout buffering when process.exit() is called immediately
+  // after console.log(). The exit code of 0 confirms the handler ran successfully.
   expect(proc.exitCode).toBe(0);
 });

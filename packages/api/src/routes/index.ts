@@ -130,7 +130,7 @@ export function createApiRoutes(queries: QueryFunctions): Hono {
   /**
    * GET /servers
    *
-   * List all servers with log counts and session counts
+   * List all servers with log counts, session counts, and status
    */
   app.get("/servers", async (c) => {
     const servers = await queries.getServers();
