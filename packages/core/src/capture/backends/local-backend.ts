@@ -176,9 +176,9 @@ export class LocalStorageBackend implements StorageBackend {
         error:
           error instanceof Error
             ? {
-              message: error.message,
-              stack: error.stack,
-            }
+                message: error.message,
+                stack: error.stack,
+              }
             : String(error),
       });
       throw error;

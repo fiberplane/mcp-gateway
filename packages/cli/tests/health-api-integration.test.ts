@@ -17,7 +17,12 @@ import {
   logger,
   resetMigrationState,
 } from "@fiberplane/mcp-gateway-core";
-import type { Gateway } from "@fiberplane/mcp-gateway-types";
+import type { Gateway, ServerInfo } from "@fiberplane/mcp-gateway-types";
+
+// Response type for /servers endpoint
+type ServersResponse = {
+  servers: ServerInfo[];
+};
 
 describe("Health Check → API Integration", () => {
   let storageDir: string;
@@ -100,7 +105,7 @@ describe("Health Check → API Integration", () => {
 
     // Query API endpoint
     const response = await apiApp.request("/servers");
-    const data = await response.json();
+    const data = (await response.json()) as ServersResponse;
 
     expect(response.status).toBe(200);
     expect(data.servers).toHaveLength(1);
@@ -137,7 +142,7 @@ describe("Health Check → API Integration", () => {
     );
 
     const response = await apiApp.request("/servers");
-    const data = await response.json();
+    const data = (await response.json()) as ServersResponse;
 
     expect(data.servers[0]?.status).toBe("offline"); // health='down' maps to status='offline'
   });
@@ -176,16 +181,12 @@ describe("Health Check → API Integration", () => {
 
     // Query API
     const response = await apiApp.request("/servers");
-    const data = await response.json();
+    const data = (await response.json()) as ServersResponse;
 
     expect(data.servers).toHaveLength(2);
 
-    const serverDown = data.servers.find(
-      (s: { name: string }) => s.name === "test-server",
-    );
-    const serverUp = data.servers.find(
-      (s: { name: string }) => s.name === "server-up",
-    );
+    const serverDown = data.servers.find((s) => s.name === "test-server");
+    const serverUp = data.servers.find((s) => s.name === "server-up");
 
     expect(serverDown?.status).toBe("offline"); // First server is still down
     expect(serverUp?.status).toBe("online"); // Second server is up
@@ -234,11 +235,9 @@ describe("Health Check → API Integration", () => {
     );
 
     const response = await apiApp.request("/servers");
-    const data = await response.json();
+    const data = (await response.json()) as ServersResponse;
 
-    const apiServer = data.servers.find(
-      (s: { name: string }) => s.name === "new-server-no-logs",
-    );
+    const apiServer = data.servers.find((s) => s.name === "new-server-no-logs");
     expect(apiServer?.status).toBe("online");
 
     // Cleanup

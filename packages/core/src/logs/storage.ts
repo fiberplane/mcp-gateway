@@ -525,19 +525,19 @@ export async function getSessionMetadata(
   const client =
     row.clientName || row.clientVersion || row.clientTitle
       ? {
-        name: row.clientName ?? "",
-        version: row.clientVersion ?? "",
-        title: row.clientTitle ?? undefined,
-      }
+          name: row.clientName ?? "",
+          version: row.clientVersion ?? "",
+          title: row.clientTitle ?? undefined,
+        }
       : undefined;
 
   // Reconstruct server info if any fields are present
   const server = row.serverVersion
     ? {
-      name: row.serverInfoName ?? row.serverName,
-      version: row.serverVersion,
-      title: row.serverTitle ?? undefined,
-    }
+        name: row.serverInfoName ?? row.serverName,
+        version: row.serverVersion,
+        title: row.serverTitle ?? undefined,
+      }
     : undefined;
 
   // Return null if neither client nor server info exists
@@ -574,19 +574,19 @@ function rowToRecord(row: Log): CaptureRecord {
   const client =
     row.clientName || row.clientVersion || row.clientTitle
       ? {
-        name: row.clientName ?? "",
-        version: row.clientVersion ?? "",
-        title: row.clientTitle ?? undefined,
-      }
+          name: row.clientName ?? "",
+          version: row.clientVersion ?? "",
+          title: row.clientTitle ?? undefined,
+        }
       : undefined;
 
   // Reconstruct server info if any fields are present
   const server = row.serverVersion
     ? {
-      name: row.serverInfoName ?? row.serverName,
-      version: row.serverVersion,
-      title: row.serverTitle ?? undefined,
-    }
+        name: row.serverInfoName ?? row.serverName,
+        version: row.serverVersion,
+        title: row.serverTitle ?? undefined,
+      }
     : undefined;
 
   return {

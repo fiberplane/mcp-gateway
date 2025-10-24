@@ -59,15 +59,19 @@ describe("Health Check System", () => {
 
   describe("checkServerHealth", () => {
     test("should return 'up' for healthy server", async () => {
+      if (!healthyServer) {
+        throw new Error("Test server not initialized");
+      }
+
       const gateway = await createGateway({ storageDir });
 
       // Access the health check method indirectly through the check() method
-      const results = await gateway.health.check();
+      const _results = await gateway.health.check();
 
       // Add a test server to the registry
       await gateway.storage.addServer({
         name: "healthy-server",
-        url: healthyServer!.url,
+        url: healthyServer.url,
         type: "http",
         headers: {},
       });
@@ -106,12 +110,16 @@ describe("Health Check System", () => {
     });
 
     test("should handle multiple servers with different health statuses", async () => {
+      if (!healthyServer) {
+        throw new Error("Test server not initialized");
+      }
+
       const gateway = await createGateway({ storageDir });
 
       // Add both healthy and unhealthy servers
       await gateway.storage.addServer({
         name: "healthy-server",
-        url: healthyServer!.url,
+        url: healthyServer.url,
         type: "http",
         headers: {},
       });
@@ -141,12 +149,16 @@ describe("Health Check System", () => {
 
   describe("health persistence", () => {
     test("should persist health check results to database", async () => {
+      if (!healthyServer) {
+        throw new Error("Test server not initialized");
+      }
+
       const gateway = await createGateway({ storageDir });
 
       // Add a server
       await gateway.storage.addServer({
         name: "test-server",
-        url: healthyServer!.url,
+        url: healthyServer.url,
         type: "http",
         headers: {},
       });
@@ -165,12 +177,16 @@ describe("Health Check System", () => {
     });
 
     test("should update health when status changes", async () => {
+      if (!healthyServer) {
+        throw new Error("Test server not initialized");
+      }
+
       const gateway = await createGateway({ storageDir });
 
       // Add a server initially pointing to healthy endpoint
       await gateway.storage.addServer({
         name: "test-server",
-        url: healthyServer!.url,
+        url: healthyServer.url,
         type: "http",
         headers: {},
       });
@@ -196,12 +212,16 @@ describe("Health Check System", () => {
 
   describe("health.start() and health.stop()", () => {
     test("should run initial health check on start", async () => {
+      if (!healthyServer) {
+        throw new Error("Test server not initialized");
+      }
+
       const gateway = await createGateway({ storageDir });
 
       // Add a server
       await gateway.storage.addServer({
         name: "test-server",
-        url: healthyServer!.url,
+        url: healthyServer.url,
         type: "http",
         headers: {},
       });
@@ -218,12 +238,16 @@ describe("Health Check System", () => {
     });
 
     test("should call onUpdate callback with health results", async () => {
+      if (!healthyServer) {
+        throw new Error("Test server not initialized");
+      }
+
       const gateway = await createGateway({ storageDir });
 
       // Add a server
       await gateway.storage.addServer({
         name: "test-server",
-        url: healthyServer!.url,
+        url: healthyServer.url,
         type: "http",
         headers: {},
       });
@@ -254,12 +278,16 @@ describe("Health Check System", () => {
     });
 
     test("should stop health checks when stop() is called", async () => {
+      if (!healthyServer) {
+        throw new Error("Test server not initialized");
+      }
+
       const gateway = await createGateway({ storageDir });
 
       // Add a server
       await gateway.storage.addServer({
         name: "test-server",
-        url: healthyServer!.url,
+        url: healthyServer.url,
         type: "http",
         headers: {},
       });
