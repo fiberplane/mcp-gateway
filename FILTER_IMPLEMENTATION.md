@@ -31,20 +31,30 @@ Build a unified filter system for the MCP Gateway web UI with comprehensive vali
 
 ### Phase 1: Foundation & Client Filter Replacement (Week 1)
 
-#### 1.1 Create Type System
+#### 1.1 Create Type System ✅
 **Files:**
-- `packages/types/src/filter-types.ts`
-- `packages/types/src/filter-schemas.ts`
+- `packages/types/src/filters.ts` (merged, Zod schemas + inferred types)
 - `packages/types/src/index.ts` (export new types)
 
 **Validation:**
-- [ ] Run `bun run typecheck` - no errors
-- [ ] Zod schemas parse correctly (manual test)
-- [ ] Types exported properly from package
+- [x] Run `bun run typecheck` - no errors
+- [x] Zod schemas parse correctly (manual test)
+- [x] Types exported properly from package
 
 **Agent Review:**
-- [ ] Launch `typescript-pro` to review type system design
-- [ ] Verify discriminated unions and type narrowing
+- [x] Launch `typescript-pro` to review type system design (Grade: 9/10)
+- [x] Verify discriminated unions and type narrowing
+
+**Improvements Implemented:**
+- Merged files into single `filters.ts`
+- Zod schemas as source of truth with `z.infer`
+- UUID validation on filter IDs
+- `FilterInput<F>` uses `Omit` to exclude ID
+- Added `createFilter()` factory function
+- Added specific type guards (isClientFilter, etc.)
+- Added utility types (FiltersForField, PartialFilterInput)
+
+**Commit:** `cb7ffeb` - feat(filters): add type-safe filter system
 
 #### 1.2 Create Filter Utilities
 **Files:**
@@ -341,5 +351,11 @@ Create/update:
 
 Last updated: 2025-10-24
 
-**Current Phase:** Phase 1.1 - Create Type System
+**Current Phase:** Phase 1.2 - Create Filter Utilities
 **Status:** In Progress
+
+### Completed
+- ✅ Phase 1.1 - Create Type System (commit cb7ffeb)
+  - filters.ts with Zod schemas + inferred types
+  - TypeScript expert review (9/10)
+  - All validation passed
