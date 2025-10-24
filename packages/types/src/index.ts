@@ -1,5 +1,6 @@
 export * from "./capture";
 export * from "./dependencies";
+export * from "./filters";
 export * from "./gateway";
 export * from "./logs";
 export * from "./registry";
