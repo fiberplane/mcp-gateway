@@ -295,18 +295,14 @@ Click column headers to sort:
 3. Try different export format
 4. Use REST API for large exports
 
-## Responsive Design
+## Display Requirements
 
-The Web UI works on:
-- **Desktop**: Full-featured dashboard
-- **Tablet**: Optimized layout with touch support
-- **Mobile**: Simplified view, all features available
+The Web UI is designed for desktop browsers:
+- **Minimum Resolution**: 1280x720 (HD)
+- **Recommended**: 1920x1080 (Full HD) or higher
+- **Wide screens**: Better experience with more visible columns
 
-**Mobile Tips:**
-- Use portrait orientation for better readability
-- Tap server cards to expand
-- Use device keyboard for search
-- Horizontal scroll for log table
+**Note**: While the UI may be usable on larger tablets in landscape mode, mobile devices are not officially supported. Some responsive elements exist but full mobile optimization is not implemented.
 
 ## Accessibility
 
@@ -326,12 +322,13 @@ The Web UI follows WCAG 2.1 AA standards:
 
 ## Browser Support
 
-Tested and supported:
+Tested and supported on desktop:
 
 - Chrome/Edge 90+
 - Firefox 88+
 - Safari 14+
-- Mobile browsers (iOS Safari, Chrome Mobile)
+
+**Note**: Mobile browsers are not officially supported. For best experience, use a desktop browser.
 
 ## Performance
 
