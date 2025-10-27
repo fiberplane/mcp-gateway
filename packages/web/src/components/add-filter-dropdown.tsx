@@ -64,11 +64,13 @@ export function AddFilterDropdown({ onAdd }: AddFilterDropdownProps) {
   // Type operator state properly based on field type
   const [operator, setOperator] = useState<FilterOperator<FilterField>>("is");
   const [value, setValue] = useState<string>("");
+  const [error, setError] = useState<string>("");
 
   // Generate unique IDs for accessibility
   const fieldSelectId = useId();
   const operatorSelectId = useId();
   const valueInputId = useId();
+  const errorId = useId();
 
   // Determine if field uses string or numeric values
   const isNumericField = field === "duration" || field === "tokens";
@@ -85,21 +87,33 @@ export function AddFilterDropdown({ onAdd }: AddFilterDropdownProps) {
     // Reset to first operator of the new type with proper typing
     setOperator(isNewFieldNumeric ? ("eq" as const) : ("is" as const));
     setValue("");
+    setError(""); // Clear errors when field changes
   };
 
   const handleAdd = () => {
+    // Clear any previous errors
+    setError("");
+
     // Validate value
     const trimmedValue = value.trim();
     if (!trimmedValue) {
-      return; // Don't add empty filters
+      setError("Please enter a value");
+      return;
     }
 
     // Split branches for type safety - numeric vs string fields
     if (isNumericField) {
       // Handle numeric fields (duration, tokens)
       const numValue = Number.parseInt(trimmedValue, 10);
-      if (Number.isNaN(numValue) || numValue < 0) {
-        return; // Invalid number
+
+      if (Number.isNaN(numValue)) {
+        setError("Please enter a valid number");
+        return;
+      }
+
+      if (numValue < 0) {
+        setError("Value must be 0 or greater");
+        return;
       }
 
       const newFilter = createFilter({
@@ -122,6 +136,7 @@ export function AddFilterDropdown({ onAdd }: AddFilterDropdownProps) {
 
     // Reset form and close
     setValue("");
+    setError("");
     setOpen(false);
   };
 
@@ -136,7 +151,7 @@ export function AddFilterDropdown({ onAdd }: AddFilterDropdownProps) {
   };
 
   return (
-    <Popover.Root open={open} onOpenChange={setOpen}>
+    <Popover.Root open={open} onOpenChange={setOpen} modal>
       <Popover.Trigger asChild>
         <Button variant="outline" size="sm" className="gap-2">
           <Plus className="size-4" aria-hidden="true" />
@@ -225,14 +240,25 @@ export function AddFilterDropdown({ onAdd }: AddFilterDropdownProps) {
                 id={valueInputId}
                 type={isNumericField ? "number" : "text"}
                 value={value}
-                onChange={(e) => setValue(e.target.value)}
+                onChange={(e) => {
+                  setValue(e.target.value);
+                  setError(""); // Clear error on change
+                }}
                 placeholder={
                   isNumericField ? "Enter number..." : "Enter value..."
                 }
                 min={isNumericField ? "0" : undefined}
                 step={isNumericField ? "1" : undefined}
+                aria-invalid={!!error}
+                aria-describedby={error ? errorId : undefined}
                 className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               />
+              {/* Error message with role="alert" for screen readers */}
+              {error && (
+                <p id={errorId} role="alert" className="text-sm text-red-600">
+                  {error}
+                </p>
+              )}
             </div>
 
             {/* Actions */}
