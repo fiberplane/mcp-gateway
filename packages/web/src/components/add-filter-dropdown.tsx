@@ -18,7 +18,6 @@ import {
   createFilter,
   type FilterField,
   type FilterOperator,
-  type FilterValue,
 } from "@fiberplane/mcp-gateway-types";
 import * as Popover from "@radix-ui/react-popover";
 import { Plus, X } from "lucide-react";
@@ -62,7 +61,8 @@ const NUMERIC_OPERATORS: Array<{
 export function AddFilterDropdown({ onAdd }: AddFilterDropdownProps) {
   const [open, setOpen] = useState(false);
   const [field, setField] = useState<FilterField>("method");
-  const [operator, setOperator] = useState<string>("is");
+  // Type operator state properly based on field type
+  const [operator, setOperator] = useState<FilterOperator<FilterField>>("is");
   const [value, setValue] = useState<string>("");
 
   // Generate unique IDs for accessibility
@@ -82,8 +82,8 @@ export function AddFilterDropdown({ onAdd }: AddFilterDropdownProps) {
   const handleFieldChange = (newField: FilterField) => {
     setField(newField);
     const isNewFieldNumeric = newField === "duration" || newField === "tokens";
-    // Reset to first operator of the new type
-    setOperator(isNewFieldNumeric ? "eq" : "is");
+    // Reset to first operator of the new type with proper typing
+    setOperator(isNewFieldNumeric ? ("eq" as const) : ("is" as const));
     setValue("");
   };
 
@@ -94,27 +94,31 @@ export function AddFilterDropdown({ onAdd }: AddFilterDropdownProps) {
       return; // Don't add empty filters
     }
 
-    // Parse numeric values
-    let filterValue: FilterValue<typeof field>;
+    // Split branches for type safety - numeric vs string fields
     if (isNumericField) {
+      // Handle numeric fields (duration, tokens)
       const numValue = Number.parseInt(trimmedValue, 10);
       if (Number.isNaN(numValue) || numValue < 0) {
         return; // Invalid number
       }
-      filterValue = numValue as FilterValue<typeof field>;
+
+      const newFilter = createFilter({
+        field: field as "duration" | "tokens",
+        operator: operator as "eq" | "gt" | "lt" | "gte" | "lte",
+        value: numValue,
+      });
+
+      onAdd(newFilter);
     } else {
-      filterValue = trimmedValue as FilterValue<typeof field>;
+      // Handle string fields (method, session, server, client)
+      const newFilter = createFilter({
+        field: field as "method" | "session" | "server" | "client",
+        operator: operator as "is" | "contains",
+        value: trimmedValue,
+      });
+
+      onAdd(newFilter);
     }
-
-    // Create filter
-    const newFilter = createFilter({
-      field,
-      operator: operator as FilterOperator<typeof field>,
-      value: filterValue,
-    });
-
-    // Notify parent
-    onAdd(newFilter);
 
     // Reset form and close
     setValue("");
@@ -126,14 +130,9 @@ export function AddFilterDropdown({ onAdd }: AddFilterDropdownProps) {
     setOpen(false);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleAdd();
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      handleCancel();
-    }
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleAdd();
   };
 
   return (
@@ -149,23 +148,23 @@ export function AddFilterDropdown({ onAdd }: AddFilterDropdownProps) {
         <Popover.Content
           className="z-50 w-80 rounded-md border border-border bg-popover p-4 shadow-lg outline-none"
           sideOffset={5}
-          onKeyDown={handleKeyDown}
         >
-          <div className="space-y-4">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-medium">Add Filter</h3>
-              <Popover.Close asChild>
-                <button
-                  type="button"
-                  className="inline-flex items-center justify-center rounded-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 p-0.5 transition-colors"
-                  aria-label="Close"
-                >
-                  <X className="size-4" aria-hidden="true" />
-                </button>
-              </Popover.Close>
-            </div>
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium">Add Filter</h3>
+            <Popover.Close asChild>
+              <button
+                type="button"
+                className="inline-flex items-center justify-center rounded-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 p-0.5 transition-colors"
+                aria-label="Close"
+              >
+                <X className="size-4" aria-hidden="true" />
+              </button>
+            </Popover.Close>
+          </div>
 
+          {/* Form with proper semantics */}
+          <form onSubmit={handleSubmit} className="space-y-4">
             {/* Filter Field Selector */}
             <div className="space-y-2">
               <label
@@ -201,7 +200,9 @@ export function AddFilterDropdown({ onAdd }: AddFilterDropdownProps) {
               <select
                 id={operatorSelectId}
                 value={operator}
-                onChange={(e) => setOperator(e.target.value)}
+                onChange={(e) =>
+                  setOperator(e.target.value as FilterOperator<FilterField>)
+                }
                 className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 {availableOperators.map((op) => (
@@ -244,16 +245,11 @@ export function AddFilterDropdown({ onAdd }: AddFilterDropdownProps) {
               >
                 Cancel
               </Button>
-              <Button
-                type="button"
-                size="sm"
-                onClick={handleAdd}
-                disabled={!value.trim()}
-              >
+              <Button type="submit" size="sm" disabled={!value.trim()}>
                 Add
               </Button>
             </div>
-          </div>
+          </form>
 
           <Popover.Arrow className="fill-border" />
         </Popover.Content>
