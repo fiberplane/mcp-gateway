@@ -13,8 +13,8 @@ import {
   clientInfoSchema,
   mcpServerInfoSchema,
 } from "@fiberplane/mcp-gateway-types";
-import { logger } from "../logger.js";
-import { estimateInputTokens, estimateOutputTokens } from "../utils/tokens.js";
+import { logger } from "../logger";
+import { estimateInputTokens, estimateOutputTokens } from "../utils/tokens";
 
 // Store request start times for duration calculation (fallback when RequestTracker not provided)
 const requestStartTimes = new Map<string | number, number>();
