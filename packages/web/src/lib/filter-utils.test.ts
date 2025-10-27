@@ -944,3 +944,365 @@ describe("clearAllFilters", () => {
     expect(result).toEqual([]);
   });
 });
+
+// ============================================================================
+// Multi-Value Filter Tests (Phase 3)
+// ============================================================================
+
+describe("parseFiltersFromUrl - multi-value support", () => {
+  it("should parse comma-separated string array", () => {
+    const params = new URLSearchParams(
+      "method=is:tools/call,prompts/get,resources/list",
+    );
+    const filters = parseFiltersFromUrl(params);
+
+    expect(filters).toHaveLength(1);
+    expect(filters[0]?.field).toBe("method");
+    expect(filters[0]?.value).toEqual([
+      "tools/call",
+      "prompts/get",
+      "resources/list",
+    ]);
+  });
+
+  it("should parse comma-separated numeric array", () => {
+    const params = new URLSearchParams("duration=eq:50,100,200");
+    const filters = parseFiltersFromUrl(params);
+
+    expect(filters).toHaveLength(1);
+    expect(filters[0]?.field).toBe("duration");
+    expect(filters[0]?.value).toEqual([50, 100, 200]);
+  });
+
+  it("should handle whitespace in array values", () => {
+    const params = new URLSearchParams(
+      "method=is:tools/call, prompts/get , resources/list",
+    );
+    const filters = parseFiltersFromUrl(params);
+
+    expect(filters[0]?.value).toEqual([
+      "tools/call",
+      "prompts/get",
+      "resources/list",
+    ]);
+  });
+
+  it("should skip empty array values", () => {
+    const params = new URLSearchParams("method=is:tools/call,,prompts/get");
+    const filters = parseFiltersFromUrl(params);
+
+    expect(filters[0]?.value).toEqual(["tools/call", "prompts/get"]);
+  });
+
+  it("should skip all-empty string array", () => {
+    const params = new URLSearchParams("method=is:,,");
+    const filters = parseFiltersFromUrl(params);
+
+    expect(filters).toHaveLength(0);
+  });
+
+  it("should skip all-invalid numeric array", () => {
+    const params = new URLSearchParams("duration=eq:abc,def,xyz");
+    const filters = parseFiltersFromUrl(params);
+
+    expect(filters).toHaveLength(0);
+  });
+
+  it("should skip numeric array with some invalid values", () => {
+    const params = new URLSearchParams("duration=eq:50,abc,200");
+    const filters = parseFiltersFromUrl(params);
+
+    expect(filters[0]?.value).toEqual([50, 200]);
+  });
+});
+
+describe("serializeFiltersToUrl - multi-value support", () => {
+  it("should serialize string array with commas", () => {
+    const filters: Filter[] = [
+      createFilter({
+        field: "method",
+        operator: "is",
+        value: ["tools/call", "prompts/get"],
+      }),
+    ];
+    const params = serializeFiltersToUrl(filters);
+
+    expect(params.get("method")).toBe("is:tools/call,prompts/get");
+  });
+
+  it("should serialize numeric array with commas", () => {
+    const filters: Filter[] = [
+      createFilter({
+        field: "duration",
+        operator: "eq",
+        value: [50, 100, 200],
+      }),
+    ];
+    const params = serializeFiltersToUrl(filters);
+
+    expect(params.get("duration")).toBe("eq:50,100,200");
+  });
+});
+
+describe("URL serialization round-trip - multi-value", () => {
+  it("should maintain string arrays through serialization and parsing", () => {
+    const original: Filter[] = [
+      createFilter({
+        field: "method",
+        operator: "is",
+        value: ["tools/call", "prompts/get", "resources/list"],
+      }),
+    ];
+
+    const serialized = serializeFiltersToUrl(original);
+    const parsed = parseFiltersFromUrl(serialized);
+
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0]).toMatchObject({
+      field: "method",
+      operator: "is",
+      value: ["tools/call", "prompts/get", "resources/list"],
+    });
+  });
+
+  it("should maintain numeric arrays through serialization and parsing", () => {
+    const original: Filter[] = [
+      createFilter({
+        field: "duration",
+        operator: "eq",
+        value: [50, 100, 200],
+      }),
+    ];
+
+    const serialized = serializeFiltersToUrl(original);
+    const parsed = parseFiltersFromUrl(serialized);
+
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0]).toMatchObject({
+      field: "duration",
+      operator: "eq",
+      value: [50, 100, 200],
+    });
+  });
+});
+
+describe("matchesFilter - multi-value support (OR logic)", () => {
+  describe("string array matching", () => {
+    it("should match if any array value matches with 'is' operator", () => {
+      const filter = createFilter({
+        field: "method",
+        operator: "is",
+        value: ["tools/call", "prompts/get"],
+      });
+
+      expect(matchesFilter(mockLog, filter)).toBe(true);
+    });
+
+    it("should not match if no array value matches", () => {
+      const filter = createFilter({
+        field: "method",
+        operator: "is",
+        value: ["prompts/get", "resources/list"],
+      });
+
+      expect(matchesFilter(mockLog, filter)).toBe(false);
+    });
+
+    it("should match if any array value matches with 'contains' operator", () => {
+      const filter = createFilter({
+        field: "method",
+        operator: "contains",
+        value: ["tools", "prompts"],
+      });
+
+      expect(matchesFilter(mockLog, filter)).toBe(true);
+    });
+
+    it("should handle single-element arrays", () => {
+      const filter = createFilter({
+        field: "method",
+        operator: "is",
+        value: ["tools/call"],
+      });
+
+      expect(matchesFilter(mockLog, filter)).toBe(true);
+    });
+
+    it("should handle large arrays efficiently", () => {
+      const filter = createFilter({
+        field: "method",
+        operator: "is",
+        value: [
+          "method1",
+          "method2",
+          "method3",
+          "tools/call", // Match should be found
+          "method5",
+        ],
+      });
+
+      expect(matchesFilter(mockLog, filter)).toBe(true);
+    });
+  });
+
+  describe("numeric array matching", () => {
+    it("should match if any array value matches with 'eq' operator", () => {
+      const filter = createFilter({
+        field: "duration",
+        operator: "eq",
+        value: [100, 150, 200],
+      });
+
+      expect(matchesFilter(mockLog, filter)).toBe(true);
+    });
+
+    it("should not match if no array value matches", () => {
+      const filter = createFilter({
+        field: "duration",
+        operator: "eq",
+        value: [100, 200, 300],
+      });
+
+      expect(matchesFilter(mockLog, filter)).toBe(false);
+    });
+
+    it("should match if any value satisfies 'gt' operator", () => {
+      const filter = createFilter({
+        field: "duration",
+        operator: "gt",
+        value: [50, 100, 200], // 150 > 100
+      });
+
+      expect(matchesFilter(mockLog, filter)).toBe(true);
+    });
+
+    it("should match if any value satisfies 'lt' operator", () => {
+      const filter = createFilter({
+        field: "duration",
+        operator: "lt",
+        value: [100, 200, 300], // 150 < 200
+      });
+
+      expect(matchesFilter(mockLog, filter)).toBe(true);
+    });
+  });
+});
+
+describe("applyFiltersToLogs - multi-value filters", () => {
+  const logs: ApiLogEntry[] = [
+    mockLog, // method: "tools/call", duration: 150
+    {
+      ...mockLog,
+      id: "log-2",
+      method: "prompts/get",
+      metadata: {
+        ...mockLog.metadata,
+        durationMs: 50,
+      },
+    },
+    {
+      ...mockLog,
+      id: "log-3",
+      method: "resources/list",
+      metadata: {
+        ...mockLog.metadata,
+        durationMs: 200,
+      },
+    },
+  ];
+
+  it("should filter by multi-value method filter (OR logic)", () => {
+    const filters = [
+      createFilter({
+        field: "method",
+        operator: "is",
+        value: ["tools/call", "prompts/get"],
+      }),
+    ];
+    const result = applyFiltersToLogs(logs, filters);
+
+    expect(result).toHaveLength(2);
+    expect(result[0]?.method).toBe("tools/call");
+    expect(result[1]?.method).toBe("prompts/get");
+  });
+
+  it("should filter by multi-value duration filter (OR logic)", () => {
+    const filters = [
+      createFilter({
+        field: "duration",
+        operator: "eq",
+        value: [50, 200],
+      }),
+    ];
+    const result = applyFiltersToLogs(logs, filters);
+
+    expect(result).toHaveLength(2);
+    expect(result[0]?.metadata.durationMs).toBe(50);
+    expect(result[1]?.metadata.durationMs).toBe(200);
+  });
+
+  it("should combine multi-value filters with AND logic between filters", () => {
+    const filters = [
+      createFilter({
+        field: "method",
+        operator: "is",
+        value: ["tools/call", "resources/list"],
+      }),
+      createFilter({
+        field: "duration",
+        operator: "gt",
+        value: 100,
+      }),
+    ];
+    const result = applyFiltersToLogs(logs, filters);
+
+    // Only logs matching ANY method value AND duration > 100
+    expect(result).toHaveLength(2);
+    expect(result[0]?.method).toBe("tools/call");
+    expect(result[1]?.method).toBe("resources/list");
+  });
+});
+
+describe("getFilterLabel - multi-value support", () => {
+  it("should format string array with commas", () => {
+    const filter = createFilter({
+      field: "method",
+      operator: "is",
+      value: ["tools/call", "prompts/get"],
+    });
+
+    expect(getFilterLabel(filter)).toBe("Method is tools/call, prompts/get");
+  });
+
+  it("should format numeric array with commas", () => {
+    const filter = createFilter({
+      field: "duration",
+      operator: "eq",
+      value: [50, 100, 200],
+    });
+
+    expect(getFilterLabel(filter)).toBe("Duration equals 50ms, 100ms, 200ms");
+  });
+
+  it("should handle single-element arrays", () => {
+    const filter = createFilter({
+      field: "method",
+      operator: "is",
+      value: ["tools/call"],
+    });
+
+    expect(getFilterLabel(filter)).toBe("Method is tools/call");
+  });
+
+  it("should handle long arrays gracefully", () => {
+    const filter = createFilter({
+      field: "method",
+      operator: "is",
+      value: ["method1", "method2", "method3", "method4", "method5"],
+    });
+
+    expect(getFilterLabel(filter)).toBe(
+      "Method is method1, method2, method3, method4, method5",
+    );
+  });
+});
