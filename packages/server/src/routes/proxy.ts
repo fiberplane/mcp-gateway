@@ -723,7 +723,7 @@ export async function createProxyRoutes(options: {
       // Log incoming request from client
       logRequest({ server, sessionId, request: jsonRpcRequest, onProxyEvent });
 
-      let response: JsonRpcResponse;
+      let response: JsonRpcResponse | undefined;
       let httpStatus = 200;
 
       try {
@@ -837,11 +837,26 @@ export async function createProxyRoutes(options: {
           // If not valid JSON, use as-is
           responseBody = responseText;
         }
-        response = responseBody as JsonRpcResponse;
         const duration = Date.now() - startTime;
 
+        const parsedJsonRpc = jsonRpcReqResSchema.safeParse(responseBody);
+        const jsonRpcMessage = parsedJsonRpc.success
+          ? parsedJsonRpc.data
+          : null;
+
+        if (jsonRpcMessage && isJsonRpcResponse(jsonRpcMessage)) {
+          response = jsonRpcMessage;
+        } else {
+          response = undefined;
+        }
+        const isResponseBody = response !== undefined;
+
         // Capture server info from initialize response BEFORE creating response record
-        if (jsonRpcRequest.method === "initialize" && response.result) {
+        if (
+          jsonRpcRequest.method === "initialize" &&
+          isResponseBody &&
+          response?.result
+        ) {
           const result = response.result as Record<string, unknown>;
           if (result.serverInfo) {
             const serverResult = mcpServerInfoSchema.safeParse(
@@ -891,7 +906,96 @@ export async function createProxyRoutes(options: {
               (await deps.getServerInfoForSession(sessionId))
             : await deps.getServerInfoForSession(sessionId);
 
+        if (jsonRpcMessage && isJsonRpcRequest(jsonRpcMessage)) {
+          const serverRequest = jsonRpcMessage;
+          const requestTimestamp = new Date().toISOString();
+          const apiRequestEntry: ApiRequestLogEntry = {
+            timestamp: requestTimestamp,
+            method: serverRequest.method,
+            id: serverRequest.id ?? null,
+            direction: "request" as const,
+            metadata: {
+              serverName: server.name,
+              sessionId,
+              durationMs: duration,
+              httpStatus,
+            },
+            request: serverRequest,
+          };
+          const requestMethodDetail = getMethodDetail(apiRequestEntry);
+
+          const requestRecord = deps.createRequestRecord(
+            server.name,
+            sessionId,
+            serverRequest,
+            httpContext,
+            updatedClientInfo,
+            updatedServerInfo,
+            requestMethodDetail,
+          );
+          await deps.appendRecord(requestRecord);
+
+          await handleSessionTransition(
+            c,
+            targetResponse,
+            sessionId,
+            jsonRpcRequest,
+            deps,
+          );
+
+          onProxyEvent?.({
+            timestamp: requestTimestamp,
+            serverName: server.name,
+            sessionId,
+            method: serverRequest.method,
+            httpStatus,
+            duration,
+            direction: "response",
+            request: serverRequest,
+            methodDetail: requestMethodDetail,
+          });
+
+          await updateServerActivity(onRegistryUpdate);
+
+          const responseHeaders = new Headers(targetResponse.headers);
+          for (const header of AUTO_HEADERS) {
+            responseHeaders.delete(header);
+          }
+          return new Response(responseText, {
+            status: httpStatus,
+            headers: responseHeaders,
+          });
+        }
+
         // Compute methodDetail for database storage
+        if (!response) {
+          logger.warn("Upstream server returned non JSON-RPC payload", {
+            server: server.name,
+            sessionId,
+            status: httpStatus,
+            bodyType: typeof responseBody,
+          });
+
+          await handleSessionTransition(
+            c,
+            targetResponse,
+            sessionId,
+            jsonRpcRequest,
+            deps,
+          );
+
+          await updateServerActivity(onRegistryUpdate);
+
+          const responseHeaders = new Headers(targetResponse.headers);
+          for (const header of AUTO_HEADERS) {
+            responseHeaders.delete(header);
+          }
+          return new Response(responseText, {
+            status: httpStatus,
+            headers: responseHeaders,
+          });
+        }
+
         const responseTimestamp = new Date().toISOString();
         const apiResponseEntry: ApiResponseLogEntry = {
           timestamp: responseTimestamp,

@@ -251,7 +251,8 @@ function getResponsePreview(log: ApiLogEntry): string {
 
   // Handle errors
   if (response.error) {
-    return `Error: ${response.error.message}`;
+    const message = response.error.message || "";
+    return message.startsWith("Error") ? message : `Error: ${message}`;
   }
 
   // Handle successful results

@@ -175,10 +175,16 @@ export function LogTable({
             (a.metadata.inputTokens ?? 0) + (a.metadata.outputTokens ?? 0);
           const bTokens =
             (b.metadata.inputTokens ?? 0) + (b.metadata.outputTokens ?? 0);
-          // Sort 0/undefined to end
-          aValue = aTokens || Number.POSITIVE_INFINITY;
-          bValue = bTokens || Number.POSITIVE_INFINITY;
-          break;
+          const aHasTokens = aTokens > 0;
+          const bHasTokens = bTokens > 0;
+
+          if (aHasTokens !== bHasTokens) {
+            // Always push zero-token entries to the end regardless of sort direction
+            return aHasTokens ? -1 : 1;
+          }
+
+          const tokenComparison = aTokens - bTokens;
+          return sortDirection === "asc" ? tokenComparison : -tokenComparison;
         }
       }
 

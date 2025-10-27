@@ -12,5 +12,6 @@ import type { ApiLogEntry } from "@fiberplane/mcp-gateway-types";
  * @returns Human-readable detail string, null if parsing failed, or empty string if not applicable
  */
 export function getMethodDetail(log: ApiLogEntry): string | null {
-  return log.metadata.methodDetail ?? null;
+  const detail = log.metadata.methodDetail;
+  return detail === null ? null : (detail ?? "");
 }
