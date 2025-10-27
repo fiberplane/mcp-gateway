@@ -126,7 +126,7 @@ export function FilterBar({ onChange }: FilterBarProps) {
 
   // Get current client filter value (if any)
   const clientFilter = filterState.filters.find((f) => f.field === "client");
-  const clientValue = clientFilter?.value as string | undefined;
+  const clientValue = clientFilter?.value;
 
   const handleClientChange = (value: string) => {
     if (value === "all") {

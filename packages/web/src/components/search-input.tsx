@@ -15,7 +15,7 @@
  */
 
 import { Search, X } from "lucide-react";
-import { useDeferredValue, useEffect, useId, useState } from "react";
+import { useDeferredValue, useEffect, useId, useRef, useState } from "react";
 
 interface SearchInputProps {
   /**
@@ -42,6 +42,9 @@ export function SearchInput({
   // Generate unique ID for accessibility
   const inputId = useId();
 
+  // Ref for type-safe focus management
+  const inputRef = useRef<HTMLInputElement>(null);
+
   // Local state for immediate UI updates
   const [localValue, setLocalValue] = useState(value);
 
@@ -53,17 +56,23 @@ export function SearchInput({
     setLocalValue(value);
   }, [value]);
 
+  // Stable reference to onChange to prevent effect re-runs
+  const onChangeRef = useRef(onChange);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
   // Notify parent of debounced changes
   useEffect(() => {
     if (deferredValue !== value) {
-      onChange(deferredValue);
+      onChangeRef.current(deferredValue);
     }
-  }, [deferredValue, value, onChange]);
+  }, [deferredValue, value]);
 
   const handleClear = () => {
     setLocalValue("");
-    // Focus back to input after clearing
-    document.getElementById(inputId)?.focus();
+    // Type-safe focus restoration using ref
+    inputRef.current?.focus();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -85,6 +94,7 @@ export function SearchInput({
 
       {/* Input field */}
       <input
+        ref={inputRef}
         id={inputId}
         type="text"
         value={localValue}
