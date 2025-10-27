@@ -63,8 +63,20 @@ function getFilterIcon(field: Filter["field"]) {
 }
 
 // Format value with units if needed
+// Handles both single values and arrays
 function formatValue(filter: Filter): string {
-  if (filter.field === "duration") {
+  // Handle array values
+  if (Array.isArray(filter.value)) {
+    if (filter.field === "duration" || filter.field === "tokens") {
+      // Add units to each numeric value
+      return filter.value.map((v) => `${v}ms`).join(", ");
+    }
+    // Join string values with commas
+    return filter.value.join(", ");
+  }
+
+  // Handle single values
+  if (filter.field === "duration" || filter.field === "tokens") {
     return `${filter.value}ms`;
   }
   return String(filter.value);
