@@ -169,6 +169,13 @@ export function FilterBar({ onChange }: FilterBarProps) {
     }));
   };
 
+  const handleRemoveFilterByField = (field: string) => {
+    setFilterState((prev) => ({
+      ...prev,
+      filters: prev.filters.filter((f) => f.field !== field),
+    }));
+  };
+
   const handleSearchChange = (search: string) => {
     setFilterState((prev) => ({
       ...prev,
@@ -242,6 +249,7 @@ export function FilterBar({ onChange }: FilterBarProps) {
         {/* Add filter dropdown */}
         <AddFilterDropdown
           onAdd={handleAddFilter}
+          onRemove={handleRemoveFilterByField}
           activeFilters={filterState.filters}
         />
 

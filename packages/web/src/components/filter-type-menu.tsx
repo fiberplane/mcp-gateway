@@ -11,13 +11,14 @@
  * - Data-driven submenus using TanStack Query hooks
  * - Multi-select support (checkboxes)
  * - Search/filter within submenus
- * - Keyboard accessible
+ * - Apply on close (no Apply/Cancel buttons)
+ * - Keyboard accessible (ESC to cancel)
  * - Screen reader friendly
  */
 
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Plus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   useAvailableClients,
   useAvailableMethods,
@@ -29,9 +30,9 @@ import { Button } from "./ui/button";
 
 interface FilterTypeMenuProps {
   /**
-   * Callback when filters are applied
+   * Callback when filters are applied (menu closes)
    * @param filterType - The type of filter (method, client, server, session)
-   * @param values - Array of selected values
+   * @param values - Array of selected values (empty array = remove filter)
    */
   onApply: (filterType: string, values: string[]) => void;
 
@@ -102,47 +103,72 @@ export function FilterTypeMenu({
       count: s.logCount,
     })) ?? [];
 
-  const handleApply = () => {
-    // Apply all filter types with their selected values
-    if (selectedMethods.length > 0) {
-      onApply("method", selectedMethods);
+  // Sync temp state with active filters when menu opens
+  useEffect(() => {
+    if (open) {
+      setSelectedMethods(activeFilters.method ?? []);
+      setSelectedClients(activeFilters.client ?? []);
+      setSelectedServers(activeFilters.server ?? []);
+      setSelectedSessions(activeFilters.session ?? []);
     }
-    if (selectedClients.length > 0) {
-      onApply("client", selectedClients);
-    }
-    if (selectedServers.length > 0) {
-      onApply("server", selectedServers);
-    }
-    if (selectedSessions.length > 0) {
-      onApply("session", selectedSessions);
-    }
+  }, [open, activeFilters]);
 
-    // Close menu after applying
-    setOpen(false);
+  // Apply all filter changes when menu closes
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen && open) {
+      // Menu is closing - apply all selections
+      applyFilters();
+    }
+    setOpen(newOpen);
   };
 
-  const handleCancel = () => {
-    // Reset selections to active filters
+  const applyFilters = () => {
+    // Apply each filter type with its selected values
+    // Empty array = remove filter for that type
+    onApply("method", selectedMethods);
+    onApply("client", selectedClients);
+    onApply("server", selectedServers);
+    onApply("session", selectedSessions);
+  };
+
+  const discardChanges = () => {
+    // Reset temp state to active filters
     setSelectedMethods(activeFilters.method ?? []);
     setSelectedClients(activeFilters.client ?? []);
     setSelectedServers(activeFilters.server ?? []);
     setSelectedSessions(activeFilters.session ?? []);
-
-    setOpen(false);
   };
 
-  const hasChanges =
-    JSON.stringify(selectedMethods) !== JSON.stringify(activeFilters.method) ||
-    JSON.stringify(selectedClients) !== JSON.stringify(activeFilters.client) ||
-    JSON.stringify(selectedServers) !== JSON.stringify(activeFilters.server) ||
-    JSON.stringify(selectedSessions) !== JSON.stringify(activeFilters.session);
+  // Detect uncommitted changes
+  const hasUncommittedChanges =
+    JSON.stringify([...selectedMethods].sort()) !==
+      JSON.stringify([...(activeFilters.method ?? [])].sort()) ||
+    JSON.stringify([...selectedClients].sort()) !==
+      JSON.stringify([...(activeFilters.client ?? [])].sort()) ||
+    JSON.stringify([...selectedServers].sort()) !==
+      JSON.stringify([...(activeFilters.server ?? [])].sort()) ||
+    JSON.stringify([...selectedSessions].sort()) !==
+      JSON.stringify([...(activeFilters.session ?? [])].sort());
 
   return (
-    <DropdownMenu.Root open={open} onOpenChange={setOpen} modal={false}>
+    <DropdownMenu.Root
+      open={open}
+      onOpenChange={handleOpenChange}
+      modal={false}
+    >
       <DropdownMenu.Trigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
+        <Button variant="outline" size="sm" className="gap-2 relative">
           <Plus className="size-4" aria-hidden="true" />
           Add filter
+          {hasUncommittedChanges && (
+            <>
+              <span
+                className="absolute -top-1 -right-1 size-2 rounded-full bg-orange-500"
+                aria-hidden="true"
+              />
+              <span className="sr-only">Uncommitted changes</span>
+            </>
+          )}
         </Button>
       </DropdownMenu.Trigger>
 
@@ -151,6 +177,13 @@ export function FilterTypeMenu({
           className="min-w-[200px] rounded-md border border-border bg-popover p-1 shadow-lg"
           sideOffset={5}
           align="start"
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              // ESC key - discard changes and close
+              discardChanges();
+              setOpen(false);
+            }
+          }}
         >
           {/* Method Filter */}
           <FilterValueSubmenu
@@ -193,26 +226,9 @@ export function FilterTypeMenu({
             searchPlaceholder="Search servers..."
           />
 
-          <DropdownMenu.Separator className="h-px bg-border my-1" />
-
-          {/* Action Buttons */}
-          <div className="flex gap-2 p-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="flex-1"
-              onClick={handleCancel}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              className="flex-1"
-              onClick={handleApply}
-              disabled={!hasChanges}
-            >
-              Apply
-            </Button>
+          {/* Helper text */}
+          <div className="px-2 py-1.5 text-xs text-muted-foreground border-t border-border mt-1">
+            Filters apply when menu closes. Press ESC to cancel.
           </div>
         </DropdownMenu.Content>
       </DropdownMenu.Portal>

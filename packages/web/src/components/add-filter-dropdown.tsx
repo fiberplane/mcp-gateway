@@ -28,6 +28,11 @@ interface AddFilterDropdownProps {
   onAdd: (filter: Filter) => void;
 
   /**
+   * Callback when filters are removed
+   */
+  onRemove?: (field: string) => void;
+
+  /**
    * Currently active filters (optional)
    * Used to show selection state in the menu
    */
@@ -36,6 +41,7 @@ interface AddFilterDropdownProps {
 
 export function AddFilterDropdown({
   onAdd,
+  onRemove,
   activeFilters = [],
 }: AddFilterDropdownProps) {
   /**
@@ -73,11 +79,18 @@ export function AddFilterDropdown({
 
   /**
    * Handle filter application from FilterTypeMenu
+   * Called for EACH filter type when menu closes
    */
   const handleApply = (filterType: string, values: string[]) => {
-    if (values.length === 0) return;
-
     const field = filterType as FilterField;
+
+    if (values.length === 0) {
+      // Empty array means remove this filter type
+      if (onRemove) {
+        onRemove(field);
+      }
+      return;
+    }
 
     // Create filter with array values for multi-select
     // Use single value if only one selected, otherwise use array
