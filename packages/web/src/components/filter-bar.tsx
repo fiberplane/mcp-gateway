@@ -24,6 +24,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../lib/api";
 import {
+  addOrReplaceFilter,
   parseFilterStateFromUrl,
   removeFilter,
   serializeFilterStateToUrl,
@@ -164,7 +165,7 @@ export function FilterBar({ onChange }: FilterBarProps) {
   const handleAddFilter = (filter: ReturnType<typeof createFilter>) => {
     setFilterState((prev) => ({
       ...prev,
-      filters: [...prev.filters, filter],
+      filters: addOrReplaceFilter(prev.filters, filter),
     }));
   };
 
