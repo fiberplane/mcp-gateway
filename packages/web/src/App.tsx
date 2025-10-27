@@ -1,6 +1,7 @@
 import type { FilterState } from "@fiberplane/mcp-gateway-types";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ExportButton } from "./components/export-button";
 import { FilterBar } from "./components/filter-bar";
 import { LogTable } from "./components/log-table";
@@ -154,7 +155,24 @@ function App() {
 
         {/* Filter Bar - Phase 1 */}
         <div className="mb-5">
-          <FilterBar onChange={handleFilterChange} />
+          <ErrorBoundary
+            fallback={(error) => (
+              <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive">
+                <p className="font-medium">Filter system unavailable</p>
+                <p className="text-sm mt-1">
+                  Please refresh the page to try again.
+                </p>
+                {import.meta.env.DEV && (
+                  <details className="mt-2 text-xs">
+                    <summary className="cursor-pointer">Error details</summary>
+                    <pre className="mt-1 overflow-auto">{error.message}</pre>
+                  </details>
+                )}
+              </div>
+            )}
+          >
+            <FilterBar onChange={handleFilterChange} />
+          </ErrorBoundary>
         </div>
 
         <div className="mb-5 flex gap-3 items-center flex-wrap">

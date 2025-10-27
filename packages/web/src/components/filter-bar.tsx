@@ -41,6 +41,9 @@ export function FilterBar({ onChange }: FilterBarProps) {
   // Generate unique ID for accessibility
   const clientSelectId = useId();
 
+  // Live region announcement for screen readers
+  const [announcement, setAnnouncement] = useState("");
+
   // Parse initial state from URL
   const [filterState, setFilterState] = useState<FilterState>(() => {
     try {
@@ -48,8 +51,9 @@ export function FilterBar({ onChange }: FilterBarProps) {
       return parseFilterStateFromUrl(params);
     } catch (error) {
       // Gracefully handle malformed URLs or invalid filter parameters
-      // biome-ignore lint/suspicious/noConsole: Error logging for debugging
-      console.warn("Failed to parse filters from URL, using defaults:", error);
+      if (import.meta.env.DEV) {
+        console.warn("Failed to parse filters from URL, using defaults:", error);
+      }
       return { search: "", filters: [] };
     }
   });
@@ -86,11 +90,12 @@ export function FilterBar({ onChange }: FilterBarProps) {
         setFilterState(parseFilterStateFromUrl(params));
       } catch (error) {
         // Gracefully handle malformed URLs during navigation
-        // biome-ignore lint/suspicious/noConsole: Error logging for debugging
-        console.warn(
-          "Failed to parse filters during navigation, using defaults:",
-          error,
-        );
+        if (import.meta.env.DEV) {
+          console.warn(
+            "Failed to parse filters during navigation, using defaults:",
+            error,
+          );
+        }
         setFilterState({ search: "", filters: [] });
       }
     };
@@ -98,6 +103,18 @@ export function FilterBar({ onChange }: FilterBarProps) {
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
+
+  // Update live region announcement when filters change
+  useEffect(() => {
+    const count = filterState.filters.length;
+    if (count === 0) {
+      setAnnouncement("All filters cleared");
+    } else if (count === 1) {
+      setAnnouncement("1 filter active");
+    } else {
+      setAnnouncement(`${count} filters active`);
+    }
+  }, [filterState.filters.length]);
 
   // Get current client filter value (if any)
   const clientFilter = filterState.filters.find((f) => f.field === "client");
@@ -146,7 +163,18 @@ export function FilterBar({ onChange }: FilterBarProps) {
     filterState.filters.length > 0 || filterState.search.trim().length > 0;
 
   return (
-    <div className="flex items-center gap-3 flex-wrap">
+    <>
+      {/* Visually hidden live region for screen reader announcements */}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {announcement}
+      </div>
+
+      <div className="flex items-center gap-3 flex-wrap">
       {/* Phase 1: Simple client selector (temporary) */}
       <div className="flex items-center gap-2">
         <label
@@ -195,6 +223,7 @@ export function FilterBar({ onChange }: FilterBarProps) {
           Clear all
         </Button>
       )}
-    </div>
+      </div>
+    </>
   );
 }

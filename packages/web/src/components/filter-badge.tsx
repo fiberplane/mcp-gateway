@@ -82,10 +82,8 @@ export function FilterBadge({ filter, onRemove }: FilterBadgeProps) {
   const label = `${fieldLabel} ${operatorLabel} ${value}`;
 
   return (
-    // biome-ignore lint/a11y/useSemanticElements: role="status" is semantically correct for announcing active filters to screen readers
     <div
       className="inline-flex items-center gap-2 h-9 px-2 border border-border rounded-md bg-background"
-      role="status"
       aria-label={`Active filter: ${label}`}
     >
       {/* Icon */}
@@ -112,7 +110,7 @@ export function FilterBadge({ filter, onRemove }: FilterBadgeProps) {
       <button
         type="button"
         onClick={() => onRemove(filter.id)}
-        className="inline-flex items-center justify-center rounded-sm hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 p-0.5 transition-colors"
+        className="inline-flex items-center justify-center rounded-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 p-0.5 transition-colors"
         aria-label={`Remove filter: ${label}`}
       >
         <X className="size-4" aria-hidden="true" />
