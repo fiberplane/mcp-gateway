@@ -3,45 +3,120 @@
  *
  * Displays an active filter as a badge with a remove button.
  *
- * Design Reference: https://www.figma.com/design/sVRANvfGiWr6CJhpXCI02W/MCP-gateway---playground?node-id=216-2812
+ * Design Reference: https://www.figma.com/design/sVRANvfGiWr6CJhpXCI02W/MCP-gateway---playground?node-id=216-2813
  *
  * Features:
- * - Visual badge with filter label
+ * - Shows field name, operator, and value separately
+ * - Method filter values have purple badge background
+ * - Other filter values are plain text (monospace)
+ * - Icons for different filter types
  * - Remove button (X)
  * - Keyboard accessible (Tab + Enter)
  * - Screen reader friendly with ARIA labels
- * - Color variants based on filter type
  */
 
 import type { Filter } from "@fiberplane/mcp-gateway-types";
-import { X } from "lucide-react";
-import { getFilterLabel } from "../lib/filter-utils";
-import { Badge } from "./ui/badge";
+import { Hash, Layers, Server, Timer, X, Zap } from "lucide-react";
 
 interface FilterBadgeProps {
   filter: Filter;
   onRemove: (filterId: string) => void;
 }
 
+// Field display names
+const FIELD_LABELS: Record<Filter["field"], string> = {
+  client: "Client",
+  method: "Method",
+  session: "SessionID",
+  server: "Server",
+  duration: "Duration",
+  tokens: "Tokens",
+};
+
+// Operator display labels
+const OPERATOR_LABELS: Record<string, string> = {
+  is: "is",
+  contains: "contains",
+  eq: "equals",
+  gt: "greater than",
+  lt: "less than",
+  gte: "≥",
+  lte: "≤",
+};
+
+// Icons for different filter types
+function getFilterIcon(field: Filter["field"]) {
+  switch (field) {
+    case "method":
+      return <Zap className="size-4" aria-hidden="true" />;
+    case "session":
+      return <Hash className="size-4" aria-hidden="true" />;
+    case "server":
+      return <Server className="size-4" aria-hidden="true" />;
+    case "client":
+      return <Layers className="size-4" aria-hidden="true" />;
+    case "duration":
+      return <Timer className="size-4" aria-hidden="true" />;
+    case "tokens":
+      return <Hash className="size-4" aria-hidden="true" />;
+  }
+}
+
+// Format value with units if needed
+function formatValue(filter: Filter): string {
+  if (filter.field === "duration") {
+    return `${filter.value}ms`;
+  }
+  return String(filter.value);
+}
+
 export function FilterBadge({ filter, onRemove }: FilterBadgeProps) {
-  const label = getFilterLabel(filter);
+  const fieldLabel = FIELD_LABELS[filter.field];
+  const operatorLabel = OPERATOR_LABELS[filter.operator] || filter.operator;
+  const value = formatValue(filter);
+  const icon = getFilterIcon(filter.field);
+
+  // Method filters get a purple badge for the value (matching Figma)
+  const shouldHighlightValue = filter.field === "method";
+
+  const label = `${fieldLabel} ${operatorLabel} ${value}`;
 
   return (
-    <Badge
-      variant="info"
-      className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1"
+    // biome-ignore lint/a11y/useSemanticElements: role="status" is semantically correct for announcing active filters to screen readers
+    <div
+      className="inline-flex items-center gap-2 h-9 px-2 border border-border rounded-md bg-background"
       role="status"
       aria-label={`Active filter: ${label}`}
     >
-      <span>{label}</span>
+      {/* Icon */}
+      {icon}
+
+      {/* Field name */}
+      <span className="text-sm font-medium text-muted-foreground">
+        {fieldLabel}
+      </span>
+
+      {/* Operator */}
+      <span className="text-sm text-muted-foreground">{operatorLabel}</span>
+
+      {/* Value - styled differently based on filter type */}
+      {shouldHighlightValue ? (
+        <div className="inline-flex items-center justify-center px-1.5 py-1 rounded-md bg-[#dddbff]">
+          <span className="text-sm font-mono text-foreground">{value}</span>
+        </div>
+      ) : (
+        <span className="text-sm font-mono text-foreground">{value}</span>
+      )}
+
+      {/* Remove button */}
       <button
         type="button"
         onClick={() => onRemove(filter.id)}
-        className="inline-flex items-center justify-center rounded-sm hover:bg-black/10 dark:hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 p-0.5 transition-colors"
+        className="inline-flex items-center justify-center rounded-sm hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 p-0.5 transition-colors"
         aria-label={`Remove filter: ${label}`}
       >
-        <X className="h-3 w-3" aria-hidden="true" />
+        <X className="size-4" aria-hidden="true" />
       </button>
-    </Badge>
+    </div>
   );
 }
