@@ -609,7 +609,7 @@ function rowToRecord(row: Log): CaptureRecord {
       clientIp: row.clientIp ?? undefined,
       inputTokens: row.inputTokens ?? undefined,
       outputTokens: row.outputTokens ?? undefined,
-      methodDetail: row.methodDetail ?? undefined,
+      methodDetail: row.methodDetail,
     },
     request: safeJsonParse(row.requestJson),
     response: safeJsonParse(row.responseJson),
