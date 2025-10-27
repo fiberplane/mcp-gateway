@@ -16,7 +16,7 @@
  */
 
 import type { Filter } from "@fiberplane/mcp-gateway-types";
-import { Hash, Layers, Server, Timer, X, Zap } from "lucide-react";
+import { BarChart3, Clock, List, Monitor, Server, X, Zap } from "lucide-react";
 
 interface FilterBadgeProps {
   filter: Filter;
@@ -44,21 +44,21 @@ const OPERATOR_LABELS: Record<string, string> = {
   lte: "≤",
 };
 
-// Icons for different filter types
+// Icons for different filter types (matching table header icons)
 function getFilterIcon(field: Filter["field"]) {
   switch (field) {
     case "method":
       return <Zap className="size-4" aria-hidden="true" />;
     case "session":
-      return <Hash className="size-4" aria-hidden="true" />;
-    case "server":
-      return <Server className="size-4" aria-hidden="true" />;
+      return <List className="size-4" aria-hidden="true" />;
     case "client":
-      return <Layers className="size-4" aria-hidden="true" />;
+      return <Monitor className="size-4" aria-hidden="true" />; // Client entity
+    case "server":
+      return <Server className="size-4" aria-hidden="true" />; // Server entity
     case "duration":
-      return <Timer className="size-4" aria-hidden="true" />;
+      return <Clock className="size-4" aria-hidden="true" />;
     case "tokens":
-      return <Hash className="size-4" aria-hidden="true" />;
+      return <BarChart3 className="size-4" aria-hidden="true" />;
   }
 }
 
