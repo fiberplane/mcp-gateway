@@ -322,13 +322,13 @@ The Web UI follows WCAG 2.1 AA standards:
 
 ## Browser Support
 
-Tested and supported on desktop:
+The Web UI aims to work with the latest versions of major desktop browsers:
 
-- Chrome/Edge 90+
-- Firefox 88+
-- Safari 14+
+- Chrome/Edge
+- Firefox
+- Safari
 
-**Note**: Mobile browsers are not officially supported. For best experience, use a desktop browser.
+**Note**: The UI is designed for desktop browsers. While it may be usable on larger tablets in landscape mode, mobile devices are not officially supported. Cross-browser testing is not comprehensive, so your mileage may vary with older browser versions.
 
 ## Performance
 

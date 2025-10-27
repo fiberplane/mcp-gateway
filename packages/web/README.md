@@ -251,9 +251,11 @@ The UI uses Radix UI primitives which are built with accessibility in mind:
 
 ## Browser Support
 
-- Chrome/Edge (latest 2 versions)
-- Firefox (latest 2 versions)
-- Safari (latest 2 versions)
+Aims to work with the latest versions of major desktop browsers:
+
+- Chrome/Edge
+- Firefox
+- Safari
 
 ## Contributing
 
