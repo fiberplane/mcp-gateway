@@ -264,6 +264,7 @@ export function createSSEJsonRpcCaptureRecord(
   clientInfo?: ClientInfo,
   serverInfo?: McpServerInfo,
   requestTracker?: RequestTracker,
+  methodDetail?: string | null,
 ): CaptureRecord {
   const client = sanitizeClientInfo(clientInfo);
   const server = sanitizeServerInfo(serverInfo);
@@ -321,6 +322,7 @@ export function createSSEJsonRpcCaptureRecord(
       outputTokens: isJsonRpcResponse(jsonRpcMessage)
         ? estimateOutputTokens(jsonRpcMessage.result ?? jsonRpcMessage.error)
         : undefined,
+      methodDetail,
     },
     sseEvent: {
       id: sseEvent.id,
