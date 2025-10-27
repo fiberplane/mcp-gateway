@@ -7,7 +7,6 @@ import { FilterBar } from "./components/filter-bar";
 import { LogTable } from "./components/log-table";
 import { Pagination } from "./components/pagination";
 import { ServerTabs } from "./components/server-tabs";
-import { SessionFilter } from "./components/session-filter";
 import { StreamingToggle } from "./components/streaming-toggle";
 import { TopNavigation } from "./components/top-navigation";
 import { Button } from "./components/ui/button";
@@ -19,7 +18,6 @@ import { getLogKey } from "./lib/utils";
 function App() {
   const queryClient = useQueryClient();
   const [serverName, setServerName] = useState<string | undefined>();
-  const [sessionId, setSessionId] = useState<string | undefined>();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isClearing, setIsClearing] = useState(false);
   const [clearError, setClearError] = useState<string | null>(null);
@@ -33,9 +31,12 @@ function App() {
   // Streaming: ON = auto-refresh with new logs, OFF = manual load more
   const [isStreaming, setIsStreaming] = useState(true);
 
-  // Extract client name from filter state for API query
+  // Extract filters from filter state for API query
   const clientFilter = filterState.filters.find((f) => f.field === "client");
   const clientName = clientFilter?.value as string | undefined;
+
+  const sessionFilter = filterState.filters.find((f) => f.field === "session");
+  const sessionId = sessionFilter?.value as string | undefined;
 
   // Fixed values (no UI controls)
   const timeGrouping = "day" as const; // Group by day
@@ -87,12 +88,6 @@ function App() {
 
   const handleServerChange = useHandler((value: string | undefined) => {
     setServerName(value);
-    setSessionId(undefined); // Reset session when server changes
-    setSelectedIds(new Set()); // Reset selection
-  });
-
-  const handleSessionChange = useHandler((value: string | undefined) => {
-    setSessionId(value);
     setSelectedIds(new Set()); // Reset selection
   });
 
@@ -176,11 +171,6 @@ function App() {
         </div>
 
         <div className="mb-5 flex gap-3 items-center flex-wrap">
-          <SessionFilter
-            serverName={serverName}
-            value={sessionId}
-            onChange={handleSessionChange}
-          />
           <StreamingToggle
             isStreaming={isStreaming}
             onToggle={handleStreamingToggle}

@@ -64,6 +64,16 @@ export interface StorageBackend {
   getClients(): Promise<ClientAggregation[]>;
 
   /**
+   * Get method aggregations (method name, log count)
+   *
+   * @param serverName - Optional server filter
+   * @returns List of method aggregation info
+   */
+  getMethods(
+    serverName?: string,
+  ): Promise<Array<{ method: string; logCount: number }>>;
+
+  /**
    * Clear all logs from storage
    *
    * This is a destructive operation that removes all stored logs.

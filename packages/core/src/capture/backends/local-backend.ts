@@ -22,6 +22,7 @@ import { ensureMigrations } from "../../logs/migrations.js";
 import * as schema from "../../logs/schema.js";
 import {
   getClients,
+  getMethods,
   getServerMetrics,
   getServers,
   getSessionMetadata,
@@ -253,6 +254,19 @@ export class LocalStorageBackend implements StorageBackend {
       return await getClients(this.db);
     } catch (error) {
       logger.error("Local storage getClients failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
+
+  async getMethods(
+    serverName?: string,
+  ): Promise<Array<{ method: string; logCount: number }>> {
+    try {
+      return await getMethods(this.db, serverName);
+    } catch (error) {
+      logger.error("Local storage getMethods failed", {
         error: error instanceof Error ? error.message : String(error),
       });
       throw error;

@@ -6,8 +6,8 @@
  * Design Reference: https://www.figma.com/design/sVRANvfGiWr6CJhpXCI02W/MCP-gateway---playground?node-id=216-2812
  *
  * Features:
- * - Filter type selector (Method, SessionID, Server, Duration, Tokens)
- * - Operator selector (is, contains, gt, lt, gte, lte)
+ * - Filter type selector (Client, Method, Session ID, Server, Duration, Tokens)
+ * - Operator selector (is, contains, eq, gt, lt, gte, lte)
  * - Value input field
  * - Keyboard accessible (Tab, Escape)
  * - Screen reader friendly with ARIA labels
@@ -31,8 +31,9 @@ interface AddFilterDropdownProps {
   onAdd: (filter: ReturnType<typeof createFilter>) => void;
 }
 
-// Available filter fields (excluding client - handled separately in Phase 1)
+// Available filter fields
 const FILTER_FIELDS: Array<{ value: FilterField; label: string }> = [
+  { value: "client", label: "Client" },
   { value: "method", label: "Method" },
   { value: "session", label: "Session ID" },
   { value: "server", label: "Server" },
@@ -60,7 +61,7 @@ const NUMERIC_OPERATORS: Array<{
 
 export function AddFilterDropdown({ onAdd }: AddFilterDropdownProps) {
   const [open, setOpen] = useState(false);
-  const [field, setField] = useState<FilterField>("method");
+  const [field, setField] = useState<FilterField>("client");
   // Type operator state properly based on field type
   const [operator, setOperator] = useState<FilterOperator<FilterField>>("is");
   const [value, setValue] = useState<string>("");

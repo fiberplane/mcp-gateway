@@ -45,6 +45,7 @@ describe("API /servers endpoint", () => {
         ],
         getSessions: async () => [],
         getClients: async () => [],
+        getMethods: async () => [],
         clearSessions: async () => {},
       };
 
@@ -86,6 +87,7 @@ describe("API /servers endpoint", () => {
         ],
         getSessions: async () => [],
         getClients: async () => [],
+        getMethods: async () => [],
         clearSessions: async () => {},
       };
 
@@ -119,6 +121,7 @@ describe("API /servers endpoint", () => {
         ],
         getSessions: async () => [],
         getClients: async () => [],
+        getMethods: async () => [],
         clearSessions: async () => {},
       };
 
@@ -152,6 +155,7 @@ describe("API /servers endpoint", () => {
         ],
         getSessions: async () => [],
         getClients: async () => [],
+        getMethods: async () => [],
         clearSessions: async () => {},
       };
 
@@ -197,6 +201,7 @@ describe("API /servers endpoint", () => {
         ],
         getSessions: async () => [],
         getClients: async () => [],
+        getMethods: async () => [],
         clearSessions: async () => {},
       };
 
@@ -237,6 +242,7 @@ describe("API /servers endpoint", () => {
         getServers: async (): Promise<ServerInfo[]> => [],
         getSessions: async () => [],
         getClients: async () => [],
+        getMethods: async () => [],
         clearSessions: async () => {},
       };
 
@@ -271,6 +277,7 @@ describe("API /servers endpoint", () => {
         ],
         getSessions: async () => [],
         getClients: async () => [],
+        getMethods: async () => [],
         clearSessions: async () => {},
       };
 
@@ -300,6 +307,7 @@ describe("API /servers endpoint", () => {
         },
         getSessions: async () => [],
         getClients: async () => [],
+        getMethods: async () => [],
         clearSessions: async () => {},
       };
 

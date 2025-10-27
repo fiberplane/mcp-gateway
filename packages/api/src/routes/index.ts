@@ -42,6 +42,13 @@ const sessionsQuerySchema = z.object({
 });
 
 /**
+ * Query parameters schema for GET /methods
+ */
+const methodsQuerySchema = z.object({
+  server: z.string().optional(),
+});
+
+/**
  * Create API routes for querying logs
  *
  * Routes:
@@ -49,6 +56,7 @@ const sessionsQuerySchema = z.object({
  * - GET /servers - List servers with aggregated stats
  * - GET /sessions - List sessions with aggregated stats
  * - GET /clients - List clients with aggregated stats
+ * - GET /methods - List methods with aggregated stats
  * - POST /sessions/clear - Clear all session data
  *
  * @param queries - Query functions to use for data access
@@ -161,6 +169,20 @@ export function createApiRoutes(queries: QueryFunctions): Hono {
     const clients = await queries.getClients();
 
     return c.json({ clients });
+  });
+
+  /**
+   * GET /methods
+   *
+   * List all methods with log counts
+   * Optionally filter by server name
+   */
+  app.get("/methods", sValidator("query", methodsQuerySchema), async (c) => {
+    const query = c.req.valid("query") as z.infer<typeof methodsQuerySchema>;
+
+    const methods = await queries.getMethods(query.server);
+
+    return c.json({ methods });
   });
 
   /**

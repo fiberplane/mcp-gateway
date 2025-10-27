@@ -329,6 +329,31 @@ export async function getClients(
 }
 
 /**
+ * Get method aggregations
+ *
+ * Returns all unique methods with log counts, optionally filtered by server.
+ */
+export async function getMethods(
+  db: BunSQLiteDatabase<typeof schema>,
+  serverName?: string,
+): Promise<Array<{ method: string; logCount: number }>> {
+  let query = db
+    .select({
+      method: logs.method,
+      logCount: count(logs.id),
+    })
+    .from(logs);
+
+  if (serverName) {
+    query = query.where(eq(logs.serverName, serverName)) as typeof query;
+  }
+
+  const result = await query.groupBy(logs.method).orderBy(logs.method);
+
+  return result as Array<{ method: string; logCount: number }>;
+}
+
+/**
  * Get server metrics (derived from logs)
  *
  * Returns activity metrics for a specific server that are computed

@@ -147,6 +147,16 @@ export interface QueryFunctions {
   >;
 
   /**
+   * Get all methods with aggregated stats
+   */
+  getMethods: (serverName?: string) => Promise<
+    Array<{
+      method: string;
+      logCount: number;
+    }>
+  >;
+
+  /**
    * Clear all session data (client info and server info)
    */
   clearSessions: () => Promise<void>;

@@ -439,6 +439,7 @@ export async function runCli(): Promise<void> {
         },
         getSessions: (serverName) => gateway.storage.getSessions(serverName),
         getClients: () => gateway.storage.getClients(),
+        getMethods: (serverName) => gateway.storage.getMethods(serverName),
         clearSessions: async () => {
           // Clear in-memory session metadata
           gateway.clientInfo.clearAll();

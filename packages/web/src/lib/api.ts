@@ -96,6 +96,24 @@ class APIClient {
   }
 
   /**
+   * Get list of methods with aggregations
+   */
+  async getMethods(
+    serverName?: string,
+  ): Promise<{ methods: Array<{ method: string; logCount: number }> }> {
+    const url = new URL(`${this.baseURL}/methods`, window.location.origin);
+    if (serverName) {
+      url.searchParams.append("server", serverName);
+    }
+
+    const response = await fetch(url.toString());
+    if (!response.ok) {
+      throw new Error(`Failed to fetch methods: ${response.statusText}`);
+    }
+    return response.json();
+  }
+
+  /**
    * Clear all session data (client info and server info)
    */
   async clearSessions(): Promise<{ success: boolean }> {
