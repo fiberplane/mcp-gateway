@@ -239,7 +239,10 @@ export function FilterBar({ onChange }: FilterBarProps) {
         ))}
 
         {/* Add filter dropdown */}
-        <AddFilterDropdown onAdd={handleAddFilter} />
+        <AddFilterDropdown
+          onAdd={handleAddFilter}
+          activeFilters={filterState.filters}
+        />
 
         {/* Clear all button */}
         {hasActiveFilters && (

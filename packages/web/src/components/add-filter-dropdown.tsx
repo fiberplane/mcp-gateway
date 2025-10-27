@@ -1,286 +1,107 @@
 /**
  * AddFilterDropdown Component
  *
- * Dropdown popover for adding new filters to the filter bar.
+ * Cascading menu for adding new filters to the filter bar.
  *
- * Design Reference: https://www.figma.com/design/sVRANvfGiWr6CJhpXCI02W/MCP-gateway---playground?node-id=216-2812
+ * Design Reference: https://www.figma.com/design/sVRANvfGiWr6CJhpXCI02W/MCP-gateway---playground?node-id=216-3266
  *
  * Features:
- * - Filter type selector (Client, Method, Session ID, Server, Duration, Tokens)
- * - Operator selector (is, contains, eq, gt, lt, gte, lte)
- * - Value input field
- * - Keyboard accessible (Tab, Escape)
+ * - Cascading menu with data-driven submenus
+ * - Multi-select support (checkboxes)
+ * - Search/filter within submenus
+ * - Keyboard accessible
  * - Screen reader friendly with ARIA labels
- * - Closes after adding filter
+ * - Real-time data from backend
  */
 
 import {
   createFilter,
+  type Filter,
   type FilterField,
-  type FilterOperator,
 } from "@fiberplane/mcp-gateway-types";
-import * as Popover from "@radix-ui/react-popover";
-import { Plus, X } from "lucide-react";
-import { useId, useState } from "react";
-import { Button } from "./ui/button";
+import { FilterTypeMenu } from "./filter-type-menu";
 
 interface AddFilterDropdownProps {
   /**
-   * Callback when a new filter is added
+   * Callback when new filters are added
    */
-  onAdd: (filter: ReturnType<typeof createFilter>) => void;
+  onAdd: (filter: Filter) => void;
+
+  /**
+   * Currently active filters (optional)
+   * Used to show selection state in the menu
+   */
+  activeFilters?: Filter[];
 }
 
-// Available filter fields
-const FILTER_FIELDS: Array<{ value: FilterField; label: string }> = [
-  { value: "client", label: "Client" },
-  { value: "method", label: "Method" },
-  { value: "session", label: "Session ID" },
-  { value: "server", label: "Server" },
-  { value: "duration", label: "Duration (ms)" },
-  { value: "tokens", label: "Tokens" },
-];
+export function AddFilterDropdown({
+  onAdd,
+  activeFilters = [],
+}: AddFilterDropdownProps) {
+  /**
+   * Convert active filters to the format expected by FilterTypeMenu
+   */
+  const getActiveFilterValues = () => {
+    const result: {
+      method?: string[];
+      client?: string[];
+      server?: string[];
+      session?: string[];
+    } = {};
 
-// String operators for text fields
-const STRING_OPERATORS: Array<{ value: "is" | "contains"; label: string }> = [
-  { value: "is", label: "is" },
-  { value: "contains", label: "contains" },
-];
+    for (const filter of activeFilters) {
+      const field = filter.field as FilterField;
 
-// Numeric operators for number fields
-const NUMERIC_OPERATORS: Array<{
-  value: "eq" | "gt" | "lt" | "gte" | "lte";
-  label: string;
-}> = [
-  { value: "eq", label: "equals" },
-  { value: "gt", label: "greater than" },
-  { value: "lt", label: "less than" },
-  { value: "gte", label: ">=" },
-  { value: "lte", label: "<=" },
-];
+      // Only handle string filters for now (method, client, server, session)
+      if (
+        field === "method" ||
+        field === "client" ||
+        field === "server" ||
+        field === "session"
+      ) {
+        // Get values as array of strings
+        const values = Array.isArray(filter.value)
+          ? filter.value.map((v) => String(v))
+          : [String(filter.value)];
 
-export function AddFilterDropdown({ onAdd }: AddFilterDropdownProps) {
-  const [open, setOpen] = useState(false);
-  const [field, setField] = useState<FilterField>("client");
-  // Type operator state properly based on field type
-  const [operator, setOperator] = useState<FilterOperator<FilterField>>("is");
-  const [value, setValue] = useState<string>("");
-  const [error, setError] = useState<string>("");
-
-  // Generate unique IDs for accessibility
-  const fieldSelectId = useId();
-  const operatorSelectId = useId();
-  const valueInputId = useId();
-  const errorId = useId();
-
-  // Determine if field uses string or numeric values
-  const isNumericField = field === "duration" || field === "tokens";
-
-  // Get available operators based on field type
-  const availableOperators = isNumericField
-    ? NUMERIC_OPERATORS
-    : STRING_OPERATORS;
-
-  // Reset operator when field type changes
-  const handleFieldChange = (newField: FilterField) => {
-    setField(newField);
-    const isNewFieldNumeric = newField === "duration" || newField === "tokens";
-    // Reset to first operator of the new type with proper typing
-    setOperator(isNewFieldNumeric ? ("eq" as const) : ("is" as const));
-    setValue("");
-    setError(""); // Clear errors when field changes
-  };
-
-  const handleAdd = () => {
-    // Clear any previous errors
-    setError("");
-
-    // Validate value
-    const trimmedValue = value.trim();
-    if (!trimmedValue) {
-      setError("Please enter a value");
-      return;
+        result[field] = values;
+      }
     }
 
-    // Split branches for type safety - numeric vs string fields
-    if (isNumericField) {
-      // Handle numeric fields (duration, tokens)
-      const numValue = Number.parseInt(trimmedValue, 10);
+    return result;
+  };
 
-      if (Number.isNaN(numValue)) {
-        setError("Please enter a valid number");
-        return;
-      }
+  /**
+   * Handle filter application from FilterTypeMenu
+   */
+  const handleApply = (filterType: string, values: string[]) => {
+    if (values.length === 0) return;
 
-      if (numValue < 0) {
-        setError("Value must be 0 or greater");
-        return;
-      }
+    const field = filterType as FilterField;
 
-      const newFilter = createFilter({
-        field: field as "duration" | "tokens",
-        operator: operator as "eq" | "gt" | "lt" | "gte" | "lte",
-        value: numValue,
-      });
-
-      onAdd(newFilter);
+    // Create filter with array values for multi-select
+    // Use single value if only one selected, otherwise use array
+    let filterValue: string | string[];
+    if (values.length === 1) {
+      // Safe to access first element since we checked length
+      filterValue = values[0] as string;
     } else {
-      // Handle string fields (method, session, server, client)
-      const newFilter = createFilter({
-        field: field as "method" | "session" | "server" | "client",
-        operator: operator as "is" | "contains",
-        value: trimmedValue,
-      });
-
-      onAdd(newFilter);
+      filterValue = values;
     }
 
-    // Reset form and close
-    setValue("");
-    setError("");
-    setOpen(false);
-  };
+    const newFilter = createFilter({
+      field,
+      operator: "is" as const, // Use "is" for multi-value filters
+      value: filterValue,
+    });
 
-  const handleCancel = () => {
-    setValue("");
-    setOpen(false);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    handleAdd();
+    onAdd(newFilter);
   };
 
   return (
-    <Popover.Root open={open} onOpenChange={setOpen} modal>
-      <Popover.Trigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
-          <Plus className="size-4" aria-hidden="true" />
-          Add filter
-        </Button>
-      </Popover.Trigger>
-
-      <Popover.Portal>
-        <Popover.Content
-          className="z-50 w-80 rounded-md border border-border bg-popover p-4 shadow-lg outline-none"
-          sideOffset={5}
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium">Add Filter</h3>
-            <Popover.Close asChild>
-              <button
-                type="button"
-                className="inline-flex items-center justify-center rounded-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 p-0.5 transition-colors"
-                aria-label="Close"
-              >
-                <X className="size-4" aria-hidden="true" />
-              </button>
-            </Popover.Close>
-          </div>
-
-          {/* Form with proper semantics */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Filter Field Selector */}
-            <div className="space-y-2">
-              <label
-                htmlFor={fieldSelectId}
-                className="text-sm font-medium text-foreground"
-              >
-                Field
-              </label>
-              <select
-                id={fieldSelectId}
-                value={field}
-                onChange={(e) =>
-                  handleFieldChange(e.target.value as FilterField)
-                }
-                className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                {FILTER_FIELDS.map((f) => (
-                  <option key={f.value} value={f.value}>
-                    {f.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Operator Selector */}
-            <div className="space-y-2">
-              <label
-                htmlFor={operatorSelectId}
-                className="text-sm font-medium text-foreground"
-              >
-                Operator
-              </label>
-              <select
-                id={operatorSelectId}
-                value={operator}
-                onChange={(e) =>
-                  setOperator(e.target.value as FilterOperator<FilterField>)
-                }
-                className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                {availableOperators.map((op) => (
-                  <option key={op.value} value={op.value}>
-                    {op.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Value Input */}
-            <div className="space-y-2">
-              <label
-                htmlFor={valueInputId}
-                className="text-sm font-medium text-foreground"
-              >
-                Value
-              </label>
-              <input
-                id={valueInputId}
-                type={isNumericField ? "number" : "text"}
-                value={value}
-                onChange={(e) => {
-                  setValue(e.target.value);
-                  setError(""); // Clear error on change
-                }}
-                placeholder={
-                  isNumericField ? "Enter number..." : "Enter value..."
-                }
-                min={isNumericField ? "0" : undefined}
-                step={isNumericField ? "1" : undefined}
-                aria-invalid={!!error}
-                aria-describedby={error ? errorId : undefined}
-                className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              />
-              {/* Error message with role="alert" for screen readers */}
-              {error && (
-                <p id={errorId} role="alert" className="text-sm text-red-600">
-                  {error}
-                </p>
-              )}
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-2 justify-end">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={handleCancel}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" size="sm" disabled={!value.trim()}>
-                Add
-              </Button>
-            </div>
-          </form>
-
-          <Popover.Arrow className="fill-border" />
-        </Popover.Content>
-      </Popover.Portal>
-    </Popover.Root>
+    <FilterTypeMenu
+      onApply={handleApply}
+      activeFilters={getActiveFilterValues()}
+    />
   );
 }
