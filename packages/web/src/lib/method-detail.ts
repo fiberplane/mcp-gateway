@@ -45,9 +45,9 @@ function truncate(str: string, maxLength: number): string {
  * or a preview of the response content (for responses).
  *
  * @param log - API log entry (request, response, or SSE event)
- * @returns Human-readable detail string, or empty string if not applicable
+ * @returns Human-readable detail string, null if parsing failed, or empty string if not applicable
  */
-export function getMethodDetail(log: ApiLogEntry): string {
+export function getMethodDetail(log: ApiLogEntry): string | null {
   // For responses, show a preview of the result
   if (log.direction === "response") {
     const preview = getResponsePreview(log);
@@ -62,7 +62,16 @@ export function getMethodDetail(log: ApiLogEntry): string {
   switch (log.method) {
     case "tools/call": {
       const parsed = toolsCallParamsSchema.safeParse(params);
-      if (!parsed.success) return "";
+      if (!parsed.success) {
+        // biome-ignore lint/suspicious/noConsole: Intentional logging for debugging parse failures
+        console.warn(
+          "[method-detail] Failed to parse tools/call params:",
+          parsed.error.issues,
+          "params:",
+          params,
+        );
+        return null;
+      }
 
       const { name, arguments: args } = parsed.data;
       if (!args || typeof args !== "object") {
@@ -85,13 +94,31 @@ export function getMethodDetail(log: ApiLogEntry): string {
 
     case "resources/read": {
       const parsed = resourcesReadParamsSchema.safeParse(params);
-      if (!parsed.success) return "";
+      if (!parsed.success) {
+        // biome-ignore lint/suspicious/noConsole: Intentional logging for debugging parse failures
+        console.warn(
+          "[method-detail] Failed to parse resources/read params:",
+          parsed.error.issues,
+          "params:",
+          params,
+        );
+        return null;
+      }
       return truncate(parsed.data.uri, 100);
     }
 
     case "prompts/get": {
       const parsed = promptsGetParamsSchema.safeParse(params);
-      if (!parsed.success) return "";
+      if (!parsed.success) {
+        // biome-ignore lint/suspicious/noConsole: Intentional logging for debugging parse failures
+        console.warn(
+          "[method-detail] Failed to parse prompts/get params:",
+          parsed.error.issues,
+          "params:",
+          params,
+        );
+        return null;
+      }
 
       const { name, arguments: args } = parsed.data;
       if (!args || typeof args !== "object") {
@@ -116,13 +143,56 @@ export function getMethodDetail(log: ApiLogEntry): string {
     case "resources/list":
     case "prompts/list": {
       // Show "all" or cursor info
-      const cursor = (params as { cursor?: string })?.cursor;
-      return cursor ? `cursor: ${cursor.slice(0, 8)}...` : "all";
+      if (
+        params &&
+        typeof params === "object" &&
+        "cursor" in params &&
+        typeof params.cursor === "string"
+      ) {
+        return `cursor: ${params.cursor.slice(0, 8)}...`;
+      }
+      return "all";
     }
 
     default:
       return "";
   }
+}
+
+/**
+ * Type guard for MCP content item with text
+ */
+function hasText(item: unknown): item is { text: string } {
+  return (
+    typeof item === "object" &&
+    item !== null &&
+    "text" in item &&
+    typeof item.text === "string"
+  );
+}
+
+/**
+ * Type guard for MCP content item with type
+ */
+function hasType(item: unknown): item is { type: string } {
+  return (
+    typeof item === "object" &&
+    item !== null &&
+    "type" in item &&
+    typeof item.type === "string"
+  );
+}
+
+/**
+ * Type guard for MCP content array format
+ */
+function hasContent(result: unknown): result is { content: Array<unknown> } {
+  return (
+    typeof result === "object" &&
+    result !== null &&
+    "content" in result &&
+    Array.isArray(result.content)
+  );
 }
 
 /**
@@ -146,26 +216,15 @@ function getResponsePreview(log: ApiLogEntry): string {
   if (!result) return "";
 
   // Extract text from MCP content array format
-  if (typeof result === "object" && result !== null && "content" in result) {
-    const content = (result as { content?: unknown }).content;
-    if (Array.isArray(content) && content.length > 0) {
-      const firstItem = content[0];
-      if (
-        typeof firstItem === "object" &&
-        firstItem !== null &&
-        "text" in firstItem
-      ) {
-        const text = String((firstItem as { text: unknown }).text);
-        return text.length > 60 ? `${text.slice(0, 60)}...` : text;
-      }
-      if (
-        typeof firstItem === "object" &&
-        firstItem !== null &&
-        "type" in firstItem
-      ) {
-        const type = (firstItem as { type: unknown }).type;
-        return `[${type}${content.length > 1 ? ` +${content.length - 1} more` : ""}]`;
-      }
+  if (hasContent(result) && result.content.length > 0) {
+    const firstItem = result.content[0];
+    if (hasText(firstItem)) {
+      const text = firstItem.text;
+      return text.length > 60 ? `${text.slice(0, 60)}...` : text;
+    }
+    if (hasType(firstItem)) {
+      const type = firstItem.type;
+      return `[${type}${result.content.length > 1 ? ` +${result.content.length - 1} more` : ""}]`;
     }
   }
 

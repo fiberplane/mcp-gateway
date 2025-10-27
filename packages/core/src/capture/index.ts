@@ -28,6 +28,24 @@ export function resetCaptureState(): void {
   requestMethods.clear();
 }
 
+/**
+ * Type guard to check if a JSON-RPC message is a request
+ */
+function isJsonRpcRequest(
+  message: JsonRpcRequest | JsonRpcResponse,
+): message is JsonRpcRequest {
+  return "method" in message && typeof message.method === "string";
+}
+
+/**
+ * Type guard to check if a JSON-RPC message is a response
+ */
+function isJsonRpcResponse(
+  message: JsonRpcRequest | JsonRpcResponse,
+): message is JsonRpcResponse {
+  return "result" in message || "error" in message;
+}
+
 function sanitizeClientInfo(info?: ClientInfo): ClientInfo | undefined {
   if (!info) {
     return undefined;
@@ -293,18 +311,11 @@ export function createSSEJsonRpcCaptureRecord(
       sseEventId: sseEvent.id,
       sseEventType: sseEvent.event,
       // Add token estimation for SSE JSON-RPC messages
-      inputTokens:
-        !isResponse && "method" in jsonRpcMessage
-          ? estimateInputTokens(
-              jsonRpcMessage.method,
-              (jsonRpcMessage as JsonRpcRequest).params,
-            )
-          : undefined,
-      outputTokens: isResponse
-        ? estimateOutputTokens(
-            (jsonRpcMessage as JsonRpcResponse).result ??
-              (jsonRpcMessage as JsonRpcResponse).error,
-          )
+      inputTokens: isJsonRpcRequest(jsonRpcMessage)
+        ? estimateInputTokens(jsonRpcMessage.method, jsonRpcMessage.params)
+        : undefined,
+      outputTokens: isJsonRpcResponse(jsonRpcMessage)
+        ? estimateOutputTokens(jsonRpcMessage.result ?? jsonRpcMessage.error)
         : undefined,
     },
     sseEvent: {
@@ -315,10 +326,10 @@ export function createSSEJsonRpcCaptureRecord(
     },
   };
 
-  if (isResponse) {
-    record.response = jsonRpcMessage as JsonRpcResponse;
-  } else {
-    record.request = jsonRpcMessage as JsonRpcRequest;
+  if (isJsonRpcResponse(jsonRpcMessage)) {
+    record.response = jsonRpcMessage;
+  } else if (isJsonRpcRequest(jsonRpcMessage)) {
+    record.request = jsonRpcMessage;
   }
 
   // Validate the record

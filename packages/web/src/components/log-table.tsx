@@ -8,6 +8,7 @@ import {
   ArrowUpDown,
   Check,
   Copy,
+  TriangleAlert,
 } from "lucide-react";
 import { Fragment, type ReactNode, useMemo, useState } from "react";
 import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
@@ -418,10 +419,26 @@ function createColumns(): Column[] {
       header: "Method detail",
       cell: (log) => {
         const detail = getMethodDetail(log);
+
+        // Parse error - show dash + warning icon
+        if (detail === null) {
+          return (
+            <span
+              className="inline-flex items-center gap-1 text-destructive text-sm"
+              title="Failed to parse request/response parameters. Check browser console for details."
+            >
+              <span className="text-muted-foreground">−</span>
+              <TriangleAlert className="w-3 h-3" />
+            </span>
+          );
+        }
+
+        // Empty/not applicable
         if (!detail) {
           return <span className="text-muted-foreground">−</span>;
         }
 
+        // Normal content
         const isLong = detail.length > 40;
         return (
           <span

@@ -76,7 +76,7 @@ describe("getMethodDetail", () => {
         request: { params: null },
       } as ApiLogEntry;
 
-      expect(getMethodDetail(log)).toBe("");
+      expect(getMethodDetail(log)).toBe(null);
     });
 
     it("handles missing arguments field", () => {
@@ -116,7 +116,7 @@ describe("getMethodDetail", () => {
         request: { params: { notUri: "something" } },
       } as ApiLogEntry;
 
-      expect(getMethodDetail(log)).toBe("");
+      expect(getMethodDetail(log)).toBe(null);
     });
   });
 
@@ -243,9 +243,10 @@ describe("getMethodDetail", () => {
       } as ApiLogEntry;
 
       const result = getMethodDetail(log);
+      expect(result).not.toBe(null);
       expect(result).toContain("This is a very long response");
       expect(result).toContain("...");
-      expect(result.length).toBeLessThan(70);
+      expect(result?.length).toBeLessThan(70);
     });
 
     it("shows content type for non-text content", () => {

@@ -15,6 +15,13 @@
  * However, this heuristic is sufficient for cost monitoring and rate limiting.
  */
 
+import {
+  promptsGetParamsSchema,
+  resourcesReadParamsSchema,
+  toolsCallParamsSchema,
+} from "@fiberplane/mcp-gateway-types";
+import { logger } from "../logger.js";
+
 const CHARS_PER_TOKEN = 4;
 
 /**
@@ -45,26 +52,66 @@ export function estimateInputTokens(method: string, params: unknown): number {
     let payload: unknown;
 
     switch (method) {
-      case "tools/call":
+      case "tools/call": {
         // LLM sends: { name: "tool_name", arguments: {...} }
-        payload = {
-          name: (params as { name?: string })?.name,
-          arguments: (params as { arguments?: unknown })?.arguments,
-        };
+        const parsed = toolsCallParamsSchema.safeParse(params);
+        if (parsed.success) {
+          payload = {
+            name: parsed.data.name,
+            arguments: parsed.data.arguments,
+          };
+        } else {
+          // Fallback to full params if schema validation fails
+          logger.warn(
+            "[tokens] Failed to parse tools/call params for token estimation",
+            {
+              issues: parsed.error.issues,
+              method,
+            },
+          );
+          payload = params || {};
+        }
         break;
+      }
 
-      case "resources/read":
+      case "resources/read": {
         // LLM sends: { uri: "file://..." }
-        payload = { uri: (params as { uri?: string })?.uri };
+        const parsed = resourcesReadParamsSchema.safeParse(params);
+        if (parsed.success) {
+          payload = { uri: parsed.data.uri };
+        } else {
+          logger.warn(
+            "[tokens] Failed to parse resources/read params for token estimation",
+            {
+              issues: parsed.error.issues,
+              method,
+            },
+          );
+          payload = params || {};
+        }
         break;
+      }
 
-      case "prompts/get":
+      case "prompts/get": {
         // LLM sends: { name: "prompt_name", arguments?: {...} }
-        payload = {
-          name: (params as { name?: string })?.name,
-          arguments: (params as { arguments?: unknown })?.arguments,
-        };
+        const parsed = promptsGetParamsSchema.safeParse(params);
+        if (parsed.success) {
+          payload = {
+            name: parsed.data.name,
+            arguments: parsed.data.arguments,
+          };
+        } else {
+          logger.warn(
+            "[tokens] Failed to parse prompts/get params for token estimation",
+            {
+              issues: parsed.error.issues,
+              method,
+            },
+          );
+          payload = params || {};
+        }
         break;
+      }
 
       case "tools/list":
       case "resources/list":
@@ -79,8 +126,12 @@ export function estimateInputTokens(method: string, params: unknown): number {
     }
 
     return estimateText(JSON.stringify(payload));
-  } catch (_error) {
+  } catch (error) {
     // Gracefully handle serialization errors
+    logger.warn("[tokens] Failed to estimate input tokens", {
+      method,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return 0;
   }
 }
@@ -145,6 +196,15 @@ export function estimateOutputTokens(result: unknown): number {
     // Handle circular references, BigInt, or other serialization errors
     // Attempt basic stringification
     if (error instanceof TypeError && error.message.includes("circular")) {
+      logger.warn(
+        "[tokens] Circular reference detected in output, using key-based estimate",
+        {
+          keyCount:
+            typeof result === "object" && result !== null
+              ? Object.keys(result).length
+              : 0,
+        },
+      );
       // For circular refs, try to estimate based on object keys
       if (typeof result === "object" && result !== null) {
         const keys = Object.keys(result);
@@ -154,6 +214,10 @@ export function estimateOutputTokens(result: unknown): number {
     }
 
     // Fallback: return 0 for unsupported types
+    logger.warn("[tokens] Failed to estimate output tokens", {
+      error: error instanceof Error ? error.message : String(error),
+      resultType: typeof result,
+    });
     return 0;
   }
 }
