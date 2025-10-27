@@ -87,6 +87,7 @@ export function createRequestCaptureRecord(
   clientInfo?: ClientInfo,
   serverInfo?: McpServerInfo,
   requestTracker?: RequestTracker,
+  methodDetail?: string | null,
 ): CaptureRecord {
   const client = sanitizeClientInfo(clientInfo);
   const server = sanitizeServerInfo(serverInfo);
@@ -115,6 +116,7 @@ export function createRequestCaptureRecord(
       userAgent: httpContext?.userAgent,
       clientIp: httpContext?.clientIp,
       inputTokens: estimateInputTokens(request.method, request.params),
+      methodDetail,
     },
     request,
   };
@@ -140,6 +142,7 @@ export function createResponseCaptureRecord(
   clientInfo?: ClientInfo,
   serverInfo?: McpServerInfo,
   requestTracker?: RequestTracker,
+  methodDetail?: string | null,
 ): CaptureRecord {
   const client = sanitizeClientInfo(clientInfo);
   const server = sanitizeServerInfo(serverInfo);
@@ -174,6 +177,7 @@ export function createResponseCaptureRecord(
       clientIp: httpContext?.clientIp,
       // Estimate tokens from either result (success) or error (failure)
       outputTokens: estimateOutputTokens(response.result ?? response.error),
+      methodDetail,
     },
     response,
   };

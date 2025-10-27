@@ -276,6 +276,47 @@ bun run dev
 bun run --filter test-mcp-server dev
 ```
 
+### Testing with the Gateway
+
+**IMPORTANT - Gateway Endpoint Pattern**
+
+When the gateway is running (`bun run dev`), it proxies MCP servers through this endpoint pattern:
+
+```
+http://localhost:3333/s/{serverName}/mcp
+```
+
+**NOT** `http://localhost:3333/{serverName}/mcp` ❌
+
+**Examples:**
+- Server named "everything" → `http://localhost:3333/s/everything/mcp` ✅
+- Server named "test-server" → `http://localhost:3333/s/test-server/mcp` ✅
+
+**Common test workflow:**
+```bash
+# 1. Start test MCP server (runs on port 3001 or 3002)
+bun run --filter test-mcp-server dev
+
+# 2. Start gateway (runs on port 3333)
+bun run dev
+
+# 3. Make requests through gateway proxy
+curl http://localhost:3333/s/everything/mcp \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}'
+
+# 4. View logs
+# - TUI: Automatically displays in terminal
+# - Web UI: http://localhost:3333/ui
+# - API: http://localhost:3333/api/logs
+```
+
+**Gateway Configuration:**
+- Config file: `~/.mcp-gateway/mcp.json`
+- Database: `~/.mcp-gateway/logs.db`
+- Clear database: `rm ~/.mcp-gateway/logs.db*`
+
 ### Release Process
 ```bash
 # Create changeset

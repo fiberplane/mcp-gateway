@@ -26,4 +26,5 @@ export * from "./registry/index";
 export { getStorageRoot } from "./registry/storage";
 
 // Utility exports
+export * from "./utils/method-detail";
 export * from "./utils/storage";

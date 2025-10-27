@@ -38,6 +38,8 @@ export const logs = sqliteTable(
     // Token estimation for cost tracking
     inputTokens: integer("input_tokens"),
     outputTokens: integer("output_tokens"),
+    // Human-readable method detail for display and sorting
+    methodDetail: text("method_detail"),
   },
   (table) => ({
     // Index for time-based queries (newest first)

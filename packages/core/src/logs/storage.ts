@@ -56,6 +56,8 @@ export async function insertLog(
     // Token estimation for cost tracking
     inputTokens: record.metadata.inputTokens ?? null,
     outputTokens: record.metadata.outputTokens ?? null,
+    // Human-readable method detail for display and sorting (pre-computed by proxy layer)
+    methodDetail: record.metadata.methodDetail ?? null,
   };
 
   // Use transaction to ensure atomicity of log insert and metadata upsert
@@ -607,6 +609,7 @@ function rowToRecord(row: Log): CaptureRecord {
       clientIp: row.clientIp ?? undefined,
       inputTokens: row.inputTokens ?? undefined,
       outputTokens: row.outputTokens ?? undefined,
+      methodDetail: row.methodDetail ?? undefined,
     },
     request: safeJsonParse(row.requestJson),
     response: safeJsonParse(row.responseJson),

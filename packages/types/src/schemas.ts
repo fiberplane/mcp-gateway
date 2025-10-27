@@ -81,6 +81,7 @@ export const captureMetadataSchema = z.object({
   sseEventType: z.string().optional(), // For SSE events
   inputTokens: z.number().optional(), // Estimated tokens for request
   outputTokens: z.number().optional(), // Estimated tokens for response
+  methodDetail: z.string().nullable().optional(), // Human-readable method detail for display
 });
 
 // Capture record stored in SQLite database

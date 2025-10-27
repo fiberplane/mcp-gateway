@@ -26,6 +26,7 @@ type SortField =
   | "server"
   | "session"
   | "method"
+  | "methodDetail"
   | "duration"
   | "client"
   | "tokens";
@@ -153,6 +154,22 @@ export function LogTable({
           aValue = a.metadata.client?.name || "";
           bValue = b.metadata.client?.name || "";
           break;
+        case "methodDetail": {
+          const aDetail = a.metadata.methodDetail ?? "";
+          const bDetail = b.metadata.methodDetail ?? "";
+
+          // Sort empty values to end for better UX
+          if (!aDetail && bDetail) {
+            return sortDirection === "asc" ? 1 : -1;
+          }
+          if (aDetail && !bDetail) {
+            return sortDirection === "asc" ? -1 : 1;
+          }
+
+          aValue = aDetail;
+          bValue = bDetail;
+          break;
+        }
         case "tokens": {
           const aTokens =
             (a.metadata.inputTokens ?? 0) + (a.metadata.outputTokens ?? 0);
@@ -417,6 +434,7 @@ function createColumns(): Column[] {
     {
       id: "methodDetail",
       header: "Method detail",
+      sortField: "methodDetail",
       cell: (log) => {
         const detail = getMethodDetail(log);
 
