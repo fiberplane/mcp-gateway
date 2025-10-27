@@ -28,6 +28,7 @@ import {
   removeFilter,
   serializeFilterStateToUrl,
 } from "../lib/filter-utils";
+import { AddFilterDropdown } from "./add-filter-dropdown";
 import { FilterBadge } from "./filter-badge";
 import { SearchInput } from "./search-input";
 import { Button } from "./ui/button";
@@ -160,6 +161,13 @@ export function FilterBar({ onChange }: FilterBarProps) {
     }));
   };
 
+  const handleAddFilter = (filter: ReturnType<typeof createFilter>) => {
+    setFilterState((prev) => ({
+      ...prev,
+      filters: [...prev.filters, filter],
+    }));
+  };
+
   const handleSearchChange = (search: string) => {
     setFilterState((prev) => ({
       ...prev,
@@ -229,6 +237,9 @@ export function FilterBar({ onChange }: FilterBarProps) {
             onRemove={handleRemoveFilter}
           />
         ))}
+
+        {/* Add filter dropdown */}
+        <AddFilterDropdown onAdd={handleAddFilter} />
 
         {/* Clear all button */}
         {hasActiveFilters && (
