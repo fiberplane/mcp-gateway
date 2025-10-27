@@ -1,7 +1,7 @@
 /**
- * FilterBar Component (Phase 1)
+ * FilterBar Component (Phase 1-2)
  *
- * Displays active filters and provides basic filtering controls.
+ * Displays active filters and provides filtering controls.
  *
  * Design Reference: https://www.figma.com/design/sVRANvfGiWr6CJhpXCI02W/MCP-gateway---playground?node-id=216-2812
  *
@@ -11,8 +11,10 @@
  * - "Clear all" button
  * - URL state persistence
  *
+ * Phase 2 Features:
+ * - Search input (global search)
+ *
  * Future phases will add:
- * - Search input
  * - "Add filter" dropdown for all filter types
  * - Better client selector UI
  */
@@ -27,6 +29,7 @@ import {
   serializeFilterStateToUrl,
 } from "../lib/filter-utils";
 import { FilterBadge } from "./filter-badge";
+import { SearchInput } from "./search-input";
 import { Button } from "./ui/button";
 
 interface FilterBarProps {
@@ -52,7 +55,11 @@ export function FilterBar({ onChange }: FilterBarProps) {
     } catch (error) {
       // Gracefully handle malformed URLs or invalid filter parameters
       if (import.meta.env.DEV) {
-        console.warn("Failed to parse filters from URL, using defaults:", error);
+        // biome-ignore lint/suspicious/noConsole: Dev-only error logging
+        console.warn(
+          "Failed to parse filters from URL, using defaults:",
+          error,
+        );
       }
       return { search: "", filters: [] };
     }
@@ -91,6 +98,7 @@ export function FilterBar({ onChange }: FilterBarProps) {
       } catch (error) {
         // Gracefully handle malformed URLs during navigation
         if (import.meta.env.DEV) {
+          // biome-ignore lint/suspicious/noConsole: Dev-only error logging
           console.warn(
             "Failed to parse filters during navigation, using defaults:",
             error,
@@ -152,6 +160,13 @@ export function FilterBar({ onChange }: FilterBarProps) {
     }));
   };
 
+  const handleSearchChange = (search: string) => {
+    setFilterState((prev) => ({
+      ...prev,
+      search,
+    }));
+  };
+
   const handleClearAll = () => {
     setFilterState({
       search: "",
@@ -165,6 +180,7 @@ export function FilterBar({ onChange }: FilterBarProps) {
   return (
     <>
       {/* Visually hidden live region for screen reader announcements */}
+      {/* biome-ignore lint/a11y/useSemanticElements: div with role="status" is the correct ARIA pattern for live regions */}
       <div
         role="status"
         aria-live="polite"
@@ -175,54 +191,56 @@ export function FilterBar({ onChange }: FilterBarProps) {
       </div>
 
       <div className="flex items-center gap-3 flex-wrap">
-      {/* Phase 1: Simple client selector (temporary) */}
-      <div className="flex items-center gap-2">
-        <label
-          htmlFor={clientSelectId}
-          className="text-sm font-medium text-muted-foreground"
-        >
-          Client:
-        </label>
-        <select
-          id={clientSelectId}
-          value={clientValue || "all"}
-          onChange={(e) => handleClientChange(e.target.value)}
-          className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        >
-          <option value="all">All clients</option>
-          {clientsData?.clients.map((client) => (
-            <option key={client.clientName} value={client.clientName}>
-              {client.clientName} ({client.logCount})
-            </option>
-          ))}
-        </select>
-      </div>
+        {/* Phase 2: Search input */}
+        <SearchInput
+          value={filterState.search}
+          onChange={handleSearchChange}
+          placeholder="Search logs..."
+        />
 
-      {/* Active filter badges */}
-      {filterState.filters.length > 0 && (
+        {/* Phase 1: Simple client selector (temporary) */}
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Filters:</span>
-          {filterState.filters.map((filter) => (
-            <FilterBadge
-              key={filter.id}
-              filter={filter}
-              onRemove={handleRemoveFilter}
-            />
-          ))}
+          <label
+            htmlFor={clientSelectId}
+            className="text-sm font-medium text-muted-foreground"
+          >
+            Client:
+          </label>
+          <select
+            id={clientSelectId}
+            value={clientValue || "all"}
+            onChange={(e) => handleClientChange(e.target.value)}
+            className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <option value="all">All clients</option>
+            {clientsData?.clients.map((client) => (
+              <option key={client.clientName} value={client.clientName}>
+                {client.clientName} ({client.logCount})
+              </option>
+            ))}
+          </select>
         </div>
-      )}
 
-      {/* Clear all button */}
-      {hasActiveFilters && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleClearAll}
-          className="ml-auto"
-        >
-          Clear all
-        </Button>
-      )}
+        {/* Active filter badges */}
+        {filterState.filters.map((filter) => (
+          <FilterBadge
+            key={filter.id}
+            filter={filter}
+            onRemove={handleRemoveFilter}
+          />
+        ))}
+
+        {/* Clear all button */}
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleClearAll}
+            className="ml-auto"
+          >
+            Clear all
+          </Button>
+        )}
       </div>
     </>
   );

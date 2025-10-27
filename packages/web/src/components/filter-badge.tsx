@@ -82,6 +82,7 @@ export function FilterBadge({ filter, onRemove }: FilterBadgeProps) {
   const label = `${fieldLabel} ${operatorLabel} ${value}`;
 
   return (
+    // biome-ignore lint/a11y/useAriaPropsSupportedByRole: aria-label on div provides context for screen readers
     <div
       className="inline-flex items-center gap-2 h-9 px-2 border border-border rounded-md bg-background"
       aria-label={`Active filter: ${label}`}
