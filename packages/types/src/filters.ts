@@ -37,62 +37,90 @@ export const numericOperatorSchema = z.enum(["eq", "gt", "lt", "gte", "lte"]);
 
 /**
  * Client filter schema (sender)
+ * Supports single value or array for multi-select
  */
 export const clientFilterSchema = z.object({
   id: z.string().uuid(),
   field: z.literal("client"),
   operator: stringOperatorSchema,
-  value: z.string().min(1, "Client name cannot be empty"),
+  value: z.union([
+    z.string().min(1, "Client name cannot be empty"),
+    z.array(z.string().min(1)).min(1, "At least one client must be selected"),
+  ]),
 });
 
 /**
  * Method filter schema
+ * Supports single value or array for multi-select
  */
 export const methodFilterSchema = z.object({
   id: z.string().uuid(),
   field: z.literal("method"),
   operator: stringOperatorSchema,
-  value: z.string().min(1, "Method cannot be empty"),
+  value: z.union([
+    z.string().min(1, "Method cannot be empty"),
+    z.array(z.string().min(1)).min(1, "At least one method must be selected"),
+  ]),
 });
 
 /**
  * Session filter schema
+ * Supports single value or array for multi-select
  */
 export const sessionFilterSchema = z.object({
   id: z.string().uuid(),
   field: z.literal("session"),
   operator: stringOperatorSchema,
-  value: z.string().min(1, "Session ID cannot be empty"),
+  value: z.union([
+    z.string().min(1, "Session ID cannot be empty"),
+    z.array(z.string().min(1)).min(1, "At least one session must be selected"),
+  ]),
 });
 
 /**
  * Server filter schema (receiver)
+ * Supports single value or array for multi-select
  */
 export const serverFilterSchema = z.object({
   id: z.string().uuid(),
   field: z.literal("server"),
   operator: stringOperatorSchema,
-  value: z.string().min(1, "Server name cannot be empty"),
+  value: z.union([
+    z.string().min(1, "Server name cannot be empty"),
+    z.array(z.string().min(1)).min(1, "At least one server must be selected"),
+  ]),
 });
 
 /**
  * Duration filter schema (milliseconds)
+ * Supports single value or array for multi-select
  */
 export const durationFilterSchema = z.object({
   id: z.string().uuid(),
   field: z.literal("duration"),
   operator: numericOperatorSchema,
-  value: z.number().int().nonnegative("Duration must be non-negative"),
+  value: z.union([
+    z.number().int().nonnegative("Duration must be non-negative"),
+    z
+      .array(z.number().int().nonnegative())
+      .min(1, "At least one duration must be selected"),
+  ]),
 });
 
 /**
  * Tokens filter schema
+ * Supports single value or array for multi-select
  */
 export const tokensFilterSchema = z.object({
   id: z.string().uuid(),
   field: z.literal("tokens"),
   operator: numericOperatorSchema,
-  value: z.number().int().nonnegative("Tokens must be non-negative"),
+  value: z.union([
+    z.number().int().nonnegative("Tokens must be non-negative"),
+    z
+      .array(z.number().int().nonnegative())
+      .min(1, "At least one token count must be selected"),
+  ]),
 });
 
 /**
@@ -164,10 +192,11 @@ export type FilterOperator<F extends FilterField> = F extends
 
 /**
  * Map filter field to value type
+ * Supports both single values and arrays for multi-select
  */
 export type FilterValue<F extends FilterField> = F extends "duration" | "tokens"
-  ? number
-  : string;
+  ? number | number[]
+  : string | string[];
 
 /**
  * Extract filters for a specific field

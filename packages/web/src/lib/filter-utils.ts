@@ -25,10 +25,15 @@ import {
  *
  * URL format: ?client=value&method=value&q=search
  * Each filter field can appear once with format: field=operator:value
+ * Multi-value filters use comma-separated values: field=operator:value1,value2,value3
  *
  * @example
  * parseFiltersFromUrl(new URLSearchParams("?client=is:claude-code&duration=gt:100"))
  * // Returns: [{ field: "client", operator: "is", value: "claude-code" }, ...]
+ *
+ * @example
+ * parseFiltersFromUrl(new URLSearchParams("?method=is:tools/call,prompts/get"))
+ * // Returns: [{ field: "method", operator: "is", value: ["tools/call", "prompts/get"] }, ...]
  */
 export function parseFiltersFromUrl(params: URLSearchParams): Filter[] {
   const filters: Filter[] = [];
@@ -46,19 +51,51 @@ export function parseFiltersFromUrl(params: URLSearchParams): Filter[] {
     const param = params.get(field);
     if (!param) continue;
 
-    // Parse format: "operator:value"
+    // Parse format: "operator:value" or "operator:value1,value2,value3"
     const colonIndex = param.indexOf(":");
     if (colonIndex === -1) continue;
 
     const operator = param.slice(0, colonIndex);
     const valueStr = param.slice(colonIndex + 1);
 
+    // Check if value contains commas (multi-value)
+    const hasMultipleValues = valueStr.includes(",");
+
     // Parse value based on field type
-    let value: string | number = valueStr;
+    let value: string | number | string[] | number[];
+
     if (field === "duration" || field === "tokens") {
-      const numValue = Number.parseInt(valueStr, 10);
-      if (Number.isNaN(numValue)) continue; // Skip invalid numbers
-      value = numValue;
+      // Numeric field
+      if (hasMultipleValues) {
+        // Parse as array of numbers
+        const values = valueStr
+          .split(",")
+          .map((v) => Number.parseInt(v.trim(), 10))
+          .filter((v) => !Number.isNaN(v));
+
+        if (values.length === 0) continue; // Skip if all values invalid
+        value = values;
+      } else {
+        // Parse as single number
+        const numValue = Number.parseInt(valueStr, 10);
+        if (Number.isNaN(numValue)) continue;
+        value = numValue;
+      }
+    } else {
+      // String field
+      if (hasMultipleValues) {
+        // Parse as array of strings
+        const values = valueStr
+          .split(",")
+          .map((v) => v.trim())
+          .filter((v) => v.length > 0);
+
+        if (values.length === 0) continue; // Skip if all values empty
+        value = values;
+      } else {
+        // Parse as single string
+        value = valueStr;
+      }
     }
 
     // Create filter with validation
@@ -79,12 +116,19 @@ export function parseFiltersFromUrl(params: URLSearchParams): Filter[] {
 
 /**
  * Serialize filters to URL search params
+ * Array values are joined with commas
  *
  * @example
  * serializeFiltersToUrl([
  *   { field: "client", operator: "is", value: "claude-code" }
  * ], "echo")
  * // Returns URLSearchParams: "client=is:claude-code&q=echo"
+ *
+ * @example
+ * serializeFiltersToUrl([
+ *   { field: "method", operator: "is", value: ["tools/call", "prompts/get"] }
+ * ])
+ * // Returns URLSearchParams: "method=is:tools/call,prompts/get"
  */
 export function serializeFiltersToUrl(
   filters: Filter[],
@@ -97,9 +141,13 @@ export function serializeFiltersToUrl(
     params.set("q", search.trim());
   }
 
-  // Add each filter as field=operator:value
+  // Add each filter as field=operator:value or field=operator:value1,value2,value3
   for (const filter of filters) {
-    params.set(filter.field, `${filter.operator}:${filter.value}`);
+    const value = Array.isArray(filter.value)
+      ? filter.value.join(",") // Join array values with commas
+      : String(filter.value);
+
+    params.set(filter.field, `${filter.operator}:${value}`);
   }
 
   return params;
@@ -178,13 +226,19 @@ export function matchesFilter(log: ApiLogEntry, filter: Filter): boolean {
 
 /**
  * Match string value against string filter
+ * Supports both single values and arrays (OR logic for arrays)
  */
 function matchesStringFilter(
   value: string | undefined,
   operator: "is" | "contains",
-  filterValue: string,
+  filterValue: string | string[],
 ): boolean {
   if (!value) return false;
+
+  // Handle array values with OR logic
+  if (Array.isArray(filterValue)) {
+    return filterValue.some((v) => matchesStringFilter(value, operator, v));
+  }
 
   switch (operator) {
     case "is":
@@ -198,13 +252,19 @@ function matchesStringFilter(
 
 /**
  * Match numeric value against numeric filter
+ * Supports both single values and arrays (OR logic for arrays)
  */
 function matchesNumericFilter(
   value: number | undefined,
   operator: "eq" | "gt" | "lt" | "gte" | "lte",
-  filterValue: number,
+  filterValue: number | number[],
 ): boolean {
   if (value === undefined) return false;
+
+  // Handle array values with OR logic
+  if (Array.isArray(filterValue)) {
+    return filterValue.some((v) => matchesNumericFilter(value, operator, v));
+  }
 
   switch (operator) {
     case "eq":
@@ -299,6 +359,10 @@ export function applyFilterState(
  * @example
  * getFilterLabel({ field: "client", operator: "is", value: "claude-code" })
  * // Returns: "Client is claude-code"
+ *
+ * @example
+ * getFilterLabel({ field: "method", operator: "is", value: ["tools/call", "prompts/get"] })
+ * // Returns: "Method is tools/call, prompts/get"
  */
 export function getFilterLabel(filter: Filter): string {
   const fieldLabels: Record<FilterField, string> = {
@@ -322,11 +386,24 @@ export function getFilterLabel(filter: Filter): string {
 
   const field = fieldLabels[filter.field];
   const operator = operatorLabels[filter.operator] || filter.operator;
-  let value = String(filter.value);
 
-  // Add units for duration
-  if (isDurationFilter(filter)) {
-    value = `${filter.value}ms`;
+  // Handle array values
+  let value: string;
+  if (Array.isArray(filter.value)) {
+    if (isDurationFilter(filter)) {
+      // Add "ms" to each duration value
+      value = filter.value.map((v) => `${v}ms`).join(", ");
+    } else {
+      // Join string/number values with commas
+      value = filter.value.join(", ");
+    }
+  } else {
+    // Single value
+    if (isDurationFilter(filter)) {
+      value = `${filter.value}ms`;
+    } else {
+      value = String(filter.value);
+    }
   }
 
   return `${field} ${operator} ${value}`;
