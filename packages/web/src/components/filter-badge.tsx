@@ -48,7 +48,13 @@ const OPERATOR_LABELS: Record<string, string> = {
 };
 
 // Icons for different filter types (matching table header icons)
-function FilterIcon({ field, className: extraClasses }: { field: Filter["field"], className: string }) {
+function FilterIcon({
+  field,
+  className: extraClasses,
+}: {
+  field: Filter["field"];
+  className: string;
+}) {
   const className = cn(extraClasses, "size-4");
 
   switch (field) {

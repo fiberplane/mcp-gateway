@@ -33,6 +33,36 @@ function getTextColor(status: ServerStatus, isSelected: boolean): string {
   return "text-foreground";
 }
 
+interface ServerTabProps {
+  isSelected: boolean;
+  panelId: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}
+
+function ServerTab({ isSelected, panelId, onClick, children }: ServerTabProps) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={isSelected}
+      aria-controls={panelId}
+      tabIndex={isSelected ? 0 : -1}
+      onClick={onClick}
+      className={`
+        flex items-center gap-2 h-8 px-3 py-1 rounded-md text-sm transition-colors
+        ${
+          isSelected
+            ? "bg-foreground text-background"
+            : "bg-card text-foreground border border-border hover:bg-muted cursor-pointer"
+        }
+      `}
+    >
+      {children}
+    </button>
+  );
+}
+
 export function ServerTabs({ value, onChange, panelId }: ServerTabsProps) {
   const { data, isLoading, error } = useQuery({
     queryKey: ["servers"],
@@ -152,41 +182,21 @@ export function ServerTabs({ value, onChange, panelId }: ServerTabsProps) {
       aria-label="Server filter tabs"
       className="flex gap-2 items-center flex-wrap"
     >
-      <button
-        type="button"
-        role="tab"
-        aria-selected={selectedServer === "all"}
-        aria-controls={panelId}
-        tabIndex={selectedServer === "all" ? 0 : -1}
+      <ServerTab
+        isSelected={selectedServer === "all"}
+        panelId={panelId}
         onClick={() => onChange(undefined)}
-        className={`
-          h-8 px-3 py-1 rounded-md text-sm transition-colors cursor-pointer
-          ${selectedServer === "all"
-            ? "bg-foreground text-background"
-            : "bg-card text-foreground border border-border hover:bg-muted"
-          }
-        `}
       >
         All servers
-      </button>
+      </ServerTab>
       {data.servers.map((server) => {
         const isSelected = selectedServer === server.name;
         return (
-          <button
+          <ServerTab
             key={server.name}
-            type="button"
-            role="tab"
-            aria-selected={isSelected}
-            aria-controls={panelId}
-            tabIndex={isSelected ? 0 : -1}
+            isSelected={isSelected}
+            panelId={panelId}
             onClick={() => onChange(server.name)}
-            className={`
-              flex items-center gap-2 h-8 px-3 py-1 rounded-md text-sm transition-colors
-              ${isSelected
-                ? "bg-foreground text-background"
-                : "bg-card border border-border hover:bg-muted cursor-pointer"
-              }
-            `}
           >
             <span
               className={`w-2 h-2 rounded-full ${getStatusColor(server.status)}`}
@@ -203,7 +213,7 @@ export function ServerTabs({ value, onChange, panelId }: ServerTabsProps) {
                 <span className="text-xs ml-1">(not found)</span>
               )}
             </span>
-          </button>
+          </ServerTab>
         );
       })}
     </div>
