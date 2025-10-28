@@ -11,15 +11,14 @@
  * - Data-driven submenus using TanStack Query hooks
  * - Multi-select support (checkboxes)
  * - Search/filter within submenus
- * - Apply on close (no Apply/Cancel buttons)
- * - Keyboard accessible (ESC to cancel)
+ * - Immediate apply (filters update as you select)
+ * - Keyboard accessible
  * - Screen reader friendly
  */
 
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Plus } from "lucide-react";
-import { useEffect, useState } from "react";
-import { arraysEqualSet } from "../lib/array-utils";
+import { useState } from "react";
 import {
   useAvailableClients,
   useAvailableMethods,
@@ -31,7 +30,7 @@ import { Button } from "./ui/button";
 
 interface FilterTypeMenuProps {
   /**
-   * Callback when filters are applied (menu closes)
+   * Callback when filters change
    * @param filterType - The type of filter (method, client, server, session)
    * @param values - Array of selected values (empty array = remove filter)
    */
@@ -54,20 +53,6 @@ export function FilterTypeMenu({
   activeFilters = {},
 }: FilterTypeMenuProps) {
   const [open, setOpen] = useState(false);
-
-  // Track selections temporarily (before applying)
-  const [selectedMethods, setSelectedMethods] = useState<string[]>(
-    activeFilters.method ?? [],
-  );
-  const [selectedClients, setSelectedClients] = useState<string[]>(
-    activeFilters.client ?? [],
-  );
-  const [selectedServers, setSelectedServers] = useState<string[]>(
-    activeFilters.server ?? [],
-  );
-  const [selectedSessions, setSelectedSessions] = useState<string[]>(
-    activeFilters.session ?? [],
-  );
 
   // Fetch available values
   const methodsQuery = useAvailableMethods();
@@ -104,74 +89,12 @@ export function FilterTypeMenu({
       count: s.logCount,
     })) ?? [];
 
-  // Sync temp state with active filters whenever they change
-  useEffect(() => {
-    setSelectedMethods(activeFilters.method ?? []);
-    setSelectedClients(activeFilters.client ?? []);
-    setSelectedServers(activeFilters.server ?? []);
-    setSelectedSessions(activeFilters.session ?? []);
-  }, [activeFilters]);
-
-  // Apply all filter changes when menu closes
-  const handleOpenChange = (newOpen: boolean) => {
-    if (!newOpen && open) {
-      // Menu is closing - apply all selections
-      applyFilters();
-    }
-    setOpen(newOpen);
-  };
-
-  const applyFilters = () => {
-    // Apply each filter type with its selected values
-    // Empty array = remove filter for that type
-    onApply("method", selectedMethods);
-    onApply("client", selectedClients);
-    onApply("server", selectedServers);
-    onApply("session", selectedSessions);
-  };
-
-  const discardChanges = () => {
-    // Reset temp state to active filters
-    setSelectedMethods(activeFilters.method ?? []);
-    setSelectedClients(activeFilters.client ?? []);
-    setSelectedServers(activeFilters.server ?? []);
-    setSelectedSessions(activeFilters.session ?? []);
-  };
-
-  // Detect uncommitted changes (efficient array comparison)
-  const hasUncommittedChanges =
-    !arraysEqualSet(selectedMethods, activeFilters.method ?? []) ||
-    !arraysEqualSet(selectedClients, activeFilters.client ?? []) ||
-    !arraysEqualSet(selectedServers, activeFilters.server ?? []) ||
-    !arraysEqualSet(selectedSessions, activeFilters.session ?? []);
-
-  // Count uncommitted changes for badge
-  const changeCount =
-    (!arraysEqualSet(selectedMethods, activeFilters.method ?? []) ? 1 : 0) +
-    (!arraysEqualSet(selectedClients, activeFilters.client ?? []) ? 1 : 0) +
-    (!arraysEqualSet(selectedServers, activeFilters.server ?? []) ? 1 : 0) +
-    (!arraysEqualSet(selectedSessions, activeFilters.session ?? []) ? 1 : 0);
-
   return (
-    <DropdownMenu.Root
-      open={open}
-      onOpenChange={handleOpenChange}
-      modal={false}
-    >
+    <DropdownMenu.Root open={open} onOpenChange={setOpen} modal={false}>
       <DropdownMenu.Trigger asChild>
         <Button variant="outline" size="sm" className="gap-2">
           <Plus className="size-4" aria-hidden="true" />
           Add filter
-          {hasUncommittedChanges && (
-            <>
-              <span className="ml-1 px-1.5 py-0.5 text-xs bg-orange-100 text-orange-700 rounded font-medium">
-                {changeCount}
-              </span>
-              <span className="sr-only">
-                {changeCount} pending {changeCount === 1 ? "change" : "changes"}
-              </span>
-            </>
-          )}
         </Button>
       </DropdownMenu.Trigger>
 
@@ -180,20 +103,13 @@ export function FilterTypeMenu({
           className="min-w-[200px] rounded-md border border-border bg-popover p-1 shadow-lg"
           sideOffset={5}
           align="start"
-          onKeyDown={(e) => {
-            if (e.key === "Escape") {
-              // ESC key - discard changes and close
-              discardChanges();
-              setOpen(false);
-            }
-          }}
         >
           {/* Method Filter */}
           <FilterValueSubmenu
             label="Method"
             values={methodValues}
-            selectedValues={selectedMethods}
-            onSelectionChange={setSelectedMethods}
+            selectedValues={activeFilters.method ?? []}
+            onSelectionChange={(values) => onApply("method", values)}
             isLoading={methodsQuery.isLoading}
             showColorBadges={true}
             searchPlaceholder="Search methods..."
@@ -203,8 +119,8 @@ export function FilterTypeMenu({
           <FilterValueSubmenu
             label="Session"
             values={sessionValues}
-            selectedValues={selectedSessions}
-            onSelectionChange={setSelectedSessions}
+            selectedValues={activeFilters.session ?? []}
+            onSelectionChange={(values) => onApply("session", values)}
             isLoading={sessionsQuery.isLoading}
             searchPlaceholder="Search sessions..."
           />
@@ -213,8 +129,8 @@ export function FilterTypeMenu({
           <FilterValueSubmenu
             label="Client"
             values={clientValues}
-            selectedValues={selectedClients}
-            onSelectionChange={setSelectedClients}
+            selectedValues={activeFilters.client ?? []}
+            onSelectionChange={(values) => onApply("client", values)}
             isLoading={clientsQuery.isLoading}
             searchPlaceholder="Search clients..."
           />
@@ -223,16 +139,11 @@ export function FilterTypeMenu({
           <FilterValueSubmenu
             label="Server"
             values={serverValues}
-            selectedValues={selectedServers}
-            onSelectionChange={setSelectedServers}
+            selectedValues={activeFilters.server ?? []}
+            onSelectionChange={(values) => onApply("server", values)}
             isLoading={serversQuery.isLoading}
             searchPlaceholder="Search servers..."
           />
-
-          {/* Helper text */}
-          <div className="px-2 py-1.5 text-xs text-muted-foreground border-t border-border mt-1">
-            Filters apply when menu closes. Press ESC to cancel.
-          </div>
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>
