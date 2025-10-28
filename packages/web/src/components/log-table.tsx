@@ -37,6 +37,8 @@ interface Column {
   sortField?: SortField;
   size?: string | number;
   isVisible?: (logs: ApiLogEntry[]) => boolean;
+  /** Optional className for the header <th> element */
+  headerClassName?: string;
 }
 
 /**
@@ -98,6 +100,7 @@ const COLUMNS: Column[] = [
     id: "timestamp",
     header: "Timestamp",
     sortField: "timestamp",
+    headerClassName: "min-w-32",
     cell: (log) => (
       <span className="font-mono text-sm text-foreground" title={log.timestamp}>
         {format(new Date(log.timestamp), "HH:mm:ss.SSS")}
@@ -108,13 +111,14 @@ const COLUMNS: Column[] = [
     id: "client",
     header: "Client",
     sortField: "client",
+    headerClassName: "min-w-40",
     cell: (log) =>
       log.metadata.client ? (
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-1">
-          <span className="font-medium truncate">
+        <div className="flex items-center gap-1">
+          <span className="font-medium truncate min-w-0">
             {log.metadata.client.name}
           </span>
-          <span className="text-muted-foreground">
+          <span className="text-muted-foreground whitespace-nowrap flex-shrink-0">
             {log.metadata.client.version}
           </span>
         </div>
@@ -126,6 +130,7 @@ const COLUMNS: Column[] = [
     id: "method",
     header: "Method",
     sortField: "method",
+    headerClassName: "min-w-44",
     cell: (log) => (
       <span
         className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-sm font-medium"
@@ -146,14 +151,15 @@ const COLUMNS: Column[] = [
     id: "server",
     header: "Server",
     sortField: "server",
+    headerClassName: "min-w-40",
     isVisible: (logs) => logs.some((log) => log.metadata.server),
     cell: (log) =>
       log.metadata.server ? (
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-1">
-          <span className="font-medium truncate">
+        <div className="flex items-center gap-1">
+          <span className="font-medium truncate min-w-0">
             {log.metadata.server.name}
           </span>
-          <span className="text-medium text-muted-foreground">
+          <span className="text-medium text-muted-foreground whitespace-nowrap flex-shrink-0">
             {log.metadata.server.version}
           </span>
         </div>
@@ -165,6 +171,7 @@ const COLUMNS: Column[] = [
     id: "session",
     header: "Session",
     sortField: "session",
+    headerClassName: "min-w-28",
     cell: (log) => (
       <span className="font-mono text-xs text-muted-foreground">
         {log.metadata.sessionId.slice(0, 8)}...
@@ -175,6 +182,7 @@ const COLUMNS: Column[] = [
     id: "duration",
     header: "Duration",
     sortField: "duration",
+    headerClassName: "min-w-24",
     cell: (log) => (
       <span className="text-sm text-muted-foreground">
         {log.metadata.durationMs}ms
@@ -347,7 +355,7 @@ export function LogTable({
           {visibleColumns.map((column) => (
             <th
               key={column.id}
-              className="text-left h-8 px-2 text-sm font-semibold text-foreground"
+              className={`text-left h-8 px-2 text-sm font-semibold text-foreground ${column.headerClassName ?? ""}`}
             >
               {column.sortField ? (
                 <SortHeader
