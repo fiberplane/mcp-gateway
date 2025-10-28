@@ -179,12 +179,15 @@ export function LogTable({
     });
 
     for (let i = 0; i < sortedGroupKeys.length; i++) {
-      // biome-ignore lint/style/noNonNullAssertion: Array index is within bounds
-      const groupKey = sortedGroupKeys[i]!;
-      // biome-ignore lint/style/noNonNullAssertion: We know the key exists
-      const groupLogs = groups.get(groupKey)!;
-      // biome-ignore lint/style/noNonNullAssertion: Groups always have at least one log
-      const firstLog = groupLogs[0]!;
+      const groupKey = sortedGroupKeys[i];
+      if (!groupKey) continue;
+
+      const groupLogs = groups.get(groupKey);
+      if (!groupLogs || groupLogs.length === 0) continue;
+
+      const firstLog = groupLogs[0];
+      if (!firstLog) continue;
+
       const label = config.formatLabel(new Date(firstLog.timestamp));
 
       // Skip divider for the current time period

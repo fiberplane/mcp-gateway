@@ -46,6 +46,7 @@ export function useCopyToClipboard<T = string>(
   const [copiedType, setCopiedType] = useState<T | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const timeoutRef = useRef<number | undefined>(undefined);
+  const mountedRef = useRef(true);
 
   const copy = useCallback(
     async (data: unknown, type?: T) => {
@@ -58,26 +59,34 @@ export function useCopyToClipboard<T = string>(
           clearTimeout(timeoutRef.current);
         }
 
-        // Set copied state
-        setCopiedType(type ?? null);
-        setError(null);
+        // Set copied state (only if still mounted)
+        if (mountedRef.current) {
+          setCopiedType(type ?? null);
+          setError(null);
+        }
 
         // Reset after delay
         timeoutRef.current = window.setTimeout(() => {
-          setCopiedType(null);
+          if (mountedRef.current) {
+            setCopiedType(null);
+          }
         }, resetDelay);
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
-        setError(error);
+        if (mountedRef.current) {
+          setError(error);
+        }
         // Error will be available via the error state, no need to log
       }
     },
     [resetDelay],
   );
 
-  // Cleanup timeout on unmount
+  // Cleanup timeout on unmount and track mounted state
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
+      mountedRef.current = false;
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }

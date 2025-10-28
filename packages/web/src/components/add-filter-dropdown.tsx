@@ -96,8 +96,13 @@ export function AddFilterDropdown({
     // Use single value if only one selected, otherwise use array
     let filterValue: string | string[];
     if (values.length === 1) {
-      // Safe to access first element since we checked length
-      filterValue = values[0] as string;
+      const firstValue = values[0];
+      if (firstValue !== undefined) {
+        filterValue = firstValue;
+      } else {
+        // This should never happen, but handle gracefully
+        return;
+      }
     } else {
       filterValue = values;
     }

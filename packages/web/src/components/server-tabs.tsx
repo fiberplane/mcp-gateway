@@ -87,11 +87,10 @@ export function ServerTabs({ value, onChange, panelId }: ServerTabsProps) {
 
   // Handle keyboard navigation
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!tabListRef.current?.contains(e.target as Node)) {
-        return;
-      }
+    const tabList = tabListRef.current;
+    if (!tabList) return;
 
+    const handleKeyDown = (e: KeyboardEvent) => {
       let newIndex = selectedIndex;
 
       switch (e.key) {
@@ -123,15 +122,13 @@ export function ServerTabs({ value, onChange, panelId }: ServerTabsProps) {
       // Focus the newly selected tab
       requestAnimationFrame(() => {
         const buttons =
-          tabListRef.current?.querySelectorAll<HTMLButtonElement>(
-            '[role="tab"]',
-          );
+          tabList.querySelectorAll<HTMLButtonElement>('[role="tab"]');
         buttons?.[newIndex]?.focus();
       });
     };
 
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    tabList.addEventListener("keydown", handleKeyDown);
+    return () => tabList.removeEventListener("keydown", handleKeyDown);
   }, [selectedIndex, allTabValues, onChange]);
 
   if (error) {
