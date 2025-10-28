@@ -81,11 +81,11 @@ function SortHeader({
     <button
       type="button"
       onClick={() => onSort(field)}
-      className="flex items-center gap-1 hover:text-foreground w-full hover:bg-muted transition-colors cursor-pointer"
+      className="flex items-center gap-1 hover:text-foreground w-full hover:bg-muted transition-colors cursor-pointer group"
     >
       {children}
       <Icon
-        className={`w-4 h-4 ${isActive ? "text-foreground" : "text-muted-foreground"}`}
+        className={`w-4 h-4 ${isActive ? "text-foreground" : "text-muted-foreground"} group-hover:text-foreground`}
       />
     </button>
   );
