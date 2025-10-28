@@ -17,7 +17,9 @@
 
 import type { Filter } from "@fiberplane/mcp-gateway-types";
 import { BarChart3, Clock, List, Monitor, Server, X, Zap } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { getMethodColor } from "../lib/method-colors";
+import { IconButton } from "./ui/button";
 
 interface FilterBadgeProps {
   filter: Filter;
@@ -46,20 +48,22 @@ const OPERATOR_LABELS: Record<string, string> = {
 };
 
 // Icons for different filter types (matching table header icons)
-function getFilterIcon(field: Filter["field"]) {
+function FilterIcon({ field, className: extraClasses }: { field: Filter["field"], className: string }) {
+  const className = cn(extraClasses, "size-4");
+
   switch (field) {
     case "method":
-      return <Zap className="size-4" aria-hidden="true" />;
+      return <Zap className={className} aria-hidden="true" />;
     case "session":
-      return <List className="size-4" aria-hidden="true" />;
+      return <List className={className} aria-hidden="true" />;
     case "client":
-      return <Monitor className="size-4" aria-hidden="true" />; // Client entity
+      return <Monitor className={className} aria-hidden="true" />; // Client entity
     case "server":
-      return <Server className="size-4" aria-hidden="true" />; // Server entity
+      return <Server className={className} aria-hidden="true" />; // Server entity
     case "duration":
-      return <Clock className="size-4" aria-hidden="true" />;
+      return <Clock className={className} aria-hidden="true" />;
     case "tokens":
-      return <BarChart3 className="size-4" aria-hidden="true" />;
+      return <BarChart3 className={className} aria-hidden="true" />;
   }
 }
 
@@ -101,7 +105,6 @@ export function FilterBadge({ filter, onRemove }: FilterBadgeProps) {
   const fieldLabel = FIELD_LABELS[filter.field];
   const operatorLabel = OPERATOR_LABELS[filter.operator] || filter.operator;
   const value = formatValue(filter);
-  const icon = getFilterIcon(filter.field);
 
   // Method filters get a purple badge for the value (matching Figma)
   const shouldHighlightValue = filter.field === "method";
@@ -113,9 +116,9 @@ export function FilterBadge({ filter, onRemove }: FilterBadgeProps) {
       : `${fieldLabel} ${operatorLabel} ${value}`;
 
   return (
-    <div className="inline-flex items-center gap-2 h-9 px-2 border border-border rounded-md bg-background">
+    <div className="inline-flex items-center gap-2 h-9 px-2 border border-foreground rounded-md bg-card">
       {/* Icon */}
-      {icon}
+      <FilterIcon field={filter.field} className="text-muted-foreground" />
 
       {/* Field name */}
       <span className="text-sm font-medium text-muted-foreground">
@@ -128,7 +131,7 @@ export function FilterBadge({ filter, onRemove }: FilterBadgeProps) {
       {/* Value - styled differently based on filter type */}
       {filter.field === "method" && Array.isArray(filter.value) ? (
         // Multiple method pills with individual colors
-        <div className="inline-flex items-center gap-1 flex-wrap">
+        <div className="inline-flex items-center gap-2 flex-wrap">
           {filter.value.slice(0, 3).map((methodValue) => (
             <div
               key={String(methodValue)}
@@ -161,15 +164,14 @@ export function FilterBadge({ filter, onRemove }: FilterBadgeProps) {
         <span className="text-sm font-mono text-foreground">{value}</span>
       )}
 
-      {/* Remove button */}
-      <button
-        type="button"
+      {/* Remove button - Ghost icon button from design system */}
+      <IconButton
+        variant="ghost"
+        size="icon-sm"
+        icon={X}
         onClick={() => onRemove(filter.id)}
-        className="inline-flex items-center justify-center rounded-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 p-2 transition-colors"
         aria-label={`Remove filter: ${label}`}
-      >
-        <X className="size-4" aria-hidden="true" />
-      </button>
+      />
     </div>
   );
 }

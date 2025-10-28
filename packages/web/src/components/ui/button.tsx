@@ -5,7 +5,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 cursor-pointer",
   {
     variants: {
       variant: {
@@ -13,7 +13,7 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline:
-          "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+          "border border-input bg-background hover:bg-secondary hover:text-secondary-foreground",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
@@ -24,6 +24,7 @@ const buttonVariants = cva(
         sm: "h-9 rounded-md px-3",
         lg: "h-11 rounded-md px-8",
         icon: "h-10 w-10",
+        "icon-sm": "h-5 w-5",
       },
     },
     defaultVariants: {
@@ -35,7 +36,7 @@ const buttonVariants = cva(
 
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
+  VariantProps<typeof buttonVariants> {
   asChild?: boolean;
 }
 
@@ -53,4 +54,47 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 );
 Button.displayName = "Button";
 
-export { Button, buttonVariants };
+/**
+ * IconButton Props
+ *
+ * Type-safe wrapper for icon-only buttons that enforces accessibility requirements.
+ */
+export interface IconButtonProps
+  extends Omit<ButtonProps, "size" | "children"> {
+  /** Icon component (e.g., from lucide-react) */
+  icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
+  /** Button size - restricted to icon variants only */
+  size?: "icon" | "icon-sm";
+  /** Required: Accessible label for screen readers */
+  "aria-label": string;
+}
+
+/**
+ * IconButton Component
+ *
+ * A type-safe icon-only button that enforces accessibility requirements.
+ * Uses the Button component internally with proper icon sizing and aria-label.
+ *
+ * @example
+ * ```tsx
+ * <IconButton
+ *   variant="ghost"
+ *   size="icon-sm"
+ *   icon={X}
+ *   aria-label="Remove filter"
+ *   onClick={handleRemove}
+ * />
+ * ```
+ */
+const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
+  ({ icon: Icon, size = "icon", ...props }, ref) => {
+    return (
+      <Button ref={ref} size={size} {...props}>
+        <Icon aria-hidden />
+      </Button>
+    );
+  },
+);
+IconButton.displayName = "IconButton";
+
+export { Button, buttonVariants, IconButton };

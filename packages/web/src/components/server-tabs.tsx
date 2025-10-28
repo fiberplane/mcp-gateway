@@ -160,11 +160,10 @@ export function ServerTabs({ value, onChange, panelId }: ServerTabsProps) {
         tabIndex={selectedServer === "all" ? 0 : -1}
         onClick={() => onChange(undefined)}
         className={`
-          h-8 px-3 py-1 rounded-md text-sm transition-colors
-          ${
-            selectedServer === "all"
-              ? "bg-foreground text-background"
-              : "bg-card text-foreground border border-border hover:bg-muted"
+          h-8 px-3 py-1 rounded-md text-sm transition-colors cursor-pointer
+          ${selectedServer === "all"
+            ? "bg-foreground text-background"
+            : "bg-card text-foreground border border-border hover:bg-muted"
           }
         `}
       >
@@ -183,10 +182,9 @@ export function ServerTabs({ value, onChange, panelId }: ServerTabsProps) {
             onClick={() => onChange(server.name)}
             className={`
               flex items-center gap-2 h-8 px-3 py-1 rounded-md text-sm transition-colors
-              ${
-                isSelected
-                  ? "bg-foreground text-background"
-                  : "bg-card border border-border hover:bg-muted"
+              ${isSelected
+                ? "bg-foreground text-background"
+                : "bg-card border border-border hover:bg-muted cursor-pointer"
               }
             `}
           >
