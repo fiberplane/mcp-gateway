@@ -133,6 +133,112 @@ export class ClientManager {
 				headers: Object.keys(server.headers),
 			});
 
+			// Diagnostic: Try different OAuth discovery URLs to see what works
+			try {
+				const normalizedUrl = server.url.replace(/\/$/, "");
+				const baseUrl = new URL(normalizedUrl);
+				const origin = baseUrl.origin;
+
+				// Try multiple possible OAuth discovery endpoints
+				const discoveryUrls = [
+					`${normalizedUrl}/.well-known/oauth-protected-resource`, // RFC 8707 - at MCP path
+					`${origin}/.well-known/oauth-protected-resource`,         // RFC 8707 - at origin
+					`${normalizedUrl}/.well-known/oauth-authorization-server`, // RFC 8414 - at MCP path
+					`${origin}/.well-known/oauth-authorization-server`,        // RFC 8414 - at origin
+				];
+
+				for (const wellKnownUrl of discoveryUrls) {
+					logger.debug("Diagnostic: Trying OAuth discovery URL", {
+						serverName: server.name,
+						wellKnownUrl,
+					});
+
+					try {
+						const response = await fetch(wellKnownUrl, {
+							headers: server.headers,
+						});
+
+						logger.info("Diagnostic: OAuth discovery response", {
+							serverName: server.name,
+							wellKnownUrl,
+							status: response.status,
+							statusText: response.statusText,
+							headers: Object.fromEntries(response.headers.entries()),
+							finalUrl: response.url,
+						});
+
+						if (response.ok) {
+							const body = await response.text();
+							logger.info("Diagnostic: OAuth discovery SUCCESS", {
+								serverName: server.name,
+								wellKnownUrl,
+								body: body.substring(0, 1000),
+							});
+							break; // Found it!
+						} else {
+							const body = await response.text();
+							logger.debug("Diagnostic: OAuth discovery failed", {
+								serverName: server.name,
+								wellKnownUrl,
+								status: response.status,
+								body: body.substring(0, 200),
+							});
+						}
+					} catch (fetchError) {
+						logger.debug("Diagnostic: Fetch failed for URL", {
+							serverName: server.name,
+							wellKnownUrl,
+							error: String(fetchError),
+						});
+					}
+				}
+
+				// Also try a plain request to the MCP endpoint to see response headers
+				logger.debug("Diagnostic: Trying plain MCP endpoint", {
+					serverName: server.name,
+					url: normalizedUrl,
+				});
+
+				const mcpResponse = await fetch(normalizedUrl, {
+					method: "POST",
+					headers: {
+						...server.headers,
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({
+						jsonrpc: "2.0",
+						id: "diagnostic",
+						method: "initialize",
+						params: {
+							protocolVersion: "2024-11-05",
+							clientInfo: { name: "diagnostic", version: "1.0.0" },
+							capabilities: {},
+						},
+					}),
+				});
+
+				logger.info("Diagnostic: MCP endpoint response", {
+					serverName: server.name,
+					status: mcpResponse.status,
+					statusText: mcpResponse.statusText,
+					headers: Object.fromEntries(mcpResponse.headers.entries()),
+				});
+
+				if (!mcpResponse.ok) {
+					const body = await mcpResponse.text();
+					logger.info("Diagnostic: MCP endpoint error body", {
+						serverName: server.name,
+						body: body.substring(0, 1000),
+					});
+				}
+			} catch (diagError) {
+				logger.error("Diagnostic: OAuth discovery diagnostic failed", {
+					serverName: server.name,
+					error: String(diagError),
+					stack: diagError instanceof Error ? diagError.stack : undefined,
+				});
+			}
+
 			// Connect to server with custom headers
 			const connection = await connect(server.url, {
 				headers: server.headers,
@@ -154,6 +260,9 @@ export class ClientManager {
 			logger.error("Failed to connect to MCP server", {
 				serverName: server.name,
 				error: String(error),
+				errorStack: error instanceof Error ? error.stack : undefined,
+				errorType: typeof error,
+				errorConstructor: error?.constructor?.name,
 			});
 			throw error;
 		}
