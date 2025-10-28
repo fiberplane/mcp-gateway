@@ -104,15 +104,13 @@ export function FilterTypeMenu({
       count: s.logCount,
     })) ?? [];
 
-  // Sync temp state with active filters when menu opens
+  // Sync temp state with active filters whenever they change
   useEffect(() => {
-    if (open) {
-      setSelectedMethods(activeFilters.method ?? []);
-      setSelectedClients(activeFilters.client ?? []);
-      setSelectedServers(activeFilters.server ?? []);
-      setSelectedSessions(activeFilters.session ?? []);
-    }
-  }, [open, activeFilters]);
+    setSelectedMethods(activeFilters.method ?? []);
+    setSelectedClients(activeFilters.client ?? []);
+    setSelectedServers(activeFilters.server ?? []);
+    setSelectedSessions(activeFilters.session ?? []);
+  }, [activeFilters]);
 
   // Apply all filter changes when menu closes
   const handleOpenChange = (newOpen: boolean) => {

@@ -17,6 +17,7 @@
 
 import type { Filter } from "@fiberplane/mcp-gateway-types";
 import { BarChart3, Clock, List, Monitor, Server, X, Zap } from "lucide-react";
+import { getMethodColor } from "../lib/method-colors";
 
 interface FilterBadgeProps {
   filter: Filter;
@@ -105,7 +106,11 @@ export function FilterBadge({ filter, onRemove }: FilterBadgeProps) {
   // Method filters get a purple badge for the value (matching Figma)
   const shouldHighlightValue = filter.field === "method";
 
-  const label = `${fieldLabel} ${operatorLabel} ${value}`;
+  // For multi-value methods, use "or" for better accessibility
+  const label =
+    filter.field === "method" && Array.isArray(filter.value)
+      ? `${fieldLabel} ${operatorLabel} ${filter.value.join(" or ")}`
+      : `${fieldLabel} ${operatorLabel} ${value}`;
 
   return (
     <div className="inline-flex items-center gap-2 h-9 px-2 border border-border rounded-md bg-background">
@@ -121,11 +126,38 @@ export function FilterBadge({ filter, onRemove }: FilterBadgeProps) {
       <span className="text-sm text-muted-foreground">{operatorLabel}</span>
 
       {/* Value - styled differently based on filter type */}
-      {shouldHighlightValue ? (
-        <div className="inline-flex items-center justify-center px-1.5 py-1 rounded-md bg-[#dddbff]">
+      {filter.field === "method" && Array.isArray(filter.value) ? (
+        // Multiple method pills with individual colors
+        <div className="inline-flex items-center gap-1 flex-wrap">
+          {filter.value.slice(0, 3).map((methodValue) => (
+            <div
+              key={String(methodValue)}
+              className="inline-flex items-center justify-center px-1.5 py-1 rounded-md"
+              style={{ backgroundColor: getMethodColor(String(methodValue)) }}
+            >
+              <span className="text-sm font-mono text-foreground">
+                {String(methodValue)}
+              </span>
+            </div>
+          ))}
+          {filter.value.length > 3 && (
+            <span className="text-sm text-muted-foreground">
+              +{filter.value.length - 3} more
+            </span>
+          )}
+        </div>
+      ) : shouldHighlightValue ? (
+        // Single method pill with its specific color
+        <div
+          className="inline-flex items-center justify-center px-1.5 py-1 rounded-md"
+          style={{
+            backgroundColor: getMethodColor(String(filter.value)),
+          }}
+        >
           <span className="text-sm font-mono text-foreground">{value}</span>
         </div>
       ) : (
+        // Non-method fields - plain text
         <span className="text-sm font-mono text-foreground">{value}</span>
       )}
 
