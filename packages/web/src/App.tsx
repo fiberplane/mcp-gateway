@@ -1,6 +1,6 @@
 import type { FilterState } from "@fiberplane/mcp-gateway-types";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ExportButton } from "./components/export-button";
 import { FilterBar } from "./components/filter-bar";
@@ -81,6 +81,11 @@ function App() {
     () => applyFilterState(allLogs, filterState),
     [allLogs, filterState],
   );
+
+  // Defer table updates to keep checkboxes responsive
+  // This allows checkbox state to update immediately while table rendering
+  // happens in the background as a lower-priority update
+  const deferredFilteredLogs = useDeferredValue(filteredLogs);
 
   const handleLoadMore = useHandler(() => {
     fetchNextPage();
@@ -184,7 +189,7 @@ function App() {
               {isClearing ? "Clearing..." : "Clear Sessions"}
             </Button>
             <ExportButton
-              logs={filteredLogs}
+              logs={deferredFilteredLogs}
               selectedIds={selectedIds}
               getLogKey={getLogKey}
             />
@@ -216,7 +221,7 @@ function App() {
               className="bg-card rounded-lg overflow-auto border border-border max-h-[calc(100vh-16rem)]"
             >
               <LogTable
-                logs={filteredLogs}
+                logs={deferredFilteredLogs}
                 selectedIds={selectedIds}
                 onSelectionChange={setSelectedIds}
                 timeGrouping={timeGrouping}

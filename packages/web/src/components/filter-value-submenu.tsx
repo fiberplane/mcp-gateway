@@ -14,11 +14,11 @@
  * - Screen reader friendly
  */
 
-import * as Checkbox from "@radix-ui/react-checkbox";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { Check, ChevronRight, Search } from "lucide-react";
+import { ChevronRight, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { getMethodColor } from "../lib/method-colors";
+import { Checkbox } from "./ui/checkbox";
 
 interface FilterValue {
   value: string;
@@ -176,14 +176,7 @@ export function FilterValueSubmenu({
                     onSelect={(e) => e.preventDefault()} // Prevent menu from closing
                   >
                     {/* Checkbox */}
-                    <Checkbox.Root
-                      checked={isChecked}
-                      className="flex size-4 items-center justify-center rounded border border-input bg-background data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                    >
-                      <Checkbox.Indicator>
-                        <Check className="size-3 text-primary-foreground" />
-                      </Checkbox.Indicator>
-                    </Checkbox.Root>
+                    <Checkbox checked={isChecked} />
 
                     {/* Color Badge (for methods) */}
                     {showColorBadges && (

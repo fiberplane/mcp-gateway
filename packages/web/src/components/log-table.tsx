@@ -11,11 +11,10 @@ import {
 } from "lucide-react";
 import { Fragment, type ReactNode, useMemo, useState } from "react";
 import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
-import { getMethodBadgeVariant } from "../lib/badge-color";
+import { getMethodColor } from "../lib/method-colors";
 import { groupLogsByTime, type TimeInterval } from "../lib/time-grouping";
 import { useHandler } from "../lib/use-handler";
 import { getLogKey } from "../lib/utils";
-import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
 
@@ -386,19 +385,19 @@ function createColumns(): Column[] {
       header: "Method",
       sortField: "method",
       cell: (log) => (
-        <Badge
-          variant={getMethodBadgeVariant(log.method)}
-          className="inline-flex items-center gap-1"
+        <span
+          className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-sm font-medium"
+          style={{ backgroundColor: getMethodColor(log.method) }}
         >
           {log.direction === "request" ? (
-            <ArrowRight className="w-3 h-3" />
+            <ArrowRight className="w-3 h-3" aria-hidden="true" />
           ) : log.direction === "response" ? (
-            <ArrowLeft className="w-3 h-3" />
+            <ArrowLeft className="w-3 h-3" aria-hidden="true" />
           ) : (
-            <ArrowDown className="w-3 h-3" />
+            <ArrowDown className="w-3 h-3" aria-hidden="true" />
           )}
           <span>{log.method}</span>
-        </Badge>
+        </span>
       ),
     },
     {
