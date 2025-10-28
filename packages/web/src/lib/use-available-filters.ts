@@ -16,18 +16,20 @@ import { api } from "./api";
  * Used in the Method filter submenu to show which methods are in the logs.
  *
  * @param serverName - Optional server filter
+ * @param enabled - Whether to fetch data (defaults to true, set to false to disable)
  * @returns Query result with methods array
  *
  * @example
- * const { data, isLoading } = useAvailableMethods();
+ * const { data, isLoading } = useAvailableMethods(undefined, open);
  * data?.methods // [{ method: "tools/call", logCount: 42 }, ...]
  */
-export function useAvailableMethods(serverName?: string) {
+export function useAvailableMethods(serverName?: string, enabled = true) {
   return useQuery({
     queryKey: ["methods", serverName],
     queryFn: async () => await api.getMethods(serverName),
-    refetchInterval: 5000, // Refresh every 5 seconds
+    refetchInterval: enabled ? 5000 : false, // Only refresh when enabled
     staleTime: 4000, // Consider data stale after 4 seconds
+    enabled, // Control whether query runs
   });
 }
 
@@ -36,18 +38,20 @@ export function useAvailableMethods(serverName?: string) {
  *
  * Used in the Client filter submenu to show which clients are in the logs.
  *
+ * @param enabled - Whether to fetch data (defaults to true, set to false to disable)
  * @returns Query result with clients array
  *
  * @example
- * const { data, isLoading } = useAvailableClients();
+ * const { data, isLoading } = useAvailableClients(open);
  * data?.clients // [{ clientName: "claude-code", clientVersion: "1.0.0", ... }, ...]
  */
-export function useAvailableClients() {
+export function useAvailableClients(enabled = true) {
   return useQuery({
     queryKey: ["clients"],
     queryFn: async () => await api.getClients(),
-    refetchInterval: 5000,
+    refetchInterval: enabled ? 5000 : false, // Only refresh when enabled
     staleTime: 4000,
+    enabled, // Control whether query runs
   });
 }
 
@@ -57,18 +61,20 @@ export function useAvailableClients() {
  * Used in the Session filter submenu to show which sessions are in the logs.
  *
  * @param serverName - Optional server filter
+ * @param enabled - Whether to fetch data (defaults to true, set to false to disable)
  * @returns Query result with sessions array
  *
  * @example
- * const { data, isLoading } = useAvailableSessions("my-server");
+ * const { data, isLoading } = useAvailableSessions("my-server", open);
  * data?.sessions // [{ sessionId: "abc123", serverName: "...", ... }, ...]
  */
-export function useAvailableSessions(serverName?: string) {
+export function useAvailableSessions(serverName?: string, enabled = true) {
   return useQuery({
     queryKey: ["sessions", serverName],
     queryFn: async () => await api.getSessions(serverName),
-    refetchInterval: 5000,
+    refetchInterval: enabled ? 5000 : false, // Only refresh when enabled
     staleTime: 4000,
+    enabled, // Control whether query runs
   });
 }
 
@@ -77,17 +83,19 @@ export function useAvailableSessions(serverName?: string) {
  *
  * Used in the Server filter submenu to show which servers are in the logs.
  *
+ * @param enabled - Whether to fetch data (defaults to true, set to false to disable)
  * @returns Query result with servers array
  *
  * @example
- * const { data, isLoading } = useAvailableServers();
+ * const { data, isLoading } = useAvailableServers(open);
  * data?.servers // [{ name: "my-server", logCount: 100, ... }, ...]
  */
-export function useAvailableServers() {
+export function useAvailableServers(enabled = true) {
   return useQuery({
     queryKey: ["servers"],
     queryFn: async () => await api.getServers(),
-    refetchInterval: 5000,
+    refetchInterval: enabled ? 5000 : false, // Only refresh when enabled
     staleTime: 4000,
+    enabled, // Control whether query runs
   });
 }

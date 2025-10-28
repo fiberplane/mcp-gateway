@@ -89,6 +89,96 @@ function SortHeader({
   );
 }
 
+/**
+ * Column definitions for the log table.
+ * Defined outside component to prevent recreation on every render.
+ */
+const COLUMNS: Column[] = [
+  {
+    id: "timestamp",
+    header: "Timestamp",
+    sortField: "timestamp",
+    cell: (log) => (
+      <span className="font-mono text-sm text-foreground" title={log.timestamp}>
+        {format(new Date(log.timestamp), "HH:mm:ss.SSS")}
+      </span>
+    ),
+  },
+  {
+    id: "client",
+    header: "Client",
+    sortField: "client",
+    cell: (log) =>
+      log.metadata.client ? (
+        <div className="flex flex-col">
+          <span className="font-medium">{log.metadata.client.name}</span>
+          <span className="text-xs text-muted-foreground">
+            {log.metadata.client.version}
+          </span>
+        </div>
+      ) : (
+        <span className="text-muted-foreground">-</span>
+      ),
+  },
+  {
+    id: "method",
+    header: "Method",
+    sortField: "method",
+    cell: (log) => (
+      <span
+        className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-sm font-medium"
+        style={{ backgroundColor: getMethodColor(log.method) }}
+      >
+        {log.direction === "request" ? (
+          <ArrowRight className="w-3 h-3" aria-hidden="true" />
+        ) : log.direction === "response" ? (
+          <ArrowLeft className="w-3 h-3" aria-hidden="true" />
+        ) : (
+          <ArrowDown className="w-3 h-3" aria-hidden="true" />
+        )}
+        <span>{log.method}</span>
+      </span>
+    ),
+  },
+  {
+    id: "server",
+    header: "Server",
+    sortField: "server",
+    isVisible: (logs) => logs.some((log) => log.metadata.server),
+    cell: (log) =>
+      log.metadata.server ? (
+        <div className="flex flex-col">
+          <span className="font-medium">{log.metadata.server.name}</span>
+          <span className="text-xs text-muted-foreground">
+            {log.metadata.server.version}
+          </span>
+        </div>
+      ) : (
+        <span className="text-muted-foreground">-</span>
+      ),
+  },
+  {
+    id: "session",
+    header: "Session",
+    sortField: "session",
+    cell: (log) => (
+      <span className="font-mono text-xs text-muted-foreground">
+        {log.metadata.sessionId.slice(0, 8)}...
+      </span>
+    ),
+  },
+  {
+    id: "duration",
+    header: "Duration",
+    sortField: "duration",
+    cell: (log) => (
+      <span className="text-sm text-muted-foreground">
+        {log.metadata.durationMs}ms
+      </span>
+    ),
+  },
+];
+
 export function LogTable({
   logs,
   selectedIds,
@@ -99,13 +189,10 @@ export function LogTable({
   const [sortField, setSortField] = useState<SortField>("timestamp");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
-  // Define columns configuration
-  const columns = useMemo(() => createColumns(), []);
-
-  // Filter visible columns
+  // Filter visible columns based on log data
   const visibleColumns = useMemo(
-    () => columns.filter((col) => !col.isVisible || col.isVisible(logs)),
-    [columns, logs],
+    () => COLUMNS.filter((col) => !col.isVisible || col.isVisible(logs)),
+    [logs],
   );
 
   const handleSort = useHandler((field: SortField) => {
@@ -350,97 +437,6 @@ export function LogTable({
 
 interface LogDetailsProps {
   log: ApiLogEntry;
-}
-
-function createColumns(): Column[] {
-  return [
-    {
-      id: "timestamp",
-      header: "Timestamp",
-      sortField: "timestamp",
-      cell: (log) => (
-        <span
-          className="font-mono text-sm text-foreground"
-          title={log.timestamp}
-        >
-          {format(new Date(log.timestamp), "HH:mm:ss.SSS")}
-        </span>
-      ),
-    },
-    {
-      id: "client",
-      header: "Client",
-      sortField: "client",
-      cell: (log) =>
-        log.metadata.client ? (
-          <div className="flex flex-col">
-            <span className="font-medium">{log.metadata.client.name}</span>
-            <span className="text-xs text-muted-foreground">
-              {log.metadata.client.version}
-            </span>
-          </div>
-        ) : (
-          <span className="text-muted-foreground">-</span>
-        ),
-    },
-    {
-      id: "method",
-      header: "Method",
-      sortField: "method",
-      cell: (log) => (
-        <span
-          className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-sm font-medium"
-          style={{ backgroundColor: getMethodColor(log.method) }}
-        >
-          {log.direction === "request" ? (
-            <ArrowRight className="w-3 h-3" aria-hidden="true" />
-          ) : log.direction === "response" ? (
-            <ArrowLeft className="w-3 h-3" aria-hidden="true" />
-          ) : (
-            <ArrowDown className="w-3 h-3" aria-hidden="true" />
-          )}
-          <span>{log.method}</span>
-        </span>
-      ),
-    },
-    {
-      id: "server",
-      header: "Server",
-      sortField: "server",
-      isVisible: (logs) => logs.some((log) => log.metadata.server),
-      cell: (log) =>
-        log.metadata.server ? (
-          <div className="flex flex-col">
-            <span className="font-medium">{log.metadata.server.name}</span>
-            <span className="text-xs text-muted-foreground">
-              {log.metadata.server.version}
-            </span>
-          </div>
-        ) : (
-          <span className="text-muted-foreground">-</span>
-        ),
-    },
-    {
-      id: "session",
-      header: "Session",
-      sortField: "session",
-      cell: (log) => (
-        <span className="font-mono text-xs text-muted-foreground">
-          {log.metadata.sessionId.slice(0, 8)}...
-        </span>
-      ),
-    },
-    {
-      id: "duration",
-      header: "Duration",
-      sortField: "duration",
-      cell: (log) => (
-        <span className="text-sm text-muted-foreground">
-          {log.metadata.durationMs}ms
-        </span>
-      ),
-    },
-  ];
 }
 
 function LogDetails({ log }: LogDetailsProps) {

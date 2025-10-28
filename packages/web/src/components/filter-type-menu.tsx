@@ -54,11 +54,11 @@ export function FilterTypeMenu({
 }: FilterTypeMenuProps) {
   const [open, setOpen] = useState(false);
 
-  // Fetch available values
-  const methodsQuery = useAvailableMethods();
-  const clientsQuery = useAvailableClients();
-  const serversQuery = useAvailableServers();
-  const sessionsQuery = useAvailableSessions();
+  // Fetch available values (only when dropdown is open)
+  const methodsQuery = useAvailableMethods(undefined, open);
+  const clientsQuery = useAvailableClients(open);
+  const serversQuery = useAvailableServers(open);
+  const sessionsQuery = useAvailableSessions(undefined, open);
 
   // Transform data for FilterValueSubmenu
   const methodValues =

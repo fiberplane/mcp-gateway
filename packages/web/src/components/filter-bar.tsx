@@ -75,14 +75,27 @@ export function FilterBar({ onChange, actions }: FilterBarProps) {
     onChangeRef.current = onChange;
   }, [onChange]);
 
+  // Track previous filter state to prevent unnecessary updates
+  const prevFilterStateRef = useRef<FilterState>(filterState);
+
   // Sync URL when filter state changes
   useEffect(() => {
-    const params = serializeFilterStateToUrl(filterState);
-    const newUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`;
-    window.history.replaceState({}, "", newUrl);
+    // Deep comparison to prevent unnecessary updates
+    const hasChanged =
+      JSON.stringify(prevFilterStateRef.current) !==
+      JSON.stringify(filterState);
 
-    // Notify parent of changes using latest callback
-    onChangeRef.current(filterState);
+    if (hasChanged) {
+      const params = serializeFilterStateToUrl(filterState);
+      const newUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`;
+      window.history.replaceState({}, "", newUrl);
+
+      // Notify parent of changes using latest callback
+      onChangeRef.current(filterState);
+
+      // Update previous state
+      prevFilterStateRef.current = filterState;
+    }
   }, [filterState]); // Only depend on filterState, not onChange
 
   // Listen for browser back/forward navigation
