@@ -19,6 +19,7 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
+import { arraysEqualSet } from "../lib/array-utils";
 import {
   useAvailableClients,
   useAvailableMethods,
@@ -139,16 +140,19 @@ export function FilterTypeMenu({
     setSelectedSessions(activeFilters.session ?? []);
   };
 
-  // Detect uncommitted changes
+  // Detect uncommitted changes (efficient array comparison)
   const hasUncommittedChanges =
-    JSON.stringify([...selectedMethods].sort()) !==
-      JSON.stringify([...(activeFilters.method ?? [])].sort()) ||
-    JSON.stringify([...selectedClients].sort()) !==
-      JSON.stringify([...(activeFilters.client ?? [])].sort()) ||
-    JSON.stringify([...selectedServers].sort()) !==
-      JSON.stringify([...(activeFilters.server ?? [])].sort()) ||
-    JSON.stringify([...selectedSessions].sort()) !==
-      JSON.stringify([...(activeFilters.session ?? [])].sort());
+    !arraysEqualSet(selectedMethods, activeFilters.method ?? []) ||
+    !arraysEqualSet(selectedClients, activeFilters.client ?? []) ||
+    !arraysEqualSet(selectedServers, activeFilters.server ?? []) ||
+    !arraysEqualSet(selectedSessions, activeFilters.session ?? []);
+
+  // Count uncommitted changes for badge
+  const changeCount =
+    (!arraysEqualSet(selectedMethods, activeFilters.method ?? []) ? 1 : 0) +
+    (!arraysEqualSet(selectedClients, activeFilters.client ?? []) ? 1 : 0) +
+    (!arraysEqualSet(selectedServers, activeFilters.server ?? []) ? 1 : 0) +
+    (!arraysEqualSet(selectedSessions, activeFilters.session ?? []) ? 1 : 0);
 
   return (
     <DropdownMenu.Root
@@ -157,16 +161,17 @@ export function FilterTypeMenu({
       modal={false}
     >
       <DropdownMenu.Trigger asChild>
-        <Button variant="outline" size="sm" className="gap-2 relative">
+        <Button variant="outline" size="sm" className="gap-2">
           <Plus className="size-4" aria-hidden="true" />
           Add filter
           {hasUncommittedChanges && (
             <>
-              <span
-                className="absolute -top-1 -right-1 size-2 rounded-full bg-orange-500"
-                aria-hidden="true"
-              />
-              <span className="sr-only">Uncommitted changes</span>
+              <span className="ml-1 px-1.5 py-0.5 text-xs bg-orange-100 text-orange-700 rounded font-medium">
+                {changeCount}
+              </span>
+              <span className="sr-only">
+                {changeCount} pending {changeCount === 1 ? "change" : "changes"}
+              </span>
             </>
           )}
         </Button>

@@ -63,16 +63,30 @@ function getFilterIcon(field: Filter["field"]) {
 }
 
 // Format value with units if needed
-// Handles both single values and arrays
+// Handles both single values and arrays with truncation
 function formatValue(filter: Filter): string {
   // Handle array values
   if (Array.isArray(filter.value)) {
-    if (filter.field === "duration" || filter.field === "tokens") {
-      // Add units to each numeric value
-      return filter.value.map((v) => `${v}ms`).join(", ");
+    const values = filter.value;
+
+    // Truncate long arrays to first 2 items + count
+    if (values.length > 2) {
+      const displayValues = values.slice(0, 2);
+      const remainingCount = values.length - 2;
+
+      if (filter.field === "duration" || filter.field === "tokens") {
+        const formatted = displayValues.map((v) => `${v}ms`).join(", ");
+        return `${formatted} +${remainingCount} more`;
+      }
+
+      return `${displayValues.join(", ")} +${remainingCount} more`;
     }
-    // Join string values with commas
-    return filter.value.join(", ");
+
+    // Show all items for arrays with 2 or fewer items
+    if (filter.field === "duration" || filter.field === "tokens") {
+      return values.map((v) => `${v}ms`).join(", ");
+    }
+    return values.join(", ");
   }
 
   // Handle single values
@@ -119,7 +133,7 @@ export function FilterBadge({ filter, onRemove }: FilterBadgeProps) {
       <button
         type="button"
         onClick={() => onRemove(filter.id)}
-        className="inline-flex items-center justify-center rounded-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 p-0.5 transition-colors"
+        className="inline-flex items-center justify-center rounded-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 p-2 transition-colors"
         aria-label={`Remove filter: ${label}`}
       >
         <X className="size-4" aria-hidden="true" />
