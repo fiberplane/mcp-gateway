@@ -48,6 +48,9 @@ export class ClientManager {
 	private oauthAdapter: GatewayOAuthAdapter;
 	private oauthProvider: StandardOAuthProvider;
 	private gatewayPort: number;
+	private oauthStateToServer: Map<string, string> = new Map(); // state -> serverUrl
+	private pendingOAuthTransports: Map<string, StreamableHttpClientTransport> =
+		new Map(); // serverName -> transport
 
 	constructor(
 		private registry: Registry,
@@ -87,7 +90,8 @@ export class ClientManager {
 
 		// Configure OAuth for this server
 		const oauthConfig: OAuthConfig = {
-			clientId: server.oauthClientId || "mcp-gateway",
+			clientId: server.oauthClientId, // Optional - DCR will be used if not provided
+			clientName: "MCP Gateway", // Used for Dynamic Client Registration
 			redirectUri: `http://localhost:${this.gatewayPort}/oauth/callback`,
 			onAuthorizationRequired: (authUrl) => {
 				logger.info("OAuth authorization required (callback triggered)", {
@@ -95,6 +99,25 @@ export class ClientManager {
 					authUrl,
 					gatewayPort: this.gatewayPort,
 				});
+
+				// Extract state from authorization URL and store mapping for callback
+				try {
+					const url = new URL(authUrl);
+					const state = url.searchParams.get("state");
+					if (state) {
+						this.oauthStateToServer.set(state, server.url);
+						logger.debug("Stored OAuth state mapping", {
+							state,
+							serverUrl: server.url,
+							serverName: server.name,
+						});
+					}
+				} catch (err) {
+					logger.error("Failed to parse authorization URL", {
+						authUrl,
+						error: String(err),
+					});
+				}
 
 				// Store auth URL in registry for TUI
 				server.authUrl = authUrl;
@@ -111,7 +134,8 @@ export class ClientManager {
 
 		logger.debug("Creating transport with OAuth config", {
 			serverName: server.name,
-			clientId: oauthConfig.clientId,
+			clientId: oauthConfig.clientId || "DCR (will auto-register)",
+			clientName: oauthConfig.clientName,
 			redirectUri: oauthConfig.redirectUri,
 			hasOAuthAdapter: !!this.oauthAdapter,
 			hasOAuthProvider: !!this.oauthProvider,
@@ -124,122 +148,21 @@ export class ClientManager {
 			oauthConfig,
 		});
 
+		// Store transport for potential OAuth callback before attempting connection
+		this.pendingOAuthTransports.set(server.name, transport);
+
 		const connect = transport.bind(client);
 
 		try {
-			logger.debug("Attempting connection with headers", {
+			logger.debug("Attempting connection", {
 				serverName: server.name,
 				url: server.url,
 				headers: Object.keys(server.headers),
+				willUseDCR: !oauthConfig.clientId,
 			});
 
-			// Diagnostic: Try different OAuth discovery URLs to see what works
-			try {
-				const normalizedUrl = server.url.replace(/\/$/, "");
-				const baseUrl = new URL(normalizedUrl);
-				const origin = baseUrl.origin;
-
-				// Try multiple possible OAuth discovery endpoints
-				const discoveryUrls = [
-					`${normalizedUrl}/.well-known/oauth-protected-resource`, // RFC 8707 - at MCP path
-					`${origin}/.well-known/oauth-protected-resource`,         // RFC 8707 - at origin
-					`${normalizedUrl}/.well-known/oauth-authorization-server`, // RFC 8414 - at MCP path
-					`${origin}/.well-known/oauth-authorization-server`,        // RFC 8414 - at origin
-				];
-
-				for (const wellKnownUrl of discoveryUrls) {
-					logger.debug("Diagnostic: Trying OAuth discovery URL", {
-						serverName: server.name,
-						wellKnownUrl,
-					});
-
-					try {
-						const response = await fetch(wellKnownUrl, {
-							headers: server.headers,
-						});
-
-						logger.info("Diagnostic: OAuth discovery response", {
-							serverName: server.name,
-							wellKnownUrl,
-							status: response.status,
-							statusText: response.statusText,
-							headers: Object.fromEntries(response.headers.entries()),
-							finalUrl: response.url,
-						});
-
-						if (response.ok) {
-							const body = await response.text();
-							logger.info("Diagnostic: OAuth discovery SUCCESS", {
-								serverName: server.name,
-								wellKnownUrl,
-								body: body.substring(0, 1000),
-							});
-							break; // Found it!
-						} else {
-							const body = await response.text();
-							logger.debug("Diagnostic: OAuth discovery failed", {
-								serverName: server.name,
-								wellKnownUrl,
-								status: response.status,
-								body: body.substring(0, 200),
-							});
-						}
-					} catch (fetchError) {
-						logger.debug("Diagnostic: Fetch failed for URL", {
-							serverName: server.name,
-							wellKnownUrl,
-							error: String(fetchError),
-						});
-					}
-				}
-
-				// Also try a plain request to the MCP endpoint to see response headers
-				logger.debug("Diagnostic: Trying plain MCP endpoint", {
-					serverName: server.name,
-					url: normalizedUrl,
-				});
-
-				const mcpResponse = await fetch(normalizedUrl, {
-					method: "POST",
-					headers: {
-						...server.headers,
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({
-						jsonrpc: "2.0",
-						id: "diagnostic",
-						method: "initialize",
-						params: {
-							protocolVersion: "2024-11-05",
-							clientInfo: { name: "diagnostic", version: "1.0.0" },
-							capabilities: {},
-						},
-					}),
-				});
-
-				logger.info("Diagnostic: MCP endpoint response", {
-					serverName: server.name,
-					status: mcpResponse.status,
-					statusText: mcpResponse.statusText,
-					headers: Object.fromEntries(mcpResponse.headers.entries()),
-				});
-
-				if (!mcpResponse.ok) {
-					const body = await mcpResponse.text();
-					logger.info("Diagnostic: MCP endpoint error body", {
-						serverName: server.name,
-						body: body.substring(0, 1000),
-					});
-				}
-			} catch (diagError) {
-				logger.error("Diagnostic: OAuth discovery diagnostic failed", {
-					serverName: server.name,
-					error: String(diagError),
-					stack: diagError instanceof Error ? diagError.stack : undefined,
-				});
-			}
-
 			// Connect to server with custom headers
+			// mcp-lite will handle OAuth discovery and DCR automatically
 			const connection = await connect(server.url, {
 				headers: server.headers,
 			});
@@ -250,6 +173,9 @@ export class ClientManager {
 				connection,
 				transport,
 			});
+
+			// Remove from pending since connection succeeded
+			this.pendingOAuthTransports.delete(server.name);
 
 			logger.info("Successfully connected to MCP server", {
 				serverName: server.name,
@@ -264,6 +190,10 @@ export class ClientManager {
 				errorType: typeof error,
 				errorConstructor: error?.constructor?.name,
 			});
+
+			// Keep transport in pendingOAuthTransports for OAuth callback
+			// It will be cleaned up after OAuth completion or explicit disconnect
+
 			throw error;
 		}
 	}
@@ -449,6 +379,8 @@ export class ClientManager {
 			logger.debug("Server not connected, nothing to disconnect", {
 				serverName,
 			});
+			// Still clean up any pending OAuth transport
+			this.pendingOAuthTransports.delete(serverName);
 			return;
 		}
 
@@ -463,6 +395,7 @@ export class ClientManager {
 			});
 		} finally {
 			this.connections.delete(serverName);
+			this.pendingOAuthTransports.delete(serverName);
 		}
 	}
 
@@ -475,10 +408,17 @@ export class ClientManager {
 
 	/**
 	 * Get transport for a server (used for OAuth callback handling)
+	 * Checks both established connections and pending OAuth transports
 	 */
 	getTransport(serverName: string): StreamableHttpClientTransport | undefined {
+		// First check established connections
 		const info = this.connections.get(serverName);
-		return info?.transport as StreamableHttpClientTransport | undefined;
+		if (info) {
+			return info.transport as StreamableHttpClientTransport;
+		}
+
+		// Then check pending OAuth transports
+		return this.pendingOAuthTransports.get(serverName);
 	}
 
 	/**
@@ -486,6 +426,64 @@ export class ClientManager {
 	 */
 	getConnectedServers(): string[] {
 		return Array.from(this.connections.keys());
+	}
+
+	/**
+	 * Get server URL by OAuth state parameter
+	 * Used in OAuth callback to determine which server initiated the flow
+	 */
+	getServerUrlByState(state: string): string | undefined {
+		return this.oauthStateToServer.get(state);
+	}
+
+	/**
+	 * Complete OAuth authorization flow for a server
+	 * Looks up the server by state and calls the transport's completeAuthorizationFlow
+	 */
+	async completeOAuthFlow(
+		code: string,
+		state: string,
+	): Promise<{ serverName: string; serverUrl: string }> {
+		const serverUrl = this.getServerUrlByState(state);
+		if (!serverUrl) {
+			throw new Error(
+				`No server found for OAuth state: ${state}. The authorization may have expired or been initiated from a different gateway instance.`,
+			);
+		}
+
+		// Find server name from URL
+		const server = this.registry.servers.find((s) => s.url === serverUrl);
+		if (!server) {
+			throw new Error(`Server not found in registry for URL: ${serverUrl}`);
+		}
+
+		logger.debug("Completing OAuth flow", {
+			serverName: server.name,
+			serverUrl,
+			state,
+		});
+
+		// Get transport for this server
+		const transport = this.getTransport(server.name);
+		if (!transport) {
+			throw new Error(
+				`No transport found for server ${server.name}. Server may not have initiated an OAuth flow.`,
+			);
+		}
+
+		// Complete the authorization flow
+		await transport.completeAuthorizationFlow(serverUrl, code, state);
+
+		// Clean up state mapping and pending transport
+		this.oauthStateToServer.delete(state);
+		this.pendingOAuthTransports.delete(server.name);
+
+		logger.info("OAuth flow completed successfully", {
+			serverName: server.name,
+			serverUrl,
+		});
+
+		return { serverName: server.name, serverUrl };
 	}
 
 	/**

@@ -2,9 +2,11 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { useAppStore } from "./store";
 
 describe("AppStore", () => {
+  const mockRegistry = { servers: [] };
+
   beforeEach(() => {
     // Reset store before each test
-    useAppStore.getState().initialize([], ".test-storage", 3333);
+    useAppStore.getState().initialize([], mockRegistry as any, ".test-storage", 3333);
   });
 
   test("initialize sets servers and storageDir", () => {
@@ -18,7 +20,7 @@ describe("AppStore", () => {
       },
     ];
 
-    useAppStore.getState().initialize(servers, "/test/dir", 8080);
+    useAppStore.getState().initialize(servers, mockRegistry as any, "/test/dir", 8080);
 
     const state = useAppStore.getState();
     expect(state.servers).toEqual(servers);
@@ -53,6 +55,7 @@ describe("AppStore", () => {
           health: "unknown" as const,
         },
       ],
+      mockRegistry as any,
       ".test-storage",
       3333,
     );

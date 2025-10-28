@@ -9,6 +9,7 @@ import {
   createResponseCaptureRecord,
   createSSEEventStream,
   getClientInfo,
+  getEvaluationHandler,
   getServer,
   getStorageRoot,
   isJsonRpcResponse,
@@ -357,12 +358,34 @@ async function handleMcpClientRequest(
           name: string;
           arguments?: unknown;
         };
-        const toolResult = await clientManager.callTool(
-          server.name,
-          params.name,
-          params.arguments || {},
-        );
-        result = toolResult;
+
+        // Check if this is an evaluation server (dry-run mode)
+        // Eval servers follow pattern: {originalName}-eval-{candidateId}
+        const isEvalServer = server.name.includes("-eval-");
+
+        if (isEvalServer) {
+          // Dry-run mode: Return empty success without executing tool
+          // Evaluation only checks if tool was invoked, not the result
+          // The tool_use event is already in stdout by the time we respond
+          logger.debug("Dry-run tool call (evaluation mode)", {
+            serverName: server.name,
+            toolName: params.name,
+            arguments: params.arguments,
+          });
+
+          result = {
+            content: [],
+            isError: false,
+          };
+        } else {
+          // Normal mode: Actually execute the tool
+          const toolResult = await clientManager.callTool(
+            server.name,
+            params.name,
+            params.arguments || {},
+          );
+          result = toolResult;
+        }
         break;
       }
 
@@ -374,11 +397,35 @@ async function handleMcpClientRequest(
 
       case "resources/read": {
         const params = jsonRpcRequest.params as { uri: string };
-        const resourceContent = await clientManager.readResource(
-          server.name,
-          params.uri,
-        );
-        result = resourceContent;
+
+        // Check if this is an evaluation server (dry-run mode)
+        const isEvalServer = server.name.includes("-eval-");
+
+        if (isEvalServer) {
+          // Dry-run mode: Return empty content
+          // Evaluation only checks if tool was invoked, resource reads are incidental
+          logger.debug("Dry-run resource read (evaluation mode)", {
+            serverName: server.name,
+            uri: params.uri,
+          });
+
+          result = {
+            contents: [
+              {
+                uri: params.uri,
+                mimeType: "text/plain",
+                text: "",
+              },
+            ],
+          };
+        } else {
+          // Normal mode: Actually read the resource
+          const resourceContent = await clientManager.readResource(
+            server.name,
+            params.uri,
+          );
+          result = resourceContent;
+        }
         break;
       }
 
@@ -393,12 +440,39 @@ async function handleMcpClientRequest(
           name: string;
           arguments?: unknown;
         };
-        const promptResult = await clientManager.getPrompt(
-          server.name,
-          params.name,
-          params.arguments,
-        );
-        result = promptResult;
+
+        // Check if this is an evaluation server (dry-run mode)
+        const isEvalServer = server.name.includes("-eval-");
+
+        if (isEvalServer) {
+          // Dry-run mode: Return empty prompt
+          // Evaluation only checks if tool was invoked, prompt gets are incidental
+          logger.debug("Dry-run prompt get (evaluation mode)", {
+            serverName: server.name,
+            promptName: params.name,
+            arguments: params.arguments,
+          });
+
+          result = {
+            messages: [
+              {
+                role: "user",
+                content: {
+                  type: "text",
+                  text: "",
+                },
+              },
+            ],
+          };
+        } else {
+          // Normal mode: Actually get the prompt
+          const promptResult = await clientManager.getPrompt(
+            server.name,
+            params.name,
+            params.arguments,
+          );
+          result = promptResult;
+        }
         break;
       }
 
@@ -757,15 +831,103 @@ export async function createProxyRoutes(
       const { server: serverName } = c.req.valid("param");
       const jsonRpcRequest = c.req.valid("json");
 
+      logger.info("Proxy request received", {
+        serverName,
+        method: jsonRpcRequest.method,
+        requestId: jsonRpcRequest.id,
+      });
+
       // Find server in registry
       const server = getServer(registry, serverName);
       if (!server) {
+        logger.warn("Server not found in registry", { serverName });
         return c.notFound();
       }
+
+      logger.info("Found server in registry", {
+        serverName,
+        isEvaluationServer: server.isEvaluationServer,
+        evaluationOriginalServer: server.evaluationOriginalServer,
+      });
 
       // Extract session ID from headers
       const validatedHeaders = c.req.valid("header");
       const sessionId = extractSessionId(validatedHeaders);
+
+      // Check if this is an evaluation server (temp server for optimization testing)
+      if (server.isEvaluationServer) {
+        logger.info("Handling evaluation server request", {
+          serverName,
+          originalServer: server.evaluationOriginalServer,
+          method: jsonRpcRequest.method,
+          requestId: jsonRpcRequest.id,
+          sessionId,
+        });
+
+        // Get evaluation handler from registry (created upfront by evaluator)
+        const evaluationHandler = getEvaluationHandler(serverName);
+
+        if (!evaluationHandler) {
+          logger.error("Evaluation handler not found in registry", {
+            serverName,
+            availableHandlers: "check evaluation-handler-registry",
+          });
+          return c.json({
+            jsonrpc: "2.0",
+            id: jsonRpcRequest.id,
+            error: {
+              code: -32603,
+              message: "Internal error: Evaluation handler not found",
+            },
+          }, 500);
+        }
+
+        logger.info("Found evaluation handler, invoking", {
+          serverName,
+          method: jsonRpcRequest.method,
+          requestId: jsonRpcRequest.id,
+        });
+
+        // Reconstruct Request with fresh body (original body was consumed by validator)
+        const freshRequest = new Request(c.req.url, {
+          method: c.req.method,
+          headers: c.req.raw.headers,
+          body: JSON.stringify(jsonRpcRequest),
+        });
+
+        const startTime = Date.now();
+        const response = await evaluationHandler(freshRequest);
+        const duration = Date.now() - startTime;
+
+        logger.info("Evaluation handler returned response", {
+          serverName,
+          method: jsonRpcRequest.method,
+          requestId: jsonRpcRequest.id,
+          status: response.status,
+          statusText: response.statusText,
+          contentType: response.headers.get("content-type"),
+          durationMs: duration,
+        });
+
+        // Log response body for debugging
+        try {
+          const responseClone = response.clone();
+          const responseBody = await responseClone.text();
+          logger.debug("Evaluation response body", {
+            serverName,
+            method: jsonRpcRequest.method,
+            bodyPreview: responseBody.slice(0, 500),
+            bodyLength: responseBody.length,
+          });
+        } catch (error) {
+          logger.warn("Failed to read evaluation response body", {
+            serverName,
+            error: String(error),
+          });
+        }
+
+        return response;
+      }
 
       // Branch: MCP client mode vs proxy mode
       if (eventHandlers?.enableMcpClient && eventHandlers?.clientManager) {

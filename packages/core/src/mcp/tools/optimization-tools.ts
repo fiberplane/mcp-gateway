@@ -117,9 +117,9 @@ const GenerateCandidatesSchema = z.object({
 		.number()
 		.int()
 		.min(1)
-		.max(10)
+		.max(20)
 		.default(4)
-		.describe("Number of candidates to generate (1-10)"),
+		.describe("Number of candidates to generate (1-20)"),
 });
 
 // Schema for generating golden prompts
@@ -130,20 +130,23 @@ const GenerateGoldenPromptsSchema = z.object({
 		.number()
 		.int()
 		.min(1)
+		.max(20)
 		.default(5)
-		.describe("Number of direct prompts"),
+		.describe("Number of direct prompts (1-20)"),
 	indirectCount: z
 		.number()
 		.int()
 		.min(1)
+		.max(20)
 		.default(5)
-		.describe("Number of indirect prompts"),
+		.describe("Number of indirect prompts (1-20)"),
 	negativeCount: z
 		.number()
 		.int()
 		.min(1)
+		.max(20)
 		.default(5)
-		.describe("Number of negative prompts"),
+		.describe("Number of negative prompts (1-20)"),
 });
 
 // Schema for optimization report

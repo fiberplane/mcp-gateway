@@ -5,6 +5,7 @@
  */
 
 import type { GoldenPrompt, Tool, ToolCandidate } from "@fiberplane/mcp-gateway-types";
+import type { OutputCallback } from "./subprocess.js";
 
 /**
  * Result of generating candidates
@@ -45,18 +46,21 @@ export async function generateCandidates(
 	tool: Tool,
 	count: number,
 	timeout = 60000,
+	onOutput?: OutputCallback,
 ): Promise<GenerateCandidatesResult> {
 	const prompt = buildCandidatePrompt(tool, count);
 	const command = [
 		"claude",
 		"-p",
+		prompt,
 		"--output-format",
 		"text",
-		prompt,
+		"--model",
+		"haiku", // Use Haiku 4.5 for faster, cheaper generation
 	];
 
 	try {
-		const result = await runGenerationSubprocess(command, timeout);
+		const result = await runGenerationSubprocess(command, timeout, onOutput);
 
 		if (result.error) {
 			return {
@@ -97,18 +101,21 @@ export async function generateGoldenPrompts(
 	tool: Tool,
 	counts: { direct: number; indirect: number; negative: number },
 	timeout = 60000,
+	onOutput?: OutputCallback,
 ): Promise<GeneratePromptsResult> {
 	const prompt = buildPromptsPrompt(tool, counts);
 	const command = [
 		"claude",
 		"-p",
+		prompt,
 		"--output-format",
 		"text",
-		prompt,
+		"--model",
+		"haiku", // Use Haiku 4.5 for faster, cheaper generation
 	];
 
 	try {
-		const result = await runGenerationSubprocess(command, timeout);
+		const result = await runGenerationSubprocess(command, timeout, onOutput);
 
 		if (result.error) {
 			return {
@@ -143,11 +150,18 @@ export async function generateGoldenPrompts(
 async function runGenerationSubprocess(
 	command: string[],
 	timeout: number,
+	onOutput?: OutputCallback,
 ): Promise<{ stdout: string; stderr: string; error?: string }> {
+	// Spawn subprocess with all environment variables from parent process
+	// Set HOME to /tmp/claude to avoid sandbox permission issues with ~/.claude.json
 	const proc = Bun.spawn(command, {
 		stdout: "pipe",
 		stderr: "pipe",
 		cwd: process.cwd(),
+		env: {
+			...process.env,
+			HOME: "/tmp/claude",
+		},
 	});
 
 	// Set up timeout
@@ -157,31 +171,86 @@ async function runGenerationSubprocess(
 		killed = true;
 	}, timeout);
 
-	// Wait for process to complete
-	await proc.exited;
-	clearTimeout(timeoutId);
-
-	// Read stdout and stderr
+	// Stream stdout and stderr concurrently
 	const stdoutChunks: Uint8Array[] = [];
 	const stderrChunks: Uint8Array[] = [];
+	let stdoutBuffer = "";
+	let stderrBuffer = "";
 
-	if (proc.stdout) {
-		const stdoutReader = proc.stdout.getReader();
-		while (true) {
-			const { done, value } = await stdoutReader.read();
-			if (done) break;
-			stdoutChunks.push(value);
-		}
-	}
+	const readStdout = async () => {
+		if (!proc.stdout) return;
+		const reader = proc.stdout.getReader();
+		const decoder = new TextDecoder();
 
-	if (proc.stderr) {
-		const stderrReader = proc.stderr.getReader();
-		while (true) {
-			const { done, value } = await stderrReader.read();
-			if (done) break;
-			stderrChunks.push(value);
+		try {
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) break;
+
+				stdoutChunks.push(value);
+
+				// Stream output if callback provided
+				if (onOutput) {
+					stdoutBuffer += decoder.decode(value, { stream: true });
+					const lines = stdoutBuffer.split('\n');
+					stdoutBuffer = lines.pop() || '';
+
+					for (const line of lines) {
+						onOutput(line, 'stdout');
+					}
+				}
+			}
+
+			// Handle any remaining buffered content
+			if (onOutput && stdoutBuffer) {
+				onOutput(stdoutBuffer, 'stdout');
+			}
+		} catch (error) {
+			// Stream closed, ignore
 		}
-	}
+	};
+
+	const readStderr = async () => {
+		if (!proc.stderr) return;
+		const reader = proc.stderr.getReader();
+		const decoder = new TextDecoder();
+
+		try {
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) break;
+
+				stderrChunks.push(value);
+
+				// Stream output if callback provided
+				if (onOutput) {
+					stderrBuffer += decoder.decode(value, { stream: true });
+					const lines = stderrBuffer.split('\n');
+					stderrBuffer = lines.pop() || '';
+
+					for (const line of lines) {
+						onOutput(line, 'stderr');
+					}
+				}
+			}
+
+			// Handle any remaining buffered content
+			if (onOutput && stderrBuffer) {
+				onOutput(stderrBuffer, 'stderr');
+			}
+		} catch (error) {
+			// Stream closed, ignore
+		}
+	};
+
+	// Read streams concurrently while process runs
+	await Promise.all([
+		readStdout(),
+		readStderr(),
+		proc.exited,
+	]);
+
+	clearTimeout(timeoutId);
 
 	const stdout = new TextDecoder().decode(
 		Buffer.concat(stdoutChunks.map((chunk) => Buffer.from(chunk))),

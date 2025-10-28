@@ -181,7 +181,7 @@ export async function runOpenTUI(context: Context, registry: Registry) {
 
   // Initialize store
   const initialize = useAppStore.getState().initialize;
-  initialize(uiServers, context.storageDir, context.port);
+  initialize(uiServers, registry, context.storageDir, context.port);
 
   // Setup async exit handler
   const handleExit = async () => {

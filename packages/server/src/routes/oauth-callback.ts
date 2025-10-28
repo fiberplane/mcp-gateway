@@ -64,67 +64,62 @@ export function createOAuthCallbackRoutes(
         hasState: !!state,
       });
 
-      // Parse state to get server name
-      const stateData = JSON.parse(decodeURIComponent(state));
-      logger.debug("OAuth callback state parsed", { stateData });
+      // Complete OAuth flow using ClientManager
+      // This will look up the server by state and complete the authorization
+      const { serverName, serverUrl } = await clientManager.completeOAuthFlow(
+        code,
+        state,
+      );
 
-      const serverName = stateData.serverName;
-
-      if (!serverName) {
-        throw new Error("Missing serverName in state");
-      }
+      logger.info("OAuth flow completed", {
+        serverName,
+        serverUrl,
+      });
 
       // Get server from registry
       const server = getServer(registry, serverName);
       if (!server) {
-        logger.error("Server not found in registry for OAuth callback", {
+        logger.error("Server not found in registry after OAuth completion", {
           serverName,
-          availableServers: registry.servers.map(s => s.name),
+          availableServers: registry.servers.map((s) => s.name),
         });
         throw new Error(`Server ${serverName} not found in registry`);
       }
-
-      logger.info("Completing OAuth authorization flow", {
-        serverName,
-        serverUrl: server.url,
-      });
-
-      // Get transport for this server
-      const transport = clientManager.getTransport(serverName);
-      if (!transport) {
-        logger.error("No transport found for server", {
-          serverName,
-          connectedServers: clientManager.getConnectedServers(),
-        });
-        throw new Error(`No transport found for server ${serverName}`);
-      }
-
-      logger.debug("Calling transport.completeAuthorizationFlow", {
-        serverName,
-        serverUrl: server.url,
-      });
-
-      // Let mcp-lite handle the token exchange!
-      await transport.completeAuthorizationFlow(server.url, code, state);
-
-      logger.info("Successfully obtained access token via mcp-lite", {
-        serverName,
-        tokenStored: !!server.oauthToken,
-      });
 
       // Clear auth error fields (token is stored by adapter)
       delete server.authUrl;
       delete server.authError;
       await saveRegistry(storage, registry);
 
-      // Notify TUI of registry update
+      logger.info("OAuth success - triggering TUI update and reconnection", {
+        serverName,
+      });
+
+      // Notify TUI of registry update (will refresh UI)
       if (options?.onRegistryUpdate) {
         options.onRegistryUpdate();
       }
 
-      // Notify that auth is complete
+      // Notify that auth is complete (can trigger reconnection)
       if (options?.onAuthComplete && server.oauthToken) {
         options.onAuthComplete(serverName, server.oauthToken);
+      }
+
+      // Attempt to reconnect the server now that we have a token
+      try {
+        logger.debug("Attempting to reconnect server after OAuth", {
+          serverName,
+        });
+        await clientManager.connectServer(server);
+        logger.info("Server reconnected successfully after OAuth", {
+          serverName,
+        });
+      } catch (reconnectError) {
+        logger.warn("Failed to reconnect server after OAuth", {
+          serverName,
+          error: String(reconnectError),
+        });
+        // Don't fail the OAuth callback - user can manually retry
       }
 
       // Return success page

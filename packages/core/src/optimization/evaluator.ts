@@ -7,11 +7,13 @@ import type {
 	Registry,
 	ToolCandidate,
 } from "@fiberplane/mcp-gateway-types";
-import { buildClaudeCommand, runEvaluation } from "./subprocess";
+import { buildClaudeCommand, runEvaluation, type OutputCallback } from "./subprocess";
 import { savePromotion, deletePromotion } from "./storage";
 import { saveRegistry } from "../registry/storage";
 import { logger } from "../logger";
 import type { ClientManager } from "../mcp/client-manager";
+import { createEvaluationHttpHandler } from "../mcp/evaluation-server";
+import { registerEvaluationHandler, unregisterEvaluationHandler } from "../mcp/evaluation-handler-registry";
 
 /**
  * Metrics for a candidate's evaluation results
@@ -65,6 +67,7 @@ export const DEFAULT_THRESHOLDS: PromotionThresholds = {
  * @param gatewayPort - Port where the gateway is running
  * @param clientManager - Optional client manager for MCP connections
  * @param evalTimeout - Timeout per evaluation in milliseconds (default: 60000)
+ * @param onOutput - Optional callback for streaming subprocess output
  * @returns Array of evaluation runs with results
  */
 export async function evaluateCandidate(
@@ -76,6 +79,7 @@ export async function evaluateCandidate(
 	gatewayPort: number,
 	clientManager?: ClientManager,
 	evalTimeout = 60000,
+	onOutput?: OutputCallback,
 ): Promise<EvalRun[]> {
 	// Create temporary server name for this candidate
 	const tempServerName = `${originalServer.name}-eval-${candidate.id.slice(0, 8)}`;
@@ -84,25 +88,47 @@ export async function evaluateCandidate(
 	const tempServer: McpServer = {
 		...originalServer,
 		name: tempServerName,
+		isEvaluationServer: true,
+		evaluationOriginalServer: originalServer.name,
 	};
 
 	// Add to registry temporarily
 	registry.servers.push(tempServer);
 	await saveRegistry(storageDir, registry);
 
-	// Connect to clientManager if provided (enables authentication)
-	if (clientManager) {
-		try {
-			await clientManager.connectServer(tempServer);
-			logger.debug("Connected temp server to clientManager", { tempServerName });
-		} catch (error) {
-			logger.warn("Failed to connect temp server to clientManager", {
-				tempServerName,
-				error: String(error),
-			});
-			// Continue anyway - may work without MCP client mode
-		}
-	}
+	// NOTE: We do NOT connect evaluation servers to clientManager
+	// Evaluation servers are served locally by the gateway's evaluation handler
+	// and don't need upstream connections (they're sandboxed)
+
+	// Create and register evaluation handler upfront (avoids lazy creation on first request)
+	logger.info("Creating evaluation HTTP handler", {
+		tempServerName,
+		originalServer: originalServer.name,
+		toolName: candidate.toolName,
+		storageDir,
+	});
+
+	const handlerStartTime = Date.now();
+	const evaluationHandler = await createEvaluationHttpHandler(
+		storageDir,
+		originalServer.name,
+		candidate.toolName,
+	);
+	const handlerCreationTime = Date.now() - handlerStartTime;
+
+	logger.info("Created evaluation HTTP handler", {
+		tempServerName,
+		creationTimeMs: handlerCreationTime,
+		handlerType: typeof evaluationHandler,
+	});
+
+	registerEvaluationHandler(tempServerName, evaluationHandler);
+
+	logger.info("Registered evaluation handler in global registry", {
+		tempServerName,
+		originalServer: originalServer.name,
+		toolName: candidate.toolName,
+	});
 
 	// Create temporary promotion with candidate description
 	const tempPromotion: PromotedTool = {
@@ -128,46 +154,54 @@ export async function evaluateCandidate(
 	});
 
 	try {
-		const runs: EvalRun[] = [];
-
-		for (const prompt of prompts) {
+		// Evaluate all prompts concurrently
+		const promptEvaluations = prompts.map(async (prompt) => {
 			let tempDir: string | undefined;
+			let evalResult: Awaited<ReturnType<typeof runEvaluation>> | undefined;
 
 			try {
 				// Build Claude command with MCP server connection
 				const { command, tempDir: dir } = await buildClaudeCommand(
 					prompt.prompt,
 					tempServerName,
+					candidate.toolName,
 					gatewayPort,
 				);
 				tempDir = dir;
 
-				// Run evaluation
-				const result = await runEvaluation(
+				// Run evaluation with output capture
+				evalResult = await runEvaluation(
 					command,
 					candidate.toolName,
 					prompt.expectedBehavior,
 					tempDir,
 					evalTimeout,
+					onOutput,
+					{
+						storageDir,
+						serverName: originalServer.name,
+						toolName: candidate.toolName,
+						promptId: prompt.id,
+					},
 				);
 
 				// Create eval run record
-				runs.push({
+				return {
 					id: crypto.randomUUID(),
 					candidateId: candidate.id,
 					promptId: prompt.id,
 					timestamp: new Date().toISOString(),
 					result: {
-						toolCalled: result.toolCalled,
-						correct: result.correct,
-						error: result.error,
-						reasoning: result.reasoning,
-						durationMs: result.duration,
+						toolCalled: evalResult.toolCalled,
+						correct: evalResult.correct,
+						error: evalResult.error,
+						reasoning: evalResult.reasoning,
+						durationMs: evalResult.duration,
 					},
-				});
+				};
 			} finally {
-				// Clean up temp MCP config directory
-				if (tempDir) {
+				// Clean up temp MCP config directory only on success
+				if (tempDir && evalResult && !evalResult.error) {
 					try {
 						await rm(tempDir, { recursive: true, force: true });
 					} catch (error) {
@@ -176,9 +210,16 @@ export async function evaluateCandidate(
 							error: String(error)
 						});
 					}
+				} else if (tempDir && evalResult?.error) {
+					logger.info("Keeping temp directory for debugging", {
+						tempDir,
+						error: evalResult.error,
+					});
 				}
 			}
-		}
+		});
+
+		const runs = await Promise.all(promptEvaluations);
 
 		return runs;
 	} finally {
@@ -200,7 +241,10 @@ export async function evaluateCandidate(
 		await saveRegistry(storageDir, registry);
 		await deletePromotion(storageDir, tempServerName, candidate.toolName);
 
-		logger.debug("Cleaned up temporary server", { tempServerName });
+		// Clean up evaluation handler
+		unregisterEvaluationHandler(tempServerName);
+
+		logger.debug("Cleaned up temporary server and handler", { tempServerName });
 	}
 }
 

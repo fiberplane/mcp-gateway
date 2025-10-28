@@ -61,6 +61,7 @@ export function OptimizationView() {
     | "idle"
     | "tool-selection"
     | "config"
+    | "cache-preview"
     | "generating"
     | "preview-candidates"
     | "evaluating"
@@ -84,6 +85,10 @@ export function OptimizationView() {
   const [generatedPrompts, setGeneratedPrompts] = useState<Map<string, GoldenPrompt[]>>(new Map());
   const [generationProgress, setGenerationProgress] = useState<string | null>(null);
 
+  // Cache preview state
+  const [cachedData, setCachedData] = useState<Map<string, { candidates: ToolCandidate[]; prompts: GoldenPrompt[] }>>(new Map());
+  const [toolsWithoutCache, setToolsWithoutCache] = useState<string[]>([]);
+
   // Evaluation state
   const [evaluationResults, setEvaluationResults] = useState<Map<string, { candidate: ToolCandidate; metrics: any; evalRuns: any[] }[]>>(new Map());
   const [evaluationProgress, setEvaluationProgress] = useState<string | null>(null);
@@ -91,6 +96,8 @@ export function OptimizationView() {
   // Subprocess output state
   const [subprocessOutput, setSubprocessOutput] = useState<string[]>([]);
   const [cancelRequested, setCancelRequested] = useState(false);
+  const [cancelledToolNames, setCancelledToolNames] = useState<Set<string>>(new Set());
+  const [runningToolNames, setRunningToolNames] = useState<Set<string>>(new Set());
 
   // Results detail view state
   const [selectedToolResultIndex, setSelectedToolResultIndex] = useState(0);
@@ -132,6 +139,8 @@ export function OptimizationView() {
       setError(null);
       setSubprocessOutput([]);
       setCancelRequested(false);
+      setCancelledToolNames(new Set());
+      setRunningToolNames(new Set());
       return;
     }
 
@@ -181,13 +190,13 @@ export function OptimizationView() {
       if (key.name === "+" || key.name === "=") {
         // Increase selected field
         if (configFieldIndex === 0) {
-          setCandidateCount((prev) => Math.min(5, prev + 1));
+          setCandidateCount((prev) => Math.min(20, prev + 1));
         } else if (configFieldIndex === 1) {
-          setDirectPromptCount((prev) => Math.min(5, prev + 1));
+          setDirectPromptCount((prev) => Math.min(20, prev + 1));
         } else if (configFieldIndex === 2) {
-          setIndirectPromptCount((prev) => Math.min(5, prev + 1));
+          setIndirectPromptCount((prev) => Math.min(20, prev + 1));
         } else if (configFieldIndex === 3) {
-          setNegativePromptCount((prev) => Math.min(5, prev + 1));
+          setNegativePromptCount((prev) => Math.min(20, prev + 1));
         }
         return;
       }
@@ -205,7 +214,21 @@ export function OptimizationView() {
         return;
       }
       if (key.name === "return") {
-        startGeneration();
+        checkCacheAndProceed();
+        return;
+      }
+      return;
+    }
+
+    if (workflowStep === "cache-preview") {
+      if (key.name === "return") {
+        // Use cached data
+        useCachedData();
+        return;
+      }
+      if (key.sequence === "r" || key.sequence === "R") {
+        // Regenerate fresh data
+        startGeneration(true); // force regenerate
         return;
       }
       return;
@@ -214,6 +237,26 @@ export function OptimizationView() {
     if (workflowStep === "preview-candidates") {
       if (key.name === "return") {
         startEvaluation();
+        return;
+      }
+      return;
+    }
+
+    if (workflowStep === "evaluating") {
+      // Handle 1-9 keys to cancel individual tools
+      if (key.sequence && /^[1-9]$/.test(key.sequence)) {
+        const toolIndex = parseInt(key.sequence, 10) - 1;
+        const runningTools = Array.from(runningToolNames);
+        const toolToCancel = runningTools[toolIndex];
+
+        if (toolToCancel) {
+          logger.info(`Cancelling evaluation for tool: ${toolToCancel}`);
+          setCancelledToolNames((prev) => {
+            const next = new Set(prev);
+            next.add(toolToCancel);
+            return next;
+          });
+        }
         return;
       }
       return;
@@ -406,19 +449,126 @@ export function OptimizationView() {
     }
   }
 
-  // Start candidate and prompt generation
-  async function startGeneration() {
+  // Check cache and show preview if data exists
+  async function checkCacheAndProceed() {
     if (!workflowServer) return;
 
     try {
+      const storageDir = useAppStore.getState().storageDir;
+      const toolsToOptimize = availableTools.filter((t) => selectedTools.has(t.name));
+
+      const cachedDataMap = new Map<string, { candidates: ToolCandidate[]; prompts: GoldenPrompt[] }>();
+      const toolsWithoutCacheList: string[] = [];
+
+      // Calculate expected prompt count based on configuration
+      const expectedPromptCount = directPromptCount + indirectPromptCount + negativePromptCount;
+
+      // Check cache for all selected tools
+      for (const tool of toolsToOptimize) {
+        const cachedCandidates = await loadCandidates(storageDir, workflowServer, tool.name);
+        const cachedPrompts = await loadGoldenPrompts(storageDir, workflowServer, tool.name);
+
+        if (cachedCandidates.length > 0 && cachedPrompts.length > 0) {
+          // Slice to match current configuration
+          const slicedCandidates = cachedCandidates.slice(0, candidateCount);
+
+          // Slice prompts proportionally to match configured counts
+          const directPrompts = cachedPrompts.filter(p => p.category === "direct").slice(0, directPromptCount);
+          const indirectPrompts = cachedPrompts.filter(p => p.category === "indirect").slice(0, indirectPromptCount);
+          const negativePrompts = cachedPrompts.filter(p => p.category === "negative").slice(0, negativePromptCount);
+          const slicedPrompts = [...directPrompts, ...indirectPrompts, ...negativePrompts];
+
+          // Only use cache if we have enough data to satisfy the configuration
+          if (slicedCandidates.length === candidateCount && slicedPrompts.length === expectedPromptCount) {
+            cachedDataMap.set(tool.name, { candidates: slicedCandidates, prompts: slicedPrompts });
+          } else {
+            // Not enough cached data for current config - need to regenerate
+            toolsWithoutCacheList.push(tool.name);
+          }
+        } else {
+          toolsWithoutCacheList.push(tool.name);
+        }
+      }
+
+      if (cachedDataMap.size > 0) {
+        // Some tools have cached data - show preview
+        setCachedData(cachedDataMap);
+        setToolsWithoutCache(toolsWithoutCacheList);
+        setWorkflowStep("cache-preview");
+      } else {
+        // No cached data - go directly to generation
+        startGeneration();
+      }
+    } catch (err) {
+      logger.error("Failed to check cache", { error: String(err) });
+      setError(err instanceof Error ? err.message : "Failed to check cache");
+    }
+  }
+
+  // Use cached data and skip generation (go directly to evaluation)
+  async function useCachedData() {
+    if (!workflowServer) return;
+
+    try {
+      const storageDir = useAppStore.getState().storageDir;
+      const candidates = new Map<string, ToolCandidate[]>();
+      const prompts = new Map<string, GoldenPrompt[]>();
+
+      // Load cached data for tools that have it
+      for (const [toolName, data] of cachedData.entries()) {
+        candidates.set(toolName, data.candidates);
+        prompts.set(toolName, data.prompts);
+      }
+
+      // Generate fresh data for tools without cache
+      if (toolsWithoutCache.length > 0) {
+        logger.info("Generating fresh data for tools without cache", { tools: toolsWithoutCache });
+        // We'll need to generate these - for now, just proceed with what we have
+        // TODO: Optionally generate for missing tools
+      }
+
+      logger.info("Using cached data", {
+        candidateCount: candidates.size,
+        candidateKeys: Array.from(candidates.keys()),
+        promptCount: prompts.size,
+      });
+
+      setGeneratedCandidates(candidates);
+      setGeneratedPrompts(prompts);
+
+      // Skip the duplicate preview and go directly to evaluation
+      // (we already showed the preview in cache-preview step)
+      // Pass data directly since setState is async
+      startEvaluation(candidates, prompts);
+    } catch (err) {
+      logger.error("Failed to use cached data", { error: String(err) });
+      setError(err instanceof Error ? err.message : "Failed to use cached data");
+    }
+  }
+
+  // Start candidate and prompt generation
+  async function startGeneration(forceRegenerate = false) {
+    if (!workflowServer) return;
+
+    try {
+      const toolsToOptimize = availableTools.filter((t) => selectedTools.has(t.name));
+
+      logger.info("Starting generation", {
+        forceRegenerate,
+        selectedToolCount: selectedTools.size,
+        selectedTools: Array.from(selectedTools),
+        toolsToOptimizeCount: toolsToOptimize.length,
+      });
+
       setWorkflowStep("generating");
       setGenerationProgress("Starting generation...");
       setError(null);
       setSubprocessOutput([]);
       setCancelRequested(false);
+      setCancelledToolNames(new Set());
+      setRunningToolNames(new Set());
 
       const storageDir = useAppStore.getState().storageDir;
-      const toolsToOptimize = availableTools.filter((t) => selectedTools.has(t.name));
 
       const candidates = new Map<string, ToolCandidate[]>();
       const prompts = new Map<string, GoldenPrompt[]>();
@@ -438,15 +588,18 @@ export function OptimizationView() {
         const tool = toolsToOptimize[i];
         if (!tool) continue;
 
+        // Generate fresh data (skip cache check when forceRegenerate is true)
         setGenerationProgress(`Tool ${i + 1}/${toolsToOptimize.length}: ${tool.name} - Generating candidates...`);
-        setSubprocessOutput([`Generating ${candidateCount} candidates for ${tool.name}...`]);
+        setSubprocessOutput((prev) => [...prev, "", `=== Generating ${candidateCount} candidates for ${tool.name} ===`]);
 
-        const candidatesResult = await generateCandidates(tool, candidateCount);
-
-        // Capture output
-        if (candidatesResult.stdout) {
-          setSubprocessOutput((prev) => [...prev, ...candidatesResult.stdout.split("\n").filter(Boolean).slice(-20)]);
-        }
+        const candidatesResult = await generateCandidates(
+          tool,
+          candidateCount,
+          60000,
+          (line, stream) => {
+            setSubprocessOutput((prev) => [...prev.slice(-99), line]);
+          }
+        );
 
         if (candidatesResult.error || candidatesResult.candidates.length === 0) {
           logger.error("Failed to generate candidates", {
@@ -456,6 +609,14 @@ export function OptimizationView() {
           setSubprocessOutput((prev) => [...prev, `ERROR: ${candidatesResult.error || "No candidates generated"}`]);
           continue;
         }
+
+        // Show generated candidates summary
+        setSubprocessOutput((prev) => [
+          ...prev,
+          "",
+          `✓ Generated ${candidatesResult.candidates.length} candidates:`,
+          ...candidatesResult.candidates.map((c, idx) => `  ${idx + 1}. [${c.description.length} chars] ${c.description.substring(0, 150)}${c.description.length > 150 ? "..." : ""}`),
+        ]);
 
         // Check cancellation again
         if (cancelRequested) {
@@ -469,18 +630,20 @@ export function OptimizationView() {
         }
 
         setGenerationProgress(`Tool ${i + 1}/${toolsToOptimize.length}: ${tool.name} - Generating test prompts...`);
-        setSubprocessOutput([`Generating test prompts for ${tool.name}...`]);
+        setSubprocessOutput((prev) => [...prev, "", `=== Generating test prompts for ${tool.name} ===`]);
 
-        const promptsResult = await generateGoldenPrompts(tool, {
-          direct: directPromptCount,
-          indirect: indirectPromptCount,
-          negative: negativePromptCount,
-        });
-
-        // Capture output
-        if (promptsResult.stdout) {
-          setSubprocessOutput((prev) => [...prev, ...promptsResult.stdout.split("\n").filter(Boolean).slice(-20)]);
-        }
+        const promptsResult = await generateGoldenPrompts(
+          tool,
+          {
+            direct: directPromptCount,
+            indirect: indirectPromptCount,
+            negative: negativePromptCount,
+          },
+          60000,
+          (line, stream) => {
+            setSubprocessOutput((prev) => [...prev.slice(-99), line]);
+          }
+        );
 
         if (promptsResult.error || promptsResult.prompts.length === 0) {
           logger.error("Failed to generate prompts", {
@@ -490,6 +653,19 @@ export function OptimizationView() {
           setSubprocessOutput((prev) => [...prev, `ERROR: ${promptsResult.error || "No prompts generated"}`]);
           continue;
         }
+
+        // Show generated prompts summary
+        const directCount = promptsResult.prompts.filter(p => p.category === "direct").length;
+        const indirectCount = promptsResult.prompts.filter(p => p.category === "indirect").length;
+        const negativeCount = promptsResult.prompts.filter(p => p.category === "negative").length;
+
+        setSubprocessOutput((prev) => [
+          ...prev,
+          "",
+          `✓ Generated ${promptsResult.prompts.length} test prompts: ${directCount} direct, ${indirectCount} indirect, ${negativeCount} negative`,
+          ...promptsResult.prompts.slice(0, 10).map((p) => `  [${p.category.toUpperCase()}] ${p.prompt.substring(0, 120)}${p.prompt.length > 120 ? "..." : ""}`),
+          ...(promptsResult.prompts.length > 10 ? [`  ... and ${promptsResult.prompts.length - 10} more`] : []),
+        ]);
 
         // Create candidate records
         const candidateRecords: ToolCandidate[] = candidatesResult.candidates.map((c) => ({
@@ -518,6 +694,9 @@ export function OptimizationView() {
 
         // Save to disk
         await saveGoldenPrompts(storageDir, workflowServer, tool.name, goldenPrompts);
+        for (const candidate of candidateRecords) {
+          await saveCandidate(storageDir, workflowServer, tool.name, candidate);
+        }
       }
 
       setGeneratedCandidates(candidates);
@@ -537,10 +716,23 @@ export function OptimizationView() {
   }
 
   // Start evaluation
-  async function startEvaluation() {
+  async function startEvaluation(
+    candidatesParam?: Map<string, ToolCandidate[]>,
+    promptsParam?: Map<string, GoldenPrompt[]>
+  ) {
     if (!workflowServer) return;
 
+    // Use passed parameters or fall back to state (for ENTER key press from preview-candidates)
+    const candidates = candidatesParam ?? generatedCandidates;
+    const prompts = promptsParam ?? generatedPrompts;
+
     try {
+      logger.info("Starting evaluation", {
+        candidateCount: candidates.size,
+        candidateKeys: Array.from(candidates.keys()),
+        promptCount: prompts.size,
+      });
+
       setWorkflowStep("evaluating");
       setEvaluationProgress("Starting evaluation...");
       setError(null);
@@ -552,8 +744,15 @@ export function OptimizationView() {
       const clientManager = useAppStore.getState().clientManager;
       const results = new Map<string, { candidate: ToolCandidate; metrics: any; evalRuns: any[] }[]>();
 
-      // Load registry to get original server
-      const registry = await loadRegistry(storageDir);
+      // Get registry from app store (shared with HTTP server)
+      const registry = useAppStore.getState().registry;
+
+      if (!registry) {
+        setError("Registry not initialized");
+        setWorkflowStep("idle");
+        return;
+      }
+
       const originalServer = registry.servers.find(s => s.name === workflowServer);
 
       if (!originalServer) {
@@ -562,82 +761,115 @@ export function OptimizationView() {
         return;
       }
 
-      let toolIndex = 0;
-      for (const [toolName, candidates] of generatedCandidates) {
-        // Check cancellation
-        if (cancelRequested) {
-          logger.info("Evaluation cancelled by user");
-          setWorkflowStep("idle");
-          setWorkflowServer(null);
-          setSelectedTools(new Set());
-          setGeneratedCandidates(new Map());
-          setGeneratedPrompts(new Map());
-          setSubprocessOutput([]);
-          setCancelRequested(false);
-          return;
-        }
+      // Check cancellation before starting
+      if (cancelRequested) {
+        logger.info("Evaluation cancelled by user");
+        setWorkflowStep("idle");
+        setWorkflowServer(null);
+        setSelectedTools(new Set());
+        setGeneratedCandidates(new Map());
+        setGeneratedPrompts(new Map());
+        setSubprocessOutput([]);
+        setCancelRequested(false);
+        return;
+      }
 
-        toolIndex++;
-        const prompts = generatedPrompts.get(toolName);
-        if (!prompts) continue;
+      setEvaluationProgress(
+        `Evaluating ${candidates.size} tools concurrently...`
+      );
 
-        const toolResults: { candidate: ToolCandidate; metrics: any; evalRuns: any[] }[] = [];
+      // Initialize running tools
+      const allToolNames = Array.from(candidates.keys());
+      setRunningToolNames(new Set(allToolNames));
+      setCancelledToolNames(new Set());
 
-        for (let i = 0; i < candidates.length; i++) {
-          // Check cancellation
-          if (cancelRequested) {
-            logger.info("Evaluation cancelled by user");
-            setWorkflowStep("idle");
-            setWorkflowServer(null);
-            setSelectedTools(new Set());
-            setGeneratedCandidates(new Map());
-            setGeneratedPrompts(new Map());
-            setSubprocessOutput([]);
-            setCancelRequested(false);
-            return;
+      // Evaluate all tools concurrently
+      const toolEvaluations = Array.from(candidates.entries()).map(
+        async ([toolName, toolCandidates]) => {
+          const toolPrompts = prompts.get(toolName);
+          if (!toolPrompts) {
+            setRunningToolNames((prev) => {
+              const next = new Set(prev);
+              next.delete(toolName);
+              return next;
+            });
+            return { toolName, results: [] };
           }
 
-          const candidate = candidates[i];
-          if (!candidate) continue;
+          // Evaluate all candidates for this tool concurrently
+          const candidateEvaluations = toolCandidates.map(async (candidate, i) => {
+            // Check global cancellation or tool-specific cancellation
+            if (cancelRequested || cancelledToolNames.has(toolName)) {
+              logger.info(`Evaluation cancelled for tool ${toolName}`);
+              return null;
+            }
 
-          setEvaluationProgress(
-            `Tool ${toolIndex}/${generatedCandidates.size}: ${toolName} - Evaluating candidate ${i + 1}/${candidates.length}...`
-          );
-          setSubprocessOutput([
-            `Running ${prompts.length} evaluations for candidate ${i + 1}/${candidates.length}`,
-            `Testing: "${candidate.description.substring(0, 60)}..."`,
-          ]);
+            if (!candidate) return null;
 
-          const evalRuns = await evaluateCandidate(
-            candidate,
-            prompts,
-            originalServer,
-            registry,
-            storageDir,
-            gatewayPort,
-            clientManager
-          );
+            // Update subprocess output with tool-specific header
+            setSubprocessOutput((prev) => [
+              ...prev.slice(-99),
+              `[${toolName}#${i + 1}] Starting: "${candidate.description.substring(0, 50)}..."`,
+            ]);
 
-          // Show results summary
-          const correct = evalRuns.filter((r) => r.result.correct).length;
-          setSubprocessOutput((prev) => [
-            ...prev,
-            `Completed: ${correct}/${evalRuns.length} correct`,
-          ]);
+            const evalRuns = await evaluateCandidate(
+              candidate,
+              toolPrompts,
+              originalServer,
+              registry,
+              storageDir,
+              gatewayPort,
+              clientManager,
+              60000, // timeout
+              (line, stream) => {
+                // Stream subprocess output to TUI with tool name prefix (keep last 100 lines)
+                setSubprocessOutput((prev) => [
+                  ...prev.slice(-99),
+                  `[${toolName}#${i + 1}] ${line}`,
+                ]);
+              }
+            );
 
-          // Save evaluation runs
-          for (const run of evalRuns) {
-            await saveEvalRun(storageDir, workflowServer, candidate.id, run);
-          }
+            // Show results summary
+            const correct = evalRuns.filter((r) => r.result.correct).length;
+            setSubprocessOutput((prev) => [
+              ...prev.slice(-99),
+              `[${toolName}#${i + 1}] Completed: ${correct}/${evalRuns.length} correct`,
+            ]);
 
-          const metrics = computeMetrics(evalRuns, prompts);
+            // Save evaluation runs
+            for (const run of evalRuns) {
+              await saveEvalRun(storageDir, workflowServer, candidate.id, run);
+            }
 
-          toolResults.push({ candidate, metrics, evalRuns });
+            const metrics = computeMetrics(evalRuns, toolPrompts);
 
-          // Save candidate
-          await saveCandidate(storageDir, workflowServer, toolName, candidate);
+            // Save candidate
+            await saveCandidate(storageDir, workflowServer, toolName, candidate);
+
+            return { candidate, metrics, evalRuns };
+          });
+
+          // Wait for all candidates in this tool to complete
+          const candidateResults = await Promise.all(candidateEvaluations);
+          const toolResults = candidateResults.filter((r): r is { candidate: ToolCandidate; metrics: any; evalRuns: any[] } => r !== null);
+
+          // Mark tool as complete
+          setRunningToolNames((prev) => {
+            const next = new Set(prev);
+            next.delete(toolName);
+            return next;
+          });
+
+          return { toolName, results: toolResults };
         }
+      );
 
+      // Wait for all tool evaluations to complete
+      const evaluationResults = await Promise.all(toolEvaluations);
+
+      // Aggregate results
+      for (const { toolName, results: toolResults } of evaluationResults) {
         results.set(toolName, toolResults);
       }
 
@@ -830,9 +1062,16 @@ export function OptimizationView() {
               const statusColor = run.result.correct ? theme.accent : theme.foreground;
 
               return (
-                <text key={run.id} fg={statusColor}>
-                  {statusIcon} [{prompt.category}] {prompt.prompt.substring(0, 80)}
-                </text>
+                <box key={run.id} style={{ flexDirection: "column" }}>
+                  <text fg={statusColor}>
+                    {statusIcon} [{prompt.category}] {prompt.prompt.substring(0, 80)}
+                  </text>
+                  {run.result.error ? (
+                    <text fg={theme.foregroundMuted} style={{ marginLeft: 2 }}>
+                      ↳ {run.result.error.split('\n')[0].substring(0, 100)}
+                    </text>
+                  ) : null}
+                </box>
               );
             })}
             {evalRuns.length > 10 ? (
@@ -853,82 +1092,115 @@ export function OptimizationView() {
   // Render tool selection screen
   function renderToolSelection() {
     return (
-      <box style={{ flexDirection: "column", padding: 1, gap: 1 }}>
-        <box style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 1 }}>
-          <text fg={theme.accent}>Select Tools to Optimize</text>
-          <text fg={theme.foregroundMuted}>
-            [{selectedTools.size} selected]
-          </text>
+      <box style={{ flexDirection: "column", padding: 1 }}>
+        <box style={{ justifyContent: "space-between" }}>
+          <text fg={theme.accent}>Select Tools to Optimize ({selectedTools.size} selected)</text>
+          <text fg={theme.foregroundMuted}>[↑↓] Navigate • [Space] Toggle • [Enter] Continue • [Esc] Cancel</text>
         </box>
 
-        <RoundedBox style={{ padding: 2 }}>
-          <box style={{ flexDirection: "column", gap: 0 }}>
-            {availableTools.map((tool, index) => {
-              const isSelected = index === selectedToolIndex;
-              const isChecked = selectedTools.has(tool.name);
+        <box style={{ flexDirection: "column", marginTop: 1 }}>
+          {availableTools.map((tool, index) => {
+            const isSelected = index === selectedToolIndex;
+            const isChecked = selectedTools.has(tool.name);
 
-              return (
-                <text key={tool.name} fg={isSelected ? theme.accent : theme.foreground}>
-                  {isSelected ? "▶ " : "  "}[{isChecked ? "✓" : " "}] {tool.name}
-                </text>
-              );
-            })}
-          </box>
-        </RoundedBox>
-
-        <text fg={theme.foregroundMuted} style={{ marginTop: 1 }}>
-          [↑↓] Navigate • [Space] Toggle • [Enter] Continue • [Esc] Cancel
-        </text>
+            return (
+              <text key={tool.name} fg={isSelected ? theme.accent : theme.foreground}>
+                {isSelected ? "▶ " : "  "}[{isChecked ? "✓" : " "}] {tool.name}
+              </text>
+            );
+          })}
+        </box>
       </box>
     );
   }
 
   // Render configuration screen
   function renderConfiguration() {
+    const totalEvals = selectedTools.size * candidateCount * (directPromptCount + indirectPromptCount + negativePromptCount);
+
     return (
-      <box style={{ flexDirection: "column", padding: 1, gap: 1 }}>
-        <box style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 1 }}>
-          <text fg={theme.accent}>Configure Optimization</text>
-          <text fg={theme.foregroundMuted}>
-            {selectedTools.size} tools selected
-          </text>
+      <box style={{ flexDirection: "column", padding: 1 }}>
+        <box style={{ justifyContent: "space-between" }}>
+          <text fg={theme.accent}>Configure Optimization ({selectedTools.size} tools)</text>
+          <text fg={theme.foregroundMuted}>[↑↓] Navigate • [+/-] Adjust • [Enter] Start • [Esc] Cancel</text>
         </box>
 
-        <RoundedBox style={{ padding: 2 }}>
-          <box style={{ flexDirection: "column", gap: 1 }}>
-            <text fg={configFieldIndex === 0 ? theme.accent : theme.foreground}>
-              {configFieldIndex === 0 ? "▶ " : "  "}Candidates per tool: {candidateCount}
-            </text>
-            <text fg={theme.foregroundMuted}>
-              Number of description variations to generate (1-5)
-            </text>
+        <box style={{ marginTop: 1 }}>
+          <text fg={configFieldIndex === 0 ? theme.accent : theme.foreground}>
+            {configFieldIndex === 0 ? "▶ " : "  "}Candidates: {candidateCount}
+          </text>
+          <text fg={theme.foregroundMuted}> (variations per tool)</text>
+        </box>
 
-            <box style={{ height: 1 }} />
+        <box>
+          <text fg={configFieldIndex === 1 ? theme.accent : theme.foregroundMuted}>
+            {configFieldIndex === 1 ? "▶ " : "  "}Direct: {directPromptCount}
+          </text>
+          <text fg={configFieldIndex === 2 ? theme.accent : theme.foregroundMuted}>
+            {configFieldIndex === 2 ? "  ▶ " : "    "}Indirect: {indirectPromptCount}
+          </text>
+          <text fg={configFieldIndex === 3 ? theme.accent : theme.foregroundMuted}>
+            {configFieldIndex === 3 ? "  ▶ " : "    "}Negative: {negativePromptCount}
+          </text>
+          <text fg={theme.foregroundMuted}> (test prompts)</text>
+        </box>
 
-            <text fg={theme.foreground}>
-              Test prompts:
-            </text>
-            <text fg={configFieldIndex === 1 ? theme.accent : theme.foregroundMuted}>
-              {configFieldIndex === 1 ? "▶ " : "  "}• Direct prompts: {directPromptCount} (explicit tool mentions)
-            </text>
-            <text fg={configFieldIndex === 2 ? theme.accent : theme.foregroundMuted}>
-              {configFieldIndex === 2 ? "▶ " : "  "}• Indirect prompts: {indirectPromptCount} (implied usage)
-            </text>
-            <text fg={configFieldIndex === 3 ? theme.accent : theme.foregroundMuted}>
-              {configFieldIndex === 3 ? "▶ " : "  "}• Negative prompts: {negativePromptCount} (should NOT use tool)
-            </text>
+        <box style={{ marginTop: 1 }}>
+          <text fg={theme.accent}>Total: {totalEvals} evaluations </text>
+          <text fg={theme.foregroundMuted}>({selectedTools.size}×{candidateCount}×{directPromptCount + indirectPromptCount + negativePromptCount})</text>
+        </box>
+      </box>
+    );
+  }
 
-            <box style={{ height: 1 }} />
+  // Render cache preview
+  function renderCachePreview() {
+    return (
+      <box style={{ flexDirection: "column", padding: 1 }}>
+        <box style={{ justifyContent: "space-between" }}>
+          <text fg={theme.accent}>Cached Data Found</text>
+          <text fg={theme.foregroundMuted}>[Enter] Use & Evaluate  [R] Regenerate  [Esc] Cancel</text>
+        </box>
 
-            <text fg={theme.accent}>
-              Total evaluations: {selectedTools.size} tools × {candidateCount} candidates × {directPromptCount + indirectPromptCount + negativePromptCount} prompts = {selectedTools.size * candidateCount * (directPromptCount + indirectPromptCount + negativePromptCount)} runs
-            </text>
-          </box>
-        </RoundedBox>
+        <box style={{ flexDirection: "column", marginTop: 1 }}>
+          <text fg={theme.foregroundMuted}>The following tools have cached data matching your configuration:</text>
+          <text fg={theme.foregroundMuted}>────────────────────────────────────────</text>
 
-        <text fg={theme.foregroundMuted} style={{ marginTop: 1 }}>
-          [↑↓] Navigate • [+/-] Adjust • [Enter] Start Generation • [Esc] Cancel
-        </text>
+          {Array.from(cachedData.entries()).map(([toolName, data]) => (
+            <box key={toolName} style={{ flexDirection: "column", marginTop: 1 }}>
+              <text fg={theme.success}>{toolName}</text>
+              <text fg={theme.foregroundMuted}>  • {data.candidates.length} candidates (matching config: {candidateCount})</text>
+              <text fg={theme.foregroundMuted}>  • {data.prompts.length} test prompts ({data.prompts.filter(p => p.category === "direct").length}D / {data.prompts.filter(p => p.category === "indirect").length}I / {data.prompts.filter(p => p.category === "negative").length}N)</text>
+              {data.candidates.length > 0 && (
+                <box style={{ flexDirection: "column", marginLeft: 4, marginTop: 1 }}>
+                  <text fg={theme.foregroundMuted}>Preview:</text>
+                  {data.candidates.map((c, idx) => (
+                    <text key={idx} fg={theme.foreground}>  {idx + 1}. [{c.description.length} chars] {c.description.substring(0, 100)}{c.description.length > 100 ? "..." : ""}</text>
+                  ))}
+                </box>
+              )}
+            </box>
+          ))}
+
+          {toolsWithoutCache.length > 0 && (
+            <>
+              <text fg={theme.foregroundMuted} style={{ marginTop: 2 }}>────────────────────────────────────────</text>
+              <text fg={theme.warning} style={{ marginTop: 1 }}>Tools requiring fresh generation:</text>
+              <text fg={theme.foregroundMuted}>(Cache missing or insufficient for current config)</text>
+              {toolsWithoutCache.map((toolName) => (
+                <text key={toolName} fg={theme.foregroundMuted}>  • {toolName}</text>
+              ))}
+            </>
+          )}
+
+          <text fg={theme.foregroundMuted} style={{ marginTop: 2 }}>────────────────────────────────────────</text>
+          <text fg={theme.info} style={{ marginTop: 1 }}>
+            Press [Enter] to use cached data and start evaluation
+          </text>
+          <text fg={theme.info}>
+            Press [R] to regenerate all candidates and prompts from scratch
+          </text>
+        </box>
       </box>
     );
   }
@@ -936,35 +1208,34 @@ export function OptimizationView() {
   // Render generation progress
   function renderGeneration() {
     return (
-      <box style={{ flexDirection: "column", padding: 1, gap: 1 }}>
-        <box style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 1 }}>
-          <text fg={theme.accent}>Generating Candidates & Test Prompts...</text>
-          {cancelRequested ? (
-            <text fg={theme.foreground}>Cancelling...</text>
-          ) : null}
+      <box style={{ flexDirection: "column", padding: 1 }}>
+        <box style={{ justifyContent: "space-between" }}>
+          <text fg={theme.accent}>{generationProgress || "Generating Candidates & Test Prompts..."}</text>
+          <text fg={theme.foregroundMuted}>{cancelRequested ? "Cancelling..." : "[Esc] Cancel"}</text>
         </box>
 
-        <RoundedBox style={{ padding: 2 }}>
-          <box style={{ flexDirection: "column", gap: 0 }}>
-            <text fg={theme.foreground}>{generationProgress || "Initializing..."}</text>
+        <box style={{ flexDirection: "column", marginTop: 1 }}>
+          {subprocessOutput.slice(-50).map((line, i) => {
+            // Highlight section headers and results
+            const isHeader = line.startsWith("===");
+            const isSuccess = line.startsWith("✓");
+            const isError = line.startsWith("ERROR");
 
-            {subprocessOutput.length > 0 ? (
-              <>
-                <box style={{ height: 1 }} />
-                <text fg={theme.foregroundMuted}>Claude Output:</text>
-                {subprocessOutput.slice(-10).map((line, i) => (
-                  <text key={i} fg={theme.foregroundMuted}>
-                    {line.substring(0, 120)}
-                  </text>
-                ))}
-              </>
-            ) : null}
-          </box>
-        </RoundedBox>
+            const color = isError ? theme.foreground :
+                         isHeader ? theme.accent :
+                         isSuccess ? theme.accent :
+                         theme.foregroundMuted;
 
-        <text fg={theme.foregroundMuted} style={{ marginTop: 1 }}>
-          [Esc] Cancel
-        </text>
+            return (
+              <text key={i} fg={color}>
+                {line}
+              </text>
+            );
+          })}
+          {subprocessOutput.length === 0 ? (
+            <text fg={theme.foregroundSubtle}>Waiting for subprocess output...</text>
+          ) : null}
+        </box>
       </box>
     );
   }
@@ -972,74 +1243,53 @@ export function OptimizationView() {
   // Render candidate preview
   function renderCandidatePreview() {
     return (
-      <box style={{ flexDirection: "column", padding: 1, gap: 1 }}>
-        <box style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 1 }}>
-          <text fg={theme.accent}>Preview Generated Candidates</text>
-          <text fg={theme.foregroundMuted}>
-            {generatedCandidates.size} tools ready
-          </text>
+      <box style={{ flexDirection: "column", padding: 1 }}>
+        <box style={{ justifyContent: "space-between" }}>
+          <text fg={theme.accent}>Preview Generated Candidates ({generatedCandidates.size} tools)</text>
+          <text fg={theme.foregroundMuted}>[Enter] Start Evaluation • [Esc] Cancel</text>
         </box>
 
-        <RoundedBox style={{ padding: 2 }}>
-          <box style={{ flexDirection: "column", gap: 1 }}>
-            {Array.from(generatedCandidates.entries()).map(([toolName, candidates]) => (
-              <box key={toolName} style={{ flexDirection: "column", gap: 0 }}>
-                <text fg={theme.accent}>{toolName}</text>
-                {candidates.slice(0, 2).map((c, i) => (
-                  <text key={c.id} fg={theme.foregroundMuted}>
-                    {i + 1}. {c.description.substring(0, 80)}{c.description.length > 80 ? "..." : ""}
-                  </text>
-                ))}
-                {candidates.length > 2 ? (
-                  <text fg={theme.foregroundMuted}>
-                    + {candidates.length - 2} more candidates
-                  </text>
-                ) : null}
-                <box style={{ height: 1 }} />
-              </box>
-            ))}
-          </box>
-        </RoundedBox>
-
-        <text fg={theme.foregroundMuted} style={{ marginTop: 1 }}>
-          [Enter] Start Evaluation • [Esc] Cancel
-        </text>
+        <box style={{ flexDirection: "column", marginTop: 1 }}>
+          {Array.from(generatedCandidates.entries()).map(([toolName, candidates]) => (
+            <box key={toolName} style={{ flexDirection: "column", marginBottom: 1 }}>
+              <text fg={theme.accent}>{toolName} ({candidates.length} candidates):</text>
+              {candidates.map((c, i) => (
+                <text key={c.id} fg={theme.foregroundMuted}>
+                  {i + 1}. {c.description.substring(0, 120)}{c.description.length > 120 ? "..." : ""}
+                </text>
+              ))}
+            </box>
+          ))}
+        </box>
       </box>
     );
   }
 
   // Render evaluation progress
   function renderEvaluation() {
+    const runningTools = Array.from(runningToolNames);
+    const completedCount = generatedCandidates.size - runningTools.length;
+
     return (
-      <box style={{ flexDirection: "column", padding: 1, gap: 1 }}>
-        <box style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 1 }}>
-          <text fg={theme.accent}>Evaluating Candidates...</text>
-          {cancelRequested ? (
-            <text fg={theme.foreground}>Cancelling...</text>
-          ) : null}
+      <box style={{ flexDirection: "column", padding: 1 }}>
+        <box style={{ justifyContent: "space-between" }}>
+          <text fg={theme.accent}>
+            Evaluating {completedCount}/{generatedCandidates.size} complete
+            {runningTools.length > 0 ? ` • Running: ${runningTools.slice(0, 3).map((t, i) => `${i+1}:${t}`).join(" ")}` : ""}
+          </text>
+          <text fg={theme.foregroundMuted}>{cancelRequested ? "Cancelling..." : "[1-9] Cancel tool • [Esc] Cancel all"}</text>
         </box>
 
-        <RoundedBox style={{ padding: 2 }}>
-          <box style={{ flexDirection: "column", gap: 0 }}>
-            <text fg={theme.foreground}>{evaluationProgress || "Initializing..."}</text>
-
-            {subprocessOutput.length > 0 ? (
-              <>
-                <box style={{ height: 1 }} />
-                <text fg={theme.foregroundMuted}>Claude Output:</text>
-                {subprocessOutput.slice(-10).map((line, i) => (
-                  <text key={i} fg={theme.foregroundMuted}>
-                    {line.substring(0, 120)}
-                  </text>
-                ))}
-              </>
-            ) : null}
-          </box>
-        </RoundedBox>
-
-        <text fg={theme.foregroundMuted} style={{ marginTop: 1 }}>
-          [Esc] Cancel
-        </text>
+        <box style={{ flexDirection: "column", marginTop: 1 }}>
+          {subprocessOutput.slice(-50).map((line, i) => (
+            <text key={i} fg={theme.foregroundMuted}>
+              {line}
+            </text>
+          ))}
+          {subprocessOutput.length === 0 ? (
+            <text fg={theme.foregroundSubtle}>Waiting for subprocess output...</text>
+          ) : null}
+        </box>
       </box>
     );
   }
@@ -1063,44 +1313,34 @@ export function OptimizationView() {
     const prompts = generatedPrompts.get(toolName) || [];
 
     return (
-      <box style={{ flexDirection: "column", padding: 1, gap: 1 }}>
-        <box style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 1 }}>
+      <box style={{ flexDirection: "column", padding: 1 }}>
+        <box style={{ justifyContent: "space-between" }}>
           <text fg={theme.accent}>
-            {toolName} - Candidate {selectedCandidateIndex + 1}/{results.length}
+            {toolName} - Candidate {selectedCandidateIndex + 1}/{results.length} (Tool {selectedToolResultIndex + 1}/{toolEntries.length})
           </text>
-          <text fg={theme.foregroundMuted}>
-            Tool {selectedToolResultIndex + 1}/{toolEntries.length}
-          </text>
+          <text fg={theme.foregroundMuted}>[←→] Tools • [↑↓] Candidates • [Esc] Back</text>
         </box>
 
-        <RoundedBox style={{ padding: 2 }}>
-          <box style={{ flexDirection: "column", gap: 1 }}>
-            {/* Metrics Summary */}
-            <text fg={theme.accent}>
-              Overall: {Math.round(selectedResult.metrics.overall * 100)}%
-            </text>
-            <text fg={theme.foreground}>
-              Direct: {Math.round(selectedResult.metrics.directSuccess * 100)}% •
-              Indirect: {Math.round(selectedResult.metrics.indirectSuccess * 100)}% •
-              Negative: {Math.round(selectedResult.metrics.negativeSuccess * 100)}%
-            </text>
+        <box style={{ flexDirection: "column", marginTop: 1 }}>
+          <text fg={theme.accent}>
+            Overall: {Math.round(selectedResult.metrics.overall * 100)}% •
+            Direct: {Math.round(selectedResult.metrics.directSuccess * 100)}% •
+            Indirect: {Math.round(selectedResult.metrics.indirectSuccess * 100)}% •
+            Negative: {Math.round(selectedResult.metrics.negativeSuccess * 100)}%
+          </text>
 
-            <box style={{ height: 1 }} />
+          <box style={{ marginTop: 1 }}>
+            <text fg={theme.foregroundMuted}>Original: </text>
+            <text fg={theme.foreground}>{originalDesc}</text>
+          </box>
 
-            {/* Original Description */}
-            <text fg={theme.foreground}>Original Description:</text>
-            <text fg={theme.foregroundMuted}>{originalDesc}</text>
-
-            <box style={{ height: 1 }} />
-
-            {/* New Description */}
-            <text fg={theme.foreground}>Optimized Description:</text>
+          <box style={{ marginTop: 1 }}>
+            <text fg={theme.foregroundMuted}>Optimized: </text>
             <text fg={theme.accent}>{selectedResult.candidate.description}</text>
+          </box>
 
-            <box style={{ height: 1 }} />
-
-            {/* Evaluation Results */}
-            <text fg={theme.foreground}>Evaluation Results:</text>
+          <box style={{ flexDirection: "column", marginTop: 1 }}>
+            <text fg={theme.foregroundMuted}>Evaluation Results:</text>
             {selectedResult.evalRuns.map((run: any, idx: number) => {
               const prompt = prompts.find((p) => p.id === run.promptId);
               if (!prompt) return null;
@@ -1109,17 +1349,20 @@ export function OptimizationView() {
               const statusColor = run.result.correct ? theme.accent : theme.foreground;
 
               return (
-                <text key={run.id} fg={statusColor}>
-                  {statusIcon} [{prompt.category}] {prompt.prompt.substring(0, 80)}
-                </text>
+                <box key={run.id} style={{ flexDirection: "column" }}>
+                  <text fg={statusColor}>
+                    {statusIcon} [{prompt.category}] {prompt.prompt.substring(0, 100)}
+                  </text>
+                  {run.result.error ? (
+                    <text fg={theme.foregroundMuted} style={{ marginLeft: 2 }}>
+                      ↳ {run.result.error.split('\n')[0].substring(0, 120)}
+                    </text>
+                  ) : null}
+                </box>
               );
             })}
           </box>
-        </RoundedBox>
-
-        <text fg={theme.foregroundMuted} style={{ marginTop: 1 }}>
-          [←→] Switch Tool • [↑↓] Switch Candidate • [Esc] Back to Summary
-        </text>
+        </box>
       </box>
     );
   }
@@ -1131,51 +1374,36 @@ export function OptimizationView() {
     }
 
     return (
-      <box style={{ flexDirection: "column", padding: 1, gap: 1 }}>
-        <box style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 1 }}>
-          <text fg={theme.accent}>Evaluation Results</text>
-          <text fg={theme.foregroundMuted}>
-            {evaluationResults.size} tools evaluated
-          </text>
+      <box style={{ flexDirection: "column", padding: 1 }}>
+        <box style={{ justifyContent: "space-between" }}>
+          <text fg={theme.accent}>Evaluation Results ({evaluationResults.size} tools)</text>
+          <text fg={theme.foregroundMuted}>[Space] Details • [Enter] Promote Best • [Esc] Cancel</text>
         </box>
 
-        <RoundedBox style={{ padding: 2 }}>
-          <box style={{ flexDirection: "column", gap: 1 }}>
-            {Array.from(evaluationResults.entries()).map(([toolName, results]) => {
-              // Find best candidate
-              const best = results.reduce((prev, curr) =>
-                curr.metrics.overall > prev.metrics.overall ? curr : prev
-              );
+        <box style={{ flexDirection: "column", marginTop: 1 }}>
+          {Array.from(evaluationResults.entries()).map(([toolName, results]) => {
+            // Find best candidate
+            const best = results.reduce((prev, curr) =>
+              curr.metrics.overall > prev.metrics.overall ? curr : prev
+            );
 
-              const overallPct = Math.round(best.metrics.overall * 100);
-              const directPct = Math.round(best.metrics.directSuccess * 100);
-              const indirectPct = Math.round(best.metrics.indirectSuccess * 100);
-              const negativePct = Math.round(best.metrics.negativeSuccess * 100);
-              const descPreview = best.candidate.description.substring(0, 100);
-              const needsEllipsis = best.candidate.description.length > 100;
+            const overallPct = Math.round(best.metrics.overall * 100);
+            const directPct = Math.round(best.metrics.directSuccess * 100);
+            const indirectPct = Math.round(best.metrics.indirectSuccess * 100);
+            const negativePct = Math.round(best.metrics.negativeSuccess * 100);
 
-              return (
-                <box key={toolName} style={{ flexDirection: "column", gap: 0 }}>
-                  <text fg={theme.accent}>{toolName}</text>
-                  <text fg={theme.foreground}>
-                    Best candidate: {overallPct}% overall
-                  </text>
-                  <text fg={theme.foregroundMuted}>
-                    Direct: {directPct}% • Indirect: {indirectPct}% • Negative: {negativePct}%
-                  </text>
-                  <text fg={theme.foregroundMuted}>
-                    {descPreview}{needsEllipsis ? "..." : ""}
-                  </text>
-                  <box style={{ height: 1 }} />
-                </box>
-              );
-            })}
-          </box>
-        </RoundedBox>
-
-        <text fg={theme.foregroundMuted} style={{ marginTop: 1 }}>
-          [Space] Detailed View • [Enter] Promote Best Candidates • [Esc] Cancel
-        </text>
+            return (
+              <box key={toolName} style={{ flexDirection: "column" }}>
+                <text fg={theme.accent}>
+                  {toolName}: {overallPct}% (D:{directPct}% I:{indirectPct}% N:{negativePct}%)
+                </text>
+                <text fg={theme.foregroundMuted}>
+                  {best.candidate.description.substring(0, 120)}{best.candidate.description.length > 120 ? "..." : ""}
+                </text>
+              </box>
+            );
+          })}
+        </box>
       </box>
     );
   }
@@ -1240,6 +1468,10 @@ export function OptimizationView() {
 
   if (workflowStep === "config") {
     return renderConfiguration();
+  }
+
+  if (workflowStep === "cache-preview") {
+    return renderCachePreview();
   }
 
   if (workflowStep === "generating") {

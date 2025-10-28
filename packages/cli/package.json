@@ -49,7 +49,7 @@
     "@opentui/core": "^0.1.26",
     "@opentui/react": "^0.1.26",
     "hono": "^4.9.8",
-    "mcp-lite": "^0.8.1",
+    "mcp-lite": "catalog:",
     "react": "^19.2.0",
     "zod": "^4.1.11",
     "zustand": "^5.0.8"

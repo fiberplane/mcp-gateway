@@ -12,6 +12,8 @@ export * from "./mcp/client-manager";
 export * from "./mcp/oauth-adapter";
 // MCP server exports
 export * from "./mcp/server";
+export * from "./mcp/evaluation-server";
+export * from "./mcp/evaluation-handler-registry";
 // Optimization exports
 export * from "./optimization/index";
 export * from "./registry/index";

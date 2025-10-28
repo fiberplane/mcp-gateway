@@ -18,6 +18,8 @@ export interface McpServer {
   oauthToken?: string; // OAuth access token
   oauthTokenExpiresAt?: number; // Token expiry timestamp (seconds since epoch)
   oauthRefreshToken?: string; // OAuth refresh token
+  isEvaluationServer?: boolean; // True if this is a temporary server for optimization evaluation
+  evaluationOriginalServer?: string; // Original server name this evaluation server is based on
 }
 
 export interface Registry {

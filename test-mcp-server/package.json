@@ -12,7 +12,7 @@
   "dependencies": {
     "@fiberplane/mcp-gateway": "workspace:*",
     "hono": "^4.9.8",
-    "mcp-lite": "^0.8.1",
+    "mcp-lite": "catalog:",
     "zod": "^4.1.11"
   },
   "devDependencies": {

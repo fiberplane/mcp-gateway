@@ -4,7 +4,8 @@
     "outDir": "dist",
     "rootDir": ".",
     "jsxImportSource": "@opentui/react",
-    "noEmit": true
+    "noEmit": true,
+    "isolatedModules": true
   },
   "include": ["src/**/*", "package.json"],
   "exclude": ["bin/**/*", "dist", "node_modules", "tests/**/*"]

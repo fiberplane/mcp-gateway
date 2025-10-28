@@ -29,11 +29,13 @@
     "ci:publish": "bun run scripts/ci-publish.ts"
   },
   "type": "module",
-  "workspaces": [
-    "packages/*",
-    "test-mcp-server"
-  ],
-  "dependencies": {
-    "mcp-lite": "https://pkg.pr.new/fiberplane/mcp-lite@133"
+  "workspaces": {
+    "packages": [
+      "packages/*",
+      "test-mcp-server"
+    ],
+    "catalog": {
+      "mcp-lite": "https://pkg.pr.new/fiberplane/mcp-lite@133"
+    }
   }
 }

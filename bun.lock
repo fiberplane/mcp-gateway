@@ -3,9 +3,6 @@
   "workspaces": {
     "": {
       "name": "@fiberplane/mcp-gateway-workspace",
-      "dependencies": {
-        "mcp-lite": "https://pkg.pr.new/fiberplane/mcp-lite@133",
-      },
       "devDependencies": {
         "@biomejs/biome": "^2.2.6",
         "@changesets/cli": "^2.29.7",
@@ -32,7 +29,7 @@
         "@opentui/core": "^0.1.26",
         "@opentui/react": "^0.1.26",
         "hono": "^4.9.8",
-        "mcp-lite": "^0.8.1",
+        "mcp-lite": "catalog:",
         "react": "^19.2.0",
         "zod": "^4.1.11",
         "zustand": "^5.0.8",
@@ -44,7 +41,7 @@
       "dependencies": {
         "@fiberplane/mcp-gateway-types": "workspace:*",
         "hono": "^4.9.8",
-        "mcp-lite": "https://pkg.pr.new/fiberplane/mcp-lite@133",
+        "mcp-lite": "catalog:",
         "zod": "^4.1.11",
       },
     },
@@ -76,7 +73,7 @@
         "@hono/node-server": "^1.19.4",
         "@hono/standard-validator": "^0.1.5",
         "hono": "^4.9.8",
-        "mcp-lite": "https://pkg.pr.new/fiberplane/mcp-lite@133",
+        "mcp-lite": "catalog:",
         "zod": "^4.1.11",
       },
     },
@@ -92,7 +89,7 @@
       "dependencies": {
         "@fiberplane/mcp-gateway": "workspace:*",
         "hono": "^4.9.8",
-        "mcp-lite": "^0.8.1",
+        "mcp-lite": "catalog:",
         "zod": "^4.1.11",
       },
       "devDependencies": {
@@ -100,6 +97,9 @@
         "typescript": "^5.7.2",
       },
     },
+  },
+  "catalog": {
+    "mcp-lite": "https://pkg.pr.new/fiberplane/mcp-lite@133",
   },
   "packages": {
     "@babel/helper-string-parser": ["@babel/helper-string-parser@7.27.1", "", {}, "sha512-qMlSxKbpRlAridDExk92nSobyDdpPijUq2DW6oDnUqd0iOGxmQjyqhMIihI9+zv4LPyZdRje2cavWPbCbWm3eA=="],
@@ -798,8 +798,6 @@
 
     "zustand": ["zustand@5.0.8", "", { "peerDependencies": { "@types/react": ">=18.0.0", "immer": ">=9.0.6", "react": ">=18.0.0", "use-sync-external-store": ">=1.2.0" }, "optionalPeers": ["@types/react", "immer", "react", "use-sync-external-store"] }, "sha512-gyPKpIaxY9XcO2vSMrLbiER7QMAMGOQZVRdJ6Zi782jkbzZygq5GI9nG8g+sMgitRtndwaBSl7uiqC49o1SSiw=="],
 
-    "@fiberplane/mcp-gateway-cli/mcp-lite": ["mcp-lite@0.8.2", "", { "dependencies": { "@standard-schema/spec": "^1.0.0" } }, "sha512-v78gCsmOI9cGhUsu8xRZ8NEZ6AOFPaAxm4xarP6Dhro3l9HY6Voo43MNuX+CO5oT8gpRfgJ5bMJLTSCFsp+4Kg=="],
-
     "@jimp/plugin-blit/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
 
     "@jimp/plugin-circle/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
@@ -861,8 +859,6 @@
     "sass-lookup/commander": ["commander@12.1.0", "", {}, "sha512-Vw8qHK3bZM9y/P10u3Vib8o/DdkvA2OtPtZvD871QKjy74Wj1WSKFILMPRPSdUSx5RFK1arlJzEtA4PkFgnbuA=="],
 
     "stylus-lookup/commander": ["commander@12.1.0", "", {}, "sha512-Vw8qHK3bZM9y/P10u3Vib8o/DdkvA2OtPtZvD871QKjy74Wj1WSKFILMPRPSdUSx5RFK1arlJzEtA4PkFgnbuA=="],
-
-    "test-mcp-server/mcp-lite": ["mcp-lite@0.8.2", "", { "dependencies": { "@standard-schema/spec": "^1.0.0" } }, "sha512-v78gCsmOI9cGhUsu8xRZ8NEZ6AOFPaAxm4xarP6Dhro3l9HY6Voo43MNuX+CO5oT8gpRfgJ5bMJLTSCFsp+4Kg=="],
 
     "@typescript-eslint/typescript-estree/minimatch/brace-expansion": ["brace-expansion@2.0.2", "", { "dependencies": { "balanced-match": "^1.0.0" } }, "sha512-Jt0vHyM+jmUBqojB7E1NIYadt0vI0Qxjxd2TErW94wDz+E2LAm5vKMXXwg6ZZBTHPuUlDgQHKXvjGBdfcF1ZDQ=="],
 

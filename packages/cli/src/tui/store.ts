@@ -81,6 +81,7 @@ export interface OptimizationProgress {
 interface AppStore {
   // State
   servers: UIServer[];
+  registry: Registry | null; // Actual registry object shared with HTTP server
   logs: LogEntry[];
   storageDir: string;
   port: number;
@@ -106,7 +107,7 @@ interface AppStore {
   optimizationProgress: OptimizationProgress | null;
 
   // Actions
-  initialize: (servers: UIServer[], storageDir: string, port: number) => void;
+  initialize: (servers: UIServer[], registry: Registry, storageDir: string, port: number) => void;
   addServer: (name: string, url: string) => Promise<void>;
   removeServer: (name: string) => Promise<void>;
   setServers: (servers: UIServer[]) => void;
@@ -166,6 +167,7 @@ export function toUIServer(server: Registry["servers"][number]): UIServer {
 export const useAppStore = create<AppStore>((set, get) => ({
   // Initial state
   servers: [],
+  registry: null,
   logs: [],
   storageDir: "",
   port: 3333,
@@ -190,7 +192,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   optimizationProgress: null,
 
   // Actions
-  initialize: (servers, storageDir, port) => set({ servers, storageDir, port }),
+  initialize: (servers, registry, storageDir, port) => set({ servers, registry, storageDir, port }),
 
   addServer: async (name, url) => {
     const { storageDir, servers } = get();
