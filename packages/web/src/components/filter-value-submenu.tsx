@@ -106,11 +106,6 @@ export function FilterValueSubmenu({
     <DropdownMenu.Sub>
       <DropdownMenu.SubTrigger className="flex items-center justify-between gap-2 px-2 py-1.5 text-sm outline-none cursor-pointer hover:bg-accent rounded-sm data-[state=open]:bg-accent">
         <span>{label}</span>
-        {selectedValues.length > 0 && (
-          <span className="px-1.5 py-0.5 text-xs bg-primary text-primary-foreground rounded">
-            {selectedValues.length}
-          </span>
-        )}
         <ChevronRight className="size-4 ml-auto" aria-hidden="true" />
       </DropdownMenu.SubTrigger>
 

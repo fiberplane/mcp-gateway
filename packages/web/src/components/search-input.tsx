@@ -32,12 +32,18 @@ interface SearchInputProps {
    * Placeholder text
    */
   placeholder?: string;
+
+  /**
+   * Optional className for the container div
+   */
+  className?: string;
 }
 
 export function SearchInput({
   value,
   onChange,
   placeholder = "Search logs...",
+  className,
 }: SearchInputProps) {
   // Generate unique ID for accessibility
   const inputId = useId();
@@ -85,7 +91,7 @@ export function SearchInput({
   const hasValue = localValue.trim().length > 0;
 
   return (
-    <div className="relative flex items-center">
+    <div className={`relative flex items-center ${className || ""}`}>
       {/* Search icon */}
       <Search
         className="absolute left-3 size-4 text-muted-foreground pointer-events-none"
@@ -101,7 +107,7 @@ export function SearchInput({
         onChange={(e) => setLocalValue(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
-        className="h-9 w-64 pl-9 pr-9 rounded-md border border-input bg-background text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        className="h-9 w-full pl-9 pr-9 rounded-md border border-input bg-background text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:border-ring transition-colors"
         aria-label="Search logs"
       />
 

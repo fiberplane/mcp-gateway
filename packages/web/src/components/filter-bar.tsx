@@ -19,10 +19,9 @@
  * - Better client selector UI
  */
 
-import { createFilter, type FilterState } from "@fiberplane/mcp-gateway-types";
-import { useQuery } from "@tanstack/react-query";
-import { useEffect, useId, useRef, useState } from "react";
-import { api } from "../lib/api";
+import type { createFilter, FilterState } from "@fiberplane/mcp-gateway-types";
+import type { ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   addOrReplaceFilter,
   parseFilterStateFromUrl,
@@ -32,7 +31,6 @@ import {
 import { AddFilterDropdown } from "./add-filter-dropdown";
 import { FilterBadge } from "./filter-badge";
 import { SearchInput } from "./search-input";
-import { Button } from "./ui/button";
 
 interface FilterBarProps {
   /**
@@ -40,12 +38,15 @@ interface FilterBarProps {
    * Used by parent to apply filters to data
    */
   onChange: (state: FilterState) => void;
+
+  /**
+   * Optional action buttons to display on the right side of search row
+   * (e.g., StreamingBadge, SettingsMenu, ExportButton)
+   */
+  actions?: ReactNode;
 }
 
-export function FilterBar({ onChange }: FilterBarProps) {
-  // Generate unique ID for accessibility
-  const clientSelectId = useId();
-
+export function FilterBar({ onChange, actions }: FilterBarProps) {
   // Live region announcement for screen readers
   const [announcement, setAnnouncement] = useState("");
 
@@ -65,13 +66,6 @@ export function FilterBar({ onChange }: FilterBarProps) {
       }
       return { search: "", filters: [] };
     }
-  });
-
-  // Fetch available clients for the dropdown
-  const { data: clientsData } = useQuery({
-    queryKey: ["clients"],
-    queryFn: () => api.getClients(),
-    refetchInterval: 5000,
   });
 
   // Use ref to keep latest onChange without causing effect re-runs
@@ -126,35 +120,6 @@ export function FilterBar({ onChange }: FilterBarProps) {
     }
   }, [filterState.filters.length]);
 
-  // Get current client filter value (if any)
-  const clientFilter = filterState.filters.find((f) => f.field === "client");
-  const clientValue = clientFilter?.value;
-
-  const handleClientChange = (value: string) => {
-    if (value === "all") {
-      // Remove client filter
-      setFilterState((prev) => ({
-        ...prev,
-        filters: prev.filters.filter((f) => f.field !== "client"),
-      }));
-    } else {
-      // Add or replace client filter
-      const newFilter = createFilter({
-        field: "client" as const,
-        operator: "is" as const,
-        value,
-      });
-
-      setFilterState((prev) => ({
-        ...prev,
-        filters: [
-          ...prev.filters.filter((f) => f.field !== "client"),
-          newFilter,
-        ],
-      }));
-    }
-  };
-
   const handleRemoveFilter = (filterId: string) => {
     setFilterState((prev) => ({
       ...prev,
@@ -184,14 +149,16 @@ export function FilterBar({ onChange }: FilterBarProps) {
   };
 
   const handleClearAll = () => {
-    setFilterState({
-      search: "",
+    // Only clear filters, preserve search (UX principle: button position = button scope)
+    setFilterState((prev) => ({
+      ...prev,
       filters: [],
-    });
+    }));
   };
 
-  const hasActiveFilters =
-    filterState.filters.length > 0 || filterState.search.trim().length > 0;
+  // Show "Clear all" button only when there are active filters
+  // (not when search has text - search is cleared via its own X button)
+  const hasActiveFilters = filterState.filters.length > 0;
 
   return (
     <>
@@ -206,64 +173,47 @@ export function FilterBar({ onChange }: FilterBarProps) {
         {announcement}
       </div>
 
-      <div className="flex items-center gap-3 flex-wrap">
-        {/* Phase 2: Search input */}
-        <SearchInput
-          value={filterState.search}
-          onChange={handleSearchChange}
-          placeholder="Search logs..."
-        />
-
-        {/* Phase 1: Simple client selector (temporary) */}
-        <div className="flex items-center gap-2">
-          <label
-            htmlFor={clientSelectId}
-            className="text-sm font-medium text-muted-foreground"
-          >
-            Client:
-          </label>
-          <select
-            id={clientSelectId}
-            value={clientValue || "all"}
-            onChange={(e) => handleClientChange(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            <option value="all">All clients</option>
-            {clientsData?.clients.map((client) => (
-              <option key={client.clientName} value={client.clientName}>
-                {client.clientName} ({client.logCount})
-              </option>
-            ))}
-          </select>
+      <div className="flex flex-col gap-3">
+        {/* Row 1: Search input + Action buttons */}
+        <div className="flex items-center gap-3">
+          <SearchInput
+            value={filterState.search}
+            onChange={handleSearchChange}
+            placeholder="Search logs..."
+            className="flex-1"
+          />
+          {actions}
         </div>
 
-        {/* Active filter badges */}
-        {filterState.filters.map((filter) => (
-          <FilterBadge
-            key={filter.id}
-            filter={filter}
-            onRemove={handleRemoveFilter}
+        {/* Row 2: Filters */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Add filter button - always first for stable position */}
+          <AddFilterDropdown
+            onAdd={handleAddFilter}
+            onRemove={handleRemoveFilterByField}
+            activeFilters={filterState.filters}
           />
-        ))}
 
-        {/* Add filter dropdown */}
-        <AddFilterDropdown
-          onAdd={handleAddFilter}
-          onRemove={handleRemoveFilterByField}
-          activeFilters={filterState.filters}
-        />
+          {/* Active filter badges */}
+          {filterState.filters.map((filter) => (
+            <FilterBadge
+              key={filter.id}
+              filter={filter}
+              onRemove={handleRemoveFilter}
+            />
+          ))}
 
-        {/* Clear all button */}
-        {hasActiveFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleClearAll}
-            className="ml-auto"
-          >
-            Clear all
-          </Button>
-        )}
+          {/* Clear all button - positioned right after filter badges */}
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={handleClearAll}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Clear all
+            </button>
+          )}
+        </div>
       </div>
     </>
   );

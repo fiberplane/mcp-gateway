@@ -2,7 +2,7 @@
 
 @theme {
   /* Background colors */
-  --color-background: #ffffff;
+  --color-background: #fafafa;  /* Light gray page background - matches Figma design */
   --color-card: #ffffff;
   --color-muted: #f9fafb;
   --color-primary: #272624;
@@ -22,6 +22,12 @@
   --color-border: #e5e7eb;
   --color-input: #e5e7eb;
   --color-ring: #1e293b;
+
+  /* Status indicator colors (for badges, dots, etc.) */
+  --color-status-success: #22c55e;   /* green - for online status */
+  --color-status-warning: #f59e0b;   /* amber - for warnings */
+  --color-status-error: #ef4444;     /* red - for errors */
+  --color-status-neutral: #9ca3af;   /* gray - for offline/not-found */
 
   /* Shadcn compatibility */
   --color-secondary: #f9fafb;

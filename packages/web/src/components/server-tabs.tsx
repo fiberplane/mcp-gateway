@@ -12,13 +12,13 @@ interface ServerTabsProps {
 function getStatusColor(status: ServerStatus): string {
   switch (status) {
     case "online":
-      return "bg-green-500";
+      return "bg-status-success";
     case "offline":
-      return "bg-red-500";
+      return "bg-status-error";
     case "not-found":
-      return "bg-gray-400";
+      return "bg-status-neutral";
     default:
-      return "bg-gray-400";
+      return "bg-status-neutral";
   }
 }
 

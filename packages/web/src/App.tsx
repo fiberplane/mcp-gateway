@@ -7,9 +7,9 @@ import { FilterBar } from "./components/filter-bar";
 import { LogTable } from "./components/log-table";
 import { Pagination } from "./components/pagination";
 import { ServerTabs } from "./components/server-tabs";
-import { StreamingToggle } from "./components/streaming-toggle";
+import { SettingsMenu } from "./components/settings-menu";
+import { StreamingBadge } from "./components/streaming-badge";
 import { TopNavigation } from "./components/top-navigation";
-import { Button } from "./components/ui/button";
 import { api } from "./lib/api";
 import { applyFilterState } from "./lib/filter-utils";
 import { useHandler } from "./lib/use-handler";
@@ -145,55 +145,16 @@ function App() {
       <TopNavigation />
 
       <main className="max-w-7xl mx-auto px-6 py-6">
+        <h1 className="text-2xl font-semibold text-foreground mb-6">
+          MCP server logs
+        </h1>
+
         <div className="mb-6">
           <ServerTabs
             value={serverName}
             onChange={handleServerChange}
             panelId="logs-panel"
           />
-        </div>
-
-        {/* Filter Bar - Phase 1 */}
-        <div className="mb-5">
-          <ErrorBoundary
-            fallback={(error) => (
-              <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive">
-                <p className="font-medium">Filter system unavailable</p>
-                <p className="text-sm mt-1">
-                  Please refresh the page to try again.
-                </p>
-                {import.meta.env.DEV && (
-                  <details className="mt-2 text-xs">
-                    <summary className="cursor-pointer">Error details</summary>
-                    <pre className="mt-1 overflow-auto">{error.message}</pre>
-                  </details>
-                )}
-              </div>
-            )}
-          >
-            <FilterBar onChange={handleFilterChange} />
-          </ErrorBoundary>
-        </div>
-
-        <div className="mb-5 flex gap-3 items-center flex-wrap">
-          <StreamingToggle
-            isStreaming={isStreaming}
-            onToggle={handleStreamingToggle}
-          />
-          <div className="ml-auto flex gap-3">
-            <Button
-              variant="outline"
-              onClick={handleClearSessions}
-              disabled={isClearing}
-            >
-              {isClearing ? "Clearing..." : "Clear Sessions"}
-            </Button>
-            <ExportButton
-              logs={deferredFilteredLogs}
-              selectedIds={selectedIds}
-              getLogKey={getLogKey}
-            />
-          </div>
         </div>
 
         {clearError && (
@@ -209,23 +170,72 @@ function App() {
         )}
 
         {isLoading ? (
-          <div className="p-10 text-center text-muted-foreground bg-card rounded-lg">
+          <div className="p-10 text-center text-muted-foreground bg-card rounded-lg border border-border">
             Loading logs...
           </div>
         ) : (
           <>
+            {/* Combined container: Filter Bar + Log Table with white background and border */}
             {/* biome-ignore lint/correctness/useUniqueElementIds: Static ID needed for ARIA tabpanel association */}
             <div
               id="logs-panel"
               role="tabpanel"
-              className="bg-card rounded-lg overflow-auto border border-border max-h-[calc(100vh-16rem)]"
+              className="bg-card rounded-lg border border-border overflow-hidden"
             >
-              <LogTable
-                logs={deferredFilteredLogs}
-                selectedIds={selectedIds}
-                onSelectionChange={setSelectedIds}
-                timeGrouping={timeGrouping}
-              />
+              {/* Filter Bar - Phase 1-2 with two-row layout */}
+              <div className="px-6 py-4 border-b border-border">
+                <ErrorBoundary
+                  fallback={(error) => (
+                    <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive">
+                      <p className="font-medium">Filter system unavailable</p>
+                      <p className="text-sm mt-1">
+                        Please refresh the page to try again.
+                      </p>
+                      {import.meta.env.DEV && (
+                        <details className="mt-2 text-xs">
+                          <summary className="cursor-pointer">
+                            Error details
+                          </summary>
+                          <pre className="mt-1 overflow-auto">
+                            {error.message}
+                          </pre>
+                        </details>
+                      )}
+                    </div>
+                  )}
+                >
+                  <FilterBar
+                    onChange={handleFilterChange}
+                    actions={
+                      <>
+                        <StreamingBadge
+                          isStreaming={isStreaming}
+                          onToggle={handleStreamingToggle}
+                        />
+                        <SettingsMenu
+                          onClearSessions={handleClearSessions}
+                          isClearing={isClearing}
+                        />
+                        <ExportButton
+                          logs={deferredFilteredLogs}
+                          selectedIds={selectedIds}
+                          getLogKey={getLogKey}
+                        />
+                      </>
+                    }
+                  />
+                </ErrorBoundary>
+              </div>
+
+              {/* Log Table */}
+              <div className="overflow-auto max-h-[calc(100vh-20rem)]">
+                <LogTable
+                  logs={deferredFilteredLogs}
+                  selectedIds={selectedIds}
+                  onSelectionChange={setSelectedIds}
+                  timeGrouping={timeGrouping}
+                />
+              </div>
             </div>
 
             {/* Load More button at bottom */}
