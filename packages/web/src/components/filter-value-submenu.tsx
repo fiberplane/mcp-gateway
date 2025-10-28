@@ -19,6 +19,8 @@ import { useMemo, useState } from "react";
 import { getMethodColor } from "../lib/method-colors";
 import { Checkbox } from "./ui/checkbox";
 import * as DropdownMenu from "./ui/dropdown-menu";
+import { EmptyState } from "./ui/empty-state";
+import { LoadingIndicator } from "./ui/loading-indicator";
 
 interface FilterValue {
   value: string;
@@ -138,17 +140,14 @@ export function FilterValueSubmenu({
           )}
 
           {/* Loading State */}
-          {isLoading && (
-            <div className="px-2 py-8 text-sm text-center text-muted-foreground">
-              Loading...
-            </div>
-          )}
+          {isLoading && <LoadingIndicator />}
 
           {/* Empty State */}
           {!isLoading && filteredValues.length === 0 && (
-            <div className="px-2 py-8 text-sm text-center text-muted-foreground">
-              {searchQuery ? "No results found" : "No values available"}
-            </div>
+            <EmptyState
+              icon={Search}
+              message={searchQuery ? "No results found" : "No values available"}
+            />
           )}
 
           {/* Value List */}

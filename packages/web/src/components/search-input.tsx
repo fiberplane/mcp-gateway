@@ -9,6 +9,7 @@
  * - Debounced input using useDeferredValue (React 19)
  * - Search icon
  * - Clear button (X) when input has value
+ * - Keyboard hint showing "Escape" to clear
  * - Updates URL params
  * - Keyboard accessible (Escape to clear)
  * - Screen reader friendly with ARIA labels
@@ -16,8 +17,10 @@
 
 import { Search } from "lucide-react";
 import { useDeferredValue, useEffect, useId, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
 import { ClearButton } from "./ui/clear-button";
 import { InputWithIcon } from "./ui/input-with-icon";
+import { Kbd } from "./ui/kbd";
 
 interface SearchInputProps {
   /**
@@ -93,26 +96,32 @@ export function SearchInput({
   const hasValue = localValue.trim().length > 0;
 
   return (
-    <InputWithIcon
-      ref={inputRef}
-      id={inputId}
-      type="text"
-      value={localValue}
-      onChange={(e) => setLocalValue(e.target.value)}
-      onKeyDown={handleKeyDown}
-      placeholder={placeholder}
-      aria-label="Search logs"
-      leftIcon={Search}
-      rightAction={
-        hasValue ? (
-          <ClearButton
-            size="icon-sm"
-            onClear={handleClear}
-            aria-label="Clear search"
-          />
-        ) : null
-      }
-      containerClassName={className}
-    />
+    <div className={cn("flex flex-col gap-1", className)}>
+      <InputWithIcon
+        ref={inputRef}
+        id={inputId}
+        type="text"
+        value={localValue}
+        onChange={(e) => setLocalValue(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder}
+        aria-label="Search logs"
+        leftIcon={Search}
+        rightAction={
+          hasValue ? (
+            <ClearButton
+              size="icon-sm"
+              onClear={handleClear}
+              aria-label="Clear search"
+            />
+          ) : null
+        }
+      />
+      {hasValue && (
+        <p className="text-xs text-muted-foreground">
+          Press <Kbd>Escape</Kbd> to clear
+        </p>
+      )}
+    </div>
   );
 }
