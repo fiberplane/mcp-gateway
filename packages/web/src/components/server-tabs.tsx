@@ -50,11 +50,11 @@ function ServerTab({ isSelected, panelId, onClick, children }: ServerTabProps) {
       tabIndex={isSelected ? 0 : -1}
       onClick={onClick}
       className={`
-        flex items-center gap-2 h-8 px-3 py-1 rounded-md text-sm transition-colors
+        flex items-center gap-2 h-8 px-3 py-1 rounded-md text-sm transition-colors cursor-pointer
         ${
           isSelected
             ? "bg-foreground text-background"
-            : "bg-card text-foreground border border-border hover:bg-muted cursor-pointer"
+            : "bg-card text-foreground border border-border hover:bg-muted"
         }
       `}
     >

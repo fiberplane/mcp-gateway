@@ -28,7 +28,7 @@ export function StreamingBadge({ isStreaming, onToggle }: StreamingBadgeProps) {
       title={
         isStreaming ? "Click to pause streaming" : "Click to resume streaming"
       }
-      className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-border transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-border transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer"
     >
       {/* Status indicator dot */}
       <span

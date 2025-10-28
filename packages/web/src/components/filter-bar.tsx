@@ -222,7 +222,7 @@ export function FilterBar({ onChange, actions }: FilterBarProps) {
             <button
               type="button"
               onClick={handleClearAll}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             >
               Clear all
             </button>
