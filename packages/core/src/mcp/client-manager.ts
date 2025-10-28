@@ -74,6 +74,9 @@ export class ClientManager {
 			serverName: server.name,
 			url: server.url,
 			hasAuthHeader: !!server.headers.Authorization,
+			hasOAuthToken: !!server.oauthToken,
+			oauthTokenExpiresAt: server.oauthTokenExpiresAt,
+			hasOAuthClientId: !!server.oauthClientId,
 		});
 
 		// Create client
@@ -87,9 +90,10 @@ export class ClientManager {
 			clientId: server.oauthClientId || "mcp-gateway",
 			redirectUri: `http://localhost:${this.gatewayPort}/oauth/callback`,
 			onAuthorizationRequired: (authUrl) => {
-				logger.info("OAuth authorization required", {
+				logger.info("OAuth authorization required (callback triggered)", {
 					serverName: server.name,
 					authUrl,
+					gatewayPort: this.gatewayPort,
 				});
 
 				// Store auth URL in registry for TUI
@@ -99,10 +103,19 @@ export class ClientManager {
 				);
 
 				if (this.onRegistryUpdate) {
+					logger.debug("Triggering registry update callback");
 					this.onRegistryUpdate();
 				}
 			},
 		};
+
+		logger.debug("Creating transport with OAuth config", {
+			serverName: server.name,
+			clientId: oauthConfig.clientId,
+			redirectUri: oauthConfig.redirectUri,
+			hasOAuthAdapter: !!this.oauthAdapter,
+			hasOAuthProvider: !!this.oauthProvider,
+		});
 
 		// Create transport with OAuth support
 		const transport = new StreamableHttpClientTransport({
@@ -114,6 +127,12 @@ export class ClientManager {
 		const connect = transport.bind(client);
 
 		try {
+			logger.debug("Attempting connection with headers", {
+				serverName: server.name,
+				url: server.url,
+				headers: Object.keys(server.headers),
+			});
+
 			// Connect to server with custom headers
 			const connection = await connect(server.url, {
 				headers: server.headers,
@@ -351,6 +370,13 @@ export class ClientManager {
 	getTransport(serverName: string): StreamableHttpClientTransport | undefined {
 		const info = this.connections.get(serverName);
 		return info?.transport as StreamableHttpClientTransport | undefined;
+	}
+
+	/**
+	 * Get list of connected server names
+	 */
+	getConnectedServers(): string[] {
+		return Array.from(this.connections.keys());
 	}
 
 	/**

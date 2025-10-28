@@ -59,8 +59,15 @@ export function createOAuthCallbackRoutes(
     }
 
     try {
+      logger.info("OAuth callback received", {
+        hasCode: !!code,
+        hasState: !!state,
+      });
+
       // Parse state to get server name
       const stateData = JSON.parse(decodeURIComponent(state));
+      logger.debug("OAuth callback state parsed", { stateData });
+
       const serverName = stateData.serverName;
 
       if (!serverName) {
@@ -70,21 +77,40 @@ export function createOAuthCallbackRoutes(
       // Get server from registry
       const server = getServer(registry, serverName);
       if (!server) {
+        logger.error("Server not found in registry for OAuth callback", {
+          serverName,
+          availableServers: registry.servers.map(s => s.name),
+        });
         throw new Error(`Server ${serverName} not found in registry`);
       }
 
-      logger.info("Completing OAuth authorization flow", { serverName });
+      logger.info("Completing OAuth authorization flow", {
+        serverName,
+        serverUrl: server.url,
+      });
 
       // Get transport for this server
       const transport = clientManager.getTransport(serverName);
       if (!transport) {
+        logger.error("No transport found for server", {
+          serverName,
+          connectedServers: clientManager.getConnectedServers(),
+        });
         throw new Error(`No transport found for server ${serverName}`);
       }
+
+      logger.debug("Calling transport.completeAuthorizationFlow", {
+        serverName,
+        serverUrl: server.url,
+      });
 
       // Let mcp-lite handle the token exchange!
       await transport.completeAuthorizationFlow(server.url, code, state);
 
-      logger.info("Successfully obtained access token", { serverName });
+      logger.info("Successfully obtained access token via mcp-lite", {
+        serverName,
+        tokenStored: !!server.oauthToken,
+      });
 
       // Clear auth error fields (token is stored by adapter)
       delete server.authUrl;
