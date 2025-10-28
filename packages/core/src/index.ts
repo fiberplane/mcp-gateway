@@ -9,6 +9,7 @@ export * from "./health";
 export * from "./logger";
 // MCP client exports
 export * from "./mcp/client-manager";
+export * from "./mcp/oauth-adapter";
 // MCP server exports
 export * from "./mcp/server";
 // Optimization exports

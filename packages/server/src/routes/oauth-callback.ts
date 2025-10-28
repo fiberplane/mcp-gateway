@@ -4,16 +4,18 @@ import {
   saveRegistry,
   getStorageRoot,
 } from "@fiberplane/mcp-gateway-core";
+import type { ClientManager } from "@fiberplane/mcp-gateway-core";
 import type { Registry } from "@fiberplane/mcp-gateway-types";
 import { Hono } from "hono";
-import { z } from "zod";
 
 /**
  * OAuth callback handler
  * Handles the redirect from OAuth authorization server
+ * Uses mcp-lite's completeAuthorizationFlow for token exchange
  */
 export function createOAuthCallbackRoutes(
   registry: Registry,
+  clientManager: ClientManager,
   storageDir?: string,
   options?: {
     onAuthComplete?: (serverName: string, token: string) => void;
@@ -71,78 +73,23 @@ export function createOAuthCallbackRoutes(
         throw new Error(`Server ${serverName} not found in registry`);
       }
 
-      logger.info("Exchanging OAuth code for token", { serverName });
+      logger.info("Completing OAuth authorization flow", { serverName });
 
-      // Fetch OAuth discovery to get token endpoint
-      const baseUrl = server.url.replace(/\/mcp\/?$/, "");
-      const discoveryUrl = `${baseUrl}/.well-known/oauth-authorization-server`;
-      const discoveryRes = await fetch(discoveryUrl);
-
-      if (!discoveryRes.ok) {
-        throw new Error("Failed to fetch OAuth discovery document");
+      // Get transport for this server
+      const transport = clientManager.getTransport(serverName);
+      if (!transport) {
+        throw new Error(`No transport found for server ${serverName}`);
       }
 
-      const discovery = (await discoveryRes.json()) as Record<string, unknown>;
-      const tokenEndpoint = discovery.token_endpoint;
-
-      if (!tokenEndpoint || typeof tokenEndpoint !== "string") {
-        throw new Error("No token_endpoint in OAuth discovery");
-      }
-
-      // Exchange code for token
-      const tokenParams: Record<string, string> = {
-        grant_type: "authorization_code",
-        code,
-        redirect_uri: stateData.redirectUri || "http://localhost:3333/oauth/callback",
-        client_id: stateData.clientId || "mcp-gateway",
-      };
-
-      // Add PKCE code_verifier (required for public clients)
-      if (stateData.codeVerifier) {
-        tokenParams.code_verifier = stateData.codeVerifier;
-      }
-
-      // Add client_secret if available (from DCR)
-      if (server.oauthClientSecret) {
-        tokenParams.client_secret = server.oauthClientSecret;
-      }
-
-      const tokenRes = await fetch(tokenEndpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams(tokenParams),
-      });
-
-      if (!tokenRes.ok) {
-        const errorBody = await tokenRes.text();
-        throw new Error(`Token exchange failed: ${tokenRes.status} ${errorBody}`);
-      }
-
-      const tokenData = (await tokenRes.json()) as Record<string, unknown>;
-      const accessToken = tokenData.access_token;
-
-      if (!accessToken || typeof accessToken !== "string") {
-        throw new Error("No access_token in token response");
-      }
+      // Let mcp-lite handle the token exchange!
+      await transport.completeAuthorizationFlow(server.url, code, state);
 
       logger.info("Successfully obtained access token", { serverName });
 
-      // Update server headers with token
-      server.headers = {
-        ...server.headers,
-        Authorization: `Bearer ${accessToken}`,
-      };
-
-      // Clear auth error fields
+      // Clear auth error fields (token is stored by adapter)
       delete server.authUrl;
       delete server.authError;
-
-      // Save updated registry
       await saveRegistry(storage, registry);
-
-      logger.info("Saved access token to registry", { serverName });
 
       // Notify TUI of registry update
       if (options?.onRegistryUpdate) {
@@ -150,8 +97,8 @@ export function createOAuthCallbackRoutes(
       }
 
       // Notify that auth is complete
-      if (options?.onAuthComplete) {
-        options.onAuthComplete(serverName, accessToken);
+      if (options?.onAuthComplete && server.oauthToken) {
+        options.onAuthComplete(serverName, server.oauthToken);
       }
 
       // Return success page
@@ -195,10 +142,7 @@ export function createOAuthCallbackRoutes(
               </p>
             </div>
             <script>
-              // Auto-close after 3 seconds
-              setTimeout(() => {
-                window.close();
-              }, 3000);
+              setTimeout(() => { window.close(); }, 3000);
             </script>
           </body>
         </html>

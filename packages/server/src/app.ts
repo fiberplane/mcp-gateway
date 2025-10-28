@@ -3,11 +3,8 @@ import {
   getStorageRoot,
   logger,
   ClientManager,
-  OAuthRequiredError,
   saveCanonicalTools,
   saveRegistry,
-  fetchOAuthDiscovery,
-  registerOAuthClient,
 } from "@fiberplane/mcp-gateway-core";
 import type { LogEntry, Registry } from "@fiberplane/mcp-gateway-types";
 import { Hono } from "hono";
@@ -74,43 +71,18 @@ export async function createApp(
   const oauthRoutes = await createOAuthRoutes(registry);
   app.route("/", oauthRoutes);
 
-  // Mount OAuth callback routes for authorization flow
-  const oauthCallbackRoutes = createOAuthCallbackRoutes(registry, storage, {
-    onRegistryUpdate: eventHandlers?.onRegistryUpdate,
-    onAuthComplete: async (serverName, token) => {
-      // Reconnect to server after successful auth
-      if (clientManager) {
-        logger.info(`Reconnecting to ${serverName} after OAuth`);
-        const server = registry.servers.find((s) => s.name === serverName);
-        if (server) {
-          try {
-            // Disconnect existing connection (which doesn't have the token)
-            await clientManager.disconnectServer(serverName);
-
-            // Connect with the updated server object (which now has the token)
-            await clientManager.connectServer(server);
-            const tools = await clientManager.discoverTools(serverName);
-            await saveCanonicalTools(storage, serverName, tools);
-            logger.info(`Reconnected to ${serverName} successfully`, {
-              toolCount: tools.length,
-            });
-          } catch (error) {
-            logger.error(`Failed to reconnect to ${serverName}`, {
-              error: String(error),
-            });
-          }
-        }
-      }
-    },
-  });
-  app.route("/oauth", oauthCallbackRoutes);
-
   // Initialize ClientManager if enabled
   let clientManager: ClientManager | undefined;
+  const port = eventHandlers?.port || 3333;
 
   if (eventHandlers?.enableMcpClient) {
     logger.info("Initializing MCP client manager");
-    clientManager = new ClientManager();
+    clientManager = new ClientManager(
+      registry,
+      storage,
+      port,
+      eventHandlers?.onRegistryUpdate,
+    );
 
     // Connect to all registered servers
     for (const server of registry.servers) {
@@ -122,55 +94,53 @@ export async function createApp(
           toolCount: tools.length,
         });
       } catch (error) {
-        // Handle OAuth authentication requirement
-        if (error instanceof OAuthRequiredError) {
-          logger.info(`Server ${server.name} requires OAuth`, {
-            authUrl: error.authUrl,
-          });
+        logger.error(`Failed to connect to ${server.name}`, {
+          error: String(error),
+          errorType: typeof error,
+          errorConstructor: error?.constructor?.name,
+          errorMessage:
+            error && typeof error === "object" && "message" in error
+              ? error.message
+              : undefined,
+        });
+      }
+    }
+  }
 
-          // Fetch full OAuth discovery document
-          const discovery = await fetchOAuthDiscovery(server.url);
+  // Mount OAuth callback routes after ClientManager is initialized
+  if (clientManager) {
+    const oauthCallbackRoutes = createOAuthCallbackRoutes(
+      registry,
+      clientManager,
+      storage,
+      {
+        onRegistryUpdate: eventHandlers?.onRegistryUpdate,
+        onAuthComplete: async (serverName, token) => {
+          // Reconnect to server after successful auth
+          logger.info(`Reconnecting to ${serverName} after OAuth`);
+          const server = registry.servers.find((s) => s.name === serverName);
+          if (server) {
+            try {
+              // Disconnect existing connection (which doesn't have the token)
+              await clientManager.disconnectServer(serverName);
 
-          // Perform Dynamic Client Registration if supported
-          if (discovery?.registration_endpoint && !server.oauthClientId) {
-            const port = eventHandlers?.port || 3333;
-            const redirectUri = `http://localhost:${port}/oauth/callback`;
-            const clientCreds = await registerOAuthClient(
-              discovery.registration_endpoint,
-              redirectUri,
-            );
-
-            if (clientCreds) {
-              server.oauthClientId = clientCreds.clientId;
-              server.oauthClientSecret = clientCreds.clientSecret;
-              logger.info(`Registered OAuth client for ${server.name}`, {
-                clientId: clientCreds.clientId,
+              // Connect with the updated server object (which now has the token)
+              await clientManager.connectServer(server);
+              const tools = await clientManager.discoverTools(serverName);
+              await saveCanonicalTools(storage, serverName, tools);
+              logger.info(`Reconnected to ${serverName} successfully`, {
+                toolCount: tools.length,
+              });
+            } catch (error) {
+              logger.error(`Failed to reconnect to ${serverName}`, {
+                error: String(error),
               });
             }
           }
-
-          // Store auth info in registry
-          server.authUrl = error.authUrl;
-          server.authError = error.message;
-          await saveRegistry(storage, registry);
-
-          // Notify TUI of registry update
-          if (eventHandlers?.onRegistryUpdate) {
-            eventHandlers.onRegistryUpdate();
-          }
-        } else {
-          logger.error(`Failed to connect to ${server.name}`, {
-            error: String(error),
-            errorType: typeof error,
-            errorConstructor: error?.constructor?.name,
-            errorMessage:
-              error && typeof error === "object" && "message" in error
-                ? error.message
-                : undefined,
-          });
-        }
-      }
-    }
+        },
+      },
+    );
+    app.route("/oauth", oauthCallbackRoutes);
   }
 
   // Mount the proxy routes for server connections

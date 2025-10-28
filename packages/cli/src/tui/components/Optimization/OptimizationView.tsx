@@ -1,5 +1,4 @@
 import {
-  buildAuthorizationUrl,
   loadRegistry,
   logger,
   openBrowser,
@@ -361,16 +360,11 @@ export function OptimizationView() {
     try {
       setAuthorizingServer(serverName);
 
-      // Get server to check for registered client_id
-      const server = servers.find(s => s.name === serverName);
-      const clientId = server?.oauthClientId;
-
-      // Build full authorization URL with state and PKCE
-      const fullAuthUrl = await buildAuthorizationUrl(authUrl, serverName, port, clientId);
-      logger.info("Authorization URL", { fullAuthUrl, clientId });
+      // Authorization URL is already built by mcp-lite with PKCE
+      logger.info("Opening authorization URL", { authUrl });
 
       // Open browser
-      await openBrowser(fullAuthUrl);
+      await openBrowser(authUrl);
 
       // Reset after 2 seconds
       setTimeout(() => {

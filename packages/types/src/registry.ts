@@ -15,6 +15,9 @@ export interface McpServer {
   authError?: string; // Error message from auth failure
   oauthClientId?: string; // Client ID from Dynamic Client Registration
   oauthClientSecret?: string; // Client secret from Dynamic Client Registration
+  oauthToken?: string; // OAuth access token
+  oauthTokenExpiresAt?: number; // Token expiry timestamp (seconds since epoch)
+  oauthRefreshToken?: string; // OAuth refresh token
 }
 
 export interface Registry {
