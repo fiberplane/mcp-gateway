@@ -24,6 +24,7 @@ import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
   addOrReplaceFilter,
+  areFilterStatesEqual,
   parseFilterStateFromUrl,
   removeFilter,
   serializeFilterStateToUrl,
@@ -80,11 +81,10 @@ export function FilterBar({ onChange, actions }: FilterBarProps) {
 
   // Sync URL when filter state changes
   useEffect(() => {
-    // Deep comparison to prevent unnecessary updates
+    // Efficient deep comparison to prevent unnecessary updates
     const previous = prevFilterStateRef.current;
     const hasChanged =
-      previous === null ||
-      JSON.stringify(previous) !== JSON.stringify(filterState);
+      previous === null || !areFilterStatesEqual(previous, filterState);
 
     if (hasChanged) {
       const params = serializeFilterStateToUrl(filterState);

@@ -52,6 +52,15 @@ const CopyButton = React.forwardRef<HTMLButtonElement, CopyButtonProps>(
     ref,
   ) => {
     const [copied, setCopied] = React.useState(false);
+    const timeoutRef = React.useRef<NodeJS.Timeout | number | null>(null);
+
+    React.useEffect(() => {
+      return () => {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
+      };
+    }, []);
 
     const handleCopy = async () => {
       try {
@@ -59,8 +68,12 @@ const CopyButton = React.forwardRef<HTMLButtonElement, CopyButtonProps>(
         setCopied(true);
         onCopy?.();
 
-        setTimeout(() => {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
+        timeoutRef.current = setTimeout(() => {
           setCopied(false);
+          timeoutRef.current = null;
         }, successDuration);
       } catch {
         // Silently fail - clipboard access may be denied

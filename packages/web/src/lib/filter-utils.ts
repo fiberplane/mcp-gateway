@@ -15,6 +15,7 @@ import {
   isDurationFilter,
   safeParseFilter,
 } from "@fiberplane/mcp-gateway-types";
+import { nanoid } from "nanoid";
 
 // ============================================================================
 // URL Serialization
@@ -101,7 +102,7 @@ export function parseFiltersFromUrl(params: URLSearchParams): Filter[] {
     // Create filter with validation
     const filterInput = { field, operator, value };
     const result = safeParseFilter({
-      id: crypto.randomUUID(),
+      id: nanoid(),
       ...filterInput,
     });
 
@@ -419,6 +420,33 @@ export function areFiltersEqual(a: Filter, b: Filter): boolean {
     a.value === b.value &&
     a.id === b.id
   );
+}
+
+/**
+ * Check if two filter states are equal
+ * Efficiently compares search string and filter arrays
+ */
+export function areFilterStatesEqual(a: FilterState, b: FilterState): boolean {
+  // Quick check: search strings must match
+  if (a.search !== b.search) return false;
+
+  // Quick check: filter array lengths must match
+  if (a.filters.length !== b.filters.length) return false;
+
+  // If both empty, they're equal
+  if (a.filters.length === 0) return true;
+
+  // Deep comparison: check each filter
+  // We compare by index since filter order matters for UX consistency
+  for (let i = 0; i < a.filters.length; i++) {
+    const filterA = a.filters[i];
+    const filterB = b.filters[i];
+    if (!filterA || !filterB || !areFiltersEqual(filterA, filterB)) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 /**

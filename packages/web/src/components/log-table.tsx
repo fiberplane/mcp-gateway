@@ -356,7 +356,6 @@ export function LogTable({
             <th
               key={column.id}
               className={cn(
-                "text-muted-foreground",
                 "text-left h-8 px-2 text-sm font-semibold text-foreground",
                 column.headerClassName,
               )}

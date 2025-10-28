@@ -50,30 +50,31 @@ export interface StatusDotProps
  * A small colored dot for indicating status with consistent styling.
  * Use aria-label to provide accessible status information.
  */
-const StatusDot = React.forwardRef<HTMLSpanElement, StatusDotProps>(
-  ({ className, variant, animate, "aria-label": ariaLabel, ...props }, ref) => {
-    if (ariaLabel) {
-      return (
-        <div
-          ref={ref as React.Ref<HTMLDivElement>}
-          role="img"
-          className={cn(statusDotVariants({ variant, animate, className }))}
-          aria-label={ariaLabel}
-          {...props}
-        />
-      );
-    }
-
+const StatusDot = React.forwardRef<
+  HTMLSpanElement | HTMLDivElement,
+  StatusDotProps
+>(({ className, variant, animate, "aria-label": ariaLabel, ...props }, ref) => {
+  if (ariaLabel) {
     return (
-      <span
-        ref={ref}
+      <div
+        ref={ref as React.Ref<HTMLDivElement>}
+        role="img"
         className={cn(statusDotVariants({ variant, animate, className }))}
-        aria-hidden="true"
+        aria-label={ariaLabel}
         {...props}
       />
     );
-  },
-);
+  }
+
+  return (
+    <span
+      ref={ref as React.Ref<HTMLSpanElement>}
+      className={cn(statusDotVariants({ variant, animate, className }))}
+      aria-hidden="true"
+      {...props}
+    />
+  );
+});
 StatusDot.displayName = "StatusDot";
 
 export { StatusDot, statusDotVariants };
