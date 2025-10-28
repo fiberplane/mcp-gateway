@@ -14,7 +14,7 @@ import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
 import { getMethodColor } from "../lib/method-colors";
 import { groupLogsByTime, type TimeInterval } from "../lib/time-grouping";
 import { useHandler } from "../lib/use-handler";
-import { getLogKey } from "../lib/utils";
+import { cn, getLogKey } from "../lib/utils";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
 
@@ -355,7 +355,11 @@ export function LogTable({
           {visibleColumns.map((column) => (
             <th
               key={column.id}
-              className={`text-left h-8 px-2 text-sm font-semibold text-foreground ${column.headerClassName ?? ""}`}
+              className={cn(
+                "text-muted-foreground",
+                "text-left h-8 px-2 text-sm font-semibold text-foreground",
+                column.headerClassName,
+              )}
             >
               {column.sortField ? (
                 <SortHeader

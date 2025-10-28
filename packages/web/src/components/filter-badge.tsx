@@ -20,6 +20,7 @@ import { BarChart3, Clock, List, Monitor, Server, X, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getMethodColor } from "../lib/method-colors";
 import { IconButton } from "./ui/button";
+import { ColorPill } from "./ui/color-pill";
 
 interface FilterBadgeProps {
   filter: Filter;
@@ -139,15 +140,12 @@ export function FilterBadge({ filter, onRemove }: FilterBadgeProps) {
         // Multiple method pills with individual colors
         <div className="inline-flex items-center gap-2 flex-wrap">
           {filter.value.slice(0, 3).map((methodValue) => (
-            <div
+            <ColorPill
               key={String(methodValue)}
-              className="inline-flex items-center justify-center px-1.5 py-1 rounded-md"
-              style={{ backgroundColor: getMethodColor(String(methodValue)) }}
+              color={getMethodColor(String(methodValue))}
             >
-              <span className="text-sm font-mono text-foreground">
-                {String(methodValue)}
-              </span>
-            </div>
+              {String(methodValue)}
+            </ColorPill>
           ))}
           {filter.value.length > 3 && (
             <span className="text-sm text-muted-foreground">
@@ -157,14 +155,9 @@ export function FilterBadge({ filter, onRemove }: FilterBadgeProps) {
         </div>
       ) : shouldHighlightValue ? (
         // Single method pill with its specific color
-        <div
-          className="inline-flex items-center justify-center px-1.5 py-1 rounded-md"
-          style={{
-            backgroundColor: getMethodColor(String(filter.value)),
-          }}
-        >
-          <span className="text-sm font-mono text-foreground">{value}</span>
-        </div>
+        <ColorPill color={getMethodColor(String(filter.value))}>
+          {value}
+        </ColorPill>
       ) : (
         // Non-method fields - plain text
         <span className="text-sm font-mono text-foreground">{value}</span>

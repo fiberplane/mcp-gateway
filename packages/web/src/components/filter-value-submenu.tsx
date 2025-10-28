@@ -14,11 +14,11 @@
  * - Screen reader friendly
  */
 
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { ChevronRight, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { getMethodColor } from "../lib/method-colors";
 import { Checkbox } from "./ui/checkbox";
+import * as DropdownMenu from "./ui/dropdown-menu";
 
 interface FilterValue {
   value: string;
@@ -104,17 +104,13 @@ export function FilterValueSubmenu({
 
   return (
     <DropdownMenu.Sub>
-      <DropdownMenu.SubTrigger className="flex items-center justify-between gap-2 px-2 py-1.5 text-sm outline-none cursor-pointer hover:bg-accent rounded-sm data-[state=open]:bg-accent">
+      <DropdownMenu.SubTrigger>
         <span>{label}</span>
         <ChevronRight className="size-4 ml-auto" aria-hidden="true" />
       </DropdownMenu.SubTrigger>
 
       <DropdownMenu.Portal>
-        <DropdownMenu.SubContent
-          className="min-w-[220px] max-w-[320px] max-h-[400px] overflow-hidden rounded-md border border-border bg-popover p-1 shadow-lg"
-          sideOffset={2}
-          alignOffset={-5}
-        >
+        <DropdownMenu.SubContent>
           {/* Search Input */}
           <div className="flex items-center gap-2 px-2 py-1.5 mb-1 border-b border-border">
             <Search
@@ -134,7 +130,7 @@ export function FilterValueSubmenu({
           {/* Clear All Button */}
           {selectedValues.length > 0 && (
             <DropdownMenu.Item
-              className="flex items-center gap-2 px-2 py-1.5 text-sm outline-none cursor-pointer hover:bg-accent rounded-sm text-muted-foreground"
+              className="text-muted-foreground"
               onSelect={handleClearAll}
             >
               Clear all ({selectedValues.length})
@@ -167,7 +163,6 @@ export function FilterValueSubmenu({
                     key={item.value}
                     checked={isChecked}
                     onCheckedChange={() => handleToggle(item.value)}
-                    className="flex items-center gap-2 px-2 py-1.5 text-sm outline-none cursor-pointer hover:bg-accent rounded-sm"
                     onSelect={(e) => e.preventDefault()} // Prevent menu from closing
                   >
                     {/* Checkbox */}

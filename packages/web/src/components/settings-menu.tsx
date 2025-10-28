@@ -11,8 +11,8 @@
  * - Destructive actions clearly marked
  */
 
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Settings } from "lucide-react";
+import * as DropdownMenu from "./ui/dropdown-menu";
 
 interface SettingsMenuProps {
   onClearSessions: () => void;
@@ -36,15 +36,11 @@ export function SettingsMenu({
       </DropdownMenu.Trigger>
 
       <DropdownMenu.Portal>
-        <DropdownMenu.Content
-          align="end"
-          sideOffset={5}
-          className="min-w-[200px] rounded-md border border-border bg-popover p-1 shadow-lg"
-        >
+        <DropdownMenu.Content align="end">
           <DropdownMenu.Item
             onSelect={onClearSessions}
             disabled={isClearing}
-            className="flex items-center px-2 py-1.5 text-sm outline-none cursor-pointer hover:bg-accent rounded-sm text-destructive focus:text-destructive focus:bg-accent disabled:pointer-events-none disabled:opacity-50"
+            className="text-destructive focus:text-destructive"
           >
             {isClearing ? "Clearing..." : "Clear Sessions..."}
           </DropdownMenu.Item>

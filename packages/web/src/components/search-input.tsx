@@ -14,8 +14,10 @@
  * - Screen reader friendly with ARIA labels
  */
 
-import { Search, X } from "lucide-react";
+import { Search } from "lucide-react";
 import { useDeferredValue, useEffect, useId, useRef, useState } from "react";
+import { ClearButton } from "./ui/clear-button";
+import { InputWithIcon } from "./ui/input-with-icon";
 
 interface SearchInputProps {
   /**
@@ -91,37 +93,26 @@ export function SearchInput({
   const hasValue = localValue.trim().length > 0;
 
   return (
-    <div className={`relative flex items-center ${className || ""}`}>
-      {/* Search icon */}
-      <Search
-        className="absolute left-3 size-4 text-muted-foreground pointer-events-none"
-        aria-hidden="true"
-      />
-
-      {/* Input field */}
-      <input
-        ref={inputRef}
-        id={inputId}
-        type="text"
-        value={localValue}
-        onChange={(e) => setLocalValue(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-        className="h-9 w-full pl-9 pr-9 rounded-md border border-input bg-background text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:border-ring transition-colors"
-        aria-label="Search logs"
-      />
-
-      {/* Clear button (only shown when input has value) */}
-      {hasValue && (
-        <button
-          type="button"
-          onClick={handleClear}
-          className="absolute right-2 inline-flex items-center justify-center rounded-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 p-0.5 transition-colors cursor-pointer"
-          aria-label="Clear search"
-        >
-          <X className="size-4" aria-hidden="true" />
-        </button>
-      )}
-    </div>
+    <InputWithIcon
+      ref={inputRef}
+      id={inputId}
+      type="text"
+      value={localValue}
+      onChange={(e) => setLocalValue(e.target.value)}
+      onKeyDown={handleKeyDown}
+      placeholder={placeholder}
+      aria-label="Search logs"
+      leftIcon={Search}
+      rightAction={
+        hasValue ? (
+          <ClearButton
+            size="icon-sm"
+            onClear={handleClear}
+            aria-label="Clear search"
+          />
+        ) : null
+      }
+      containerClassName={className}
+    />
   );
 }

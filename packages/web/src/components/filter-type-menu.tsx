@@ -16,7 +16,6 @@
  * - Screen reader friendly
  */
 
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
@@ -27,6 +26,7 @@ import {
 } from "../lib/use-available-filters";
 import { FilterValueSubmenu } from "./filter-value-submenu";
 import { Button } from "./ui/button";
+import * as DropdownMenu from "./ui/dropdown-menu";
 
 interface FilterTypeMenuProps {
   /**
@@ -134,11 +134,7 @@ export function FilterTypeMenu({
       </DropdownMenu.Trigger>
 
       <DropdownMenu.Portal>
-        <DropdownMenu.Content
-          className="min-w-[200px] rounded-md border border-border bg-popover p-1 shadow-lg"
-          sideOffset={5}
-          align="start"
-        >
+        <DropdownMenu.Content align="start">
           {/* Method Filter */}
           <FilterValueSubmenu
             label="Method"

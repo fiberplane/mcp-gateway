@@ -12,6 +12,8 @@
  * - Tooltip for discoverability
  */
 
+import { StatusDot } from "./ui/status-dot";
+
 interface StreamingBadgeProps {
   isStreaming: boolean;
   onToggle: (enabled: boolean) => void;
@@ -31,11 +33,9 @@ export function StreamingBadge({ isStreaming, onToggle }: StreamingBadgeProps) {
       className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-border transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer"
     >
       {/* Status indicator dot */}
-      <span
-        className={`w-2 h-2 rounded-full ${
-          isStreaming ? "bg-status-success animate-pulse" : "bg-status-neutral"
-        }`}
-        aria-hidden="true"
+      <StatusDot
+        variant={isStreaming ? "success" : "neutral"}
+        animate={isStreaming}
       />
 
       {/* Status text with clarifying subtext */}

@@ -2,6 +2,7 @@ import type { ServerStatus } from "@fiberplane/mcp-gateway-types";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef } from "react";
 import { api } from "../lib/api";
+import { StatusDot } from "./ui/status-dot";
 
 interface ServerTabsProps {
   value?: string;
@@ -9,16 +10,18 @@ interface ServerTabsProps {
   panelId: string;
 }
 
-function getStatusColor(status: ServerStatus): string {
+function getStatusVariant(
+  status: ServerStatus,
+): "success" | "error" | "neutral" {
   switch (status) {
     case "online":
-      return "bg-status-success";
+      return "success";
     case "offline":
-      return "bg-status-error";
+      return "error";
     case "not-found":
-      return "bg-status-neutral";
+      return "neutral";
     default:
-      return "bg-status-neutral";
+      return "neutral";
   }
 }
 
@@ -198,11 +201,10 @@ export function ServerTabs({ value, onChange, panelId }: ServerTabsProps) {
             panelId={panelId}
             onClick={() => onChange(server.name)}
           >
-            <span
-              className={`w-2 h-2 rounded-full ${getStatusColor(server.status)}`}
-              aria-hidden="true"
+            <StatusDot
+              variant={getStatusVariant(server.status)}
+              aria-label={server.status}
             />
-            <span className="sr-only">{server.status}</span>
             <span className={getTextColor(server.status, isSelected)}>
               {server.name}
               {server.logCount > 0 && ` (${server.logCount})`}
