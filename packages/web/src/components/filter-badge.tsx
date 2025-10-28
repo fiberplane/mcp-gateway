@@ -66,35 +66,35 @@ function getFilterIcon(field: Filter["field"]) {
 // Format value with units if needed
 // Handles both single values and arrays with truncation
 function formatValue(filter: Filter): string {
+  const formatSingleValue = (value: string | number): string => {
+    if (typeof value === "number") {
+      return filter.field === "duration" ? `${value}ms` : String(value);
+    }
+    return value;
+  };
+
   // Handle array values
   if (Array.isArray(filter.value)) {
     const values = filter.value;
 
     // Truncate long arrays to first 2 items + count
     if (values.length > 2) {
-      const displayValues = values.slice(0, 2);
+      const displayValues = values
+        .slice(0, 2)
+        .map((v) => formatSingleValue(v as string | number));
       const remainingCount = values.length - 2;
-
-      if (filter.field === "duration" || filter.field === "tokens") {
-        const formatted = displayValues.map((v) => `${v}ms`).join(", ");
-        return `${formatted} +${remainingCount} more`;
-      }
 
       return `${displayValues.join(", ")} +${remainingCount} more`;
     }
 
     // Show all items for arrays with 2 or fewer items
-    if (filter.field === "duration" || filter.field === "tokens") {
-      return values.map((v) => `${v}ms`).join(", ");
-    }
-    return values.join(", ");
+    return values
+      .map((v) => formatSingleValue(v as string | number))
+      .join(", ");
   }
 
   // Handle single values
-  if (filter.field === "duration" || filter.field === "tokens") {
-    return `${filter.value}ms`;
-  }
-  return String(filter.value);
+  return formatSingleValue(filter.value as string | number);
 }
 
 export function FilterBadge({ filter, onRemove }: FilterBadgeProps) {

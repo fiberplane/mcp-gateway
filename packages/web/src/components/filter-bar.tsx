@@ -76,14 +76,15 @@ export function FilterBar({ onChange, actions }: FilterBarProps) {
   }, [onChange]);
 
   // Track previous filter state to prevent unnecessary updates
-  const prevFilterStateRef = useRef<FilterState>(filterState);
+  const prevFilterStateRef = useRef<FilterState | null>(null);
 
   // Sync URL when filter state changes
   useEffect(() => {
     // Deep comparison to prevent unnecessary updates
+    const previous = prevFilterStateRef.current;
     const hasChanged =
-      JSON.stringify(prevFilterStateRef.current) !==
-      JSON.stringify(filterState);
+      previous === null ||
+      JSON.stringify(previous) !== JSON.stringify(filterState);
 
     if (hasChanged) {
       const params = serializeFilterStateToUrl(filterState);

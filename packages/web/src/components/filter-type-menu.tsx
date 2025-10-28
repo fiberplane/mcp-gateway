@@ -18,7 +18,7 @@
 
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Plus } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   useAvailableClients,
   useAvailableMethods,
@@ -67,14 +67,49 @@ export function FilterTypeMenu({
       count: m.logCount,
     })) ?? [];
 
-  const clientValues =
-    clientsQuery.data?.clients.map((c) => ({
-      value: c.clientName,
-      label: c.clientVersion
-        ? `${c.clientName} (${c.clientVersion})`
-        : c.clientName,
-      count: c.logCount,
-    })) ?? [];
+  const clientValues = useMemo(() => {
+    const clients = clientsQuery.data?.clients ?? [];
+    const aggregated = new Map<
+      string,
+      { count: number; versions: Set<string> }
+    >();
+
+    for (const client of clients) {
+      const existing = aggregated.get(client.clientName);
+      const version = client.clientVersion?.trim();
+      if (existing) {
+        existing.count += client.logCount;
+        if (version) {
+          existing.versions.add(version);
+        }
+      } else {
+        const versions = new Set<string>();
+        if (version) {
+          versions.add(version);
+        }
+        aggregated.set(client.clientName, {
+          count: client.logCount,
+          versions,
+        });
+      }
+    }
+
+    return Array.from(aggregated.entries())
+      .map(([name, { count, versions }]) => {
+        let label = name;
+        if (versions.size === 1) {
+          label = `${name} (${Array.from(versions)[0]})`;
+        } else if (versions.size > 1) {
+          label = `${name} (${versions.size} versions)`;
+        }
+        return {
+          value: name,
+          label,
+          count,
+        };
+      })
+      .sort((a, b) => a.value.localeCompare(b.value));
+  }, [clientsQuery.data?.clients]);
 
   const serverValues =
     serversQuery.data?.servers.map((s) => ({
