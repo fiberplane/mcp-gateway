@@ -2,16 +2,12 @@
  * FilterValueSubmenu Component
  *
  * Reusable submenu for selecting filter values with checkboxes.
- * Used by FilterTypeMenu for Method, Client, Server, and Session filters.
  *
  * Features:
  * - Multi-select with checkboxes
  * - Search/filter input
- * - Loading states
- * - Value counts (e.g., "tools/call (42)")
+ * - Value counts
  * - Optional color badges for methods
- * - Keyboard accessible
- * - Screen reader friendly
  */
 
 import { ChevronRight, Search } from "lucide-react";

@@ -2,13 +2,6 @@
  * InfoCard Component
  *
  * Displays a label-value pair with consistent styling.
- * Used for metadata display in log details and other information panels.
- *
- * Features:
- * - Uppercase label with muted styling
- * - Value with foreground color
- * - Optional code variant for monospace values
- * - Word-break handling for long values
  *
  * @example
  * ```tsx

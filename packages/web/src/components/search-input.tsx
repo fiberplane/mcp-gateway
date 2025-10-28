@@ -1,17 +1,12 @@
 /**
  * SearchInput Component
  *
- * Global search input for filtering logs by content (method names, parameters, etc.)
- *
- * Design Reference: https://www.figma.com/design/sVRANvfGiWr6CJhpXCI02W/MCP-gateway---playground?node-id=216-2812
+ * Global search input for filtering logs by content.
  *
  * Features:
- * - Debounced input using useDeferredValue (React 19)
- * - Search icon
- * - Clear button (X) when input has value
+ * - Debounced input using useDeferredValue
+ * - Clear button when input has value
  * - Keyboard hint showing "Escape" to clear
- * - Updates URL params
- * - Keyboard accessible (Escape to clear)
  * - Screen reader friendly with ARIA labels
  */
 

@@ -2,13 +2,6 @@
  * SettingsMenu Component
  *
  * Dropdown menu for application settings and administrative actions.
- * Currently contains:
- * - Clear Sessions (destructive action)
- *
- * Features:
- * - Keyboard accessible
- * - Proper ARIA labels
- * - Destructive actions clearly marked
  */
 
 import { Settings } from "lucide-react";

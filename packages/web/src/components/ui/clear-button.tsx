@@ -1,15 +1,7 @@
 /**
  * ClearButton Component
  *
- * Specialized button for clear/remove actions with consistent styling.
- * Built on top of IconButton with X icon and ghost variant.
- *
- * Features:
- * - Consistent X icon
- * - Ghost/transparent styling
- * - Hover states
- * - Focus rings
- * - Type-safe with required aria-label
+ * Specialized button for clear/remove actions.
  *
  * @example
  * ```tsx

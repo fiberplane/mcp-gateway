@@ -1,14 +1,7 @@
 /**
  * EmptyState Component
  *
- * Displays a centered message for empty states (no data, no results, etc.)
- * with optional icon and action button.
- *
- * Features:
- * - Centered layout with muted text
- * - Optional icon (from lucide-react)
- * - Optional action button
- * - Consistent padding
+ * Displays a centered message for empty states with optional icon and action.
  *
  * @example
  * ```tsx
@@ -16,7 +9,7 @@
  * <EmptyState
  *   icon={Search}
  *   message="No results found"
- *   action={<Button onClick={clearFilters}>Clear filters</Button>}
+ *   action={<Button>Clear filters</Button>}
  * />
  * ```
  */

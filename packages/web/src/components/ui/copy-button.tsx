@@ -2,13 +2,6 @@
  * CopyButton Component
  *
  * Button that copies content to clipboard with visual feedback.
- * Shows "Copy" → "Copied" transition with icon change.
- *
- * Features:
- * - Automatic clipboard copying
- * - Visual feedback (icon + text transition)
- * - Success state with timeout
- * - Accessible with proper ARIA labels
  *
  * @example
  * ```tsx
@@ -66,13 +59,11 @@ const CopyButton = React.forwardRef<HTMLButtonElement, CopyButtonProps>(
         setCopied(true);
         onCopy?.();
 
-        // Reset after timeout
         setTimeout(() => {
           setCopied(false);
         }, successDuration);
       } catch {
         // Silently fail - clipboard access may be denied
-        // Component will show "Copy" state indicating no action was taken
       }
     };
 

@@ -3,16 +3,11 @@
  *
  * Displays an active filter as a badge with a remove button.
  *
- * Design Reference: https://www.figma.com/design/sVRANvfGiWr6CJhpXCI02W/MCP-gateway---playground?node-id=216-2813
- *
  * Features:
- * - Shows field name, operator, and value separately
- * - Method filter values have purple badge background
- * - Other filter values are plain text (monospace)
+ * - Shows field name, operator, and value
+ * - Method filters have colored pill badges
  * - Icons for different filter types
- * - Remove button (X)
- * - Keyboard accessible (Tab + Enter)
- * - Screen reader friendly with ARIA labels
+ * - Remove button
  */
 
 import type { Filter } from "@fiberplane/mcp-gateway-types";

@@ -1,14 +1,7 @@
 /**
  * StatusDot Component
  *
- * Small colored dot for indicating status (online, offline, success, error, etc.)
- * Provides consistent sizing, colors, and animation behavior.
- *
- * Features:
- * - Predefined status variants with semantic colors
- * - Optional pulse animation
- * - Consistent sizing (w-2 h-2)
- * - Screen reader support
+ * Small colored dot for indicating status with optional pulse animation.
  *
  * @example
  * ```tsx
@@ -59,8 +52,6 @@ export interface StatusDotProps
  */
 const StatusDot = React.forwardRef<HTMLSpanElement, StatusDotProps>(
   ({ className, variant, animate, "aria-label": ariaLabel, ...props }, ref) => {
-    // When aria-label is provided, use div with role="img" for accessibility
-    // Otherwise, use span with aria-hidden
     if (ariaLabel) {
       return (
         <div

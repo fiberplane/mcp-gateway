@@ -2,15 +2,6 @@
  * InputWithIcon Component
  *
  * Input field with optional left icon and right action slot.
- * Handles proper spacing and positioning automatically.
- *
- * Features:
- * - Left icon support (search, filter, etc.)
- * - Right action slot (clear button, etc.)
- * - Automatic padding adjustments
- * - Focus states
- * - Placeholder styling
- * - Type-safe with proper TypeScript interfaces
  *
  * @example
  * ```tsx
@@ -18,8 +9,6 @@
  *   leftIcon={Search}
  *   rightAction={<ClearButton onClear={() => {}} aria-label="Clear" />}
  *   placeholder="Search..."
- *   value={value}
- *   onChange={onChange}
  * />
  * ```
  */
@@ -72,7 +61,6 @@ const InputWithIcon = React.forwardRef<HTMLInputElement, InputWithIconProps>(
   ) => {
     return (
       <div className={cn("relative flex items-center", containerClassName)}>
-        {/* Left Icon */}
         {LeftIcon && (
           <LeftIcon
             className="absolute left-3 size-4 text-muted-foreground pointer-events-none"
@@ -80,7 +68,6 @@ const InputWithIcon = React.forwardRef<HTMLInputElement, InputWithIconProps>(
           />
         )}
 
-        {/* Input Field */}
         <input
           ref={ref}
           className={cn(
@@ -95,7 +82,6 @@ const InputWithIcon = React.forwardRef<HTMLInputElement, InputWithIconProps>(
           {...inputProps}
         />
 
-        {/* Right Action Slot */}
         {rightAction && <div className="absolute right-2">{rightAction}</div>}
       </div>
     );

@@ -1,15 +1,8 @@
 /**
  * StreamingBadge Component
  *
- * Compact badge showing streaming status with click-to-toggle behavior.
- * Displays "Live" with animated pulse when streaming is active,
- * or "Paused" when streaming is disabled.
- *
- * Features:
- * - Visual status indicator with animated pulse
- * - Click to toggle streaming on/off
- * - Accessible as a switch control
- * - Tooltip for discoverability
+ * Displays streaming status with click-to-toggle behavior.
+ * Shows "Live" with animated pulse when active, or "Paused" when disabled.
  */
 
 import { StatusDot } from "./ui/status-dot";

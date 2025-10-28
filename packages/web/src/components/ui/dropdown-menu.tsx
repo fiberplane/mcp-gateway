@@ -1,15 +1,7 @@
 /**
  * DropdownMenu UI Component
  *
- * Styled wrapper around Radix UI DropdownMenu with consistent design system styling.
- * Provides a compound component API for building dropdown menus with items, checkboxes, and submenus.
- *
- * Features:
- * - Consistent styling across all dropdown menus
- * - Support for items, checkbox items, and nested submenus
- * - Keyboard accessible
- * - Screen reader friendly
- * - Follows Radix UI composition patterns
+ * Styled wrapper around Radix UI DropdownMenu with consistent styling.
  *
  * @example
  * ```tsx
@@ -17,15 +9,8 @@
  *   <DropdownMenu.Trigger>Open</DropdownMenu.Trigger>
  *   <DropdownMenu.Portal>
  *     <DropdownMenu.Content>
- *       <DropdownMenu.Item onSelect={() => {}}>Action</DropdownMenu.Item>
- *       <DropdownMenu.Separator />
+ *       <DropdownMenu.Item>Action</DropdownMenu.Item>
  *       <DropdownMenu.CheckboxItem checked={true}>Option</DropdownMenu.CheckboxItem>
- *       <DropdownMenu.Sub>
- *         <DropdownMenu.SubTrigger>More</DropdownMenu.SubTrigger>
- *         <DropdownMenu.SubContent>
- *           <DropdownMenu.Item>Nested item</DropdownMenu.Item>
- *         </DropdownMenu.SubContent>
- *       </DropdownMenu.Sub>
  *     </DropdownMenu.Content>
  *   </DropdownMenu.Portal>
  * </DropdownMenu.Root>
@@ -37,15 +22,10 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-// Re-export Root and Portal as-is
 const Root = RadixDropdownMenu.Root;
 const Portal = RadixDropdownMenu.Portal;
 const Sub = RadixDropdownMenu.Sub;
-
-// Trigger - typically a button, no default styling
 const Trigger = RadixDropdownMenu.Trigger;
-
-// Content - main dropdown container
 const Content = React.forwardRef<
   React.ElementRef<typeof RadixDropdownMenu.Content>,
   React.ComponentPropsWithoutRef<typeof RadixDropdownMenu.Content>
@@ -66,8 +46,6 @@ const Content = React.forwardRef<
   />
 ));
 Content.displayName = "DropdownMenuContent";
-
-// SubContent - submenu container
 const SubContent = React.forwardRef<
   React.ElementRef<typeof RadixDropdownMenu.SubContent>,
   React.ComponentPropsWithoutRef<typeof RadixDropdownMenu.SubContent>
@@ -89,8 +67,6 @@ const SubContent = React.forwardRef<
   />
 ));
 SubContent.displayName = "DropdownMenuSubContent";
-
-// Item - clickable menu item
 const Item = React.forwardRef<
   React.ElementRef<typeof RadixDropdownMenu.Item>,
   React.ComponentPropsWithoutRef<typeof RadixDropdownMenu.Item>
@@ -108,8 +84,6 @@ const Item = React.forwardRef<
   />
 ));
 Item.displayName = "DropdownMenuItem";
-
-// CheckboxItem - item with checkbox
 const CheckboxItem = React.forwardRef<
   React.ElementRef<typeof RadixDropdownMenu.CheckboxItem>,
   React.ComponentPropsWithoutRef<typeof RadixDropdownMenu.CheckboxItem>
@@ -127,8 +101,6 @@ const CheckboxItem = React.forwardRef<
   />
 ));
 CheckboxItem.displayName = "DropdownMenuCheckboxItem";
-
-// SubTrigger - opens a submenu
 const SubTrigger = React.forwardRef<
   React.ElementRef<typeof RadixDropdownMenu.SubTrigger>,
   React.ComponentPropsWithoutRef<typeof RadixDropdownMenu.SubTrigger>
@@ -147,8 +119,6 @@ const SubTrigger = React.forwardRef<
   />
 ));
 SubTrigger.displayName = "DropdownMenuSubTrigger";
-
-// Separator - visual divider
 const Separator = React.forwardRef<
   React.ElementRef<typeof RadixDropdownMenu.Separator>,
   React.ComponentPropsWithoutRef<typeof RadixDropdownMenu.Separator>
@@ -160,8 +130,6 @@ const Separator = React.forwardRef<
   />
 ));
 Separator.displayName = "DropdownMenuSeparator";
-
-// Export all components
 export {
   Root,
   Trigger,

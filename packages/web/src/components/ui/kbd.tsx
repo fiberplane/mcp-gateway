@@ -2,14 +2,6 @@
  * Kbd Component
  *
  * Displays keyboard keys or shortcuts with consistent styling.
- * Used for keyboard hints and documentation.
- *
- * Features:
- * - Styled keyboard key representation
- * - Monospace font
- * - Subtle border and background
- * - Inline display
- * - Proper semantic markup with <kbd> element
  *
  * @example
  * ```tsx

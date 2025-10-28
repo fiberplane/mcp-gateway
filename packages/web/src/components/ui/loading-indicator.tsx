@@ -2,13 +2,6 @@
  * LoadingIndicator Component
  *
  * Simple loading indicator with customizable message and layout.
- * Provides consistent styling for loading states across the application.
- *
- * Features:
- * - Customizable message
- * - Size variants (sm, md, lg)
- * - Inline or block layout
- * - Muted text styling
  *
  * @example
  * ```tsx
@@ -61,7 +54,7 @@ const LoadingIndicator = React.forwardRef<
   LoadingIndicatorProps
 >(({ className, size, inline, message = "Loading...", ...props }, ref) => {
   return (
-    // biome-ignore lint/a11y/useSemanticElements: div with role="status" is semantically correct for loading states
+    // biome-ignore lint/a11y/useSemanticElements: role="status" is semantically correct for loading states
     <div
       ref={ref}
       className={cn(

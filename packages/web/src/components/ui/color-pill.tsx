@@ -2,20 +2,11 @@
  * ColorPill Component
  *
  * Pill-shaped badge with dynamic background color.
- * Used for method names, tags, and other color-coded content.
- *
- * Features:
- * - Dynamic background color via CSS variable or hex
- * - Consistent padding and border radius
- * - Optional icon support
- * - Monospace text for code-like content
  *
  * @example
  * ```tsx
  * <ColorPill color="#ff6b6b">GET</ColorPill>
- * <ColorPill color={getMethodColor("tools/call")}>
- *   tools/call
- * </ColorPill>
+ * <ColorPill color={getMethodColor("tools/call")}>tools/call</ColorPill>
  * ```
  */
 

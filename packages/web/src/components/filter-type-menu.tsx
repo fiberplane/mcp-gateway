@@ -4,16 +4,10 @@
  * Main cascading menu for adding filters.
  * Provides submenus for Method, Session, Client, and Server filters.
  *
- * Design Reference: https://www.figma.com/design/sVRANvfGiWr6CJhpXCI02W/MCP-gateway---playground?node-id=216-3266
- *
  * Features:
- * - Cascading menu with Radix Dropdown Menu
- * - Data-driven submenus using TanStack Query hooks
- * - Multi-select support (checkboxes)
- * - Search/filter within submenus
- * - Immediate apply (filters update as you select)
- * - Keyboard accessible
- * - Screen reader friendly
+ * - Data-driven submenus using TanStack Query
+ * - Multi-select support with immediate apply
+ * - Search within submenus
  */
 
 import { Plus } from "lucide-react";
