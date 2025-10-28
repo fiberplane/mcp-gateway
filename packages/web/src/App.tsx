@@ -180,62 +180,58 @@ function App() {
             <div
               id="logs-panel"
               role="tabpanel"
-              className="bg-card rounded-lg border border-border overflow-hidden"
+              className="bg-card rounded-lg border border-border overflow-hidden p-4 gap-6 grid"
             >
               {/* Filter Bar - Phase 1-2 with two-row layout */}
-              <div className="px-6 py-4 border-b border-border">
-                <ErrorBoundary
-                  fallback={(error) => (
-                    <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive">
-                      <p className="font-medium">Filter system unavailable</p>
-                      <p className="text-sm mt-1">
-                        Please refresh the page to try again.
-                      </p>
-                      {import.meta.env.DEV && (
-                        <details className="mt-2 text-xs">
-                          <summary className="cursor-pointer">
-                            Error details
-                          </summary>
-                          <pre className="mt-1 overflow-auto">
-                            {error.message}
-                          </pre>
-                        </details>
-                      )}
-                    </div>
-                  )}
-                >
-                  <FilterBar
-                    onChange={handleFilterChange}
-                    actions={
-                      <>
-                        <StreamingBadge
-                          isStreaming={isStreaming}
-                          onToggle={handleStreamingToggle}
-                        />
-                        <SettingsMenu
-                          onClearSessions={handleClearSessions}
-                          isClearing={isClearing}
-                        />
-                        <ExportButton
-                          logs={deferredFilteredLogs}
-                          selectedIds={selectedIds}
-                          getLogKey={getLogKey}
-                        />
-                      </>
-                    }
-                  />
-                </ErrorBoundary>
-              </div>
+              <ErrorBoundary
+                fallback={(error) => (
+                  <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive">
+                    <p className="font-medium">Filter system unavailable</p>
+                    <p className="text-sm mt-1">
+                      Please refresh the page to try again.
+                    </p>
+                    {import.meta.env.DEV && (
+                      <details className="mt-2 text-xs">
+                        <summary className="cursor-pointer">
+                          Error details
+                        </summary>
+                        <pre className="mt-1 overflow-auto">
+                          {error.message}
+                        </pre>
+                      </details>
+                    )}
+                  </div>
+                )}
+              >
+                <FilterBar
+                  onChange={handleFilterChange}
+                  actions={
+                    <>
+                      <StreamingBadge
+                        isStreaming={isStreaming}
+                        onToggle={handleStreamingToggle}
+                      />
+                      <SettingsMenu
+                        onClearSessions={handleClearSessions}
+                        isClearing={isClearing}
+                      />
+                      <ExportButton
+                        logs={deferredFilteredLogs}
+                        selectedIds={selectedIds}
+                        getLogKey={getLogKey}
+                      />
+                    </>
+                  }
+                />
+              </ErrorBoundary>
 
               {/* Log Table */}
-              <div className="overflow-auto max-h-[calc(100vh-20rem)]">
-                <LogTable
-                  logs={deferredFilteredLogs}
-                  selectedIds={selectedIds}
-                  onSelectionChange={setSelectedIds}
-                  timeGrouping={timeGrouping}
-                />
-              </div>
+              <LogTable
+                logs={deferredFilteredLogs}
+                selectedIds={selectedIds}
+                onSelectionChange={setSelectedIds}
+                timeGrouping={timeGrouping}
+              />
             </div>
 
             {/* Load More button at bottom */}

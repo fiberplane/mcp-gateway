@@ -110,9 +110,11 @@ const COLUMNS: Column[] = [
     sortField: "client",
     cell: (log) =>
       log.metadata.client ? (
-        <div className="flex flex-col">
-          <span className="font-medium">{log.metadata.client.name}</span>
-          <span className="text-xs text-muted-foreground">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-1">
+          <span className="font-medium truncate">
+            {log.metadata.client.name}
+          </span>
+          <span className="text-muted-foreground">
             {log.metadata.client.version}
           </span>
         </div>
@@ -147,9 +149,11 @@ const COLUMNS: Column[] = [
     isVisible: (logs) => logs.some((log) => log.metadata.server),
     cell: (log) =>
       log.metadata.server ? (
-        <div className="flex flex-col">
-          <span className="font-medium">{log.metadata.server.name}</span>
-          <span className="text-xs text-muted-foreground">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-1">
+          <span className="font-medium truncate">
+            {log.metadata.server.name}
+          </span>
+          <span className="text-medium text-muted-foreground">
             {log.metadata.server.version}
           </span>
         </div>
@@ -333,7 +337,7 @@ export function LogTable({
     <table className="w-full border-collapse">
       <thead className="border-b border-border">
         <tr>
-          <th className="w-12 p-3">
+          <th className="w-12 h-8">
             <Checkbox
               checked={allSelected}
               onCheckedChange={handleSelectAll}
@@ -343,7 +347,7 @@ export function LogTable({
           {visibleColumns.map((column) => (
             <th
               key={column.id}
-              className="text-left p-3 text-sm font-semibold text-foreground"
+              className="text-left h-8 px-2 text-sm font-semibold text-foreground"
             >
               {column.sortField ? (
                 <SortHeader
@@ -376,7 +380,7 @@ export function LogTable({
               >
                 <td
                   colSpan={visibleColumns.length + 1}
-                  className="p-3 text-sm font-semibold text-muted-foreground text-center"
+                  className="h-8 text-sm font-semibold text-muted-foreground text-center"
                 >
                   {item.label}
                 </td>
@@ -410,7 +414,7 @@ export function LogTable({
                   // biome-ignore lint/a11y/useKeyWithClickEvents: Table row click for expand/collapse, keyboard nav to be added
                   <td
                     key={column.id}
-                    className="p-3 cursor-pointer"
+                    className="p-2 cursor-pointer"
                     onClick={() => handleRowClick(log)}
                   >
                     {column.cell(log)}
