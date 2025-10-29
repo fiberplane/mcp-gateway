@@ -65,9 +65,7 @@ This is a Bun workspace monorepo containing the MCP Gateway project. The reposit
 │   │   ├── package.json         # Wrapper package with optionalDeps
 │   │   └── postinstall.mjs      # Platform detection & binary setup
 │   ├── mcp-gateway-darwin-arm64/  # Binary package for macOS ARM64
-│   ├── mcp-gateway-darwin-x64/    # Binary package for macOS x64
 │   ├── mcp-gateway-linux-x64/     # Binary package for Linux x64
-│   └── mcp-gateway-windows-x64/   # Binary package for Windows x64
 ├── test-mcp-server/             # Test MCP server for validation
 │   ├── *.ts                     # Test server configurations
 │   └── package.json             # Test server dependencies
@@ -120,7 +118,7 @@ This is a Bun workspace monorepo containing the MCP Gateway project. The reposit
   - `@fiberplane/mcp-gateway-web` - React-based web UI for browsing logs (relies on the REST API)
   - `@fiberplane/mcp-gateway-cli` (private) - CLI orchestrator (mounts server + API + web UI + TUI)
   - `@fiberplane/mcp-gateway` (public) - Wrapper package for binary distribution
-  - `@fiberplane/mcp-gateway-*` (4 platform packages) - Compiled binaries for darwin-arm64, darwin-x64, linux-x64, windows-x64
+  - `@fiberplane/mcp-gateway-*` (4 platform packages) - Compiled binaries for darwin-arm64, linux-x64
 - Use `--filter` flags for package-specific operations
 - Test MCP server is a separate workspace for testing proxy functionality
 - **Binary Distribution**: CLI is distributed as platform-specific compiled binaries, not source code

@@ -4,9 +4,11 @@
  */
 
 import { ChevronRight, Search } from "lucide-react";
+import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { getMethodColor } from "../lib/method-colors";
 import { Checkbox } from "./ui/checkbox";
+import { ColorPill } from "./ui/color-pill";
 import * as DropdownMenu from "./ui/dropdown-menu";
 import { EmptyState } from "./ui/empty-state";
 import { LoadingIndicator } from "./ui/loading-indicator";
@@ -21,6 +23,11 @@ interface FilterValueSubmenuProps {
    * Filter type label (e.g., "Method", "Client")
    */
   label: string;
+
+  /**
+   * Optional icon to display before label
+   */
+  icon?: ReactNode;
 
   /**
    * Available values to select from
@@ -43,9 +50,9 @@ interface FilterValueSubmenuProps {
   isLoading?: boolean;
 
   /**
-   * Whether to show color badges (for methods)
+   * Whether to show color pills (for methods)
    */
-  showColorBadges?: boolean;
+  showColorPills?: boolean;
 
   /**
    * Placeholder for search input
@@ -55,11 +62,12 @@ interface FilterValueSubmenuProps {
 
 export function FilterValueSubmenu({
   label,
+  icon,
   values,
   selectedValues,
   onSelectionChange,
   isLoading = false,
-  showColorBadges = false,
+  showColorPills = false,
   searchPlaceholder = "Search...",
 }: FilterValueSubmenuProps) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -95,8 +103,12 @@ export function FilterValueSubmenu({
   return (
     <DropdownMenu.Sub>
       <DropdownMenu.SubTrigger>
+        {icon}
         <span>{label}</span>
-        <ChevronRight className="size-4 ml-auto" aria-hidden="true" />
+        <ChevronRight
+          className="size-4 ml-auto text-muted-foreground"
+          aria-hidden="true"
+        />
       </DropdownMenu.SubTrigger>
 
       <DropdownMenu.Portal>
@@ -155,17 +167,15 @@ export function FilterValueSubmenu({
                     {/* Checkbox */}
                     <Checkbox checked={isChecked} />
 
-                    {/* Color Badge (for methods) */}
-                    {showColorBadges && (
-                      <span
-                        className="size-3 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: getMethodColor(item.value) }}
-                        aria-hidden="true"
-                      />
+                    {/* Color Pill (for methods) */}
+                    {showColorPills ? (
+                      <ColorPill color={getMethodColor(item.value)}>
+                        {item.value}
+                      </ColorPill>
+                    ) : (
+                      /* Label */
+                      <span className="flex-1 truncate">{displayLabel}</span>
                     )}
-
-                    {/* Label */}
-                    <span className="flex-1 truncate">{displayLabel}</span>
                   </DropdownMenu.CheckboxItem>
                 );
               })}

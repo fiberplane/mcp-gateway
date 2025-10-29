@@ -14,6 +14,7 @@ import {
 import { FilterValueSubmenu } from "./filter-value-submenu";
 import { Button } from "./ui/button";
 import * as DropdownMenu from "./ui/dropdown-menu";
+import { CategoryIcon } from "./ui/field-icons";
 
 interface FilterTypeMenuProps {
   /**
@@ -111,20 +112,38 @@ export function FilterTypeMenu({
 
       <DropdownMenu.Portal>
         <DropdownMenu.Content align="start">
+          {/* Filter by label */}
+          <DropdownMenu.Label>Filter by</DropdownMenu.Label>
+          <DropdownMenu.Separator />
+
           {/* Method Filter */}
           <FilterValueSubmenu
             label="Method"
+            icon={
+              <CategoryIcon
+                category="method"
+                className="size-4"
+                aria-hidden="true"
+              />
+            }
             values={methodValues}
             selectedValues={activeFilters.method ?? []}
             onSelectionChange={(values) => onApply("method", values)}
             isLoading={methodsQuery.isLoading}
-            showColorBadges={true}
+            showColorPills={true}
             searchPlaceholder="Search methods..."
           />
 
           {/* Session Filter */}
           <FilterValueSubmenu
             label="Session"
+            icon={
+              <CategoryIcon
+                category="session"
+                className="size-4"
+                aria-hidden="true"
+              />
+            }
             values={sessionValues}
             selectedValues={activeFilters.session ?? []}
             onSelectionChange={(values) => onApply("session", values)}
@@ -135,6 +154,13 @@ export function FilterTypeMenu({
           {/* Client Filter */}
           <FilterValueSubmenu
             label="Client"
+            icon={
+              <CategoryIcon
+                category="client"
+                className="size-4"
+                aria-hidden="true"
+              />
+            }
             values={clientValues}
             selectedValues={activeFilters.client ?? []}
             onSelectionChange={(values) => onApply("client", values)}
@@ -145,6 +171,13 @@ export function FilterTypeMenu({
           {/* Server Filter */}
           <FilterValueSubmenu
             label="Server"
+            icon={
+              <CategoryIcon
+                category="server"
+                className="size-4"
+                aria-hidden="true"
+              />
+            }
             values={serverValues}
             selectedValues={activeFilters.server ?? []}
             onSelectionChange={(values) => onApply("server", values)}

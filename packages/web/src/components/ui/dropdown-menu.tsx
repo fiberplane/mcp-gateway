@@ -130,6 +130,20 @@ const Separator = React.forwardRef<
   />
 ));
 Separator.displayName = "DropdownMenuSeparator";
+const Label = React.forwardRef<
+  React.ElementRef<typeof RadixDropdownMenu.Label>,
+  React.ComponentPropsWithoutRef<typeof RadixDropdownMenu.Label>
+>(({ className, ...props }, ref) => (
+  <RadixDropdownMenu.Label
+    ref={ref}
+    className={cn(
+      "px-2 py-1.5 text-sm font-semibold text-foreground",
+      className,
+    )}
+    {...props}
+  />
+));
+Label.displayName = "DropdownMenuLabel";
 export {
   Root,
   Trigger,
@@ -138,6 +152,7 @@ export {
   Item,
   CheckboxItem,
   Separator,
+  Label,
   Sub,
   SubTrigger,
   SubContent,
