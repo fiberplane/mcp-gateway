@@ -39,7 +39,7 @@ class APIClient {
     // Map frontend parameter names to API parameter names
     const paramMapping: Record<string, string> = {
       serverName: "server",
-      clientName: "clientName",
+      clientName: "client",
       sessionId: "session",
     };
 

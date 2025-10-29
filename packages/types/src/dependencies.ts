@@ -117,9 +117,9 @@ export interface QueryFunctions {
   queryLogs: (options?: LogQueryOptions) => Promise<LogQueryResult>;
 
   /**
-   * Get all servers with aggregated stats (without status field)
+   * Get all servers with aggregated stats
    */
-  getServers: () => Promise<Array<Omit<ServerInfo, "status">>>;
+  getServers: () => Promise<ServerInfo[]>;
 
   /**
    * Get all sessions with aggregated stats
