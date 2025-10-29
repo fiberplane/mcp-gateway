@@ -14,7 +14,7 @@ This document outlines the architecture for adding a web-based UI to the MCP Gat
 │  │                                                            │  │
 │  │  - TanStack Router (routing)                              │  │
 │  │  - TanStack Query (data fetching, caching)                │  │
-│  │  - Zustand (client state management)                      │  │
+│  │  - URL-based state (filters synced to URL params)        │  │
 │  │  - UI Components (tables, filters, details)               │  │
 │  └───────────────────────────────────────────────────────────┘  │
 │                              │                                   │
@@ -88,29 +88,74 @@ This document outlines the architecture for adding a web-based UI to the MCP Gat
 - Export logs to various formats (JSON, CSV)
 
 **Technology Stack:**
-- **React 18+** - UI library
+- **React 19** - UI framework
 - **TypeScript** - Type safety
 - **Vite** - Build tool and dev server
 - **TanStack Router** - Type-safe routing
 - **TanStack Query (React Query)** - Server state management, caching
-- **Zustand** - Client-side state management (UI state, filters)
+- **URL Parameters** - Filter state persistence and sharing
 - **Tailwind CSS** - Styling
-- **Shadcn/ui** or **Radix UI** - Component primitives
+- **Radix UI** - Accessible component primitives (dropdowns, checkboxes, tabs)
 
 **Key Features:**
-- Log table view with virtual scrolling
-- Advanced filtering sidebar
-- Log detail panel/modal
-- Server tabs for quick filtering
+- Log table view with sortable columns
+- Filter bar with cascading dropdown menu
+- Multi-select filters (method, client, server, session)
+- Duration filter with comparison operators
+- Filter badges with array truncation (first 2 values + "+N more")
+- URL-based filter state (shareable links)
+- Real-time polling for new logs
+- Log detail expansion with JSON viewer
+- Search across log content
 - Export functionality
 - Responsive design
 
+**Filter Architecture:**
+
+The web UI implements a URL-based filter system with the following components:
+
+1. **Filter State Management:**
+   - Filter state stored in URL search parameters (e.g., `?method=tools/call,prompts/get&server=figma`)
+   - Type-safe parsing with Zod schemas (`packages/types/src/filters.ts`)
+   - Automatic URL sync on filter changes
+   - Shareable links preserve filter state
+
+2. **Filter UI Components:**
+   - `FilterBar` - Container with search input, filter badges, and controls
+   - `AddFilterDropdown` - Cascading dropdown menu for adding filters
+   - `FilterTypeMenu` - Top-level menu with filter type submenus
+   - `FilterValueSubmenu` - Reusable submenu with multi-select checkboxes and search
+   - `FilterBadge` - Removable badge showing active filter with value truncation
+
+3. **Filter Types:**
+   - **Multi-value filters** (method, client, server, session):
+     - Support multiple selections with checkboxes
+     - Search within values
+     - Display as badges with truncation (first 2 values + "+N more")
+     - Method filters show colored pills
+   - **Comparison filters** (duration):
+     - Single value with operator (equals, >, <, ≥, ≤)
+     - Numeric input validation
+
+4. **Data Flow:**
+   - TanStack Query fetches available filter values from API
+   - User selects values in cascading dropdown
+   - Selection immediately updates URL parameters
+   - `filter-utils.ts` parses URL and applies client-side filtering
+   - Log list re-renders with filtered results
+
+5. **Client-Side Filtering:**
+   - `parseFiltersFromUrl()` - Converts URL params to Filter objects
+   - `serializeFiltersToUrl()` - Converts Filter objects to URL params
+   - `matchesFilter()` - Checks if log entry matches filter criteria
+   - All filtering happens in browser for instant response
+
 ### 3. Core Package Extensions
 
-**New Functionality Needed:**
-- `LogReader` - Read and parse JSONL capture files
-- `LogQuery` - Filter, sort, and paginate logs in memory
-- `LogAggregator` - Generate statistics and summaries
+**Implemented Functionality:**
+- `LogReader` - Reads and parses JSONL capture files
+- Query functions - Filter, sort, and paginate logs in memory
+- Aggregation functions - Generate statistics for available filter values
 
 **Data Flow:**
 1. API receives request with query parameters
@@ -119,6 +164,8 @@ This document outlines the architecture for adding a web-based UI to the MCP Gat
 4. Core returns typed results to API
 5. API serializes and sends to client
 6. React Query caches and provides to components
+7. Web UI applies client-side filtering with `filter-utils.ts`
+8. Filter state synced to URL parameters for sharing
 
 ## Package Dependencies
 
