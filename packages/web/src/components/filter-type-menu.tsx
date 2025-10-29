@@ -122,7 +122,7 @@ export function FilterTypeMenu({
             icon={
               <CategoryIcon
                 category="method"
-                className="size-4"
+                className="size-4 text-muted-foreground"
                 aria-hidden="true"
               />
             }
@@ -140,7 +140,7 @@ export function FilterTypeMenu({
             icon={
               <CategoryIcon
                 category="session"
-                className="size-4"
+                className="size-4 text-muted-foreground"
                 aria-hidden="true"
               />
             }
@@ -157,7 +157,7 @@ export function FilterTypeMenu({
             icon={
               <CategoryIcon
                 category="client"
-                className="size-4"
+                className="size-4 text-muted-foreground"
                 aria-hidden="true"
               />
             }
@@ -174,7 +174,7 @@ export function FilterTypeMenu({
             icon={
               <CategoryIcon
                 category="server"
-                className="size-4"
+                className="size-4 text-muted-foreground"
                 aria-hidden="true"
               />
             }
