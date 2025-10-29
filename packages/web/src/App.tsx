@@ -14,7 +14,7 @@ import { api } from "./lib/api";
 import {
   filterParamsToFilters,
   parseAsFilterParam,
-  parseAsSearch,
+  parseAsSearchArray,
 } from "./lib/filter-parsers";
 import { useHandler } from "./lib/use-handler";
 import { getLogKey } from "./lib/utils";
@@ -27,7 +27,7 @@ function App() {
   const [clearError, setClearError] = useState<string | null>(null);
 
   // Filter state from URL via nuqs
-  const [search] = useQueryState("q", parseAsSearch);
+  const [searchQueries] = useQueryState("search", parseAsSearchArray);
 
   const [filterParams] = useQueryStates({
     client: parseAsFilterParam,
@@ -44,25 +44,16 @@ function App() {
     [filterParams],
   );
 
-  // Construct filter state from URL values
-  const filterState = useMemo(
-    () => ({
-      search: search ?? "",
-      filters,
-    }),
-    [search, filters],
-  );
-
   // Streaming: ON = auto-refresh with new logs, OFF = manual load more
   const [isStreaming, setIsStreaming] = useState(true);
 
-  // Extract filters from filter state and convert to API parameters
+  // Extract filters and convert to API parameters
   // Backend now supports all filter types with proper operators
   const apiParams = useMemo(() => {
     const params: Parameters<typeof api.getLogs>[0] = {};
 
     // Extract each filter type
-    for (const filter of filterState.filters) {
+    for (const filter of filters) {
       switch (filter.field) {
         case "client":
           params.clientName = filter.value as string | string[];
@@ -122,7 +113,7 @@ function App() {
     }
 
     return params;
-  }, [filterState.filters]);
+  }, [filters]);
 
   // Fixed values (no UI controls)
   const timeGrouping = "day" as const; // Group by day
@@ -163,21 +154,24 @@ function App() {
   // Apply client-side search filtering only (backend handles all field filters)
   // Search is the only filter not sent to backend
   const filteredLogs = useMemo(() => {
-    if (!filterState.search) return allLogs;
+    if (!searchQueries || searchQueries.length === 0) return allLogs;
 
     return allLogs.filter((log) => {
-      const searchLower = filterState.search.toLowerCase();
+      // Log must match ALL search terms (AND logic)
+      return searchQueries.every((query) => {
+        const searchLower = query.toLowerCase();
 
-      // Search across multiple fields
-      return (
-        log.method.toLowerCase().includes(searchLower) ||
-        log.metadata.serverName?.toLowerCase().includes(searchLower) ||
-        log.metadata.client?.name?.toLowerCase().includes(searchLower) ||
-        log.metadata.sessionId?.toLowerCase().includes(searchLower) ||
-        JSON.stringify(log).toLowerCase().includes(searchLower)
-      );
+        // Search across multiple fields
+        return (
+          log.method.toLowerCase().includes(searchLower) ||
+          log.metadata.serverName?.toLowerCase().includes(searchLower) ||
+          log.metadata.client?.name?.toLowerCase().includes(searchLower) ||
+          log.metadata.sessionId?.toLowerCase().includes(searchLower) ||
+          JSON.stringify(log).toLowerCase().includes(searchLower)
+        );
+      });
     });
-  }, [allLogs, filterState.search]);
+  }, [allLogs, searchQueries]);
 
   // Defer table updates to keep checkboxes responsive
   // This allows checkbox state to update immediately while table rendering
@@ -272,7 +266,7 @@ function App() {
             <div
               id="logs-panel"
               role="tabpanel"
-              className="bg-card rounded-lg border border-border overflow-hidden p-4 gap-6 grid"
+              className="bg-card rounded-lg border border-border p-4 gap-6 grid"
             >
               {/* Filter Bar - Phase 1-2 with two-row layout */}
               <ErrorBoundary

@@ -10,7 +10,7 @@ import { createParser } from "nuqs";
 import { parseFiltersFromUrl, serializeFiltersToUrl } from "./filter-utils";
 
 /**
- * Parser for search query parameter
+ * Parser for search query parameter (deprecated - use parseAsSearchArray)
  *
  * URL format: ?q=search+term
  * Default: empty string
@@ -25,6 +25,23 @@ export const parseAsSearch = createParser({
     return value.trim();
   },
 }).withDefault("");
+
+/**
+ * Parser for array of search terms in URL
+ *
+ * URL format: ?search=error,warning
+ * Default: empty array
+ */
+export const parseAsSearchArray = createParser({
+  parse: (value: string) => {
+    // Split by comma for multiple search terms in single param
+    return value ? value.split(",").filter((s) => s.trim().length > 0) : [];
+  },
+  serialize: (value: string[]) => {
+    // Join with comma
+    return value.length > 0 ? value.join(",") : "";
+  },
+}).withDefault([]);
 
 /**
  * Parser for individual filter field parameters

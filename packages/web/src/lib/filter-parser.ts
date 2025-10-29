@@ -18,6 +18,13 @@ import type { ReactNode } from "react";
 import { type FilterParseError, findClosestField } from "./filter-errors";
 
 /**
+ * Result of parsing input - either a filter or search term
+ */
+export type ParseResult =
+  | { type: "filter"; filter: FilterInput }
+  | { type: "search"; query: string };
+
+/**
  * Autocomplete suggestion
  */
 export interface FilterSuggestion {
@@ -89,6 +96,27 @@ const FIELD_EXAMPLES: Record<FilterField, string[]> = {
   session: ["session is abc123"],
   server: ["server is my-server"],
 };
+
+/**
+ * Parse input and detect if it's a filter or search term
+ *
+ * @example
+ * parseInput("tokens > 150") // { type: "filter", filter: {...} }
+ * parseInput("error message") // { type: "search", query: "error message" }
+ */
+export function parseInput(text: string): ParseResult | null {
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+
+  // Try to parse as filter
+  const filter = parseFilterInput(trimmed);
+  if (filter) {
+    return { type: "filter", filter };
+  }
+
+  // Not a valid filter → treat as search term
+  return { type: "search", query: trimmed };
+}
 
 /**
  * Parse filter input text into structured filter
@@ -381,4 +409,29 @@ export function formatParsedFilter(parsed: FilterInput): string {
   const value =
     parsed.field === "duration" ? `${parsed.value}ms` : parsed.value;
   return `${parsed.field} ${opDisplay} ${value}`;
+}
+
+/**
+ * Format a Filter object back to input text for editing
+ *
+ * @example
+ * formatFilterForEditing(filter) // "tokens > 150"
+ */
+export function formatFilterForEditing(filter: {
+  field: string;
+  operator: string;
+  value: string | number | string[] | number[];
+}): string {
+  const opDisplay = OPERATOR_DISPLAY[filter.operator] || filter.operator;
+
+  // Handle arrays by taking first value (for simplicity in editing)
+  let value: string | number;
+  if (Array.isArray(filter.value)) {
+    value = filter.value[0] ?? "";
+  } else {
+    value = filter.value;
+  }
+
+  // Don't add "ms" suffix for editing (user types plain number)
+  return `${filter.field} ${opDisplay} ${value}`;
 }

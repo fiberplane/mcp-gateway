@@ -138,10 +138,18 @@ export const filterSchema = z.discriminatedUnion("field", [
 ]);
 
 /**
- * Filter state schema (search + filters)
+ * Search term schema (for text search pills)
+ */
+export const searchTermSchema = z.object({
+  id: z.string().uuid(),
+  query: z.string().min(1, "Search term cannot be empty"),
+});
+
+/**
+ * Filter state schema (search terms + filters)
  */
 export const filterStateSchema = z.object({
-  search: z.string().default(""),
+  searchTerms: z.array(searchTermSchema).default([]),
   filters: z.array(filterSchema).default([]),
 });
 
@@ -169,7 +177,12 @@ export type TokensFilter = z.infer<typeof tokensFilterSchema>;
 export type Filter = z.infer<typeof filterSchema>;
 
 /**
- * Filter state including search query
+ * Search term for text search
+ */
+export type SearchTerm = z.infer<typeof searchTermSchema>;
+
+/**
+ * Filter state including search terms and filters
  */
 export type FilterState = z.infer<typeof filterStateSchema>;
 
@@ -328,6 +341,19 @@ export function createFilter<F extends FilterField>(
     id: crypto.randomUUID(),
     ...input,
   } as FiltersForField<F>;
+}
+
+/**
+ * Create a new search term with auto-generated UUID
+ *
+ * @example
+ * const searchTerm = createSearchTerm("error");
+ */
+export function createSearchTerm(query: string): SearchTerm {
+  return {
+    id: crypto.randomUUID(),
+    query,
+  };
 }
 
 /**

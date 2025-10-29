@@ -154,19 +154,28 @@ export function serializeFiltersToUrl(
 }
 
 /**
- * Parse filter state (search + filters) from URL
+ * Parse filter state (search terms + filters) from URL
+ * @deprecated Use parseAsSearchArray and filterParamsToFilters from filter-parsers instead
  */
 export function parseFilterStateFromUrl(params: URLSearchParams): FilterState {
-  const search = params.get("q") || "";
+  const searchParam = params.get("search") || "";
+  const searchTerms = searchParam
+    ? searchParam.split(",").map((query, index) => ({
+        id: `search-${index}`,
+        query: query.trim(),
+      }))
+    : [];
   const filters = parseFiltersFromUrl(params);
-  return { search, filters };
+  return { searchTerms, filters };
 }
 
 /**
  * Serialize filter state to URL
+ * @deprecated Use filtersToFilterParams and search query state from filter-parsers instead
  */
 export function serializeFilterStateToUrl(state: FilterState): URLSearchParams {
-  return serializeFiltersToUrl(state.filters, state.search);
+  const searchQuery = state.searchTerms.map((st) => st.query).join(",");
+  return serializeFiltersToUrl(state.filters, searchQuery);
 }
 
 // ============================================================================
@@ -341,12 +350,15 @@ export function applyFiltersToLogs(
 
 /**
  * Apply filter state to logs
+ * @deprecated Apply filters and search terms separately in your component
  */
 export function applyFilterState(
   logs: ApiLogEntry[],
   state: FilterState,
 ): ApiLogEntry[] {
-  return applyFiltersToLogs(logs, state.filters, state.search);
+  // Combine all search terms into single string for legacy compatibility
+  const searchQuery = state.searchTerms.map((st) => st.query).join(" ");
+  return applyFiltersToLogs(logs, state.filters, searchQuery);
 }
 
 // ============================================================================
@@ -423,17 +435,31 @@ export function areFiltersEqual(a: Filter, b: Filter): boolean {
 
 /**
  * Check if two filter states are equal
- * Efficiently compares search string and filter arrays
+ * Efficiently compares search terms and filter arrays
  */
 export function areFilterStatesEqual(a: FilterState, b: FilterState): boolean {
-  // Quick check: search strings must match
-  if (a.search !== b.search) return false;
+  // Quick check: search term array lengths must match
+  if (a.searchTerms.length !== b.searchTerms.length) return false;
+
+  // Check search terms
+  for (let i = 0; i < a.searchTerms.length; i++) {
+    const termA = a.searchTerms[i];
+    const termB = b.searchTerms[i];
+    if (
+      !termA ||
+      !termB ||
+      termA.id !== termB.id ||
+      termA.query !== termB.query
+    ) {
+      return false;
+    }
+  }
 
   // Quick check: filter array lengths must match
   if (a.filters.length !== b.filters.length) return false;
 
   // If both empty, they're equal
-  if (a.filters.length === 0) return true;
+  if (a.filters.length === 0 && a.searchTerms.length === 0) return true;
 
   // Deep comparison: check each filter
   // We compare by index since filter order matters for UX consistency

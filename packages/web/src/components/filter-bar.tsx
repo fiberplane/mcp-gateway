@@ -1,23 +1,28 @@
 /**
- * Filter bar with search input, active filter badges, and controls.
+ * Filter bar with unified input, active search terms, filter badges, and controls.
  * Filter state is synced with URL parameters via nuqs.
  */
 
-import type { createFilter } from "@fiberplane/mcp-gateway-types";
+import type {
+  createFilter,
+  createSearchTerm,
+  SearchTerm,
+} from "@fiberplane/mcp-gateway-types";
 import { useQueryState, useQueryStates } from "nuqs";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
+import { formatFilterForEditing } from "@/lib/filter-parser";
 import {
   filterParamsToFilters,
   filtersToFilterParams,
   parseAsFilterParam,
-  parseAsSearch,
+  parseAsSearchArray,
 } from "../lib/filter-parsers";
 import { addOrReplaceFilter, removeFilter } from "../lib/filter-utils";
 import { AddFilterDropdown } from "./add-filter-dropdown";
 import { CommandFilterInput } from "./command-filter-input";
 import { FilterBadge } from "./filter-badge";
-import { SearchInput } from "./search-input";
+import { SearchPill } from "./search-pill";
 
 interface FilterBarProps {
   /**
@@ -31,8 +36,25 @@ export function FilterBar({ actions }: FilterBarProps) {
   // Live region announcement for screen readers
   const [announcement, setAnnouncement] = useState("");
 
+  // State for editing filters
+  const [editingValue, setEditingValue] = useState<string | undefined>();
+
   // URL state management via nuqs
-  const [search, setSearch] = useQueryState("q", parseAsSearch);
+  // Search terms stored as comma-separated in URL: ?search=error,warning
+  const [searchQueries, setSearchQueries] = useQueryState(
+    "search",
+    parseAsSearchArray,
+  );
+
+  // Convert search queries to SearchTerm objects with IDs
+  const searchTerms = useMemo<SearchTerm[]>(
+    () =>
+      searchQueries.map((query, index) => ({
+        id: `search-${index}`,
+        query,
+      })),
+    [searchQueries],
+  );
 
   const [filterParams, setFilterParams] = useQueryStates(
     {
@@ -84,12 +106,46 @@ export function FilterBar({ actions }: FilterBarProps) {
     setFilterParams(newParams);
   };
 
-  const handleSearchChange = (newSearch: string) => {
-    setSearch(newSearch);
+  const handleAddSearch = (searchTerm: ReturnType<typeof createSearchTerm>) => {
+    setSearchQueries([...searchQueries, searchTerm.query]);
+    setEditingValue(undefined); // Clear editing state
+  };
+
+  const handleRemoveSearch = (searchTermId: string) => {
+    // Extract index from ID (format: "search-0", "search-1", etc.)
+    const index = Number.parseInt(searchTermId.split("-")[1] || "0", 10);
+    const updated = searchQueries.filter((_, i) => i !== index);
+    setSearchQueries(updated);
+  };
+
+  const handleEditFilter = (filterId: string) => {
+    // Find the filter being edited
+    const filter = filters.find((f) => f.id === filterId);
+    if (!filter) return;
+
+    // Format filter as text for editing
+    const text = formatFilterForEditing(filter);
+    setEditingValue(text);
+
+    // Remove the filter (it will be re-added when user submits)
+    handleRemoveFilter(filterId);
+  };
+
+  const handleEditSearch = (searchTermId: string) => {
+    // Extract index and get the search term
+    const index = Number.parseInt(searchTermId.split("-")[1] || "0", 10);
+    const query = searchQueries[index];
+    if (!query) return;
+
+    // Populate input with search term
+    setEditingValue(query);
+
+    // Remove the search term (it will be re-added when user submits)
+    handleRemoveSearch(searchTermId);
   };
 
   const handleClearAll = () => {
-    // Only clear filters, preserve search (UX principle: button position = button scope)
+    // Clear both filters and search terms
     setFilterParams({
       client: null,
       method: null,
@@ -98,11 +154,11 @@ export function FilterBar({ actions }: FilterBarProps) {
       duration: null,
       tokens: null,
     });
+    setSearchQueries([]);
   };
 
-  // Show "Clear all" button only when there are active filters
-  // (not when search has text - search is cleared via its own X button)
-  const hasActiveFilters = filters.length > 0;
+  // Show "Clear all" button when there are active filters or search terms
+  const hasActiveItems = filters.length > 0 || searchTerms.length > 0;
 
   return (
     <>
@@ -118,21 +174,19 @@ export function FilterBar({ actions }: FilterBarProps) {
       </div>
 
       <div className="flex flex-col gap-3">
-        {/* Row 1: Search input + Action buttons */}
+        {/* Row 1: Unified input + Action buttons */}
         <div className="flex items-center gap-3">
-          <SearchInput
-            value={search ?? ""}
-            onChange={handleSearchChange}
-            placeholder="Search logs..."
-            className="flex-1"
-          />
+          <div className="flex-1">
+            <CommandFilterInput
+              onAddFilter={handleAddFilter}
+              onAddSearch={handleAddSearch}
+              initialValue={editingValue}
+            />
+          </div>
           {actions}
         </div>
 
-        {/* Row 2: Command filter input */}
-        <CommandFilterInput onAdd={handleAddFilter} />
-
-        {/* Row 3: Filters */}
+        {/* Row 2: Search pills + Filter pills */}
         <div className="flex items-center gap-2 flex-wrap">
           {/* Add filter button - always first for stable position */}
           <AddFilterDropdown
@@ -141,17 +195,28 @@ export function FilterBar({ actions }: FilterBarProps) {
             activeFilters={filters}
           />
 
+          {/* Active search pills */}
+          {searchTerms.map((searchTerm) => (
+            <SearchPill
+              key={searchTerm.id}
+              searchTerm={searchTerm}
+              onRemove={handleRemoveSearch}
+              onEdit={handleEditSearch}
+            />
+          ))}
+
           {/* Active filter badges */}
           {filters.map((filter) => (
             <FilterBadge
               key={filter.id}
               filter={filter}
               onRemove={handleRemoveFilter}
+              onEdit={handleEditFilter}
             />
           ))}
 
-          {/* Clear all button - positioned right after filter badges */}
-          {hasActiveFilters && (
+          {/* Clear all button - positioned right after pills */}
+          {hasActiveItems && (
             <button
               type="button"
               onClick={handleClearAll}

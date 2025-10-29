@@ -305,10 +305,11 @@ describe("URL serialization round-trip", () => {
 
 describe("parseFilterStateFromUrl", () => {
   it("should parse search and filters", () => {
-    const params = new URLSearchParams("q=echo&client=is:claude-code");
+    const params = new URLSearchParams("search=echo&client=is:claude-code");
     const state = parseFilterStateFromUrl(params);
 
-    expect(state.search).toBe("echo");
+    expect(state.searchTerms).toHaveLength(1);
+    expect(state.searchTerms[0]?.query).toBe("echo");
     expect(state.filters).toHaveLength(1);
     expect(state.filters[0]?.field).toBe("client");
   });
@@ -317,7 +318,7 @@ describe("parseFilterStateFromUrl", () => {
     const params = new URLSearchParams("client=is:claude-code");
     const state = parseFilterStateFromUrl(params);
 
-    expect(state.search).toBe("");
+    expect(state.searchTerms).toHaveLength(0);
     expect(state.filters).toHaveLength(1);
   });
 });
@@ -325,7 +326,7 @@ describe("parseFilterStateFromUrl", () => {
 describe("serializeFilterStateToUrl", () => {
   it("should serialize state with search and filters", () => {
     const state = {
-      search: "echo",
+      searchTerms: [{ id: "search-0", query: "echo" }],
       filters: [
         createFilter({
           field: "client",
@@ -731,7 +732,7 @@ describe("applyFilterState", () => {
   it("should apply state with filters and search", () => {
     const logs: ApiLogEntry[] = [mockLog];
     const state = {
-      search: "claude",
+      searchTerms: [{ id: "search-0", query: "claude" }],
       filters: [
         createFilter({
           field: "method",

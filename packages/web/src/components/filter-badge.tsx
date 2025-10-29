@@ -13,6 +13,7 @@ import { ColorPill } from "./ui/color-pill";
 interface FilterBadgeProps {
   filter: Filter;
   onRemove: (filterId: string) => void;
+  onEdit?: (filterId: string) => void;
 }
 
 // Field display names
@@ -96,7 +97,7 @@ function formatValue(filter: Filter): string {
   return formatSingleValue(filter.value as string | number);
 }
 
-export function FilterBadge({ filter, onRemove }: FilterBadgeProps) {
+export function FilterBadge({ filter, onRemove, onEdit }: FilterBadgeProps) {
   const fieldLabel = FIELD_LABELS[filter.field];
   const operatorLabel = OPERATOR_LABELS[filter.operator] || filter.operator;
   const value = formatValue(filter);
@@ -112,44 +113,53 @@ export function FilterBadge({ filter, onRemove }: FilterBadgeProps) {
 
   return (
     <div className="inline-flex items-center gap-2 h-9 px-2 border border-foreground rounded-md bg-card">
-      {/* Icon */}
-      <FilterIcon field={filter.field} className="text-muted-foreground" />
+      {/* Clickable area for editing */}
+      <button
+        type="button"
+        onClick={() => onEdit?.(filter.id)}
+        className="inline-flex items-center gap-2 hover:opacity-70 transition-opacity cursor-pointer disabled:cursor-default disabled:opacity-100"
+        disabled={!onEdit}
+        aria-label={`Edit filter: ${label}`}
+      >
+        {/* Icon */}
+        <FilterIcon field={filter.field} className="text-muted-foreground" />
 
-      {/* Field name */}
-      <span className="text-sm font-medium text-muted-foreground">
-        {fieldLabel}
-      </span>
+        {/* Field name */}
+        <span className="text-sm font-medium text-muted-foreground">
+          {fieldLabel}
+        </span>
 
-      {/* Operator */}
-      <span className="text-sm text-muted-foreground">{operatorLabel}</span>
+        {/* Operator */}
+        <span className="text-sm text-muted-foreground">{operatorLabel}</span>
 
-      {/* Value - styled differently based on filter type */}
-      {filter.field === "method" && Array.isArray(filter.value) ? (
-        // Multiple method pills with individual colors
-        <div className="inline-flex items-center gap-2 flex-wrap">
-          {filter.value.slice(0, 3).map((methodValue) => (
-            <ColorPill
-              key={String(methodValue)}
-              color={getMethodColor(String(methodValue))}
-            >
-              {String(methodValue)}
-            </ColorPill>
-          ))}
-          {filter.value.length > 3 && (
-            <span className="text-sm text-muted-foreground">
-              +{filter.value.length - 3} more
-            </span>
-          )}
-        </div>
-      ) : shouldHighlightValue ? (
-        // Single method pill with its specific color
-        <ColorPill color={getMethodColor(String(filter.value))}>
-          {value}
-        </ColorPill>
-      ) : (
-        // Non-method fields - plain text
-        <span className="text-sm font-mono text-foreground">{value}</span>
-      )}
+        {/* Value - styled differently based on filter type */}
+        {filter.field === "method" && Array.isArray(filter.value) ? (
+          // Multiple method pills with individual colors
+          <div className="inline-flex items-center gap-2 flex-wrap">
+            {filter.value.slice(0, 3).map((methodValue) => (
+              <ColorPill
+                key={String(methodValue)}
+                color={getMethodColor(String(methodValue))}
+              >
+                {String(methodValue)}
+              </ColorPill>
+            ))}
+            {filter.value.length > 3 && (
+              <span className="text-sm text-muted-foreground">
+                +{filter.value.length - 3} more
+              </span>
+            )}
+          </div>
+        ) : shouldHighlightValue ? (
+          // Single method pill with its specific color
+          <ColorPill color={getMethodColor(String(filter.value))}>
+            {value}
+          </ColorPill>
+        ) : (
+          // Non-method fields - plain text
+          <span className="text-sm font-mono text-foreground">{value}</span>
+        )}
+      </button>
 
       {/* Remove button - Ghost icon button from design system */}
       <IconButton
