@@ -512,9 +512,7 @@ The CLI uses OpenTUI which has `bun:ffi` dependencies that **cannot be distribut
 ├── postinstall.mjs detects platform & creates symlink
 └── Depends on platform-specific binary packages:
     ├── @fiberplane/mcp-gateway-darwin-arm64 (61MB binary)
-    ├── @fiberplane/mcp-gateway-darwin-x64 (61MB binary)
     ├── @fiberplane/mcp-gateway-linux-x64 (61MB binary)
-    └── @fiberplane/mcp-gateway-windows-x64 (61MB binary)
 
 @fiberplane/mcp-gateway-cli (private)
 └── Source code for CLI (not published directly)
@@ -541,9 +539,7 @@ bun run build:binaries --all  # Will fail locally on most platforms
 ### Platform Support
 
 - ✅ macOS ARM64 (darwin-arm64) - Apple Silicon
-- ✅ macOS x64 (darwin-x64) - Intel Macs
 - ✅ Linux x64 (linux-x64) - Most Linux distributions
-- ✅ Windows x64 (windows-x64) - Windows 10/11
 
 ### CI/CD Strategy
 
@@ -562,7 +558,6 @@ The gateway includes a React-based web UI (`@fiberplane/mcp-gateway-web`) for br
 - **Real-time updates** - Automatically polls for new logs
 - **Log details** - Expand individual logs to view full request/response JSON
 - **Export functionality** - Export selected or all logs as JSON
-- **Responsive design** - Works on desktop and mobile browsers
 
 ### Development
 ```bash
