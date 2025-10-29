@@ -15,6 +15,12 @@ import {
 } from "@fiberplane/mcp-gateway-types";
 import { AlertCircle, Check, Search, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import {
+  useAvailableClients,
+  useAvailableMethods,
+  useAvailableServers,
+  useAvailableSessions,
+} from "@/lib/use-available-filters";
 import { formatErrorMessage } from "@/lib/filter-errors";
 import {
   type FilterSuggestion,
@@ -66,6 +72,12 @@ export function CommandFilterInput({
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Fetch available values for autocomplete
+  const { data: serversData } = useAvailableServers();
+  const { data: clientsData } = useAvailableClients();
+  const { data: methodsData } = useAvailableMethods();
+  const { data: sessionsData } = useAvailableSessions();
+
   // Update input when initialValue changes (for editing)
   useEffect(() => {
     if (initialValue) {
@@ -97,9 +109,16 @@ export function CommandFilterInput({
       ? validation.error
       : null;
 
-  // Get autocomplete suggestions
+  // Get autocomplete suggestions with fetched values
   const suggestions = showAutocomplete
-    ? getAutocompleteSuggestions(inputValue)
+    ? getAutocompleteSuggestions(inputValue, {
+        servers: serversData?.servers.map((s) => s.name) ?? [],
+        clients: clientsData?.clients.map((c) => c.clientName) ?? [],
+        methods: methodsData?.methods.map((m) => m.method) ?? [],
+        sessions: [
+          ...new Set(sessionsData?.sessions.map((s) => s.sessionId) ?? []),
+        ], // Dedupe session IDs
+      })
     : [];
 
   // Parse input for preview

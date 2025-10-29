@@ -306,9 +306,22 @@ export function validateFilterInput(text: string): ValidationResult {
 }
 
 /**
+ * Available autocomplete values fetched from API
+ */
+export interface AutocompleteValues {
+  servers: string[];
+  clients: string[];
+  methods: string[];
+  sessions: string[];
+}
+
+/**
  * Get autocomplete suggestions for current input
  */
-export function getAutocompleteSuggestions(input: string): FilterSuggestion[] {
+export function getAutocompleteSuggestions(
+  input: string,
+  values?: AutocompleteValues,
+): FilterSuggestion[] {
   // Don't trim - we need to preserve spaces to detect when user has typed field + space
   const text = input;
 
@@ -379,8 +392,9 @@ export function getAutocompleteSuggestions(input: string): FilterSuggestion[] {
   if (!operator) return [];
   const valueStr = afterField.slice(operatorMatch[0]?.length ?? 0).trim();
 
-  // Stage 3: Value suggestions (common values)
+  // Stage 3: Value suggestions
   if (field === "tokens") {
+    // Numeric field - preset common values
     const commonValues = [100, 500, 1000, 5000];
     return commonValues
       .filter((val) => !valueStr || String(val).startsWith(valueStr))
@@ -392,6 +406,7 @@ export function getAutocompleteSuggestions(input: string): FilterSuggestion[] {
   }
 
   if (field === "duration") {
+    // Numeric field - preset common values
     const commonValues = [25, 100, 500, 1000, 2000];
     return commonValues
       .filter((val) => !valueStr || String(val).startsWith(valueStr))
@@ -402,8 +417,46 @@ export function getAutocompleteSuggestions(input: string): FilterSuggestion[] {
       }));
   }
 
-  // For string fields, we can't suggest values without API data
-  // Could add hook to fetch available values here
+  // String fields - use values from API
+  if (field === "server" && values?.servers) {
+    return values.servers
+      .filter((server) => !valueStr || server.toLowerCase().includes(valueStr.toLowerCase()))
+      .map((server) => ({
+        text: `${field} ${operator} ${server}`,
+        display: server,
+      }));
+  }
+
+  if (field === "client" && values?.clients) {
+    return values.clients
+      .filter((client) => !valueStr || client.toLowerCase().includes(valueStr.toLowerCase()))
+      .map((client) => ({
+        text: `${field} ${operator} ${client}`,
+        display: client,
+      }));
+  }
+
+  if (field === "method" && values?.methods) {
+    return values.methods
+      .filter((method) => !valueStr || method.toLowerCase().includes(valueStr.toLowerCase()))
+      .map((method) => ({
+        text: `${field} ${operator} ${method}`,
+        display: method,
+      }));
+  }
+
+  if (field === "session" && values?.sessions) {
+    // Limit sessions to first 20 to avoid overwhelming the dropdown
+    return values.sessions
+      .filter((session) => !valueStr || session.toLowerCase().includes(valueStr.toLowerCase()))
+      .slice(0, 20)
+      .map((session) => ({
+        text: `${field} ${operator} ${session}`,
+        display: session,
+        description: "Recent session",
+      }));
+  }
+
   return [];
 }
 

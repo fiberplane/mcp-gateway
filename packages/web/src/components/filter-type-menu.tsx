@@ -95,11 +95,19 @@ export function FilterTypeMenu({
       value: s.name,
     })) ?? [];
 
-  const sessionValues =
-    sessionsQuery.data?.sessions.map((s) => ({
-      value: s.sessionId,
-      label: `${s.sessionId.slice(0, 8)}... (${s.serverName})`,
-    })) ?? [];
+  const sessionValues = useMemo(() => {
+    const sessions = sessionsQuery.data?.sessions ?? [];
+    // Dedupe sessions by sessionId (same session can appear on multiple servers)
+    const uniqueSessions = new Map<string, string>();
+    for (const session of sessions) {
+      if (!uniqueSessions.has(session.sessionId)) {
+        uniqueSessions.set(session.sessionId, session.sessionId);
+      }
+    }
+    return Array.from(uniqueSessions.values()).map((sessionId) => ({
+      value: sessionId,
+    }));
+  }, [sessionsQuery.data?.sessions]);
 
   return (
     <DropdownMenu.Root open={open} onOpenChange={setOpen} modal={false}>
