@@ -313,22 +313,6 @@ The Web UI works on:
 - Use device keyboard for search
 - Horizontal scroll for log table
 
-## Accessibility
-
-The Web UI follows WCAG 2.1 AA standards:
-
-- Keyboard navigation supported
-- Screen reader friendly
-- High contrast mode supported
-- Focus indicators visible
-- Semantic HTML structure
-
-**Screen Reader Tips:**
-- Headings: Use `H` key to navigate sections
-- Tables: Use arrow keys to navigate cells
-- Buttons: Use `Tab` to focus, `Enter` to activate
-- Links: Use `Tab` to navigate, `Enter` to follow
-
 ## Browser Support
 
 Tested and supported:

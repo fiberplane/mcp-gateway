@@ -34,10 +34,8 @@ Single-page React application for viewing and analyzing MCP Gateway traffic logs
 
 ### Styling
 - **Tailwind CSS 3+** - Utility-first CSS
-- **Radix UI** - Accessible component primitives
+- **Radix UI** - Component primitives
   - DropdownMenu, Checkbox, Tabs, etc.
-  - Full keyboard navigation
-  - ARIA compliant
 
 ### Additional Libraries
 - **date-fns** - Date formatting and manipulation
@@ -601,18 +599,7 @@ export const apiClient = new APIClient();
 **Mobile Adaptations:**
 - Stack table columns vertically on small screens
 - Drawer-style filter sidebar on mobile
-- Touch-friendly tap targets (min 44x44px)
 - Simplified header on mobile
-
-## Accessibility
-
-- Semantic HTML elements
-- ARIA labels and roles
-- Keyboard navigation support
-- Focus management (modals, dropdowns)
-- Screen reader announcements for dynamic content
-- High contrast mode support
-- Reduced motion support
 
 ## Performance Optimizations
 

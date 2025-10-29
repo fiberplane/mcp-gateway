@@ -24,7 +24,6 @@ This document summarizes the final technology decisions for the MCP Gateway Web 
 ## Why Shadcn/ui?
 
 ### ✅ Pros
-- **Accessible** - Built on Radix UI primitives (WAI-ARIA compliant)
 - **Own the code** - Components copied to your repo, not npm dependencies
 - **Customizable** - Full control, can modify any component
 - **Tailwind-native** - Perfect match for our styling approach
@@ -44,12 +43,12 @@ bunx shadcn-ui@latest add dialog     # Optional: Log details modal
 
 ### Alternatives Considered
 
-| Option | Accessible? | Tailwind? | Scaffolding | Verdict |
-|--------|------------|-----------|-------------|---------|
-| **Radix UI** (raw) | ✅✅✅ | ✅ Manual | ⚡ Slow | Too verbose |
-| **Shadcn/ui** | ✅✅✅ | ✅✅✅ | ⚡⚡⚡ Fast | ✅ **Winner** |
-| Material UI | ✅✅ | ❌ | ⚡⚡ | Not Tailwind |
-| Chakra UI | ✅✅ | ❌ | ⚡⚡ | Uncertain future |
+| Option | Tailwind? | Scaffolding | Verdict |
+|--------|-----------|-------------|---------|
+| **Radix UI** (raw) | ✅ Manual | ⚡ Slow | Too verbose |
+| **Shadcn/ui** | ✅✅✅ | ⚡⚡⚡ Fast | ✅ **Winner** |
+| Material UI | ❌ | ⚡⚡ | Not Tailwind |
+| Chakra UI | ❌ | ⚡⚡ | Uncertain future |
 
 ---
 
@@ -209,21 +208,6 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 - **TanStack Query caching** - Avoids unnecessary refetches
 - **Polling optimization** - Stops when tab hidden
 - **Virtual scrolling** - Deferred to post-MVP (if needed)
-
----
-
-## Accessibility
-
-### Built-in Features
-- **Radix UI primitives** - Keyboard navigation, ARIA labels, focus management
-- **Semantic HTML** - Table uses `<table>`, buttons use `<button>`
-- **Focus indicators** - Tailwind ring utilities for focus states
-- **Screen reader support** - Radix handles announcements
-
-### Testing (Post-MVP)
-- Lighthouse accessibility audit
-- axe-core integration
-- Keyboard-only navigation testing
 
 ---
 
