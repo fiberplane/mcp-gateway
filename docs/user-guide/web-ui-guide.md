@@ -317,10 +317,10 @@ The Web UI works on:
 
 Tested and supported:
 
-- Chrome/Edge 90+
-- Firefox 88+
-- Safari 14+
-- Mobile browsers (iOS Safari, Chrome Mobile)
+- Chrome/Edge 92+
+- Firefox 95+
+- Safari 15.4+
+- Mobile browsers (iOS Safari 15.4+, Chrome Mobile)
 
 ## Performance
 
