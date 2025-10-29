@@ -158,22 +158,21 @@ export function FilterAutocomplete({
               role="option"
               aria-selected={index === selectedIndex}
             >
-              {/* Main suggestion text */}
+              {/* Main suggestion text with inline description */}
               <div className="flex items-center gap-2">
                 {suggestion.icon && (
                   <span className="size-4">{suggestion.icon}</span>
                 )}
                 <span className="font-medium text-sm leading-tight">
                   {suggestion.display}
+                  {suggestion.description && (
+                    <span className="font-normal text-muted-foreground">
+                      {" "}
+                      - {suggestion.description}
+                    </span>
+                  )}
                 </span>
               </div>
-
-              {/* Description */}
-              {suggestion.description && (
-                <span className="text-xs text-muted-foreground leading-tight">
-                  {suggestion.description}
-                </span>
-              )}
 
               {/* Example */}
               {suggestion.example && (
