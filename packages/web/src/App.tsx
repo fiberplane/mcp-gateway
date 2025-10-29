@@ -166,7 +166,7 @@ function App() {
     <div className="min-h-screen bg-background">
       <TopNavigation />
 
-      <main className="max-w-7xl mx-auto px-6 py-6">
+      <main className="max-w-[1600px] mx-auto px-6 py-6">
         <h1 className="text-2xl font-semibold text-foreground mb-6">
           MCP server logs
         </h1>
@@ -246,13 +246,15 @@ function App() {
                 />
               </ErrorBoundary>
 
-              {/* Log Table */}
-              <LogTable
-                logs={deferredFilteredLogs}
-                selectedIds={selectedIds}
-                onSelectionChange={setSelectedIds}
-                timeGrouping={timeGrouping}
-              />
+              {/* Log Table - wrapped for horizontal scroll */}
+              <div className="overflow-x-auto -mx-4 px-4">
+                <LogTable
+                  logs={deferredFilteredLogs}
+                  selectedIds={selectedIds}
+                  onSelectionChange={setSelectedIds}
+                  timeGrouping={timeGrouping}
+                />
+              </div>
             </div>
 
             {/* Load More button at bottom */}
