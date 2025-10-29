@@ -420,7 +420,10 @@ export function getAutocompleteSuggestions(
   // String fields - use values from API
   if (field === "server" && values?.servers) {
     return values.servers
-      .filter((server) => !valueStr || server.toLowerCase().includes(valueStr.toLowerCase()))
+      .filter(
+        (server) =>
+          !valueStr || server.toLowerCase().includes(valueStr.toLowerCase()),
+      )
       .map((server) => ({
         text: `${field} ${operator} ${server}`,
         display: server,
@@ -429,7 +432,10 @@ export function getAutocompleteSuggestions(
 
   if (field === "client" && values?.clients) {
     return values.clients
-      .filter((client) => !valueStr || client.toLowerCase().includes(valueStr.toLowerCase()))
+      .filter(
+        (client) =>
+          !valueStr || client.toLowerCase().includes(valueStr.toLowerCase()),
+      )
       .map((client) => ({
         text: `${field} ${operator} ${client}`,
         display: client,
@@ -438,7 +444,10 @@ export function getAutocompleteSuggestions(
 
   if (field === "method" && values?.methods) {
     return values.methods
-      .filter((method) => !valueStr || method.toLowerCase().includes(valueStr.toLowerCase()))
+      .filter(
+        (method) =>
+          !valueStr || method.toLowerCase().includes(valueStr.toLowerCase()),
+      )
       .map((method) => ({
         text: `${field} ${operator} ${method}`,
         display: method,
@@ -448,7 +457,10 @@ export function getAutocompleteSuggestions(
   if (field === "session" && values?.sessions) {
     // Limit sessions to first 20 to avoid overwhelming the dropdown
     return values.sessions
-      .filter((session) => !valueStr || session.toLowerCase().includes(valueStr.toLowerCase()))
+      .filter(
+        (session) =>
+          !valueStr || session.toLowerCase().includes(valueStr.toLowerCase()),
+      )
       .slice(0, 20)
       .map((session) => ({
         text: `${field} ${operator} ${session}`,

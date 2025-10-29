@@ -116,41 +116,78 @@ export function createApiRoutes(queries: QueryFunctions): Hono {
       );
     }
 
+    // Helper to parse and validate numeric parameter
+    const parseNumeric = (
+      value: string | undefined,
+      paramName: string,
+    ): number | undefined => {
+      if (!value) return undefined;
+      const parsed = Number.parseInt(value, 10);
+      if (Number.isNaN(parsed)) {
+        throw new Error(`${paramName} must be a valid integer`);
+      }
+      return parsed;
+    };
+
+    // Helper to parse and validate array of numeric parameters
+    const parseNumericArray = (
+      values: string[] | undefined,
+      paramName: string,
+    ): number | number[] | undefined => {
+      if (!values || values.length === 0) return undefined;
+      const parsed =
+        values.length === 1
+          ? parseNumeric(values[0], paramName)
+          : values.map((v, i) => {
+              const num = Number.parseInt(v, 10);
+              if (Number.isNaN(num)) {
+                throw new Error(`${paramName}[${i}] must be a valid integer`);
+              }
+              return num;
+            });
+      return parsed;
+    };
+
     // Parse numeric filters (duration)
-    const durationEq =
-      durationEqStrs && durationEqStrs.length > 0
-        ? durationEqStrs.length === 1
-          ? Number.parseInt(durationEqStrs[0]!, 10)
-          : durationEqStrs.map((s) => Number.parseInt(s, 10))
-        : undefined;
-    const durationGt = durationGtStr
-      ? Number.parseInt(durationGtStr, 10)
-      : undefined;
-    const durationLt = durationLtStr
-      ? Number.parseInt(durationLtStr, 10)
-      : undefined;
-    const durationGte = durationGteStr
-      ? Number.parseInt(durationGteStr, 10)
-      : undefined;
-    const durationLte = durationLteStr
-      ? Number.parseInt(durationLteStr, 10)
-      : undefined;
+    let durationEq: number | number[] | undefined;
+    let durationGt: number | undefined;
+    let durationLt: number | undefined;
+    let durationGte: number | undefined;
+    let durationLte: number | undefined;
 
     // Parse numeric filters (tokens)
-    const tokensEq =
-      tokensEqStrs && tokensEqStrs.length > 0
-        ? tokensEqStrs.length === 1
-          ? Number.parseInt(tokensEqStrs[0]!, 10)
-          : tokensEqStrs.map((s) => Number.parseInt(s, 10))
-        : undefined;
-    const tokensGt = tokensGtStr ? Number.parseInt(tokensGtStr, 10) : undefined;
-    const tokensLt = tokensLtStr ? Number.parseInt(tokensLtStr, 10) : undefined;
-    const tokensGte = tokensGteStr
-      ? Number.parseInt(tokensGteStr, 10)
-      : undefined;
-    const tokensLte = tokensLteStr
-      ? Number.parseInt(tokensLteStr, 10)
-      : undefined;
+    let tokensEq: number | number[] | undefined;
+    let tokensGt: number | undefined;
+    let tokensLt: number | undefined;
+    let tokensGte: number | undefined;
+    let tokensLte: number | undefined;
+
+    try {
+      durationEq = parseNumericArray(durationEqStrs, "durationEq");
+      durationGt = parseNumeric(durationGtStr, "durationGt");
+      durationLt = parseNumeric(durationLtStr, "durationLt");
+      durationGte = parseNumeric(durationGteStr, "durationGte");
+      durationLte = parseNumeric(durationLteStr, "durationLte");
+
+      tokensEq = parseNumericArray(tokensEqStrs, "tokensEq");
+      tokensGt = parseNumeric(tokensGtStr, "tokensGt");
+      tokensLt = parseNumeric(tokensLtStr, "tokensLt");
+      tokensGte = parseNumeric(tokensGteStr, "tokensGte");
+      tokensLte = parseNumeric(tokensLteStr, "tokensLte");
+    } catch (error) {
+      return c.json(
+        {
+          error: {
+            code: "INVALID_PARAM",
+            message:
+              error instanceof Error
+                ? error.message
+                : "Invalid numeric parameter",
+          },
+        },
+        400,
+      );
+    }
 
     const options: LogQueryOptions = {
       // String filters (support arrays)

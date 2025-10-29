@@ -15,12 +15,6 @@ import {
 } from "@fiberplane/mcp-gateway-types";
 import { AlertCircle, Check, Search, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import {
-  useAvailableClients,
-  useAvailableMethods,
-  useAvailableServers,
-  useAvailableSessions,
-} from "@/lib/use-available-filters";
 import { formatErrorMessage } from "@/lib/filter-errors";
 import {
   type FilterSuggestion,
@@ -28,6 +22,12 @@ import {
   parseInput,
   validateFilterInput,
 } from "@/lib/filter-parser";
+import {
+  useAvailableClients,
+  useAvailableMethods,
+  useAvailableServers,
+  useAvailableSessions,
+} from "@/lib/use-available-filters";
 import { useHandler } from "@/lib/use-handler";
 import { cn } from "@/lib/utils";
 import { FilterAutocomplete } from "./filter-autocomplete";
@@ -333,7 +333,6 @@ export function CommandFilterInput({
           open={showAutocomplete}
           onSelect={handleSelectSuggestion}
           onClose={() => setShowAutocomplete(false)}
-          anchorRef={inputRef}
           errorContent={errorContent}
           previewContent={previewContent}
         />

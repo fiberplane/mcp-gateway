@@ -31,11 +31,6 @@ interface FilterAutocompleteProps {
   onClose: () => void;
 
   /**
-   * Reference element to position the dropdown relative to
-   */
-  anchorRef: React.RefObject<HTMLInputElement | null>;
-
-  /**
    * Optional error content to display at top of dropdown
    */
   errorContent?: React.ReactNode;
@@ -51,8 +46,6 @@ export function FilterAutocomplete({
   open,
   onSelect,
   onClose,
-  // @ts-expect-error - anchorRef reserved for future positioning logic
-  anchorRef,
   errorContent,
   previewContent,
 }: FilterAutocompleteProps) {
@@ -60,6 +53,7 @@ export function FilterAutocomplete({
   const listRef = useRef<HTMLElement>(null);
 
   // Reset selection when suggestions change
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Intentionally reset on suggestions change
   useEffect(() => {
     setSelectedIndex(0);
   }, [suggestions]);
@@ -130,6 +124,7 @@ export function FilterAutocomplete({
       aria-label="Filter assistance"
     >
       {/* Live region for screen reader announcements */}
+      {/* biome-ignore lint/a11y/useSemanticElements: Live region for screen readers, div is appropriate */}
       <div role="status" aria-live="polite" className="sr-only">
         {suggestions.length > 0
           ? `${suggestions.length} suggestion${suggestions.length === 1 ? "" : "s"} available`

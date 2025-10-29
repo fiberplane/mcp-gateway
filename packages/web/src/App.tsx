@@ -115,8 +115,9 @@ function App() {
               : filter.value;
             break;
         }
+      } else if (filter.field === "server") {
+        params.serverName = filter.value;
       }
-      // Server filter is handled by ServerTabs component, not passed to API
     }
 
     return params;
