@@ -228,7 +228,7 @@ export function CommandFilterInput({
       onAddFilter(filter);
       setInputValue("");
       setShowAutocomplete(false);
-      inputRef.current?.focus();
+      // Don't refocus - let user see the filter pill that was added
     } else {
       // Not complete yet, populate and keep autocomplete open for next stage
       setInputValue(suggestion.text);
