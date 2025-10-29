@@ -1,218 +1,166 @@
 /**
  * Filter bar with search input, active filter badges, and controls.
- * Filter state is synced with URL parameters.
+ * Filter state is synced with URL parameters via nuqs.
  */
 
-import type { createFilter, FilterState } from "@fiberplane/mcp-gateway-types";
+import type { createFilter } from "@fiberplane/mcp-gateway-types";
+import { useQueryState, useQueryStates } from "nuqs";
 import type { ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  addOrReplaceFilter,
-  areFilterStatesEqual,
-  parseFilterStateFromUrl,
-  removeFilter,
-  serializeFilterStateToUrl,
+	addOrReplaceFilter,
+	removeFilter,
 } from "../lib/filter-utils";
+import {
+	filterParamsToFilters,
+	filtersToFilterParams,
+	parseAsFilterParam,
+	parseAsSearch,
+} from "../lib/filter-parsers";
 import { AddFilterDropdown } from "./add-filter-dropdown";
 import { FilterBadge } from "./filter-badge";
 import { SearchInput } from "./search-input";
 
 interface FilterBarProps {
-  /**
-   * Callback when filter state changes
-   * Used by parent to apply filters to data
-   */
-  onChange: (state: FilterState) => void;
-
-  /**
-   * Optional action buttons to display on the right side of search row
-   * (e.g., StreamingBadge, SettingsMenu, ExportButton)
-   */
-  actions?: ReactNode;
+	/**
+	 * Optional action buttons to display on the right side of search row
+	 * (e.g., StreamingBadge, SettingsMenu, ExportButton)
+	 */
+	actions?: ReactNode;
 }
 
-export function FilterBar({ onChange, actions }: FilterBarProps) {
-  // Live region announcement for screen readers
-  const [announcement, setAnnouncement] = useState("");
+export function FilterBar({ actions }: FilterBarProps) {
+	// Live region announcement for screen readers
+	const [announcement, setAnnouncement] = useState("");
 
-  // Parse initial state from URL
-  const [filterState, setFilterState] = useState<FilterState>(() => {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      return parseFilterStateFromUrl(params);
-    } catch (error) {
-      // Gracefully handle malformed URLs or invalid filter parameters
-      if (import.meta.env.DEV) {
-        // biome-ignore lint/suspicious/noConsole: Dev-only error logging
-        console.warn(
-          "Failed to parse filters from URL, using defaults:",
-          error,
-        );
-      }
-      return { search: "", filters: [] };
-    }
-  });
+	// URL state management via nuqs
+	const [search, setSearch] = useQueryState("q", parseAsSearch);
 
-  // Use ref to keep latest onChange without causing effect re-runs
-  // This prevents infinite loops if parent doesn't memoize onChange
-  const onChangeRef = useRef(onChange);
-  useEffect(() => {
-    onChangeRef.current = onChange;
-  }, [onChange]);
+	const [filterParams, setFilterParams] = useQueryStates(
+		{
+			client: parseAsFilterParam,
+			method: parseAsFilterParam,
+			session: parseAsFilterParam,
+			server: parseAsFilterParam,
+			duration: parseAsFilterParam,
+			tokens: parseAsFilterParam,
+		},
+		{
+			history: "replace", // Use replaceState instead of pushState
+		},
+	);
 
-  // Track previous filter state to prevent unnecessary updates
-  const prevFilterStateRef = useRef<FilterState | null>(null);
+	// Convert URL params to Filter array
+	const filters = useMemo(
+		() => filterParamsToFilters(filterParams),
+		[filterParams],
+	);
 
-  // Sync URL when filter state changes
-  useEffect(() => {
-    // Efficient deep comparison to prevent unnecessary updates
-    const previous = prevFilterStateRef.current;
-    const hasChanged =
-      previous === null || !areFilterStatesEqual(previous, filterState);
+	// Update live region announcement when filters change
+	useEffect(() => {
+		const count = filters.length;
+		if (count === 0) {
+			setAnnouncement("All filters cleared");
+		} else if (count === 1) {
+			setAnnouncement("1 filter active");
+		} else {
+			setAnnouncement(`${count} filters active`);
+		}
+	}, [filters.length]);
 
-    if (hasChanged) {
-      const params = serializeFilterStateToUrl(filterState);
-      const newUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`;
-      window.history.replaceState({}, "", newUrl);
+	const handleRemoveFilter = (filterId: string) => {
+		const updatedFilters = removeFilter(filters, filterId);
+		const newParams = filtersToFilterParams(updatedFilters);
+		setFilterParams(newParams);
+	};
 
-      // Notify parent of changes using latest callback
-      onChangeRef.current(filterState);
+	const handleAddFilter = (filter: ReturnType<typeof createFilter>) => {
+		const updatedFilters = addOrReplaceFilter(filters, filter);
+		const newParams = filtersToFilterParams(updatedFilters);
+		setFilterParams(newParams);
+	};
 
-      // Update previous state
-      prevFilterStateRef.current = filterState;
-    }
-  }, [filterState]); // Only depend on filterState, not onChange
+	const handleRemoveFilterByField = (field: string) => {
+		const updatedFilters = filters.filter((f) => f.field !== field);
+		const newParams = filtersToFilterParams(updatedFilters);
+		setFilterParams(newParams);
+	};
 
-  // Listen for browser back/forward navigation
-  useEffect(() => {
-    const handlePopState = () => {
-      try {
-        const params = new URLSearchParams(window.location.search);
-        setFilterState(parseFilterStateFromUrl(params));
-      } catch (error) {
-        // Gracefully handle malformed URLs during navigation
-        if (import.meta.env.DEV) {
-          // biome-ignore lint/suspicious/noConsole: Dev-only error logging
-          console.warn(
-            "Failed to parse filters during navigation, using defaults:",
-            error,
-          );
-        }
-        setFilterState({ search: "", filters: [] });
-      }
-    };
+	const handleSearchChange = (newSearch: string) => {
+		setSearch(newSearch);
+	};
 
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
+	const handleClearAll = () => {
+		// Only clear filters, preserve search (UX principle: button position = button scope)
+		setFilterParams({
+			client: null,
+			method: null,
+			session: null,
+			server: null,
+			duration: null,
+			tokens: null,
+		});
+	};
 
-  // Update live region announcement when filters change
-  useEffect(() => {
-    const count = filterState.filters.length;
-    if (count === 0) {
-      setAnnouncement("All filters cleared");
-    } else if (count === 1) {
-      setAnnouncement("1 filter active");
-    } else {
-      setAnnouncement(`${count} filters active`);
-    }
-  }, [filterState.filters.length]);
+	// Show "Clear all" button only when there are active filters
+	// (not when search has text - search is cleared via its own X button)
+	const hasActiveFilters = filters.length > 0;
 
-  const handleRemoveFilter = (filterId: string) => {
-    setFilterState((prev) => ({
-      ...prev,
-      filters: removeFilter(prev.filters, filterId),
-    }));
-  };
+	return (
+		<>
+			{/* Visually hidden live region for screen reader announcements */}
+			{/* biome-ignore lint/a11y/useSemanticElements: div with role="status" is the correct ARIA pattern for live regions */}
+			<div
+				role="status"
+				aria-live="polite"
+				aria-atomic="true"
+				className="sr-only"
+			>
+				{announcement}
+			</div>
 
-  const handleAddFilter = (filter: ReturnType<typeof createFilter>) => {
-    setFilterState((prev) => ({
-      ...prev,
-      filters: addOrReplaceFilter(prev.filters, filter),
-    }));
-  };
+			<div className="flex flex-col gap-3">
+				{/* Row 1: Search input + Action buttons */}
+				<div className="flex items-center gap-3">
+					<SearchInput
+						value={search ?? ""}
+						onChange={handleSearchChange}
+						placeholder="Search logs..."
+						className="flex-1"
+					/>
+					{actions}
+				</div>
 
-  const handleRemoveFilterByField = (field: string) => {
-    setFilterState((prev) => ({
-      ...prev,
-      filters: prev.filters.filter((f) => f.field !== field),
-    }));
-  };
+				{/* Row 2: Filters */}
+				<div className="flex items-center gap-2 flex-wrap">
+					{/* Add filter button - always first for stable position */}
+					<AddFilterDropdown
+						onAdd={handleAddFilter}
+						onRemove={handleRemoveFilterByField}
+						activeFilters={filters}
+					/>
 
-  const handleSearchChange = (search: string) => {
-    setFilterState((prev) => ({
-      ...prev,
-      search,
-    }));
-  };
+					{/* Active filter badges */}
+					{filters.map((filter) => (
+						<FilterBadge
+							key={filter.id}
+							filter={filter}
+							onRemove={handleRemoveFilter}
+						/>
+					))}
 
-  const handleClearAll = () => {
-    // Only clear filters, preserve search (UX principle: button position = button scope)
-    setFilterState((prev) => ({
-      ...prev,
-      filters: [],
-    }));
-  };
-
-  // Show "Clear all" button only when there are active filters
-  // (not when search has text - search is cleared via its own X button)
-  const hasActiveFilters = filterState.filters.length > 0;
-
-  return (
-    <>
-      {/* Visually hidden live region for screen reader announcements */}
-      {/* biome-ignore lint/a11y/useSemanticElements: div with role="status" is the correct ARIA pattern for live regions */}
-      <div
-        role="status"
-        aria-live="polite"
-        aria-atomic="true"
-        className="sr-only"
-      >
-        {announcement}
-      </div>
-
-      <div className="flex flex-col gap-3">
-        {/* Row 1: Search input + Action buttons */}
-        <div className="flex items-center gap-3">
-          <SearchInput
-            value={filterState.search}
-            onChange={handleSearchChange}
-            placeholder="Search logs..."
-            className="flex-1"
-          />
-          {actions}
-        </div>
-
-        {/* Row 2: Filters */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Add filter button - always first for stable position */}
-          <AddFilterDropdown
-            onAdd={handleAddFilter}
-            onRemove={handleRemoveFilterByField}
-            activeFilters={filterState.filters}
-          />
-
-          {/* Active filter badges */}
-          {filterState.filters.map((filter) => (
-            <FilterBadge
-              key={filter.id}
-              filter={filter}
-              onRemove={handleRemoveFilter}
-            />
-          ))}
-
-          {/* Clear all button - positioned right after filter badges */}
-          {hasActiveFilters && (
-            <button
-              type="button"
-              onClick={handleClearAll}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-            >
-              Clear all
-            </button>
-          )}
-        </div>
-      </div>
-    </>
-  );
+					{/* Clear all button - positioned right after filter badges */}
+					{hasActiveFilters && (
+						<button
+							type="button"
+							onClick={handleClearAll}
+							className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+						>
+							Clear all
+						</button>
+					)}
+				</div>
+			</div>
+		</>
+	);
 }
