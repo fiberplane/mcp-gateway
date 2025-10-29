@@ -527,10 +527,20 @@ function createColumns(): Column[] {
         // Calculate total (treating undefined as 0)
         const total = (inputTokens ?? 0) + (outputTokens ?? 0);
 
+        // Build tooltip with only present values
+        const tooltipParts: string[] = [];
+        if (inputTokens !== undefined) {
+          tooltipParts.push(`Input: ${inputTokens}`);
+        }
+        if (outputTokens !== undefined) {
+          tooltipParts.push(`Output: ${outputTokens}`);
+        }
+        const tooltip = tooltipParts.join(", ");
+
         return (
           <span
             className="text-sm text-muted-foreground tabular-nums text-right"
-            title={`Input: ${inputTokens ?? "−"}, Output: ${outputTokens ?? "−"}`}
+            title={tooltip}
           >
             {total.toLocaleString()}
           </span>
