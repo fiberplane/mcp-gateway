@@ -15,11 +15,7 @@
  * However, this heuristic is sufficient for cost monitoring and rate limiting.
  */
 
-import {
-  promptsGetParamsSchema,
-  resourcesReadParamsSchema,
-  toolsCallParamsSchema,
-} from "@fiberplane/mcp-gateway-types";
+import { toolsCallParamsSchema } from "@fiberplane/mcp-gateway-types";
 import { logger } from "../logger.js";
 
 const CHARS_PER_TOKEN = 4;
@@ -43,11 +39,32 @@ function estimateText(text: string): number {
  * Extracts only the parts that would be sent to the LLM in a tool_use block,
  * ignoring MCP protocol overhead.
  *
+ * Per issue #55: Only methods where the LLM produces tokens have input cost.
+ *
  * @param method - MCP method name (e.g., "tools/call")
  * @param params - Request parameters
- * @returns Estimated token count for the input
+ * @returns Estimated token count for the input, or undefined if not applicable
  */
-export function estimateInputTokens(method: string, params: unknown): number {
+export function estimateInputTokens(
+  method: string,
+  params: unknown,
+): number | undefined {
+  // No-cost methods (requests initiated by client, not LLM)
+  // https://github.com/fiberplane/mcp-gateway/issues/55
+  if (
+    method === "tools/list" ||
+    method === "resources/list" ||
+    method === "resources/templates/list" ||
+    method === "resources/read" ||
+    method === "prompts/list" ||
+    method === "prompts/get" ||
+    method === "ping" ||
+    method === "initialize" ||
+    method === "notifications/initialized"
+  ) {
+    return undefined;
+  }
+
   try {
     let payload: unknown;
 
@@ -74,52 +91,6 @@ export function estimateInputTokens(method: string, params: unknown): number {
         break;
       }
 
-      case "resources/read": {
-        // LLM sends: { uri: "file://..." }
-        const parsed = resourcesReadParamsSchema.safeParse(params);
-        if (parsed.success) {
-          payload = { uri: parsed.data.uri };
-        } else {
-          logger.warn(
-            "[tokens] Failed to parse resources/read params for token estimation",
-            {
-              issues: parsed.error.issues,
-              method,
-            },
-          );
-          payload = params || {};
-        }
-        break;
-      }
-
-      case "prompts/get": {
-        // LLM sends: { name: "prompt_name", arguments?: {...} }
-        const parsed = promptsGetParamsSchema.safeParse(params);
-        if (parsed.success) {
-          payload = {
-            name: parsed.data.name,
-            arguments: parsed.data.arguments,
-          };
-        } else {
-          logger.warn(
-            "[tokens] Failed to parse prompts/get params for token estimation",
-            {
-              issues: parsed.error.issues,
-              method,
-            },
-          );
-          payload = params || {};
-        }
-        break;
-      }
-
-      case "tools/list":
-      case "resources/list":
-      case "prompts/list":
-        // List methods have minimal input (just cursor if any)
-        payload = params || {};
-        break;
-
       default:
         // For other methods, use full params
         payload = params || {};
@@ -141,16 +112,35 @@ export function estimateInputTokens(method: string, params: unknown): number {
  *
  * The result is what gets sent back to the LLM in a tool_result block.
  *
+ * Per issue #55: Only methods where the LLM reads the response have output cost.
+ *
  * EDGE CASES:
  * - Handles circular references (returns 0)
  * - Handles BigInt values (converts to string)
  * - Handles undefined/null (returns minimal count)
  * - For binary data (base64), counts the encoded string length
  *
+ * @param method - MCP method name (e.g., "tools/call")
  * @param result - Response result object
- * @returns Estimated token count for the output
+ * @returns Estimated token count for the output, or undefined if not applicable
  */
-export function estimateOutputTokens(result: unknown): number {
+export function estimateOutputTokens(
+  method: string,
+  result: unknown,
+): number | undefined {
+  // No-cost methods (responses not read by LLM)
+  // https://github.com/fiberplane/mcp-gateway/issues/55
+  if (
+    method === "tools/list" ||
+    method === "resources/list" ||
+    method === "resources/templates/list" ||
+    method === "prompts/list" ||
+    method === "ping" ||
+    method === "initialize" ||
+    method === "notifications/initialized"
+  ) {
+    return undefined;
+  }
   try {
     // Handle null/undefined explicitly
     if (result === null || result === undefined) {
@@ -158,18 +148,27 @@ export function estimateOutputTokens(result: unknown): number {
     }
 
     // For MCP responses with content arrays (common pattern)
+    // MCP spec uses "contents" (plural) for resources/read
+    // Some implementations use "content" (singular) for tools/call
     // Example: { content: [{ type: "text", text: "..." }] }
-    if (
-      typeof result === "object" &&
-      result !== null &&
-      "content" in result &&
-      Array.isArray(result.content)
-    ) {
+    let contentArray: Array<unknown> | null = null;
+
+    if (typeof result === "object" && result !== null) {
+      // Try "contents" first (MCP spec - used by resources/read)
+      if ("contents" in result && Array.isArray(result.contents)) {
+        contentArray = result.contents;
+      }
+      // Fall back to "content" (some implementations - used by tools/call)
+      else if ("content" in result && Array.isArray(result.content)) {
+        contentArray = result.content;
+      }
+    }
+
+    if (contentArray) {
       // This is more accurate for text content
-      const content = result.content;
       let totalChars = 0;
 
-      for (const item of content) {
+      for (const item of contentArray) {
         if (item && typeof item === "object") {
           // Count text content more accurately
           if ("text" in item && typeof item.text === "string") {
@@ -184,7 +183,7 @@ export function estimateOutputTokens(result: unknown): number {
 
       // Add overhead for JSON structure (type fields, etc.)
       // Typical: {"content":[{"type":"text","text":"..."}]} adds ~40 chars
-      const structureOverhead = 40 + content.length * 20;
+      const structureOverhead = 40 + contentArray.length * 20;
       totalChars += structureOverhead;
 
       return Math.ceil(totalChars / CHARS_PER_TOKEN);

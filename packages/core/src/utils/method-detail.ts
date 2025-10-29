@@ -184,7 +184,7 @@ export function getMethodDetail(log: ApiLogEntry): string | null {
     case "tools/list":
     case "resources/list":
     case "prompts/list": {
-      // Show "all" or cursor info
+      // Show cursor info only (don't show "all" - it's redundant)
       if (
         params &&
         typeof params === "object" &&
@@ -193,7 +193,7 @@ export function getMethodDetail(log: ApiLogEntry): string | null {
       ) {
         return `cursor: ${params.cursor.slice(0, 8)}...`;
       }
-      return "all";
+      return "";
     }
 
     default:
@@ -226,15 +226,23 @@ function hasType(item: unknown): item is { type: string } {
 }
 
 /**
- * Type guard for MCP content array format
+ * Extract content array from result (handles both "content" and "contents")
+ * MCP spec uses "contents" (plural), but some implementations use "content"
  */
-function hasContent(result: unknown): result is { content: Array<unknown> } {
-  return (
-    typeof result === "object" &&
-    result !== null &&
-    "content" in result &&
-    Array.isArray(result.content)
-  );
+function getContentArray(result: unknown): Array<unknown> | null {
+  if (typeof result !== "object" || result === null) return null;
+
+  // Try "contents" first (MCP spec)
+  if ("contents" in result && Array.isArray(result.contents)) {
+    return result.contents;
+  }
+
+  // Fall back to "content" (some implementations)
+  if ("content" in result && Array.isArray(result.content)) {
+    return result.content;
+  }
+
+  return null;
 }
 
 /**
@@ -384,8 +392,9 @@ function getResponsePreview(log: ApiLogEntry): string {
 
     case "tools/call": {
       // Format: "text content..." with quotes
-      if (hasContent(result) && result.content.length > 0) {
-        const firstItem = result.content[0];
+      const toolContent = getContentArray(result);
+      if (toolContent && toolContent.length > 0) {
+        const firstItem = toolContent[0];
         if (hasText(firstItem)) {
           const text = firstItem.text;
           const truncated = text.length > 40 ? `${text.slice(0, 40)}...` : text;
@@ -394,19 +403,62 @@ function getResponsePreview(log: ApiLogEntry): string {
       }
       break;
     }
+
+    case "resources/read": {
+      // Format: "mimetype (length)" or "N contents"
+      const resourceContent = getContentArray(result);
+      if (resourceContent) {
+        const contentCount = resourceContent.length;
+        if (contentCount === 0) return "0 contents";
+        if (contentCount > 1) return `${contentCount} contents`;
+
+        // Single content item - show MIME type and size
+        const firstItem = resourceContent[0];
+        if (firstItem && typeof firstItem === "object") {
+          const mimeType =
+            "mimeType" in firstItem && typeof firstItem.mimeType === "string"
+              ? firstItem.mimeType
+              : undefined;
+
+          // Calculate size
+          let size = 0;
+          let unit = "chars";
+
+          if (hasText(firstItem)) {
+            size = firstItem.text.length;
+            unit = "chars";
+          } else if (
+            "data" in firstItem &&
+            typeof firstItem.data === "string"
+          ) {
+            // Base64 data - estimate bytes (base64 is ~1.33x larger than original)
+            size = Math.ceil((firstItem.data.length * 3) / 4);
+            unit = "bytes";
+          }
+
+          if (mimeType && size > 0) {
+            return `${mimeType} (${size.toLocaleString()} ${unit})`;
+          }
+          if (mimeType) return mimeType;
+          if (size > 0) return `${size.toLocaleString()} ${unit}`;
+        }
+      }
+      break;
+    }
   }
 
   // Generic fallback formatting
-  // Extract text from MCP content array format
-  if (hasContent(result) && result.content.length > 0) {
-    const firstItem = result.content[0];
+  // Extract text from MCP content array format (handles both content/contents)
+  const genericContent = getContentArray(result);
+  if (genericContent && genericContent.length > 0) {
+    const firstItem = genericContent[0];
     if (hasText(firstItem)) {
       const text = firstItem.text;
       return text.length > 60 ? `${text.slice(0, 60)}...` : text;
     }
     if (hasType(firstItem)) {
       const type = firstItem.type;
-      return `[${type}${result.content.length > 1 ? ` +${result.content.length - 1} more` : ""}]`;
+      return `[${type}${genericContent.length > 1 ? ` +${genericContent.length - 1} more` : ""}]`;
     }
   }
 

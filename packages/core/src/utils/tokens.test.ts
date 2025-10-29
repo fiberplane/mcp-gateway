@@ -16,44 +16,39 @@ describe("estimateInputTokens", () => {
     expect(tokens).toBeLessThan(50);
   });
 
-  it("estimates tokens for resources/read", () => {
+  it("returns undefined for resources/read (no-cost method)", () => {
     const params = { uri: "file:///path/to/file.txt" };
 
     const tokens = estimateInputTokens("resources/read", params);
 
-    // Should be roughly: {"uri":"file:///path/to/file.txt"}
-    // That's about 40 characters = 10 tokens
-    expect(tokens).toBeGreaterThan(0);
-    expect(tokens).toBeLessThan(20);
+    // resources/read requests are initiated by client, not LLM
+    expect(tokens).toBeUndefined();
+  });
+
+  it("returns undefined for tools/list (no-cost method)", () => {
+    const tokens = estimateInputTokens("tools/list", {});
+    expect(tokens).toBeUndefined();
+  });
+
+  it("returns undefined for prompts/list (no-cost method)", () => {
+    const tokens = estimateInputTokens("prompts/list", {});
+    expect(tokens).toBeUndefined();
+  });
+
+  it("returns undefined for prompts/get request (no-cost method)", () => {
+    const tokens = estimateInputTokens("prompts/get", { name: "test" });
+    expect(tokens).toBeUndefined();
+  });
+
+  it("returns undefined for initialize (no-cost method)", () => {
+    const tokens = estimateInputTokens("initialize", {});
+    expect(tokens).toBeUndefined();
   });
 
   it("handles invalid params gracefully", () => {
     const tokens = estimateInputTokens("tools/call", null);
     // Should handle null params gracefully
     expect(tokens).toBeGreaterThanOrEqual(0);
-  });
-
-  it("handles prompts/get with arguments", () => {
-    const params = {
-      name: "code_review",
-      arguments: { language: "typescript", style: "detailed" },
-    };
-
-    const tokens = estimateInputTokens("prompts/get", params);
-
-    // Should extract name and arguments
-    expect(tokens).toBeGreaterThan(0);
-    expect(tokens).toBeLessThan(50);
-  });
-
-  it("handles list methods with cursor", () => {
-    const params = { cursor: "abc123def456" };
-
-    const tokens = estimateInputTokens("tools/list", params);
-
-    // Should count cursor param
-    expect(tokens).toBeGreaterThan(0);
-    expect(tokens).toBeLessThan(20);
   });
 
   it("handles unknown methods", () => {
@@ -89,12 +84,12 @@ describe("estimateInputTokens", () => {
 });
 
 describe("estimateOutputTokens", () => {
-  it("estimates tokens from result", () => {
+  it("estimates tokens from tools/call result", () => {
     const result = {
       content: [{ type: "text", text: "Hello, world!" }],
     };
 
-    const tokens = estimateOutputTokens(result);
+    const tokens = estimateOutputTokens("tools/call", result);
 
     // Should use optimized content extraction
     // "Hello, world!" = 13 chars + structure overhead ~60 chars = ~73 chars = ~19 tokens
@@ -102,13 +97,47 @@ describe("estimateOutputTokens", () => {
     expect(tokens).toBeLessThan(30);
   });
 
+  it("returns undefined for tools/list response (no-cost method)", () => {
+    const result = { tools: [{ name: "test" }] };
+    const tokens = estimateOutputTokens("tools/list", result);
+    expect(tokens).toBeUndefined();
+  });
+
+  it("returns undefined for prompts/list response (no-cost method)", () => {
+    const result = { prompts: [{ name: "test" }] };
+    const tokens = estimateOutputTokens("prompts/list", result);
+    expect(tokens).toBeUndefined();
+  });
+
+  it("returns undefined for initialize response (no-cost method)", () => {
+    const result = { serverInfo: { name: "test", version: "1.0" } };
+    const tokens = estimateOutputTokens("initialize", result);
+    expect(tokens).toBeUndefined();
+  });
+
+  it("estimates tokens for resources/read response (has cost)", () => {
+    const result = {
+      contents: [{ type: "text", text: "File contents here" }],
+    };
+    const tokens = estimateOutputTokens("resources/read", result);
+    expect(tokens).toBeGreaterThan(0);
+  });
+
+  it("estimates tokens for prompts/get response (has cost)", () => {
+    const result = {
+      messages: [{ role: "user", content: { type: "text", text: "Test" } }],
+    };
+    const tokens = estimateOutputTokens("prompts/get", result);
+    expect(tokens).toBeGreaterThan(0);
+  });
+
   it("handles empty results", () => {
-    const tokens = estimateOutputTokens(undefined);
+    const tokens = estimateOutputTokens("tools/call", undefined);
     expect(tokens).toBeGreaterThan(0); // "{}" is 2 chars = 1 token
   });
 
   it("handles null results gracefully", () => {
-    const tokens = estimateOutputTokens(null);
+    const tokens = estimateOutputTokens("tools/call", null);
     // Should handle null results gracefully
     expect(tokens).toBeGreaterThanOrEqual(0);
   });
@@ -120,7 +149,7 @@ describe("estimateOutputTokens", () => {
       data: { details: "The requested method does not exist" },
     };
 
-    const tokens = estimateOutputTokens(error);
+    const tokens = estimateOutputTokens("tools/call", error);
 
     // Should estimate tokens from error object
     expect(tokens).toBeGreaterThan(0);
@@ -136,7 +165,7 @@ describe("estimateOutputTokens", () => {
       ],
     };
 
-    const tokens = estimateOutputTokens(result);
+    const tokens = estimateOutputTokens("tools/call", result);
 
     // Should count all text content + structure
     // ~75 chars of text + structure overhead ~100 chars = ~175 chars = ~44 tokens
@@ -154,7 +183,7 @@ describe("estimateOutputTokens", () => {
       ],
     };
 
-    const tokens = estimateOutputTokens(result);
+    const tokens = estimateOutputTokens("tools/call", result);
 
     // Should count base64 data length
     // ~104 chars of base64 + structure ~60 = ~164 chars = ~41 tokens
@@ -172,7 +201,7 @@ describe("estimateOutputTokens", () => {
       },
     };
 
-    const tokens = estimateOutputTokens(result);
+    const tokens = estimateOutputTokens("tools/call", result);
 
     // Should stringify entire object
     // ~120 chars = ~30 tokens
@@ -185,7 +214,7 @@ describe("estimateOutputTokens", () => {
       content: [{ type: "text", text: "" }],
     };
 
-    const tokens = estimateOutputTokens(result);
+    const tokens = estimateOutputTokens("tools/call", result);
 
     // Should count structure overhead only
     // ~60 chars structure = ~15 tokens
@@ -197,10 +226,10 @@ describe("estimateOutputTokens", () => {
     // Simulate a large file read
     const largeText = "x".repeat(10000);
     const result = {
-      content: [{ type: "text", text: largeText }],
+      contents: [{ type: "text", text: largeText }],
     };
 
-    const tokens = estimateOutputTokens(result);
+    const tokens = estimateOutputTokens("resources/read", result);
 
     // Should handle large content
     // 10000 chars + ~60 structure = ~10060 chars = ~2515 tokens
@@ -214,7 +243,7 @@ describe("estimateOutputTokens", () => {
       timestamp: "2024-01-01T00:00:00Z",
     };
 
-    const tokens = estimateOutputTokens(result);
+    const tokens = estimateOutputTokens("tools/call", result);
 
     // Should stringify entire object
     expect(tokens).toBeGreaterThan(0);
@@ -224,7 +253,7 @@ describe("estimateOutputTokens", () => {
   it("handles arrays at top level", () => {
     const result = ["item1", "item2", "item3"];
 
-    const tokens = estimateOutputTokens(result);
+    const tokens = estimateOutputTokens("tools/call", result);
 
     // Should stringify array
     // ["item1","item2","item3"] = ~30 chars = ~8 tokens
@@ -233,8 +262,10 @@ describe("estimateOutputTokens", () => {
   });
 
   it("handles primitive values", () => {
-    expect(estimateOutputTokens("simple string")).toBeGreaterThan(0);
-    expect(estimateOutputTokens(12345)).toBeGreaterThan(0);
-    expect(estimateOutputTokens(true)).toBeGreaterThan(0);
+    expect(estimateOutputTokens("tools/call", "simple string")).toBeGreaterThan(
+      0,
+    );
+    expect(estimateOutputTokens("tools/call", 12345)).toBeGreaterThan(0);
+    expect(estimateOutputTokens("tools/call", true)).toBeGreaterThan(0);
   });
 });
