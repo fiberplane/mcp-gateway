@@ -71,6 +71,7 @@ export function CommandFilterInput({
   const [inputValue, setInputValue] = useState(initialValue || "");
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const blurTimeoutRef = useRef<number | null>(null);
 
   // Fetch available values for autocomplete
   const { data: serversData } = useAvailableServers();
@@ -211,6 +212,11 @@ export function CommandFilterInput({
 
   // Handle autocomplete selection
   const handleSelectSuggestion = useHandler((suggestion: FilterSuggestion) => {
+    // Cancel any pending blur timeout
+    if (blurTimeoutRef.current !== null) {
+      window.clearTimeout(blurTimeoutRef.current);
+      blurTimeoutRef.current = null;
+    }
     setInputValue(suggestion.text);
     // Keep autocomplete open to show next stage suggestions (e.g., operators after field)
     setShowAutocomplete(true);
@@ -252,7 +258,9 @@ export function CommandFilterInput({
             onFocus={() => setShowAutocomplete(true)}
             onBlur={() => {
               // Delay to allow clicking autocomplete items
-              setTimeout(() => setShowAutocomplete(false), 200);
+              blurTimeoutRef.current = window.setTimeout(() => {
+                setShowAutocomplete(false);
+              }, 200);
             }}
             placeholder={placeholder}
             className={cn(
