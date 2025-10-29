@@ -17,7 +17,7 @@ export function SearchPill({ searchTerm, onRemove, onEdit }: SearchPillProps) {
   const label = `Search: ${searchTerm.query}`;
 
   return (
-    <div className="inline-flex items-center gap-2 h-9 px-2 rounded-md bg-muted/50 border border-muted">
+    <div className="inline-flex items-center gap-2 h-8 px-2 rounded-md bg-muted/50 border border-muted">
       {/* Clickable area for editing */}
       <button
         type="button"

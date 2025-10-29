@@ -26,7 +26,6 @@ import { useHandler } from "@/lib/use-handler";
 import { cn } from "@/lib/utils";
 import { FilterAutocomplete } from "./filter-autocomplete";
 import { FilterBadge } from "./filter-badge";
-import { SearchPill } from "./search-pill";
 import { Button } from "./ui/button";
 
 interface CommandFilterInputProps {
@@ -171,7 +170,7 @@ export function CommandFilterInput({
       <div className="relative">
         <div
           className={cn(
-            "flex items-center gap-2 px-3 py-2",
+            "flex items-center gap-2 px-3 py-1.5",
             "border rounded-md bg-background",
             "transition-colors",
             validationState === "valid" && "border-green-600",
@@ -253,27 +252,21 @@ export function CommandFilterInput({
         </span>
       </div>
 
-      {/* Preview pill (when valid) */}
+      {/* Preview pill (when valid) - only for filters */}
       {isValid &&
         trimmed &&
         (() => {
           const result = parseInput(trimmed);
-          if (!result) return null;
+          // Skip preview for search terms (text is self-explanatory)
+          if (!result || result.type === "search") return null;
 
           return (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span>Preview:</span>
-              {result.type === "filter" ? (
-                <FilterBadge
-                  filter={createFilter(result.filter)}
-                  onRemove={() => {}} // No-op for preview
-                />
-              ) : (
-                <SearchPill
-                  searchTerm={createSearchTerm(result.query)}
-                  onRemove={() => {}} // No-op for preview
-                />
-              )}
+              <FilterBadge
+                filter={createFilter(result.filter)}
+                onRemove={() => {}} // No-op for preview
+              />
             </div>
           );
         })()}

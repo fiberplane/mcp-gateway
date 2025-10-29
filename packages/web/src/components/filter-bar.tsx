@@ -180,7 +180,7 @@ export function FilterBar({ actions }: FilterBarProps) {
         {announcement}
       </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2">
         {/* Row 1: Unified input + Action buttons */}
         <div className="flex items-center gap-3">
           <div className="flex-1">

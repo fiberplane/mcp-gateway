@@ -112,7 +112,7 @@ export function FilterBadge({ filter, onRemove, onEdit }: FilterBadgeProps) {
       : `${fieldLabel} ${operatorLabel} ${value}`;
 
   return (
-    <div className="inline-flex items-center gap-2 h-9 px-2 border border-foreground rounded-md bg-card">
+    <div className="inline-flex items-center gap-2 h-8 px-2 border border-foreground rounded-md bg-card">
       {/* Clickable area for editing */}
       <button
         type="button"
