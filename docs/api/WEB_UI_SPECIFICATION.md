@@ -587,20 +587,6 @@ class APIClient {
 export const apiClient = new APIClient();
 ```
 
-## Responsive Design
-
-**Breakpoints:**
-- `sm`: 640px
-- `md`: 768px
-- `lg`: 1024px
-- `xl`: 1280px
-- `2xl`: 1536px
-
-**Mobile Adaptations:**
-- Stack table columns vertically on small screens
-- Drawer-style filter sidebar on mobile
-- Simplified header on mobile
-
 ## Performance Optimizations
 
 1. **Code Splitting:** Route-based code splitting with TanStack Router

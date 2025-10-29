@@ -300,27 +300,13 @@ Click column headers to sort:
 3. Try different export format
 4. Use REST API for large exports
 
-## Responsive Design
-
-The Web UI works on:
-- **Desktop**: Full-featured dashboard
-- **Tablet**: Optimized layout with touch support
-- **Mobile**: Simplified view, all features available
-
-**Mobile Tips:**
-- Use portrait orientation for better readability
-- Tap server cards to expand
-- Use device keyboard for search
-- Horizontal scroll for log table
-
 ## Browser Support
 
-Tested and supported:
+Latest versions of:
 
-- Chrome/Edge 92+
-- Firefox 95+
-- Safari 15.4+
-- Mobile browsers (iOS Safari 15.4+, Chrome Mobile)
+- Chrome/Edge
+- Firefox
+- Safari
 
 ## Performance
 
