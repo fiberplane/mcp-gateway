@@ -68,17 +68,37 @@ export type ApiLogEntry =
 /**
  * Query options for log filtering and pagination
  *
- * Fields that support arrays enable OR logic (e.g., serverName: ["a", "b"] matches logs from server "a" OR "b")
+ * String fields support arrays for OR logic (e.g., serverName: ["a", "b"] matches logs from server "a" OR "b")
+ * Numeric fields support comparison operators (gt, lt, eq, gte, lte)
  */
 export interface LogQueryOptions {
+  // String filters (support arrays for multi-select)
   serverName?: string | string[]; // Filter by server name(s) - supports multi-select
   sessionId?: string | string[]; // Filter by session ID(s) - supports multi-select
-  method?: string; // Filter by method (partial match with LIKE) - single value only
+  method?: string | string[]; // Filter by method name(s) - supports multi-select with partial match
   clientName?: string | string[]; // Filter by client name(s) - supports multi-select
   clientVersion?: string; // Filter by client version - single value only
   clientIp?: string; // Filter by client IP - single value only
+
+  // Numeric filters (duration in milliseconds)
+  durationEq?: number | number[]; // Duration equals (supports array for OR logic)
+  durationGt?: number; // Duration greater than
+  durationLt?: number; // Duration less than
+  durationGte?: number; // Duration greater than or equal
+  durationLte?: number; // Duration less than or equal
+
+  // Numeric filters (tokens - sum of input + output)
+  tokensEq?: number | number[]; // Total tokens equals (supports array for OR logic)
+  tokensGt?: number; // Total tokens greater than
+  tokensLt?: number; // Total tokens less than
+  tokensGte?: number; // Total tokens greater than or equal
+  tokensLte?: number; // Total tokens less than or equal
+
+  // Time range filters
   after?: string; // ISO timestamp
   before?: string; // ISO timestamp
+
+  // Pagination
   limit?: number;
   order?: "asc" | "desc";
 }

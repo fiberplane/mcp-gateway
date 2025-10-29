@@ -7,7 +7,20 @@ import type {
   ServerInfo,
   SessionInfo,
 } from "@fiberplane/mcp-gateway-types";
-import { and, count, desc, eq, gt, inArray, like, lt, sql } from "drizzle-orm";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  gt,
+  gte,
+  inArray,
+  like,
+  lt,
+  lte,
+  or,
+  sql,
+} from "drizzle-orm";
 import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
 import { logger } from "../logger.js";
 import type * as schema from "./schema.js";
@@ -122,6 +135,16 @@ export async function queryLogs(
     clientName,
     clientVersion,
     clientIp,
+    durationEq,
+    durationGt,
+    durationLt,
+    durationGte,
+    durationLte,
+    tokensEq,
+    tokensGt,
+    tokensLt,
+    tokensGte,
+    tokensLte,
     after,
     before,
     limit = 100,
@@ -130,6 +153,8 @@ export async function queryLogs(
 
   // Build where conditions
   const conditions = [];
+
+  // String filters (support arrays for OR logic)
   if (serverName) {
     conditions.push(
       Array.isArray(serverName)
@@ -145,7 +170,13 @@ export async function queryLogs(
     );
   }
   if (method) {
-    conditions.push(like(logs.method, `%${method}%`));
+    // Support arrays for multi-select with partial match (OR logic)
+    if (Array.isArray(method)) {
+      const methodConditions = method.map((m) => like(logs.method, `%${m}%`));
+      conditions.push(or(...methodConditions));
+    } else {
+      conditions.push(like(logs.method, `%${method}%`));
+    }
   }
   if (clientName) {
     conditions.push(
@@ -160,6 +191,54 @@ export async function queryLogs(
   if (clientIp) {
     conditions.push(eq(logs.clientIp, clientIp));
   }
+
+  // Duration filters (milliseconds)
+  if (durationEq !== undefined) {
+    conditions.push(
+      Array.isArray(durationEq)
+        ? inArray(logs.durationMs, durationEq)
+        : eq(logs.durationMs, durationEq),
+    );
+  }
+  if (durationGt !== undefined) {
+    conditions.push(gt(logs.durationMs, durationGt));
+  }
+  if (durationLt !== undefined) {
+    conditions.push(lt(logs.durationMs, durationLt));
+  }
+  if (durationGte !== undefined) {
+    conditions.push(gte(logs.durationMs, durationGte));
+  }
+  if (durationLte !== undefined) {
+    conditions.push(lte(logs.durationMs, durationLte));
+  }
+
+  // Token filters (calculated as inputTokens + outputTokens)
+  // Note: We use SQL expressions to calculate total tokens on the fly
+  const totalTokensExpr = sql<number>`COALESCE(${logs.inputTokens}, 0) + COALESCE(${logs.outputTokens}, 0)`;
+
+  if (tokensEq !== undefined) {
+    if (Array.isArray(tokensEq)) {
+      const tokenConditions = tokensEq.map((t) => eq(totalTokensExpr, t));
+      conditions.push(or(...tokenConditions));
+    } else {
+      conditions.push(eq(totalTokensExpr, tokensEq));
+    }
+  }
+  if (tokensGt !== undefined) {
+    conditions.push(gt(totalTokensExpr, tokensGt));
+  }
+  if (tokensLt !== undefined) {
+    conditions.push(lt(totalTokensExpr, tokensLt));
+  }
+  if (tokensGte !== undefined) {
+    conditions.push(gte(totalTokensExpr, tokensGte));
+  }
+  if (tokensLte !== undefined) {
+    conditions.push(lte(totalTokensExpr, tokensLte));
+  }
+
+  // Time range filters
   if (after) {
     conditions.push(gt(logs.timestamp, after));
   }

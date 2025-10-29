@@ -53,13 +53,27 @@ export function createApiRoutes(queries: QueryFunctions): Hono {
     const serverNames = c.req.queries("server");
     const sessionIds = c.req.queries("session");
     const clientNames = c.req.queries("client");
-    const method = c.req.query("method");
+    const methodNames = c.req.queries("method");
     const after = c.req.query("after");
     const before = c.req.query("before");
     const limitStr = c.req.query("limit");
     const order = c.req.query("order");
 
-    // Parse and validate
+    // Duration filter params
+    const durationEqStrs = c.req.queries("durationEq");
+    const durationGtStr = c.req.query("durationGt");
+    const durationLtStr = c.req.query("durationLt");
+    const durationGteStr = c.req.query("durationGte");
+    const durationLteStr = c.req.query("durationLte");
+
+    // Tokens filter params
+    const tokensEqStrs = c.req.queries("tokensEq");
+    const tokensGtStr = c.req.query("tokensGt");
+    const tokensLtStr = c.req.query("tokensLt");
+    const tokensGteStr = c.req.query("tokensGte");
+    const tokensLteStr = c.req.query("tokensLte");
+
+    // Parse and validate limit
     const limit = limitStr ? Number.parseInt(limitStr, 10) : undefined;
     if (
       limit !== undefined &&
@@ -76,6 +90,7 @@ export function createApiRoutes(queries: QueryFunctions): Hono {
       );
     }
 
+    // Validate order
     if (order && order !== "asc" && order !== "desc") {
       return c.json(
         {
@@ -101,7 +116,44 @@ export function createApiRoutes(queries: QueryFunctions): Hono {
       );
     }
 
+    // Parse numeric filters (duration)
+    const durationEq =
+      durationEqStrs && durationEqStrs.length > 0
+        ? durationEqStrs.length === 1
+          ? Number.parseInt(durationEqStrs[0]!, 10)
+          : durationEqStrs.map((s) => Number.parseInt(s, 10))
+        : undefined;
+    const durationGt = durationGtStr
+      ? Number.parseInt(durationGtStr, 10)
+      : undefined;
+    const durationLt = durationLtStr
+      ? Number.parseInt(durationLtStr, 10)
+      : undefined;
+    const durationGte = durationGteStr
+      ? Number.parseInt(durationGteStr, 10)
+      : undefined;
+    const durationLte = durationLteStr
+      ? Number.parseInt(durationLteStr, 10)
+      : undefined;
+
+    // Parse numeric filters (tokens)
+    const tokensEq =
+      tokensEqStrs && tokensEqStrs.length > 0
+        ? tokensEqStrs.length === 1
+          ? Number.parseInt(tokensEqStrs[0]!, 10)
+          : tokensEqStrs.map((s) => Number.parseInt(s, 10))
+        : undefined;
+    const tokensGt = tokensGtStr ? Number.parseInt(tokensGtStr, 10) : undefined;
+    const tokensLt = tokensLtStr ? Number.parseInt(tokensLtStr, 10) : undefined;
+    const tokensGte = tokensGteStr
+      ? Number.parseInt(tokensGteStr, 10)
+      : undefined;
+    const tokensLte = tokensLteStr
+      ? Number.parseInt(tokensLteStr, 10)
+      : undefined;
+
     const options: LogQueryOptions = {
+      // String filters (support arrays)
       serverName:
         serverNames && serverNames.length > 0
           ? serverNames.length === 1
@@ -114,15 +166,38 @@ export function createApiRoutes(queries: QueryFunctions): Hono {
             ? sessionIds[0]
             : sessionIds
           : undefined,
-      method: method || undefined,
+      method:
+        methodNames && methodNames.length > 0
+          ? methodNames.length === 1
+            ? methodNames[0]
+            : methodNames
+          : undefined,
       clientName:
         clientNames && clientNames.length > 0
           ? clientNames.length === 1
             ? clientNames[0]
             : clientNames
           : undefined,
+
+      // Duration filters
+      durationEq,
+      durationGt,
+      durationLt,
+      durationGte,
+      durationLte,
+
+      // Tokens filters
+      tokensEq,
+      tokensGt,
+      tokensLt,
+      tokensGte,
+      tokensLte,
+
+      // Time range
       after: after || undefined,
       before: before || undefined,
+
+      // Pagination
       limit,
       order: (order as "asc" | "desc") || undefined,
     };

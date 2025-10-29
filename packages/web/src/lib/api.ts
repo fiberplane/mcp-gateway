@@ -21,14 +21,25 @@ class APIClient {
    * Returns ApiLogEntry records (transformed from CaptureRecords by the API).
    * Each CaptureRecord is split into separate request/response entries with a direction field.
    *
-   * Multi-select filters (serverName, clientName, sessionId) can be passed as arrays.
+   * String filters (serverName, clientName, sessionId, method) support arrays for multi-select.
+   * Numeric filters (duration, tokens) support comparison operators (eq, gt, lt, gte, lte).
    * Arrays are sent as repeated query parameters (e.g., ?client=foo&client=bar).
    */
   async getLogs(params: {
     serverName?: string | string[];
     clientName?: string | string[];
     sessionId?: string | string[];
-    method?: string;
+    method?: string | string[];
+    durationEq?: number | number[];
+    durationGt?: number;
+    durationLt?: number;
+    durationGte?: number;
+    durationLte?: number;
+    tokensEq?: number | number[];
+    tokensGt?: number;
+    tokensLt?: number;
+    tokensGte?: number;
+    tokensLte?: number;
     after?: string;
     before?: string;
     limit?: number;

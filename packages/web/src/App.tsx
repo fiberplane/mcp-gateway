@@ -16,7 +16,6 @@ import {
   parseAsFilterParam,
   parseAsSearch,
 } from "./lib/filter-parsers";
-import { applyFilterState } from "./lib/filter-utils";
 import { useHandler } from "./lib/use-handler";
 import { getLogKey } from "./lib/utils";
 
@@ -57,13 +56,73 @@ function App() {
   // Streaming: ON = auto-refresh with new logs, OFF = manual load more
   const [isStreaming, setIsStreaming] = useState(true);
 
-  // Extract filters from filter state for API query
-  // Backend now supports arrays for multi-select filtering (OR logic)
-  const clientFilter = filterState.filters.find((f) => f.field === "client");
-  const clientName = clientFilter?.value as string | string[] | undefined;
+  // Extract filters from filter state and convert to API parameters
+  // Backend now supports all filter types with proper operators
+  const apiParams = useMemo(() => {
+    const params: Parameters<typeof api.getLogs>[0] = {};
 
-  const sessionFilter = filterState.filters.find((f) => f.field === "session");
-  const sessionId = sessionFilter?.value as string | string[] | undefined;
+    // Extract each filter type
+    for (const filter of filterState.filters) {
+      switch (filter.field) {
+        case "client":
+          params.clientName = filter.value as string | string[];
+          break;
+        case "session":
+          params.sessionId = filter.value as string | string[];
+          break;
+        case "method":
+          params.method = filter.value as string | string[];
+          break;
+        case "duration": {
+          const value = filter.value;
+          // Map operator to specific param
+          switch (filter.operator) {
+            case "eq":
+              params.durationEq = value as number | number[];
+              break;
+            case "gt":
+              params.durationGt = value as number;
+              break;
+            case "lt":
+              params.durationLt = value as number;
+              break;
+            case "gte":
+              params.durationGte = value as number;
+              break;
+            case "lte":
+              params.durationLte = value as number;
+              break;
+          }
+          break;
+        }
+        case "tokens": {
+          const value = filter.value;
+          // Map operator to specific param
+          switch (filter.operator) {
+            case "eq":
+              params.tokensEq = value as number | number[];
+              break;
+            case "gt":
+              params.tokensGt = value as number;
+              break;
+            case "lt":
+              params.tokensLt = value as number;
+              break;
+            case "gte":
+              params.tokensGte = value as number;
+              break;
+            case "lte":
+              params.tokensLte = value as number;
+              break;
+          }
+          break;
+        }
+        // Server filter is handled by ServerTabs component, not passed to API
+      }
+    }
+
+    return params;
+  }, [filterState.filters]);
 
   // Fixed values (no UI controls)
   const timeGrouping = "day" as const; // Group by day
@@ -76,12 +135,11 @@ function App() {
     isLoading,
     error,
   } = useInfiniteQuery({
-    queryKey: ["logs", serverName, clientName, sessionId],
+    queryKey: ["logs", serverName, apiParams],
     queryFn: async ({ pageParam }) =>
       api.getLogs({
         serverName,
-        clientName,
-        sessionId,
+        ...apiParams,
         limit: 100,
         before: pageParam,
         order: "desc", // Always descending - newest first
@@ -102,12 +160,24 @@ function App() {
   // Flatten all pages into single array
   const allLogs = data?.pages.flatMap((page) => page.data) ?? [];
 
-  // Apply client-side filters (for filters not supported by API yet)
-  // Memoized to prevent unnecessary re-filtering on every render
-  const filteredLogs = useMemo(
-    () => applyFilterState(allLogs, filterState),
-    [allLogs, filterState],
-  );
+  // Apply client-side search filtering only (backend handles all field filters)
+  // Search is the only filter not sent to backend
+  const filteredLogs = useMemo(() => {
+    if (!filterState.search) return allLogs;
+
+    return allLogs.filter((log) => {
+      const searchLower = filterState.search.toLowerCase();
+
+      // Search across multiple fields
+      return (
+        log.method.toLowerCase().includes(searchLower) ||
+        log.metadata.serverName?.toLowerCase().includes(searchLower) ||
+        log.metadata.client?.name?.toLowerCase().includes(searchLower) ||
+        log.metadata.sessionId?.toLowerCase().includes(searchLower) ||
+        JSON.stringify(log).toLowerCase().includes(searchLower)
+      );
+    });
+  }, [allLogs, filterState.search]);
 
   // Defer table updates to keep checkboxes responsive
   // This allows checkbox state to update immediately while table rendering
