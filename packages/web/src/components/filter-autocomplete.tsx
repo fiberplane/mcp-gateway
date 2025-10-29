@@ -145,13 +145,13 @@ export function FilterAutocomplete({
               key={`${suggestion.text}-${index}`}
               type="button"
               className={cn(
-                "w-full px-3 py-2 text-left",
-                "flex flex-col gap-1",
+                "w-full px-3 py-1.5 text-left",
+                "flex flex-col gap-0.5",
                 "transition-colors cursor-pointer",
                 "focus:outline-none",
                 index === selectedIndex
-                  ? "bg-accent text-accent-foreground"
-                  : "hover:bg-accent/50",
+                  ? "bg-primary/10 text-foreground border-l-2 border-primary"
+                  : "hover:bg-primary/5 border-l-2 border-transparent",
               )}
               onClick={() => onSelect(suggestion)}
               onMouseEnter={() => setSelectedIndex(index)}
@@ -163,21 +163,21 @@ export function FilterAutocomplete({
                 {suggestion.icon && (
                   <span className="size-4">{suggestion.icon}</span>
                 )}
-                <span className="font-medium text-sm">
+                <span className="font-medium text-sm leading-tight">
                   {suggestion.display}
                 </span>
               </div>
 
               {/* Description */}
               {suggestion.description && (
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs text-muted-foreground leading-tight">
                   {suggestion.description}
                 </span>
               )}
 
               {/* Example */}
               {suggestion.example && (
-                <code className="text-xs text-muted-foreground bg-muted px-1 rounded">
+                <code className="text-xs text-muted-foreground bg-border/30 px-1.5 py-0.5 rounded font-mono leading-none">
                   {suggestion.example}
                 </code>
               )}
