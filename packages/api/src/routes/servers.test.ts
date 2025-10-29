@@ -38,7 +38,6 @@ describe("API /servers endpoint", () => {
         getServers: async (): Promise<ServerInfo[]> => [
           {
             name: "test-server",
-            logCount: 10,
             sessionCount: 2,
             status: "online",
           },
@@ -59,7 +58,6 @@ describe("API /servers endpoint", () => {
       expect(data.servers).toHaveLength(1);
       expect(data.servers[0]).toEqual({
         name: "test-server",
-        logCount: 10,
         sessionCount: 2,
         status: "online",
       });
@@ -80,7 +78,6 @@ describe("API /servers endpoint", () => {
         getServers: async (): Promise<ServerInfo[]> => [
           {
             name: "healthy-server",
-            logCount: 5,
             sessionCount: 1,
             status: "online",
           },
@@ -114,7 +111,6 @@ describe("API /servers endpoint", () => {
         getServers: async (): Promise<ServerInfo[]> => [
           {
             name: "unhealthy-server",
-            logCount: 3,
             sessionCount: 1,
             status: "offline",
           },
@@ -148,7 +144,6 @@ describe("API /servers endpoint", () => {
         getServers: async (): Promise<ServerInfo[]> => [
           {
             name: "unknown-server",
-            logCount: 0,
             sessionCount: 0,
             status: "not-found",
           },
@@ -182,19 +177,16 @@ describe("API /servers endpoint", () => {
         getServers: async (): Promise<ServerInfo[]> => [
           {
             name: "server-online",
-            logCount: 10,
             sessionCount: 2,
             status: "online",
           },
           {
             name: "server-offline",
-            logCount: 5,
             sessionCount: 1,
             status: "offline",
           },
           {
             name: "server-not-found",
-            logCount: 0,
             sessionCount: 0,
             status: "not-found",
           },
@@ -255,7 +247,7 @@ describe("API /servers endpoint", () => {
       expect(data.servers).toHaveLength(0);
     });
 
-    test("should include log and session counts", async () => {
+    test("should include session counts", async () => {
       const queries: QueryFunctions = {
         queryLogs: async () => ({
           data: [],
@@ -270,7 +262,6 @@ describe("API /servers endpoint", () => {
         getServers: async (): Promise<ServerInfo[]> => [
           {
             name: "test-server",
-            logCount: 42,
             sessionCount: 7,
             status: "online",
           },
@@ -286,7 +277,6 @@ describe("API /servers endpoint", () => {
       const response = await app.request("/servers");
       const data = (await response.json()) as ServersResponse;
 
-      expect(data.servers[0]?.logCount).toBe(42);
       expect(data.servers[0]?.sessionCount).toBe(7);
     });
 

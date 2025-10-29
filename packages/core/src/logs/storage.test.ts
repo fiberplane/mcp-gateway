@@ -288,17 +288,6 @@ describe("Storage Functions", () => {
       expect(result).toHaveLength(2);
     });
 
-    test("should count logs per server", async () => {
-      const db = getDb(storageDir);
-      const result = await getServers(db);
-
-      const serverA = result.find((s) => s.name === "server-a");
-      const serverB = result.find((s) => s.name === "server-b");
-
-      expect(serverA?.logCount).toBe(3);
-      expect(serverB?.logCount).toBe(1);
-    });
-
     test("should count distinct sessions per server", async () => {
       const db = getDb(storageDir);
       const result = await getServers(db);
@@ -347,7 +336,6 @@ describe("Storage Functions", () => {
       expect(serverB?.status).toBe("not-found");
       expect(serverC).toEqual({
         name: "server-c",
-        logCount: 0,
         sessionCount: 0,
         status: "online",
       });
@@ -408,17 +396,6 @@ describe("Storage Functions", () => {
       expect(result).toHaveLength(1);
       expect(result[0].serverName).toBe("server-a");
       expect(result[0].sessionId).toBe("session-1");
-    });
-
-    test("should count logs per session", async () => {
-      const db = getDb(storageDir);
-      const result = await getSessions(db);
-
-      const session1 = result.find((s) => s.sessionId === "session-1");
-      const session2 = result.find((s) => s.sessionId === "session-2");
-
-      expect(session1?.logCount).toBe(2);
-      expect(session2?.logCount).toBe(1);
     });
 
     test("should track session time ranges", async () => {

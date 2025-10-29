@@ -128,7 +128,6 @@ export interface QueryFunctions {
     Array<{
       sessionId: string;
       serverName: string;
-      logCount: number;
       startTime: string;
       endTime: string;
     }>
@@ -141,7 +140,6 @@ export interface QueryFunctions {
     Array<{
       clientName: string;
       clientVersion: string | null;
-      logCount: number;
       sessionCount: number;
     }>
   >;
@@ -152,7 +150,6 @@ export interface QueryFunctions {
   getMethods: (serverName?: string) => Promise<
     Array<{
       method: string;
-      logCount: number;
     }>
   >;
 
