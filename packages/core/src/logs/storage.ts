@@ -198,14 +198,12 @@ export async function getServers(
 ): Promise<ServerInfo[]> {
   // Get servers that have logs in the database, with health data
   const logsResult = await db
-    .select({
+    .selectDistinct({
       name: logs.serverName,
-      sessionCount: sql<number>`COUNT(DISTINCT ${logs.sessionId})`,
       health: serverHealth.health,
     })
     .from(logs)
     .leftJoin(serverHealth, eq(logs.serverName, serverHealth.serverName))
-    .groupBy(logs.serverName, serverHealth.health)
     .orderBy(sql`LOWER(${logs.serverName}) COLLATE NOCASE`);
 
   // Create a map of registry servers (normalized name -> original name)
@@ -245,7 +243,6 @@ export async function getServers(
 
     serverMap.set(normalizedName, {
       name: registryName || server.name,
-      sessionCount: server.sessionCount,
       status,
     });
   }
@@ -261,7 +258,6 @@ export async function getServers(
 
         serverMap.set(normalizedName, {
           name: serverName,
-          sessionCount: 0,
           status,
         });
       }
@@ -310,14 +306,12 @@ export async function getClients(
   db: BunSQLiteDatabase<typeof schema>,
 ): Promise<ClientAggregation[]> {
   const result = await db
-    .select({
+    .selectDistinct({
       clientName: logs.clientName,
       clientVersion: logs.clientVersion,
-      sessionCount: sql<number>`COUNT(DISTINCT ${logs.sessionId})`,
     })
     .from(logs)
     .where(sql`${logs.clientName} IS NOT NULL`)
-    .groupBy(logs.clientName, logs.clientVersion)
     .orderBy(logs.clientName);
 
   return result as ClientAggregation[];

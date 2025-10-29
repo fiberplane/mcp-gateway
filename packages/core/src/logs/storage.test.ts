@@ -288,15 +288,13 @@ describe("Storage Functions", () => {
       expect(result).toHaveLength(2);
     });
 
-    test("should count distinct sessions per server", async () => {
+    test("should return distinct servers from logs", async () => {
       const db = getDb(storageDir);
       const result = await getServers(db);
 
-      const serverA = result.find((s) => s.name === "server-a");
-      const serverB = result.find((s) => s.name === "server-b");
-
-      expect(serverA?.sessionCount).toBe(2);
-      expect(serverB?.sessionCount).toBe(1);
+      expect(result).toHaveLength(2);
+      expect(result.find((s) => s.name === "server-a")).toBeDefined();
+      expect(result.find((s) => s.name === "server-b")).toBeDefined();
     });
 
     test("should default statuses to not-found when registry data is unavailable", async () => {
@@ -336,7 +334,6 @@ describe("Storage Functions", () => {
       expect(serverB?.status).toBe("not-found");
       expect(serverC).toEqual({
         name: "server-c",
-        sessionCount: 0,
         status: "online",
       });
     });

@@ -38,7 +38,6 @@ describe("API /servers endpoint", () => {
         getServers: async (): Promise<ServerInfo[]> => [
           {
             name: "test-server",
-            sessionCount: 2,
             status: "online",
           },
         ],
@@ -58,7 +57,6 @@ describe("API /servers endpoint", () => {
       expect(data.servers).toHaveLength(1);
       expect(data.servers[0]).toEqual({
         name: "test-server",
-        sessionCount: 2,
         status: "online",
       });
     });
@@ -78,7 +76,6 @@ describe("API /servers endpoint", () => {
         getServers: async (): Promise<ServerInfo[]> => [
           {
             name: "healthy-server",
-            sessionCount: 1,
             status: "online",
           },
         ],
@@ -111,7 +108,6 @@ describe("API /servers endpoint", () => {
         getServers: async (): Promise<ServerInfo[]> => [
           {
             name: "unhealthy-server",
-            sessionCount: 1,
             status: "offline",
           },
         ],
@@ -144,7 +140,6 @@ describe("API /servers endpoint", () => {
         getServers: async (): Promise<ServerInfo[]> => [
           {
             name: "unknown-server",
-            sessionCount: 0,
             status: "not-found",
           },
         ],
@@ -177,17 +172,14 @@ describe("API /servers endpoint", () => {
         getServers: async (): Promise<ServerInfo[]> => [
           {
             name: "server-online",
-            sessionCount: 2,
             status: "online",
           },
           {
             name: "server-offline",
-            sessionCount: 1,
             status: "offline",
           },
           {
             name: "server-not-found",
-            sessionCount: 0,
             status: "not-found",
           },
         ],
@@ -245,39 +237,6 @@ describe("API /servers endpoint", () => {
 
       expect(response.status).toBe(200);
       expect(data.servers).toHaveLength(0);
-    });
-
-    test("should include session counts", async () => {
-      const queries: QueryFunctions = {
-        queryLogs: async () => ({
-          data: [],
-          pagination: {
-            count: 0,
-            limit: 100,
-            hasMore: false,
-            oldestTimestamp: null,
-            newestTimestamp: null,
-          },
-        }),
-        getServers: async (): Promise<ServerInfo[]> => [
-          {
-            name: "test-server",
-            sessionCount: 7,
-            status: "online",
-          },
-        ],
-        getSessions: async () => [],
-        getClients: async () => [],
-        getMethods: async () => [],
-        clearSessions: async () => {},
-      };
-
-      const app = createApp(queries, mockLogger);
-
-      const response = await app.request("/servers");
-      const data = (await response.json()) as ServersResponse;
-
-      expect(data.servers[0]?.sessionCount).toBe(7);
     });
 
     test("should handle errors gracefully", async () => {

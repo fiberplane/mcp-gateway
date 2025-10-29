@@ -140,7 +140,6 @@ export interface QueryFunctions {
     Array<{
       clientName: string;
       clientVersion: string | null;
-      sessionCount: number;
     }>
   >;
 
