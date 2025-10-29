@@ -108,7 +108,6 @@ This document outlines the architecture for adding a web-based UI to the MCP Gat
 - Log detail expansion with JSON viewer
 - Search across log content
 - Export functionality
-- Responsive design
 
 **Filter Architecture:**
 
@@ -296,5 +295,4 @@ app.use('/*', serveStatic({
 
 3. **User Experience:**
    - Loads within 2 seconds
-   - Responsive on common screen sizes
    - Intuitive navigation and filtering

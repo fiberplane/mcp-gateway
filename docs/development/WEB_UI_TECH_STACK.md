@@ -215,7 +215,6 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 
 ### Post-MVP
 - Dark mode (design tokens ready!)
-- Mobile responsive design
 - Advanced filters (time range, duration slider)
 - Full-text search in JSON
 - Stats dashboard
