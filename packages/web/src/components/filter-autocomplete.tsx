@@ -34,6 +34,16 @@ interface FilterAutocompleteProps {
    * Reference element to position the dropdown relative to
    */
   anchorRef: React.RefObject<HTMLInputElement | null>;
+
+  /**
+   * Optional error content to display at top of dropdown
+   */
+  errorContent?: React.ReactNode;
+
+  /**
+   * Optional preview content to display at top of dropdown
+   */
+  previewContent?: React.ReactNode;
 }
 
 export function FilterAutocomplete({
@@ -43,9 +53,11 @@ export function FilterAutocomplete({
   onClose,
   // @ts-expect-error - anchorRef reserved for future positioning logic
   anchorRef,
+  errorContent,
+  previewContent,
 }: FilterAutocompleteProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const listRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLElement>(null);
 
   // Reset selection when suggestions change
   useEffect(() => {
@@ -69,12 +81,13 @@ export function FilterAutocomplete({
           setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
           break;
         case "Tab":
-        case "Enter":
+          // Tab selects highlighted suggestion (for guided completion)
           if (suggestions[selectedIndex]) {
             e.preventDefault();
             onSelect(suggestions[selectedIndex]);
           }
           break;
+        // Enter is NOT handled here - let it submit the typed value
         case "Escape":
           e.preventDefault();
           onClose();
@@ -100,63 +113,78 @@ export function FilterAutocomplete({
     }
   }, [selectedIndex]);
 
-  if (!open || suggestions.length === 0) {
+  // Show dropdown if open AND (has suggestions OR has error/preview content)
+  if (!open || (suggestions.length === 0 && !errorContent && !previewContent)) {
     return null;
   }
 
   return (
-    <div
+    <section
       ref={listRef}
       className={cn(
         "absolute z-50 mt-1 w-full",
         "rounded-md border border-border bg-popover shadow-lg",
-        "max-h-[300px] overflow-y-auto",
-        "animate-in fade-in-0 zoom-in-95",
+        "max-h-[400px] overflow-y-auto",
+        "animate-in fade-in-0 zoom-in-95 duration-150",
       )}
-      role="listbox"
-      aria-label="Filter suggestions"
+      aria-label="Filter assistance"
     >
-      {suggestions.map((suggestion, index) => (
-        <button
-          key={`${suggestion.text}-${index}`}
-          type="button"
-          className={cn(
-            "w-full px-3 py-2 text-left",
-            "flex flex-col gap-1",
-            "transition-colors cursor-pointer",
-            "focus:outline-none",
-            index === selectedIndex
-              ? "bg-accent text-accent-foreground"
-              : "hover:bg-accent/50",
-          )}
-          onClick={() => onSelect(suggestion)}
-          onMouseEnter={() => setSelectedIndex(index)}
-          role="option"
-          aria-selected={index === selectedIndex}
-        >
-          {/* Main suggestion text */}
-          <div className="flex items-center gap-2">
-            {suggestion.icon && (
-              <span className="size-4">{suggestion.icon}</span>
-            )}
-            <span className="font-medium text-sm">{suggestion.display}</span>
-          </div>
+      {/* Error/Preview section (sticky at top) */}
+      {(errorContent || previewContent) && (
+        <div className="sticky top-0 z-10 bg-popover">
+          {errorContent}
+          {previewContent}
+        </div>
+      )}
 
-          {/* Description */}
-          {suggestion.description && (
-            <span className="text-xs text-muted-foreground">
-              {suggestion.description}
-            </span>
-          )}
+      {/* Suggestions section */}
+      {suggestions.length > 0 && (
+        <div role="listbox" aria-label="Filter suggestions">
+          {suggestions.map((suggestion, index) => (
+            <button
+              key={`${suggestion.text}-${index}`}
+              type="button"
+              className={cn(
+                "w-full px-3 py-2 text-left",
+                "flex flex-col gap-1",
+                "transition-colors cursor-pointer",
+                "focus:outline-none",
+                index === selectedIndex
+                  ? "bg-accent text-accent-foreground"
+                  : "hover:bg-accent/50",
+              )}
+              onClick={() => onSelect(suggestion)}
+              onMouseEnter={() => setSelectedIndex(index)}
+              role="option"
+              aria-selected={index === selectedIndex}
+            >
+              {/* Main suggestion text */}
+              <div className="flex items-center gap-2">
+                {suggestion.icon && (
+                  <span className="size-4">{suggestion.icon}</span>
+                )}
+                <span className="font-medium text-sm">
+                  {suggestion.display}
+                </span>
+              </div>
 
-          {/* Example */}
-          {suggestion.example && (
-            <code className="text-xs text-muted-foreground bg-muted px-1 rounded">
-              {suggestion.example}
-            </code>
-          )}
-        </button>
-      ))}
-    </div>
+              {/* Description */}
+              {suggestion.description && (
+                <span className="text-xs text-muted-foreground">
+                  {suggestion.description}
+                </span>
+              )}
+
+              {/* Example */}
+              {suggestion.example && (
+                <code className="text-xs text-muted-foreground bg-muted px-1 rounded">
+                  {suggestion.example}
+                </code>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }

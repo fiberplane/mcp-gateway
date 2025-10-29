@@ -346,7 +346,7 @@ export function getAutocompleteSuggestions(input: string): FilterSuggestion[] {
   const operatorMatch = afterField.match(operatorPattern);
 
   if (!operatorMatch) {
-    // Suggest operators
+    // Suggest operators (filter by partial input)
     const isNumericField = field === "duration" || field === "tokens";
     const operators = isNumericField
       ? [
@@ -361,7 +361,13 @@ export function getAutocompleteSuggestions(input: string): FilterSuggestion[] {
           { op: "contains", desc: "partial match" },
         ];
 
-    return operators.map(({ op, desc }) => ({
+    // Filter operators by partial input
+    const partialOp = afterField.trim().toLowerCase();
+    const filtered = partialOp
+      ? operators.filter(({ op }) => op.toLowerCase().startsWith(partialOp))
+      : operators;
+
+    return filtered.map(({ op, desc }) => ({
       text: `${field} ${op} `,
       display: op,
       description: desc,

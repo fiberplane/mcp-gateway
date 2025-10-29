@@ -13,7 +13,7 @@ import {
   type Filter,
   type SearchTerm,
 } from "@fiberplane/mcp-gateway-types";
-import { Check, Search, X } from "lucide-react";
+import { AlertCircle, Check, Search, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { formatErrorMessage } from "@/lib/filter-errors";
 import {
@@ -88,9 +88,12 @@ export function CommandFilterInput({
   // 2. It's non-empty (will be treated as search)
   const isValid = trimmed.length > 0;
 
-  // Only show errors for incomplete filters (not for plain search text)
+  // Only show errors for truly invalid input (not incomplete or unknown field)
+  // "incomplete" errors (missing operator/value) shouldn't show while typing
   const error =
-    validation?.valid === false && validation.error.type !== "unknown_field"
+    validation?.valid === false &&
+    validation.error.type !== "unknown_field" &&
+    validation.error.type !== "incomplete"
       ? validation.error
       : null;
 
@@ -98,6 +101,46 @@ export function CommandFilterInput({
   const suggestions = showAutocomplete
     ? getAutocompleteSuggestions(inputValue)
     : [];
+
+  // Parse input for preview
+  const parseResult = trimmed ? parseInput(trimmed) : null;
+
+  // Create error content for dropdown (using design tokens)
+  // Only show error when there are NO suggestions (suggestions = user making progress)
+  const errorContent =
+    error && suggestions.length === 0 ? (
+      <div
+        className={cn(
+          "px-3 py-2.5 border-b border-border",
+          "bg-badge-error", // Light red background from design tokens
+          "flex items-start gap-2",
+        )}
+        role="alert"
+        aria-live="assertive"
+      >
+        <AlertCircle className="size-4 text-status-error shrink-0 mt-0.5" />
+        <p className="text-sm text-status-error">{formatErrorMessage(error)}</p>
+      </div>
+    ) : undefined;
+
+  // Create preview content for dropdown (only for filters, using design tokens)
+  const previewContent =
+    !error && isValid && parseResult?.type === "filter" ? (
+      <output
+        className={cn(
+          "px-3 py-2 border-b border-border",
+          "bg-muted", // Subtle gray from design tokens
+          "flex items-center gap-2",
+        )}
+        aria-live="polite"
+      >
+        <span className="text-xs text-muted-foreground">Preview:</span>
+        <FilterBadge
+          filter={createFilter(parseResult.filter)}
+          onRemove={() => {}} // No-op for preview
+        />
+      </output>
+    ) : undefined;
 
   // Handle adding filter or search
   const handleAdd = useHandler(() => {
@@ -126,11 +169,8 @@ export function CommandFilterInput({
 
   // Handle keyboard shortcuts
   const handleKeyDown = useHandler((e: React.KeyboardEvent) => {
-    // Let autocomplete handle Enter when it has suggestions
-    // Otherwise, we handle it here
-    const hasActiveSuggestions = showAutocomplete && suggestions.length > 0;
-
-    if (e.key === "Enter" && isValid && !hasActiveSuggestions) {
+    if (e.key === "Enter" && isValid) {
+      // Enter always submits the typed value (Tab selects suggestions)
       e.preventDefault();
       handleAdd();
     } else if (e.key === "Escape") {
@@ -153,7 +193,8 @@ export function CommandFilterInput({
   // Handle autocomplete selection
   const handleSelectSuggestion = useHandler((suggestion: FilterSuggestion) => {
     setInputValue(suggestion.text);
-    setShowAutocomplete(false);
+    // Keep autocomplete open to show next stage suggestions (e.g., operators after field)
+    setShowAutocomplete(true);
     inputRef.current?.focus();
   });
 
@@ -165,7 +206,7 @@ export function CommandFilterInput({
       : "invalid";
 
   return (
-    <div className="space-y-2">
+    <div>
       {/* Input row */}
       <div className="relative">
         <div
@@ -229,20 +270,22 @@ export function CommandFilterInput({
               size="sm"
               variant="default"
               onClick={handleAdd}
-              className="shrink-0"
+              className="shrink-0 h-6 leading-1"
             >
               Add
             </Button>
           )}
         </div>
 
-        {/* Autocomplete dropdown */}
+        {/* Unified dropdown with autocomplete + preview + errors */}
         <FilterAutocomplete
           suggestions={suggestions}
-          open={showAutocomplete && suggestions.length > 0}
+          open={showAutocomplete}
           onSelect={handleSelectSuggestion}
           onClose={() => setShowAutocomplete(false)}
           anchorRef={inputRef}
+          errorContent={errorContent}
+          previewContent={previewContent}
         />
 
         {/* Hidden help text for screen readers */}
@@ -252,32 +295,6 @@ export function CommandFilterInput({
           for autocomplete, Enter to add, Escape to clear.
         </span>
       </div>
-
-      {/* Preview pill (when valid) - only for filters */}
-      {isValid &&
-        trimmed &&
-        (() => {
-          const result = parseInput(trimmed);
-          // Skip preview for search terms (text is self-explanatory)
-          if (!result || result.type === "search") return null;
-
-          return (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>Preview:</span>
-              <FilterBadge
-                filter={createFilter(result.filter)}
-                onRemove={() => {}} // No-op for preview
-              />
-            </div>
-          );
-        })()}
-
-      {/* Error message (when invalid) */}
-      {error && (
-        <div className="bg-warning/10 border border-warning/20 px-3 py-2 rounded-md text-sm text-warning-foreground">
-          ⚠️ {formatErrorMessage(error)}
-        </div>
-      )}
     </div>
   );
 }
