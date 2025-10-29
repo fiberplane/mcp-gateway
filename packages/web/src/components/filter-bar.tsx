@@ -3,11 +3,7 @@
  * Filter state is synced with URL parameters via nuqs.
  */
 
-import type {
-  createFilter,
-  createSearchTerm,
-  SearchTerm,
-} from "@fiberplane/mcp-gateway-types";
+import type { createFilter } from "@fiberplane/mcp-gateway-types";
 import { useQueryState, useQueryStates } from "nuqs";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
@@ -22,7 +18,6 @@ import { addOrReplaceFilter, removeFilter } from "../lib/filter-utils";
 import { AddFilterDropdown } from "./add-filter-dropdown";
 import { CommandFilterInput } from "./command-filter-input";
 import { FilterBadge } from "./filter-badge";
-import { SearchPill } from "./search-pill";
 
 interface FilterBarProps {
   /**
@@ -46,15 +41,8 @@ export function FilterBar({ actions }: FilterBarProps) {
     parseAsSearchArray,
   );
 
-  // Convert search queries to SearchTerm objects with IDs
-  const searchTerms = useMemo<SearchTerm[]>(
-    () =>
-      searchQueries.map((query, index) => ({
-        id: `search-${index}`,
-        query,
-      })),
-    [searchQueries],
-  );
+  // Convert search queries array to space-separated string for input
+  const searchValue = useMemo(() => searchQueries.join(" "), [searchQueries]);
 
   const [filterParams, setFilterParams] = useQueryStates(
     {
@@ -107,16 +95,16 @@ export function FilterBar({ actions }: FilterBarProps) {
     setFilterParams(newParams);
   };
 
-  const handleAddSearch = (searchTerm: ReturnType<typeof createSearchTerm>) => {
-    setSearchQueries([...searchQueries, searchTerm.query]);
-    setEditingValue(undefined); // Clear editing state
-  };
-
-  const handleRemoveSearch = (searchTermId: string) => {
-    // Extract index from ID (format: "search-0", "search-1", etc.)
-    const index = Number.parseInt(searchTermId.split("-")[1] || "0", 10);
-    const updated = searchQueries.filter((_, i) => i !== index);
-    setSearchQueries(updated);
+  const handleUpdateSearch = (newSearchValue: string) => {
+    // Convert space-separated string to array for URL
+    const trimmed = newSearchValue.trim();
+    if (!trimmed) {
+      setSearchQueries([]);
+      return;
+    }
+    // Split by spaces and filter out empty strings
+    const terms = trimmed.split(/\s+/).filter((t) => t.length > 0);
+    setSearchQueries(terms);
   };
 
   const handleEditFilter = (filterId: string) => {
@@ -135,22 +123,6 @@ export function FilterBar({ actions }: FilterBarProps) {
     handleRemoveFilter(filterId);
   };
 
-  const handleEditSearch = (searchTermId: string) => {
-    // Don't allow editing if already editing something
-    if (editingValue !== undefined) return;
-
-    // Extract index and get the search term
-    const index = Number.parseInt(searchTermId.split("-")[1] || "0", 10);
-    const query = searchQueries[index];
-    if (!query) return;
-
-    // Populate input with search term
-    setEditingValue(query);
-
-    // Remove the search term (it will be re-added when user submits)
-    handleRemoveSearch(searchTermId);
-  };
-
   const handleClearAll = () => {
     // Clear both filters and search terms
     setFilterParams({
@@ -165,7 +137,7 @@ export function FilterBar({ actions }: FilterBarProps) {
   };
 
   // Show "Clear all" button when there are active filters or search terms
-  const hasActiveItems = filters.length > 0 || searchTerms.length > 0;
+  const hasActiveItems = filters.length > 0 || searchValue.length > 0;
 
   return (
     <>
@@ -186,7 +158,8 @@ export function FilterBar({ actions }: FilterBarProps) {
           <div className="flex-1">
             <CommandFilterInput
               onAddFilter={handleAddFilter}
-              onAddSearch={handleAddSearch}
+              searchValue={searchValue}
+              onUpdateSearch={handleUpdateSearch}
               initialValue={editingValue}
               onCancel={() => setEditingValue(undefined)}
             />
@@ -202,16 +175,6 @@ export function FilterBar({ actions }: FilterBarProps) {
             onRemove={handleRemoveFilterByField}
             activeFilters={filters}
           />
-
-          {/* Active search pills */}
-          {searchTerms.map((searchTerm) => (
-            <SearchPill
-              key={searchTerm.id}
-              searchTerm={searchTerm}
-              onRemove={handleRemoveSearch}
-              onEdit={handleEditSearch}
-            />
-          ))}
 
           {/* Active filter badges */}
           {filters.map((filter) => (

@@ -7,12 +7,7 @@
  * - client is claude-code
  */
 
-import {
-  createFilter,
-  createSearchTerm,
-  type Filter,
-  type SearchTerm,
-} from "@fiberplane/mcp-gateway-types";
+import { createFilter, type Filter } from "@fiberplane/mcp-gateway-types";
 import { AlertCircle, Check, Search, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { formatErrorMessage } from "@/lib/filter-errors";
@@ -41,9 +36,14 @@ interface CommandFilterInputProps {
   onAddFilter: (filter: Filter) => void;
 
   /**
-   * Callback when a search term is added
+   * Current search value (controlled)
    */
-  onAddSearch: (searchTerm: SearchTerm) => void;
+  searchValue: string;
+
+  /**
+   * Callback when search value changes
+   */
+  onUpdateSearch: (value: string) => void;
 
   /**
    * Optional placeholder text
@@ -63,12 +63,14 @@ interface CommandFilterInputProps {
 
 export function CommandFilterInput({
   onAddFilter,
-  onAddSearch,
+  searchValue,
+  onUpdateSearch,
   placeholder = "Search or filter: error, tokens > 150, client is claude-code...",
   initialValue,
   onCancel,
 }: CommandFilterInputProps) {
-  const [inputValue, setInputValue] = useState(initialValue || "");
+  // Use initialValue for editing, otherwise use searchValue for search
+  const [inputValue, setInputValue] = useState(initialValue || searchValue);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const blurTimeoutRef = useRef<number | null>(null);
@@ -78,6 +80,13 @@ export function CommandFilterInput({
   const { data: clientsData } = useAvailableClients();
   const { data: methodsData } = useAvailableMethods();
   const { data: sessionsData } = useAvailableSessions();
+
+  // Sync inputValue with searchValue when not editing
+  useEffect(() => {
+    if (!initialValue) {
+      setInputValue(searchValue);
+    }
+  }, [searchValue, initialValue]);
 
   // Update input when initialValue changes (for editing)
   useEffect(() => {
@@ -171,7 +180,7 @@ export function CommandFilterInput({
       </output>
     ) : undefined;
 
-  // Handle adding filter or search
+  // Handle adding filter or updating search
   const handleAdd = useHandler(() => {
     const trimmed = inputValue.trim();
     if (!trimmed) return;
@@ -181,19 +190,18 @@ export function CommandFilterInput({
     if (!result) return;
 
     if (result.type === "filter") {
-      // Add as filter
+      // Add as filter pill - clear input AND search after
       const filter = createFilter(result.filter);
       onAddFilter(filter);
+      setInputValue("");
+      onUpdateSearch(""); // Clear search when adding filter
+      setShowAutocomplete(false);
+      inputRef.current?.focus();
     } else {
-      // Add as search term
-      const searchTerm = createSearchTerm(result.query);
-      onAddSearch(searchTerm);
+      // Update search - keep in input (stays visible)
+      onUpdateSearch(trimmed);
+      setShowAutocomplete(false);
     }
-
-    // Clear input and keep focus
-    setInputValue("");
-    setShowAutocomplete(false);
-    inputRef.current?.focus();
   });
 
   // Handle keyboard shortcuts
@@ -207,7 +215,9 @@ export function CommandFilterInput({
       if (showAutocomplete) {
         setShowAutocomplete(false);
       } else {
+        // Clear input and search
         setInputValue("");
+        onUpdateSearch("");
         onCancel?.(); // Notify parent that editing was cancelled
       }
     }
@@ -215,8 +225,20 @@ export function CommandFilterInput({
 
   // Handle input change
   const handleChange = useHandler((e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(e.target.value);
-    setShowAutocomplete(true);
+    const newValue = e.target.value;
+    setInputValue(newValue);
+
+    // Check if this looks like a filter (has filter syntax)
+    const hasFilterSyntax = /[:><]/.test(newValue);
+
+    // Only update search for plain text (not filter syntax)
+    // This prevents "client:" from being treated as a search term while typing
+    if (!hasFilterSyntax) {
+      onUpdateSearch(newValue);
+    }
+
+    // Show autocomplete only for structured filter syntax
+    setShowAutocomplete(hasFilterSyntax);
   });
 
   // Handle autocomplete selection
@@ -236,6 +258,7 @@ export function CommandFilterInput({
       const filter = createFilter(result.filter);
       onAddFilter(filter);
       setInputValue("");
+      onUpdateSearch(""); // Clear search when adding filter via autocomplete
       setShowAutocomplete(false);
       // Don't refocus - let user see the filter pill that was added
     } else {
