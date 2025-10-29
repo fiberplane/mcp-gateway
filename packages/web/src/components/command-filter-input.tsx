@@ -224,7 +224,13 @@ export function CommandFilterInput({
   // Handle input change
   const handleChange = useHandler((e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
+    const previousValue = inputValue;
     setInputValue(newValue);
+
+    // Clear search when input is explicitly cleared (e.g., native X button)
+    if (newValue === "" && previousValue !== "") {
+      onUpdateSearch("");
+    }
 
     // Show autocomplete for any input
     setShowAutocomplete(true);
