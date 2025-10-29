@@ -53,7 +53,9 @@ const ColorPill = React.forwardRef<HTMLDivElement, ColorPillProps>(
         {...props}
       >
         {icon}
-        <span className="text-sm font-mono font-normal text-foreground leading-4">{children}</span>
+        <span className="text-sm font-mono font-normal text-foreground leading-4">
+          {children}
+        </span>
       </div>
     );
   },

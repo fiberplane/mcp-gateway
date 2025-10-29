@@ -42,14 +42,14 @@ export interface StorageBackend {
   queryLogs(options?: LogQueryOptions): Promise<LogQueryResult>;
 
   /**
-   * Get server aggregations (name, log count, session count)
+   * Get server aggregations (name, session count)
    *
    * @returns List of server aggregation info
    */
   getServers(): Promise<ServerInfo[]>;
 
   /**
-   * Get session aggregations (session ID, server, log count, time range)
+   * Get session aggregations (session ID, server, time range)
    *
    * @param serverName - Optional server filter
    * @returns List of session aggregation info
@@ -57,21 +57,19 @@ export interface StorageBackend {
   getSessions(serverName?: string): Promise<SessionInfo[]>;
 
   /**
-   * Get client aggregations (client name/version, log count, session count)
+   * Get client aggregations (client name/version, session count)
    *
    * @returns List of client aggregation info
    */
   getClients(): Promise<ClientAggregation[]>;
 
   /**
-   * Get method aggregations (method name, log count)
+   * Get method aggregations (method name)
    *
    * @param serverName - Optional server filter
    * @returns List of method aggregation info
    */
-  getMethods(
-    serverName?: string,
-  ): Promise<Array<{ method: string; logCount: number }>>;
+  getMethods(serverName?: string): Promise<Array<{ method: string }>>;
 
   /**
    * Clear all logs from storage

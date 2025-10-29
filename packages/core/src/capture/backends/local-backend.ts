@@ -260,9 +260,7 @@ export class LocalStorageBackend implements StorageBackend {
     }
   }
 
-  async getMethods(
-    serverName?: string,
-  ): Promise<Array<{ method: string; logCount: number }>> {
+  async getMethods(serverName?: string): Promise<Array<{ method: string }>> {
     try {
       return await getMethods(this.db, serverName);
     } catch (error) {

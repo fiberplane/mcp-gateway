@@ -207,7 +207,6 @@ export function ServerTabs({ value, onChange, panelId }: ServerTabsProps) {
             />
             <span className={getTextColor(server.status, isSelected)}>
               {server.name}
-              {server.logCount > 0 && ` (${server.logCount})`}
               {server.status === "offline" && (
                 <span className="text-xs ml-1">(offline)</span>
               )}

@@ -32,7 +32,7 @@ export function ClientFilter({ value, onChange }: ClientFilterProps) {
             key={`${client.clientName}-${client.clientVersion}`}
             value={client.clientName}
           >
-            {client.clientName} ({client.logCount})
+            {client.clientName}
           </TabsTrigger>
         ))}
       </TabsList>

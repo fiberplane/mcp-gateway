@@ -200,7 +200,6 @@ export async function getServers(
   const logsResult = await db
     .select({
       name: logs.serverName,
-      logCount: count(logs.id),
       sessionCount: sql<number>`COUNT(DISTINCT ${logs.sessionId})`,
       health: serverHealth.health,
     })
@@ -246,7 +245,6 @@ export async function getServers(
 
     serverMap.set(normalizedName, {
       name: registryName || server.name,
-      logCount: server.logCount,
       sessionCount: server.sessionCount,
       status,
     });
@@ -263,7 +261,6 @@ export async function getServers(
 
         serverMap.set(normalizedName, {
           name: serverName,
-          logCount: 0,
           sessionCount: 0,
           status,
         });
@@ -290,7 +287,6 @@ export async function getSessions(
     .select({
       sessionId: logs.sessionId,
       serverName: logs.serverName,
-      logCount: count(logs.id),
       startTime: sql<string>`MIN(${logs.timestamp})`,
       endTime: sql<string>`MAX(${logs.timestamp})`,
     })
@@ -317,7 +313,6 @@ export async function getClients(
     .select({
       clientName: logs.clientName,
       clientVersion: logs.clientVersion,
-      logCount: count(logs.id),
       sessionCount: sql<number>`COUNT(DISTINCT ${logs.sessionId})`,
     })
     .from(logs)
@@ -331,26 +326,21 @@ export async function getClients(
 /**
  * Get method aggregations
  *
- * Returns all unique methods with log counts, optionally filtered by server.
+ * Returns all unique methods, optionally filtered by server.
  */
 export async function getMethods(
   db: BunSQLiteDatabase<typeof schema>,
   serverName?: string,
-): Promise<Array<{ method: string; logCount: number }>> {
-  let query = db
-    .select({
-      method: logs.method,
-      logCount: count(logs.id),
-    })
-    .from(logs);
+): Promise<Array<{ method: string }>> {
+  let query = db.selectDistinct({ method: logs.method }).from(logs);
 
   if (serverName) {
     query = query.where(eq(logs.serverName, serverName)) as typeof query;
   }
 
-  const result = await query.groupBy(logs.method).orderBy(logs.method);
+  const result = await query.orderBy(logs.method);
 
-  return result as Array<{ method: string; logCount: number }>;
+  return result as Array<{ method: string }>;
 }
 
 /**

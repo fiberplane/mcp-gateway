@@ -1,6 +1,6 @@
 /**
  * Reusable submenu for multi-selecting filter values.
- * Includes search input, checkboxes, and value counts.
+ * Includes search input and checkboxes.
  */
 
 import { ChevronRight, Search } from "lucide-react";
@@ -13,7 +13,6 @@ import { LoadingIndicator } from "./ui/loading-indicator";
 
 interface FilterValue {
   value: string;
-  count: number;
   label?: string; // Optional display label (defaults to value)
 }
 
@@ -165,11 +164,8 @@ export function FilterValueSubmenu({
                       />
                     )}
 
-                    {/* Label and Count */}
+                    {/* Label */}
                     <span className="flex-1 truncate">{displayLabel}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {item.count}
-                    </span>
                   </DropdownMenu.CheckboxItem>
                 );
               })}

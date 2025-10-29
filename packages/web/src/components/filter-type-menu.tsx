@@ -51,38 +51,30 @@ export function FilterTypeMenu({
   const methodValues =
     methodsQuery.data?.methods.map((m) => ({
       value: m.method,
-      count: m.logCount,
     })) ?? [];
 
   const clientValues = useMemo(() => {
     const clients = clientsQuery.data?.clients ?? [];
-    const aggregated = new Map<
-      string,
-      { count: number; versions: Set<string> }
-    >();
+    const aggregated = new Map<string, Set<string>>();
 
     for (const client of clients) {
       const existing = aggregated.get(client.clientName);
       const version = client.clientVersion?.trim();
       if (existing) {
-        existing.count += client.logCount;
         if (version) {
-          existing.versions.add(version);
+          existing.add(version);
         }
       } else {
         const versions = new Set<string>();
         if (version) {
           versions.add(version);
         }
-        aggregated.set(client.clientName, {
-          count: client.logCount,
-          versions,
-        });
+        aggregated.set(client.clientName, versions);
       }
     }
 
     return Array.from(aggregated.entries())
-      .map(([name, { count, versions }]) => {
+      .map(([name, versions]) => {
         let label = name;
         if (versions.size === 1) {
           label = `${name} (${Array.from(versions)[0]})`;
@@ -92,7 +84,6 @@ export function FilterTypeMenu({
         return {
           value: name,
           label,
-          count,
         };
       })
       .sort((a, b) => a.value.localeCompare(b.value));
@@ -101,14 +92,12 @@ export function FilterTypeMenu({
   const serverValues =
     serversQuery.data?.servers.map((s) => ({
       value: s.name,
-      count: s.logCount,
     })) ?? [];
 
   const sessionValues =
     sessionsQuery.data?.sessions.map((s) => ({
       value: s.sessionId,
       label: `${s.sessionId.slice(0, 8)}... (${s.serverName})`,
-      count: s.logCount,
     })) ?? [];
 
   return (

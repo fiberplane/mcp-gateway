@@ -16,14 +16,14 @@ import { parseFiltersFromUrl, serializeFiltersToUrl } from "./filter-utils";
  * Default: empty string
  */
 export const parseAsSearch = createParser({
-	parse: (value: string) => {
-		// nuqs handles URL decoding automatically
-		return value.trim();
-	},
-	serialize: (value: string) => {
-		// nuqs handles URL encoding automatically
-		return value.trim();
-	},
+  parse: (value: string) => {
+    // nuqs handles URL decoding automatically
+    return value.trim();
+  },
+  serialize: (value: string) => {
+    // nuqs handles URL encoding automatically
+    return value.trim();
+  },
 }).withDefault("");
 
 /**
@@ -33,55 +33,54 @@ export const parseAsSearch = createParser({
  * Example: client=is:claude-code or method=is:tools/call,prompts/get
  */
 export const parseAsFilterParam = createParser({
-	parse: (value: string) => {
-		return value; // Return raw value, will be parsed into Filter objects later
-	},
-	serialize: (value: string | null) => {
-		return value ?? ""; // nuqs expects empty string for null
-	},
+  parse: (value: string) => {
+    return value; // Return raw value, will be parsed into Filter objects later
+  },
+  serialize: (value: string | null) => {
+    return value ?? ""; // nuqs expects empty string for null
+  },
 }).withOptions({ shallow: false }); // Use push history for filter changes
 
 /**
  * Convert URL filter params to Filter array
  */
 export function filterParamsToFilters(params: {
-	client?: string | null;
-	method?: string | null;
-	session?: string | null;
-	server?: string | null;
-	duration?: string | null;
-	tokens?: string | null;
+  client?: string | null;
+  method?: string | null;
+  session?: string | null;
+  server?: string | null;
+  duration?: string | null;
+  tokens?: string | null;
 }): Filter[] {
-	const urlParams = new URLSearchParams();
+  const urlParams = new URLSearchParams();
 
-	// Add non-null params to URLSearchParams for parsing
-	for (const [key, value] of Object.entries(params)) {
-		if (value) {
-			urlParams.set(key, value);
-		}
-	}
+  // Add non-null params to URLSearchParams for parsing
+  for (const [key, value] of Object.entries(params)) {
+    if (value) {
+      urlParams.set(key, value);
+    }
+  }
 
-	return parseFiltersFromUrl(urlParams);
+  return parseFiltersFromUrl(urlParams);
 }
 
 /**
  * Convert Filter array to URL filter params
  */
-export function filtersToFilterParams(filters: Filter[]): Record<
-	FilterField,
-	string | null
-> {
-	const params = serializeFiltersToUrl(filters);
+export function filtersToFilterParams(
+  filters: Filter[],
+): Record<FilterField, string | null> {
+  const params = serializeFiltersToUrl(filters);
 
-	// Convert URLSearchParams to object with null for missing fields
-	const result: Record<string, string | null> = {
-		client: params.get("client"),
-		method: params.get("method"),
-		session: params.get("session"),
-		server: params.get("server"),
-		duration: params.get("duration"),
-		tokens: params.get("tokens"),
-	};
+  // Convert URLSearchParams to object with null for missing fields
+  const result: Record<string, string | null> = {
+    client: params.get("client"),
+    method: params.get("method"),
+    session: params.get("session"),
+    server: params.get("server"),
+    duration: params.get("duration"),
+    tokens: params.get("tokens"),
+  };
 
-	return result as Record<FilterField, string | null>;
+  return result as Record<FilterField, string | null>;
 }

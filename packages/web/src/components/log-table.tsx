@@ -1,13 +1,13 @@
 import type { ApiLogEntry } from "@fiberplane/mcp-gateway-types";
 import { format } from "date-fns";
 import {
-	ArrowDown,
-	ArrowLeft,
-	ArrowRight,
-	ArrowUp,
-	ArrowUpDown,
-	Check,
-	Copy,
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  ArrowUpDown,
+  Check,
+  Copy,
 } from "lucide-react";
 import { Fragment, type ReactNode, useMemo, useState } from "react";
 import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
@@ -127,28 +127,28 @@ const COLUMNS: Column[] = [
         <span className="text-muted-foreground">-</span>
       ),
   },
-	{
-		id: "method",
-		header: "Method",
-		sortField: "method",
-		headerClassName: "min-w-44",
-		cell: (log) => {
-			const icon =
-				log.direction === "request" ? (
-					<ArrowRight className="w-3 h-3" aria-hidden="true" />
-				) : log.direction === "response" ? (
-					<ArrowLeft className="w-3 h-3" aria-hidden="true" />
-				) : (
-					<ArrowDown className="w-3 h-3" aria-hidden="true" />
-				);
+  {
+    id: "method",
+    header: "Method",
+    sortField: "method",
+    headerClassName: "min-w-44",
+    cell: (log) => {
+      const icon =
+        log.direction === "request" ? (
+          <ArrowRight className="w-3 h-3" aria-hidden="true" />
+        ) : log.direction === "response" ? (
+          <ArrowLeft className="w-3 h-3" aria-hidden="true" />
+        ) : (
+          <ArrowDown className="w-3 h-3" aria-hidden="true" />
+        );
 
-			return (
-				<ColorPill color={getMethodColor(log.method)} icon={icon}>
-					{log.method}
-				</ColorPill>
-			);
-		},
-	},
+      return (
+        <ColorPill color={getMethodColor(log.method)} icon={icon}>
+          {log.method}
+        </ColorPill>
+      );
+    },
+  },
   {
     id: "server",
     header: "Server",

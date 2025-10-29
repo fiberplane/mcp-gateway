@@ -8,6 +8,7 @@ import {
   type Filter,
   type FilterField,
 } from "@fiberplane/mcp-gateway-types";
+import { useHandler } from "@/lib/use-handler";
 import { FilterTypeMenu } from "./filter-type-menu";
 
 interface AddFilterDropdownProps {
@@ -36,7 +37,7 @@ export function AddFilterDropdown({
   /**
    * Convert active filters to the format expected by FilterTypeMenu
    */
-  const getActiveFilterValues = () => {
+  const getActiveFilterValues = useHandler(() => {
     const result: {
       method?: string[];
       client?: string[];
@@ -64,13 +65,13 @@ export function AddFilterDropdown({
     }
 
     return result;
-  };
+  });
 
   /**
    * Handle filter application from FilterTypeMenu
    * Called for EACH filter type when menu closes
    */
-  const handleApply = (filterType: string, values: string[]) => {
+  const handleApply = useHandler((filterType: string, values: string[]) => {
     const field = filterType as FilterField;
 
     if (values.length === 0) {
@@ -94,7 +95,7 @@ export function AddFilterDropdown({
     });
 
     onAdd(newFilter);
-  };
+  });
 
   return (
     <FilterTypeMenu

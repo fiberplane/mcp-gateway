@@ -223,9 +223,7 @@ export interface Gateway {
     /**
      * Get method aggregations from storage
      */
-    getMethods(
-      serverName?: string,
-    ): Promise<Array<{ method: string; logCount: number }>>;
+    getMethods(serverName?: string): Promise<Array<{ method: string }>>;
 
     /**
      * Get metrics for a specific server

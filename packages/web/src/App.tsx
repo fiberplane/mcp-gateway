@@ -11,48 +11,48 @@ import { SettingsMenu } from "./components/settings-menu";
 import { StreamingBadge } from "./components/streaming-badge";
 import { TopNavigation } from "./components/top-navigation";
 import { api } from "./lib/api";
-import { applyFilterState } from "./lib/filter-utils";
 import {
-	filterParamsToFilters,
-	parseAsFilterParam,
-	parseAsSearch,
+  filterParamsToFilters,
+  parseAsFilterParam,
+  parseAsSearch,
 } from "./lib/filter-parsers";
+import { applyFilterState } from "./lib/filter-utils";
 import { useHandler } from "./lib/use-handler";
 import { getLogKey } from "./lib/utils";
 
 function App() {
-	const queryClient = useQueryClient();
-	const [serverName, setServerName] = useState<string | undefined>();
-	const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-	const [isClearing, setIsClearing] = useState(false);
-	const [clearError, setClearError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const [serverName, setServerName] = useState<string | undefined>();
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isClearing, setIsClearing] = useState(false);
+  const [clearError, setClearError] = useState<string | null>(null);
 
-	// Filter state from URL via nuqs
-	const [search] = useQueryState("q", parseAsSearch);
+  // Filter state from URL via nuqs
+  const [search] = useQueryState("q", parseAsSearch);
 
-	const [filterParams] = useQueryStates({
-		client: parseAsFilterParam,
-		method: parseAsFilterParam,
-		session: parseAsFilterParam,
-		server: parseAsFilterParam,
-		duration: parseAsFilterParam,
-		tokens: parseAsFilterParam,
-	});
+  const [filterParams] = useQueryStates({
+    client: parseAsFilterParam,
+    method: parseAsFilterParam,
+    session: parseAsFilterParam,
+    server: parseAsFilterParam,
+    duration: parseAsFilterParam,
+    tokens: parseAsFilterParam,
+  });
 
-	// Convert URL params to Filter array
-	const filters = useMemo(
-		() => filterParamsToFilters(filterParams),
-		[filterParams],
-	);
+  // Convert URL params to Filter array
+  const filters = useMemo(
+    () => filterParamsToFilters(filterParams),
+    [filterParams],
+  );
 
-	// Construct filter state from URL values
-	const filterState = useMemo(
-		() => ({
-			search: search ?? "",
-			filters,
-		}),
-		[search, filters],
-	);
+  // Construct filter state from URL values
+  const filterState = useMemo(
+    () => ({
+      search: search ?? "",
+      filters,
+    }),
+    [search, filters],
+  );
 
   // Streaming: ON = auto-refresh with new logs, OFF = manual load more
   const [isStreaming, setIsStreaming] = useState(true);
@@ -117,14 +117,14 @@ function App() {
     fetchNextPage();
   });
 
-	const handleServerChange = useHandler((value: string | undefined) => {
-		setServerName(value);
-		setSelectedIds(new Set()); // Reset selection
-	});
+  const handleServerChange = useHandler((value: string | undefined) => {
+    setServerName(value);
+    setSelectedIds(new Set()); // Reset selection
+  });
 
-	const handleStreamingToggle = useHandler((enabled: boolean) => {
-		setIsStreaming(enabled);
-	});
+  const handleStreamingToggle = useHandler((enabled: boolean) => {
+    setIsStreaming(enabled);
+  });
 
   const handleClearSessions = useHandler(async (): Promise<void> => {
     // Ask for confirmation
@@ -223,27 +223,27 @@ function App() {
                     )}
                   </div>
                 )}
-							>
-								<FilterBar
-									actions={
-										<>
-											<StreamingBadge
-												isStreaming={isStreaming}
-												onToggle={handleStreamingToggle}
-											/>
-											<SettingsMenu
-												onClearSessions={handleClearSessions}
-												isClearing={isClearing}
-											/>
-											<ExportButton
-												logs={deferredFilteredLogs}
-												selectedIds={selectedIds}
-												getLogKey={getLogKey}
-											/>
-										</>
-									}
-								/>
-							</ErrorBoundary>
+              >
+                <FilterBar
+                  actions={
+                    <>
+                      <StreamingBadge
+                        isStreaming={isStreaming}
+                        onToggle={handleStreamingToggle}
+                      />
+                      <SettingsMenu
+                        onClearSessions={handleClearSessions}
+                        isClearing={isClearing}
+                      />
+                      <ExportButton
+                        logs={deferredFilteredLogs}
+                        selectedIds={selectedIds}
+                        getLogKey={getLogKey}
+                      />
+                    </>
+                  }
+                />
+              </ErrorBoundary>
 
               {/* Log Table */}
               <LogTable

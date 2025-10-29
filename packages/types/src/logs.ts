@@ -108,7 +108,6 @@ export type ServerStatus = "online" | "offline" | "not-found";
  */
 export interface ServerInfo {
   name: string;
-  logCount: number;
   sessionCount: number;
   status: ServerStatus;
 }
@@ -119,7 +118,6 @@ export interface ServerInfo {
 export interface SessionInfo {
   sessionId: string;
   serverName: string;
-  logCount: number;
   startTime: string;
   endTime: string;
 }
@@ -130,6 +128,5 @@ export interface SessionInfo {
 export interface ClientAggregation {
   clientName: string;
   clientVersion: string | null;
-  logCount: number;
   sessionCount: number;
 }
