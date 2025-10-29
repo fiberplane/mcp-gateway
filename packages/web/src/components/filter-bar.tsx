@@ -1,22 +1,6 @@
 /**
- * FilterBar Component (Phase 1-2)
- *
- * Displays active filters and provides filtering controls.
- *
- * Design Reference: https://www.figma.com/design/sVRANvfGiWr6CJhpXCI02W/MCP-gateway---playground?node-id=216-2812
- *
- * Phase 1 Features:
- * - Display active filter badges
- * - Client filter selector (temporary UI)
- * - "Clear all" button
- * - URL state persistence
- *
- * Phase 2 Features:
- * - Search input (global search)
- *
- * Future phases will add:
- * - "Add filter" dropdown for all filter types
- * - Better client selector UI
+ * Filter bar with search input, active filter badges, and controls.
+ * Filter state is synced with URL parameters.
  */
 
 import type { createFilter, FilterState } from "@fiberplane/mcp-gateway-types";

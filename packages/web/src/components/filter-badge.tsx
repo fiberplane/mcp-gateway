@@ -1,13 +1,6 @@
 /**
- * FilterBadge Component
- *
- * Displays an active filter as a badge with a remove button.
- *
- * Features:
- * - Shows field name, operator, and value
- * - Method filters have colored pill badges
- * - Icons for different filter types
- * - Remove button
+ * Displays an active filter as a removable badge.
+ * Method filters show colored pills, arrays are truncated with "+N more".
  */
 
 import type { Filter } from "@fiberplane/mcp-gateway-types";

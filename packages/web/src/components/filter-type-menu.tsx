@@ -1,13 +1,6 @@
 /**
- * FilterTypeMenu Component
- *
- * Main cascading menu for adding filters.
- * Provides submenus for Method, Session, Client, and Server filters.
- *
- * Features:
- * - Data-driven submenus using TanStack Query
- * - Multi-select support with immediate apply
- * - Search within submenus
+ * Cascading dropdown menu with filter type submenus.
+ * Calls onApply when menu closes with selected values for each filter type.
  */
 
 import { Plus } from "lucide-react";

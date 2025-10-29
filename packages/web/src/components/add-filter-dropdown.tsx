@@ -1,17 +1,6 @@
 /**
- * AddFilterDropdown Component
- *
- * Cascading menu for adding new filters to the filter bar.
- *
- * Design Reference: https://www.figma.com/design/sVRANvfGiWr6CJhpXCI02W/MCP-gateway---playground?node-id=216-3266
- *
- * Features:
- * - Cascading menu with data-driven submenus
- * - Multi-select support (checkboxes)
- * - Search/filter within submenus
- * - Keyboard accessible
- * - Screen reader friendly with ARIA labels
- * - Real-time data from backend
+ * Dropdown menu for adding filters.
+ * Converts menu selections to Filter objects via onAdd callback.
  */
 
 import {

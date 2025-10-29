@@ -1,13 +1,6 @@
 /**
- * FilterValueSubmenu Component
- *
- * Reusable submenu for selecting filter values with checkboxes.
- *
- * Features:
- * - Multi-select with checkboxes
- * - Search/filter input
- * - Value counts
- * - Optional color badges for methods
+ * Reusable submenu for multi-selecting filter values.
+ * Includes search input, checkboxes, and value counts.
  */
 
 import { ChevronRight, Search } from "lucide-react";

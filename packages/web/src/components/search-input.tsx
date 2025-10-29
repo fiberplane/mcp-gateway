@@ -1,13 +1,6 @@
 /**
- * SearchInput Component
- *
- * Global search input for filtering logs by content.
- *
- * Features:
- * - Debounced input using useDeferredValue
- * - Clear button when input has value
- * - Keyboard hint showing "Escape" to clear
- * - Screen reader friendly with ARIA labels
+ * Search input with debouncing and clear button.
+ * Uses useDeferredValue for performance with large log sets.
  */
 
 import { Search } from "lucide-react";
