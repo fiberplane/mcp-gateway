@@ -217,10 +217,24 @@ export function CommandFilterInput({
       window.clearTimeout(blurTimeoutRef.current);
       blurTimeoutRef.current = null;
     }
-    setInputValue(suggestion.text);
-    // Keep autocomplete open to show next stage suggestions (e.g., operators after field)
-    setShowAutocomplete(true);
-    inputRef.current?.focus();
+
+    // Check if this suggestion completes a valid filter
+    const trimmed = suggestion.text.trim();
+    const result = parseInput(trimmed);
+
+    if (result && result.type === "filter") {
+      // Complete filter! Add it immediately
+      const filter = createFilter(result.filter);
+      onAddFilter(filter);
+      setInputValue("");
+      setShowAutocomplete(false);
+      inputRef.current?.focus();
+    } else {
+      // Not complete yet, populate and keep autocomplete open for next stage
+      setInputValue(suggestion.text);
+      setShowAutocomplete(true);
+      inputRef.current?.focus();
+    }
   });
 
   // Validation state for styling
