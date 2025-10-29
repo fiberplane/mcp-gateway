@@ -176,7 +176,10 @@ export function createResponseCaptureRecord(
       userAgent: httpContext?.userAgent,
       clientIp: httpContext?.clientIp,
       // Estimate tokens from either result (success) or error (failure)
-      outputTokens: estimateOutputTokens(response.result ?? response.error),
+      outputTokens: estimateOutputTokens(
+        method,
+        response.result ?? response.error,
+      ),
       methodDetail,
     },
     response,
@@ -320,7 +323,10 @@ export function createSSEJsonRpcCaptureRecord(
         ? estimateInputTokens(jsonRpcMessage.method, jsonRpcMessage.params)
         : undefined,
       outputTokens: isJsonRpcResponse(jsonRpcMessage)
-        ? estimateOutputTokens(jsonRpcMessage.result ?? jsonRpcMessage.error)
+        ? estimateOutputTokens(
+            method,
+            jsonRpcMessage.result ?? jsonRpcMessage.error,
+          )
         : undefined,
       methodDetail,
     },

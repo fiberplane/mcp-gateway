@@ -516,18 +516,21 @@ function createColumns(): Column[] {
       header: "Tokens",
       sortField: "tokens",
       cell: (log) => {
-        const inputTokens = log.metadata.inputTokens ?? 0;
-        const outputTokens = log.metadata.outputTokens ?? 0;
-        const total = inputTokens + outputTokens;
+        const inputTokens = log.metadata.inputTokens;
+        const outputTokens = log.metadata.outputTokens;
 
-        if (total === 0) {
+        // If both are undefined, this method has no token cost (N/A)
+        if (inputTokens === undefined && outputTokens === undefined) {
           return <span className="text-muted-foreground">−</span>;
         }
+
+        // Calculate total (treating undefined as 0)
+        const total = (inputTokens ?? 0) + (outputTokens ?? 0);
 
         return (
           <span
             className="text-sm text-muted-foreground tabular-nums text-right"
-            title={`Input: ${inputTokens}, Output: ${outputTokens}`}
+            title={`Input: ${inputTokens ?? "−"}, Output: ${outputTokens ?? "−"}`}
           >
             {total.toLocaleString()}
           </span>
