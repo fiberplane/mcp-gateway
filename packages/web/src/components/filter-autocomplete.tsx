@@ -75,8 +75,8 @@ export function FilterAutocomplete({
           setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
           break;
         case "Tab":
-          // Tab selects highlighted suggestion (for guided completion)
-          if (suggestions[selectedIndex]) {
+          // Tab (without shift) selects highlighted suggestion (for guided completion)
+          if (!e.shiftKey && suggestions[selectedIndex]) {
             e.preventDefault();
             onSelect(suggestions[selectedIndex]);
           }
