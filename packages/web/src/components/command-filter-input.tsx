@@ -226,15 +226,6 @@ export function CommandFilterInput({
     const newValue = e.target.value;
     setInputValue(newValue);
 
-    // Check if this looks like a filter (has filter syntax)
-    const hasFilterSyntax = /[:><]/.test(newValue);
-
-    // Only update search for plain text (not filter syntax)
-    // This prevents "client:" from being treated as a search term while typing
-    if (!hasFilterSyntax) {
-      onUpdateSearch(newValue);
-    }
-
     // Show autocomplete for any input
     setShowAutocomplete(true);
   });
