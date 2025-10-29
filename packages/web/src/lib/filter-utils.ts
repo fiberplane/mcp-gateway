@@ -15,7 +15,6 @@ import {
   isDurationFilter,
   safeParseFilter,
 } from "@fiberplane/mcp-gateway-types";
-import { nanoid } from "nanoid";
 
 // ============================================================================
 // URL Serialization
@@ -102,7 +101,7 @@ export function parseFiltersFromUrl(params: URLSearchParams): Filter[] {
     // Create filter with validation
     const filterInput = { field, operator, value };
     const result = safeParseFilter({
-      id: nanoid(),
+      id: crypto.randomUUID(),
       ...filterInput,
     });
 
