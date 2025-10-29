@@ -108,6 +108,9 @@ This document outlines the architecture for adding a web-based UI to the MCP Gat
 - Log detail expansion with JSON viewer
 - Search across log content
 - Export functionality
+- Responsive design
+- **Token estimation** - Display approximate token costs for LLM operations (see `packages/core/src/utils/tokens.ts`)
+- **Method detail preview** - Human-readable summaries of request/response content (see `packages/web/src/lib/method-detail.ts`)
 
 **Filter Architecture:**
 

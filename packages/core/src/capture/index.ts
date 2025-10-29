@@ -14,6 +14,7 @@ import {
   mcpServerInfoSchema,
 } from "@fiberplane/mcp-gateway-types";
 import { logger } from "../logger";
+import { estimateInputTokens, estimateOutputTokens } from "../utils/tokens";
 
 // Store request start times for duration calculation (fallback when RequestTracker not provided)
 const requestStartTimes = new Map<string | number, number>();
@@ -25,6 +26,24 @@ const requestMethods = new Map<string | number, string>();
 export function resetCaptureState(): void {
   requestStartTimes.clear();
   requestMethods.clear();
+}
+
+/**
+ * Type guard to check if a JSON-RPC message is a request
+ */
+function isJsonRpcRequest(
+  message: JsonRpcRequest | JsonRpcResponse,
+): message is JsonRpcRequest {
+  return "method" in message && typeof message.method === "string";
+}
+
+/**
+ * Type guard to check if a JSON-RPC message is a response
+ */
+function isJsonRpcResponse(
+  message: JsonRpcRequest | JsonRpcResponse,
+): message is JsonRpcResponse {
+  return "result" in message || "error" in message;
 }
 
 function sanitizeClientInfo(info?: ClientInfo): ClientInfo | undefined {
@@ -68,6 +87,7 @@ export function createRequestCaptureRecord(
   clientInfo?: ClientInfo,
   serverInfo?: McpServerInfo,
   requestTracker?: RequestTracker,
+  methodDetail?: string | null,
 ): CaptureRecord {
   const client = sanitizeClientInfo(clientInfo);
   const server = sanitizeServerInfo(serverInfo);
@@ -95,6 +115,8 @@ export function createRequestCaptureRecord(
       server,
       userAgent: httpContext?.userAgent,
       clientIp: httpContext?.clientIp,
+      inputTokens: estimateInputTokens(request.method, request.params),
+      methodDetail,
     },
     request,
   };
@@ -120,6 +142,7 @@ export function createResponseCaptureRecord(
   clientInfo?: ClientInfo,
   serverInfo?: McpServerInfo,
   requestTracker?: RequestTracker,
+  methodDetail?: string | null,
 ): CaptureRecord {
   const client = sanitizeClientInfo(clientInfo);
   const server = sanitizeServerInfo(serverInfo);
@@ -152,6 +175,12 @@ export function createResponseCaptureRecord(
       server,
       userAgent: httpContext?.userAgent,
       clientIp: httpContext?.clientIp,
+      // Estimate tokens from either result (success) or error (failure)
+      outputTokens: estimateOutputTokens(
+        method,
+        response.result ?? response.error,
+      ),
+      methodDetail,
     },
     response,
   };
@@ -238,6 +267,7 @@ export function createSSEJsonRpcCaptureRecord(
   clientInfo?: ClientInfo,
   serverInfo?: McpServerInfo,
   requestTracker?: RequestTracker,
+  methodDetail?: string | null,
 ): CaptureRecord {
   const client = sanitizeClientInfo(clientInfo);
   const server = sanitizeServerInfo(serverInfo);
@@ -288,6 +318,17 @@ export function createSSEJsonRpcCaptureRecord(
       clientIp: httpContext?.clientIp,
       sseEventId: sseEvent.id,
       sseEventType: sseEvent.event,
+      // Add token estimation for SSE JSON-RPC messages
+      inputTokens: isJsonRpcRequest(jsonRpcMessage)
+        ? estimateInputTokens(jsonRpcMessage.method, jsonRpcMessage.params)
+        : undefined,
+      outputTokens: isJsonRpcResponse(jsonRpcMessage)
+        ? estimateOutputTokens(
+            method,
+            jsonRpcMessage.result ?? jsonRpcMessage.error,
+          )
+        : undefined,
+      methodDetail,
     },
     sseEvent: {
       id: sseEvent.id,
@@ -297,10 +338,10 @@ export function createSSEJsonRpcCaptureRecord(
     },
   };
 
-  if (isResponse) {
-    record.response = jsonRpcMessage as JsonRpcResponse;
-  } else {
-    record.request = jsonRpcMessage as JsonRpcRequest;
+  if (isJsonRpcResponse(jsonRpcMessage)) {
+    record.response = jsonRpcMessage;
+  } else if (isJsonRpcRequest(jsonRpcMessage)) {
+    record.request = jsonRpcMessage;
   }
 
   // Validate the record

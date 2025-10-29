@@ -26,6 +26,7 @@ export interface ProxyDependencies {
     httpContext?: HttpContext,
     clientInfo?: ClientInfo,
     serverInfo?: McpServerInfo,
+    methodDetail?: string | null,
   ) => CaptureRecord;
 
   /** Create a response capture record */
@@ -38,6 +39,7 @@ export interface ProxyDependencies {
     httpContext?: HttpContext,
     clientInfo?: ClientInfo,
     serverInfo?: McpServerInfo,
+    methodDetail?: string | null,
   ) => CaptureRecord;
 
   /** Append a capture record to storage */

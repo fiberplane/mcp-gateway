@@ -1,4 +1,5 @@
 import type {
+  ApiLogEntry,
   CaptureRecord,
   ClientInfo,
   Gateway,
@@ -19,8 +20,10 @@ import {
   createResponseCaptureRecord,
   createSSEEventCaptureRecord,
   createSSEJsonRpcCaptureRecord,
+  resolveJsonRpcMethod,
 } from "./capture/index.js";
 import { logger } from "./logger.js";
+import { getMethodDetail } from "./utils/method-detail.js";
 
 // In-memory storage for client info by session (scoped to Gateway instance)
 class ClientInfoStore {
@@ -426,6 +429,37 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
         serverInfo?: McpServerInfo,
       ) => {
         try {
+          // Compute methodDetail before creating capture record
+          const method = resolveJsonRpcMethod(jsonRpcMessage, requestTracker);
+          const apiLogEntry: ApiLogEntry = isResponse
+            ? {
+                timestamp: new Date().toISOString(),
+                method,
+                id: jsonRpcMessage.id ?? null,
+                direction: "response" as const,
+                metadata: {
+                  serverName,
+                  sessionId,
+                  durationMs: 0,
+                  httpStatus: 200,
+                },
+                response: jsonRpcMessage as JsonRpcResponse,
+              }
+            : {
+                timestamp: new Date().toISOString(),
+                method,
+                id: jsonRpcMessage.id ?? null,
+                direction: "request" as const,
+                metadata: {
+                  serverName,
+                  sessionId,
+                  durationMs: 0,
+                  httpStatus: 200,
+                },
+                request: jsonRpcMessage as JsonRpcRequest,
+              };
+          const methodDetail = getMethodDetail(apiLogEntry);
+
           const record = createSSEJsonRpcCaptureRecord(
             serverName,
             sessionId,
@@ -436,6 +470,7 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
             clientInfo ?? (await clientInfoStore.get(sessionId)),
             serverInfo ?? (await serverInfoStore.get(sessionId)),
             requestTracker,
+            methodDetail,
           );
           await backend.write(record);
           return record;

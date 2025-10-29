@@ -153,6 +153,7 @@ export async function runCli(): Promise<void> {
         httpContext,
         clientInfo,
         serverInfo,
+        methodDetail,
       ) =>
         createRequestCaptureRecord(
           serverName,
@@ -162,6 +163,7 @@ export async function runCli(): Promise<void> {
           clientInfo,
           serverInfo,
           gateway.requestTracker,
+          methodDetail,
         ),
       createResponseRecord: (
         serverName,
@@ -172,6 +174,7 @@ export async function runCli(): Promise<void> {
         httpContext,
         clientInfo,
         serverInfo,
+        methodDetail,
       ) =>
         createResponseCaptureRecord(
           serverName,
@@ -183,6 +186,7 @@ export async function runCli(): Promise<void> {
           clientInfo,
           serverInfo,
           gateway.requestTracker,
+          methodDetail,
         ),
       appendRecord: (record) => gateway.capture.append(record),
       captureErrorResponse: (

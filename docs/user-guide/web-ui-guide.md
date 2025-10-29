@@ -63,9 +63,13 @@ The main log view shows a table with columns:
 | **Time** | Request timestamp (relative or absolute) |
 | **Server** | Which server handled the request |
 | **Method** | MCP method name (e.g., "initialize", "list_resources") |
+| **Method Detail** | Human-readable preview of the request/response (e.g., tool arguments, response preview) |
 | **Status** | HTTP status (200, 500, etc.) or error |
 | **Duration** | Response time in milliseconds |
+| **Tokens** | Estimated token count (input + output) for cost tracking - hover for breakdown |
 | **Actions** | View details or export |
+
+**Note on Token Estimates**: Token counts use a ~4 characters per token heuristic for approximate cost tracking. These are estimates (±10-20% variance) and should not be used for exact billing. For precise token counts, use your LLM provider's tokenizer.
 
 ### Viewing Log Details
 
@@ -205,6 +209,7 @@ Click column headers to sort:
 | **Method** | A-Z, Z-A |
 | **Duration** | Fastest first, slowest first |
 | **Status** | Success first, errors first |
+| **Tokens** | Highest first, lowest first (empty values at end) |
 
 ## Keyboard Shortcuts
 
@@ -243,8 +248,15 @@ Click column headers to sort:
 
 1. Filter by method (e.g., "call_tool")
 2. View all requests for that method
-3. See which parameters are used
-4. Analyze response patterns
+3. See which parameters are used in the **Method Detail** column
+4. Analyze response patterns and token costs
+
+### Identify Expensive Tool Calls
+
+1. Click the **Tokens** column header to sort by token count
+2. High token count calls appear at the top
+3. Review these for optimization opportunities
+4. Check if responses could be more concise
 
 ## Troubleshooting
 
@@ -300,13 +312,40 @@ Click column headers to sort:
 3. Try different export format
 4. Use REST API for large exports
 
+## Display Requirements
+
+The Web UI is designed for desktop browsers:
+- **Minimum Resolution**: 1280x720 (HD)
+- **Recommended**: 1920x1080 (Full HD) or higher
+- **Wide screens**: Better experience with more visible columns
+
+**Note**: While the UI may be usable on larger tablets in landscape mode, mobile devices are not officially supported. Some responsive elements exist but full mobile optimization is not implemented.
+
+## Accessibility
+
+The Web UI follows WCAG 2.1 AA standards:
+
+- Keyboard navigation supported
+- Screen reader friendly
+- High contrast mode supported
+- Focus indicators visible
+- Semantic HTML structure
+
+**Screen Reader Tips:**
+- Headings: Use `H` key to navigate sections
+- Tables: Use arrow keys to navigate cells
+- Buttons: Use `Tab` to focus, `Enter` to activate
+- Links: Use `Tab` to navigate, `Enter` to follow
+
 ## Browser Support
 
-Latest versions of:
+The Web UI aims to work with the latest versions of major desktop browsers:
 
 - Chrome/Edge
 - Firefox
 - Safari
+
+**Note**: The UI is designed for desktop browsers. While it may be usable on larger tablets in landscape mode, mobile devices are not officially supported. Cross-browser testing is not comprehensive, so your mileage may vary with older browser versions.
 
 ## Performance
 

@@ -8,6 +8,7 @@ import {
   createRequestCaptureRecord,
   createResponseCaptureRecord,
   type Gateway,
+  getMethodDetail,
   logger,
   resetMigrationState,
 } from "@fiberplane/mcp-gateway-core";
@@ -15,7 +16,11 @@ import {
   createApp as createServerApp,
   type ProxyDependencies,
 } from "@fiberplane/mcp-gateway-server";
-import type { McpServer } from "@fiberplane/mcp-gateway-types";
+import type {
+  ApiRequestLogEntry,
+  ApiResponseLogEntry,
+  McpServer,
+} from "@fiberplane/mcp-gateway-types";
 import type { Hono } from "hono";
 
 /**
@@ -63,8 +68,24 @@ export async function createApp(
       httpContext,
       clientInfo,
       serverInfo,
-    ) =>
-      createRequestCaptureRecord(
+    ) => {
+      const timestamp = new Date().toISOString();
+      const apiEntry: ApiRequestLogEntry = {
+        timestamp,
+        method: request.method,
+        id: request.id ?? null,
+        direction: "request",
+        metadata: {
+          serverName,
+          sessionId,
+          durationMs: 0,
+          httpStatus: 0,
+        },
+        request,
+      };
+      const methodDetail = getMethodDetail(apiEntry);
+
+      return createRequestCaptureRecord(
         serverName,
         sessionId,
         request,
@@ -72,7 +93,9 @@ export async function createApp(
         clientInfo,
         serverInfo,
         gateway.requestTracker,
-      ),
+        methodDetail,
+      );
+    },
 
     createResponseRecord: (
       serverName: string,
@@ -83,8 +106,24 @@ export async function createApp(
       httpContext,
       clientInfo,
       serverInfo,
-    ) =>
-      createResponseCaptureRecord(
+    ) => {
+      const timestamp = new Date().toISOString();
+      const apiEntry: ApiResponseLogEntry = {
+        timestamp,
+        method,
+        id: response.id ?? null,
+        direction: "response",
+        metadata: {
+          serverName,
+          sessionId,
+          durationMs: 0,
+          httpStatus,
+        },
+        response,
+      };
+      const methodDetail = getMethodDetail(apiEntry);
+
+      return createResponseCaptureRecord(
         serverName,
         sessionId,
         response,
@@ -94,7 +133,9 @@ export async function createApp(
         clientInfo,
         serverInfo,
         gateway.requestTracker,
-      ),
+        methodDetail,
+      );
+    },
 
     appendRecord: async (record) => {
       await gateway.capture.append(record);
