@@ -326,6 +326,8 @@ export function getAutocompleteSuggestions(
   const text = input;
 
   // Stage 1: Field suggestions
+  // Only show field suggestions for partial matches (not exact matches)
+  // This allows searching for words like "duration", "method", etc.
   if (!text || !text.includes(" ")) {
     const fields: FilterField[] = [
       "tokens",
@@ -335,8 +337,11 @@ export function getAutocompleteSuggestions(
       "session",
       "server",
     ];
+    const lowerText = text.toLowerCase();
     return fields
-      .filter((field) => field.startsWith(text.toLowerCase()))
+      .filter(
+        (field) => field.startsWith(lowerText) && field !== lowerText, // Exclude exact matches
+      )
       .map((field) => ({
         text: `${field} `,
         display: field,

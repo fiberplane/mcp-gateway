@@ -129,16 +129,14 @@ export function CommandFilterInput({
       : null;
 
   // Get autocomplete suggestions with fetched values
-  const suggestions = showAutocomplete
-    ? getAutocompleteSuggestions(inputValue, {
-        servers: serversData?.servers.map((s) => s.name) ?? [],
-        clients: clientsData?.clients.map((c) => c.clientName) ?? [],
-        methods: methodsData?.methods.map((m) => m.method) ?? [],
-        sessions: [
-          ...new Set(sessionsData?.sessions.map((s) => s.sessionId) ?? []),
-        ], // Dedupe session IDs
-      })
-    : [];
+  const suggestions = getAutocompleteSuggestions(inputValue, {
+    servers: serversData?.servers.map((s) => s.name) ?? [],
+    clients: clientsData?.clients.map((c) => c.clientName) ?? [],
+    methods: methodsData?.methods.map((m) => m.method) ?? [],
+    sessions: [
+      ...new Set(sessionsData?.sessions.map((s) => s.sessionId) ?? []),
+    ], // Dedupe session IDs
+  });
 
   // Parse input for preview
   const parseResult = trimmed ? parseInput(trimmed) : null;
@@ -237,8 +235,8 @@ export function CommandFilterInput({
       onUpdateSearch(newValue);
     }
 
-    // Show autocomplete only for structured filter syntax
-    setShowAutocomplete(hasFilterSyntax);
+    // Show autocomplete for any input
+    setShowAutocomplete(true);
   });
 
   // Handle autocomplete selection
@@ -353,7 +351,10 @@ export function CommandFilterInput({
         {/* Unified dropdown with autocomplete + preview + errors */}
         <FilterAutocomplete
           suggestions={suggestions}
-          open={showAutocomplete}
+          open={
+            showAutocomplete &&
+            (suggestions.length > 0 || !!errorContent || !!previewContent)
+          }
           onSelect={handleSelectSuggestion}
           onClose={() => setShowAutocomplete(false)}
           errorContent={errorContent}
