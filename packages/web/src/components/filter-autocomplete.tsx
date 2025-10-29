@@ -143,40 +143,58 @@ export function FilterAutocomplete({
 
       {/* Suggestions section */}
       {suggestions.length > 0 && (
-        <div role="listbox" aria-label="Filter suggestions">
-          {suggestions.map((suggestion, index) => (
-            <button
-              key={`${suggestion.text}-${index}`}
-              type="button"
-              className={cn(
-                "w-full px-3 py-1.5 text-left",
-                "flex flex-col gap-0.5",
-                "transition-colors cursor-pointer",
-                "focus:outline-none",
-                index === selectedIndex
-                  ? "bg-primary/10 text-foreground border-l-2 border-primary"
-                  : "hover:bg-primary/5 border-l-2 border-transparent",
-              )}
-              onClick={() => onSelect(suggestion)}
-              onMouseEnter={() => setSelectedIndex(index)}
-              role="option"
-              aria-selected={index === selectedIndex}
-            >
-              {/* Main suggestion text - field name only */}
-              <div
-                className="flex items-center gap-2"
-                title={suggestion.description}
-              >
-                {suggestion.icon && (
-                  <span className="size-4">{suggestion.icon}</span>
+        <>
+          <div role="listbox" aria-label="Filter suggestions">
+            {suggestions.map((suggestion, index) => (
+              <button
+                key={`${suggestion.text}-${index}`}
+                type="button"
+                className={cn(
+                  "w-full px-3 py-1.5 text-left",
+                  "flex flex-col gap-0.5",
+                  "transition-colors cursor-pointer",
+                  "focus:outline-none",
+                  index === selectedIndex
+                    ? "bg-primary/10 text-foreground border-l-2 border-primary"
+                    : "hover:bg-primary/5 border-l-2 border-transparent",
                 )}
-                <span className="font-medium text-sm leading-tight">
-                  {suggestion.display}
-                </span>
-              </div>
-            </button>
-          ))}
-        </div>
+                onClick={() => onSelect(suggestion)}
+                onMouseEnter={() => setSelectedIndex(index)}
+                role="option"
+                aria-selected={index === selectedIndex}
+              >
+                {/* Main suggestion text - field name only */}
+                <div
+                  className="flex items-center gap-2"
+                  title={suggestion.description}
+                >
+                  {suggestion.icon && (
+                    <span className="size-4">{suggestion.icon}</span>
+                  )}
+                  <span className="font-medium text-sm leading-tight">
+                    {suggestion.display}
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* Keyboard hints */}
+          <div className="sticky bottom-0 px-3 py-2 border-t border-border bg-muted/50 text-xs text-muted-foreground">
+            <kbd className="px-1.5 py-0.5 rounded bg-background border border-border">
+              Tab
+            </kbd>{" "}
+            to select •{" "}
+            <kbd className="px-1.5 py-0.5 rounded bg-background border border-border">
+              Enter
+            </kbd>{" "}
+            to search •{" "}
+            <kbd className="px-1.5 py-0.5 rounded bg-background border border-border">
+              Esc
+            </kbd>{" "}
+            to close
+          </div>
+        </>
       )}
     </section>
   );
