@@ -298,9 +298,14 @@ export function CommandFilterInput({
             onKeyDown={handleKeyDown}
             onFocus={() => setShowAutocomplete(true)}
             onBlur={() => {
+              // Clear any existing timeout before setting new one
+              if (blurTimeoutRef.current !== null) {
+                window.clearTimeout(blurTimeoutRef.current);
+              }
               // Delay to allow clicking autocomplete items
               blurTimeoutRef.current = window.setTimeout(() => {
                 setShowAutocomplete(false);
+                blurTimeoutRef.current = null;
               }, 200);
             }}
             placeholder={placeholder}
@@ -309,8 +314,12 @@ export function CommandFilterInput({
               "text-sm outline-none",
               "placeholder:text-muted-foreground",
             )}
+            role="combobox"
             aria-label="Command filter input"
             aria-describedby="command-filter-help"
+            aria-expanded={showAutocomplete}
+            aria-controls="filter-autocomplete-listbox"
+            aria-autocomplete="list"
           />
 
           {/* Validation icon + status */}

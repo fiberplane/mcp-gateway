@@ -191,6 +191,7 @@ export function FilterBar({ actions }: FilterBarProps) {
             <button
               type="button"
               onClick={handleClearAll}
+              aria-label={`Clear all ${filters.length} filter${filters.length === 1 ? "" : "s"}${searchQueries.length > 0 ? ` and ${searchQueries.length} search term${searchQueries.length === 1 ? "" : "s"}` : ""}`}
               className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             >
               Clear all

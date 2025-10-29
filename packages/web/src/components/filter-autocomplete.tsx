@@ -7,6 +7,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { FilterSuggestion } from "@/lib/filter-parser";
+import { useHandler } from "@/lib/use-handler";
 import { cn } from "@/lib/utils";
 
 interface FilterAutocompleteProps {
@@ -58,48 +59,60 @@ export function FilterAutocomplete({
     setSelectedIndex(0);
   }, [suggestions]);
 
-  // Handle keyboard navigation
+  // Handle keyboard navigation - use stable handler to avoid memory leaks
+  const handleKeyDown = useHandler((e: KeyboardEvent) => {
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setSelectedIndex((prev) =>
+          prev < suggestions.length - 1 ? prev + 1 : prev,
+        );
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+        break;
+      case "Tab":
+        // Tab (without shift) selects highlighted suggestion (for guided completion)
+        // Only if there are suggestions and selectedIndex is valid
+        if (
+          !e.shiftKey &&
+          suggestions.length > 0 &&
+          selectedIndex >= 0 &&
+          selectedIndex < suggestions.length &&
+          suggestions[selectedIndex]
+        ) {
+          e.preventDefault();
+          onSelect(suggestions[selectedIndex]);
+        }
+        // Otherwise, let Tab navigate normally (don't prevent default)
+        break;
+      // Enter is NOT handled here - let it submit the typed value
+      case "Escape":
+        e.preventDefault();
+        onClose();
+        break;
+    }
+  });
+
   useEffect(() => {
     if (!open) return;
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      switch (e.key) {
-        case "ArrowDown":
-          e.preventDefault();
-          setSelectedIndex((prev) =>
-            prev < suggestions.length - 1 ? prev + 1 : prev,
-          );
-          break;
-        case "ArrowUp":
-          e.preventDefault();
-          setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
-          break;
-        case "Tab":
-          // Tab (without shift) selects highlighted suggestion (for guided completion)
-          if (!e.shiftKey && suggestions[selectedIndex]) {
-            e.preventDefault();
-            onSelect(suggestions[selectedIndex]);
-          }
-          break;
-        // Enter is NOT handled here - let it submit the typed value
-        case "Escape":
-          e.preventDefault();
-          onClose();
-          break;
-      }
-    };
-
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [open, suggestions, selectedIndex, onSelect, onClose]);
+  }, [open, handleKeyDown]);
 
   // Scroll selected item into view
   useEffect(() => {
     if (!listRef.current) return;
-    const selectedElement = listRef.current.children[
-      selectedIndex
-    ] as HTMLElement;
-    if (selectedElement) {
+
+    // Bounds check before accessing children array
+    if (selectedIndex < 0 || selectedIndex >= listRef.current.children.length) {
+      return;
+    }
+
+    const selectedElement = listRef.current.children[selectedIndex];
+    if (selectedElement instanceof HTMLElement) {
       selectedElement.scrollIntoView({
         block: "nearest",
         behavior: "smooth",
@@ -144,10 +157,16 @@ export function FilterAutocomplete({
       {/* Suggestions section */}
       {suggestions.length > 0 && (
         <>
-          <div role="listbox" aria-label="Filter suggestions">
+          {/* biome-ignore lint/correctness/useUniqueElementIds: Singleton component, static ID is acceptable for ARIA */}
+          <div
+            id="filter-autocomplete-listbox"
+            role="listbox"
+            aria-label="Filter suggestions"
+          >
             {suggestions.map((suggestion, index) => (
               <button
                 key={`${suggestion.text}-${index}`}
+                id={`filter-suggestion-${index}`}
                 type="button"
                 className={cn(
                   "w-full px-3 py-1.5 text-left",
