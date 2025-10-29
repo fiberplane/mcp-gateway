@@ -1,15 +1,79 @@
 import type { LogEntry } from "@fiberplane/mcp-gateway-types";
+import { z } from "zod";
+
+// MCP request parameter schemas
+const toolsCallParamsSchema = z.object({
+  name: z.string(),
+  arguments: z.record(z.string(), z.unknown()).optional(),
+});
+
+const resourcesReadParamsSchema = z.object({
+  uri: z.string(),
+});
+
+const promptsGetParamsSchema = z.object({
+  name: z.string(),
+  arguments: z.record(z.string(), z.unknown()).optional(),
+});
+
+// MCP response result schemas
+const initializeResultSchema = z.object({
+  serverInfo: z.object({
+    name: z.string(),
+    version: z.string(),
+  }),
+});
+
+const toolsListResultSchema = z.object({
+  tools: z.array(z.object({ name: z.string() })),
+});
+
+const toolsCallResultSchema = z.object({
+  content: z.array(
+    z.object({
+      type: z.string(),
+      text: z.string().optional(),
+    }),
+  ),
+});
+
+const resourcesListResultSchema = z.object({
+  resources: z.array(
+    z.object({
+      name: z.string(),
+      uri: z.string(),
+    }),
+  ),
+});
+
+const resourceTemplatesListResultSchema = z.object({
+  resourceTemplates: z.array(
+    z.object({
+      name: z.string(),
+      uriTemplate: z.string(),
+    }),
+  ),
+});
+
+const promptsListResultSchema = z.object({
+  prompts: z.array(z.object({ name: z.string() })),
+});
+
+const promptsGetResultSchema = z.object({
+  description: z.string().optional(),
+  messages: z.array(z.unknown()),
+});
 
 // Format request-specific details
 export function formatRequestDetails(log: LogEntry): string {
   if (!log.request?.params) return "";
 
-  const params = log.request.params as Record<string, unknown>;
-
   // tools/call: show tool name and args
   if (log.method === "tools/call") {
-    const toolName = params.name as string;
-    const args = params.arguments as Record<string, unknown>;
+    const parsed = toolsCallParamsSchema.safeParse(log.request.params);
+    if (!parsed.success) return "";
+
+    const { name: toolName, arguments: args } = parsed.data;
     const argStr = Object.entries(args || {})
       .map(([k, v]) => `${k}:${JSON.stringify(v)}`)
       .join(", ");
@@ -19,15 +83,19 @@ export function formatRequestDetails(log: LogEntry): string {
 
   // resources/read: show URI
   if (log.method === "resources/read") {
-    const uri = params.uri as string;
-    const content = ` ${uri}`;
+    const parsed = resourcesReadParamsSchema.safeParse(log.request.params);
+    if (!parsed.success) return "";
+
+    const content = ` ${parsed.data.uri}`;
     return content.length > 20 ? `${content.slice(0, 20)}...` : content;
   }
 
   // prompts/get: show prompt name and arguments
   if (log.method === "prompts/get") {
-    const name = params.name as string;
-    const args = params.arguments as Record<string, unknown> | undefined;
+    const parsed = promptsGetParamsSchema.safeParse(log.request.params);
+    if (!parsed.success) return "";
+
+    const { name, arguments: args } = parsed.data;
     if (args && Object.keys(args).length > 0) {
       const argStr = Object.entries(args)
         .map(([k, v]) => `${k}:${JSON.stringify(v)}`)
@@ -46,26 +114,39 @@ export function formatRequestDetails(log: LogEntry): string {
 export function formatResponseDetails(log: LogEntry): string {
   if (!log.response || "error" in log.response) return "";
 
-  const result = log.response.result as Record<string, unknown>;
-
   // initialize: show server name and version
   if (log.method === "initialize") {
-    const serverInfo = result.serverInfo as { name: string; version: string };
+    const parsed = initializeResultSchema.safeParse(log.response.result);
+    if (!parsed.success) return "";
+
+    const { serverInfo } = parsed.data;
     return `→ ${serverInfo.name}@${serverInfo.version}`;
   }
 
   // tools/list: show count and first few tool names
   if (log.method === "tools/list") {
-    const tools = result.tools as Array<{ name: string }>;
-    const toolNames = tools.slice(0, 3).map((t) => t.name);
+    const parsed = toolsListResultSchema.safeParse(log.response.result);
+    if (!parsed.success) return "";
+
+    const { tools } = parsed.data;
+    if (tools.length === 0) return "0 tools";
+
+    const preview = tools
+      .slice(0, 3)
+      .map((t) => t.name)
+      .join(", ");
     const more = tools.length > 3 ? `, +${tools.length - 3}` : "";
-    return `${tools.length} tools: ${toolNames.join(", ")}${more}`;
+    return `${tools.length} tools: ${preview}${more}`;
   }
 
   // tools/call: show result text (truncated)
   if (log.method === "tools/call") {
-    const content = result.content as Array<{ type: string; text?: string }>;
-    const textContent = content?.find((c) => c.type === "text")?.text;
+    const parsed = toolsCallResultSchema.safeParse(log.response.result);
+    if (!parsed.success) return "";
+
+    const textContent = parsed.data.content.find(
+      (c) => c.type === "text",
+    )?.text;
     if (textContent) {
       const truncated =
         textContent.length > 40
@@ -77,48 +158,65 @@ export function formatResponseDetails(log: LogEntry): string {
 
   // resources/list: show count and first few resource names
   if (log.method === "resources/list") {
-    const resources = result.resources as Array<{ name: string; uri: string }>;
-    const count = resources?.length || 0;
-    if (count === 0) return "0 resources";
+    const parsed = resourcesListResultSchema.safeParse(log.response.result);
+    if (!parsed.success) return "";
 
-    const resourceNames = resources.slice(0, 2).map((r) => r.name);
-    const more = count > 2 ? `, +${count - 2}` : "";
-    const content = `${count} resources: ${resourceNames.join(", ")}${more}`;
+    const { resources } = parsed.data;
+    if (resources.length === 0) return "0 resources";
+
+    const preview = resources
+      .slice(0, 2)
+      .map((r) => r.name)
+      .join(", ");
+    const more = resources.length > 2 ? `, +${resources.length - 2}` : "";
+    const content = `${resources.length} resources: ${preview}${more}`;
     return content.length > 20 ? `${content.slice(0, 20)}...` : content;
   }
 
   // resources/templates/list: show count and first few template names
   if (log.method === "resources/templates/list") {
-    const templates = result.resourceTemplates as Array<{
-      name: string;
-      uriTemplate: string;
-    }>;
-    const count = templates?.length || 0;
-    if (count === 0) return "0 templates";
+    const parsed = resourceTemplatesListResultSchema.safeParse(
+      log.response.result,
+    );
+    if (!parsed.success) return "";
 
-    const templateNames = templates.slice(0, 2).map((t) => t.name);
-    const more = count > 2 ? `, +${count - 2}` : "";
-    const content = `${count} templates: ${templateNames.join(", ")}${more}`;
+    const { resourceTemplates } = parsed.data;
+    if (resourceTemplates.length === 0) return "0 templates";
+
+    const preview = resourceTemplates
+      .slice(0, 2)
+      .map((t) => t.name)
+      .join(", ");
+    const more =
+      resourceTemplates.length > 2 ? `, +${resourceTemplates.length - 2}` : "";
+    const content = `${resourceTemplates.length} templates: ${preview}${more}`;
     return content.length > 20 ? `${content.slice(0, 20)}...` : content;
   }
 
   // prompts/list: show count and first few prompt names
   if (log.method === "prompts/list") {
-    const prompts = result.prompts as Array<{ name: string }>;
-    const count = prompts?.length || 0;
-    if (count === 0) return "0 prompts";
+    const parsed = promptsListResultSchema.safeParse(log.response.result);
+    if (!parsed.success) return "";
 
-    const promptNames = prompts.slice(0, 2).map((p) => p.name);
-    const more = count > 2 ? `, +${count - 2}` : "";
-    const content = `${count} prompts: ${promptNames.join(", ")}${more}`;
+    const { prompts } = parsed.data;
+    if (prompts.length === 0) return "0 prompts";
+
+    const preview = prompts
+      .slice(0, 2)
+      .map((p) => p.name)
+      .join(", ");
+    const more = prompts.length > 2 ? `, +${prompts.length - 2}` : "";
+    const content = `${prompts.length} prompts: ${preview}${more}`;
     return content.length > 20 ? `${content.slice(0, 20)}...` : content;
   }
 
   // prompts/get: show prompt name and message count
   if (log.method === "prompts/get") {
-    const description = result.description as string | undefined;
-    const messages = result.messages as Array<unknown>;
-    const messageCount = messages?.length || 0;
+    const parsed = promptsGetResultSchema.safeParse(log.response.result);
+    if (!parsed.success) return "";
+
+    const { description, messages } = parsed.data;
+    const messageCount = messages.length;
 
     const content = description
       ? `"${description}" (${messageCount} ${messageCount === 1 ? "message" : "messages"})`
