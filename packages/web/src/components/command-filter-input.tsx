@@ -49,6 +49,11 @@ interface CommandFilterInputProps {
    * Initial value to populate input (for editing)
    */
   initialValue?: string;
+
+  /**
+   * Optional callback when editing is cancelled (Escape pressed)
+   */
+  onCancel?: () => void;
 }
 
 export function CommandFilterInput({
@@ -56,6 +61,7 @@ export function CommandFilterInput({
   onAddSearch,
   placeholder = "Search or filter: error, tokens > 150, client is claude-code...",
   initialValue,
+  onCancel,
 }: CommandFilterInputProps) {
   const [inputValue, setInputValue] = useState(initialValue || "");
   const [showAutocomplete, setShowAutocomplete] = useState(false);
@@ -134,6 +140,7 @@ export function CommandFilterInput({
         setShowAutocomplete(false);
       } else {
         setInputValue("");
+        onCancel?.(); // Notify parent that editing was cancelled
       }
     }
   });

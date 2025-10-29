@@ -98,6 +98,7 @@ export function FilterBar({ actions }: FilterBarProps) {
     const updatedFilters = addOrReplaceFilter(filters, filter);
     const newParams = filtersToFilterParams(updatedFilters);
     setFilterParams(newParams);
+    setEditingValue(undefined); // Clear editing state
   };
 
   const handleRemoveFilterByField = (field: string) => {
@@ -119,6 +120,9 @@ export function FilterBar({ actions }: FilterBarProps) {
   };
 
   const handleEditFilter = (filterId: string) => {
+    // Don't allow editing if already editing something
+    if (editingValue !== undefined) return;
+
     // Find the filter being edited
     const filter = filters.find((f) => f.id === filterId);
     if (!filter) return;
@@ -132,6 +136,9 @@ export function FilterBar({ actions }: FilterBarProps) {
   };
 
   const handleEditSearch = (searchTermId: string) => {
+    // Don't allow editing if already editing something
+    if (editingValue !== undefined) return;
+
     // Extract index and get the search term
     const index = Number.parseInt(searchTermId.split("-")[1] || "0", 10);
     const query = searchQueries[index];
@@ -181,6 +188,7 @@ export function FilterBar({ actions }: FilterBarProps) {
               onAddFilter={handleAddFilter}
               onAddSearch={handleAddSearch}
               initialValue={editingValue}
+              onCancel={() => setEditingValue(undefined)}
             />
           </div>
           {actions}
