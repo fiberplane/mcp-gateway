@@ -58,21 +58,12 @@ function App() {
   const [isStreaming, setIsStreaming] = useState(true);
 
   // Extract filters from filter state for API query
-  // Note: Backend currently only supports single values, not arrays
-  // If filter value is an array, use only the first value
+  // Backend now supports arrays for multi-select filtering (OR logic)
   const clientFilter = filterState.filters.find((f) => f.field === "client");
-  const clientName = clientFilter
-    ? Array.isArray(clientFilter.value)
-      ? clientFilter.value[0]
-      : (clientFilter.value as string)
-    : undefined;
+  const clientName = clientFilter?.value as string | string[] | undefined;
 
   const sessionFilter = filterState.filters.find((f) => f.field === "session");
-  const sessionId = sessionFilter
-    ? Array.isArray(sessionFilter.value)
-      ? sessionFilter.value[0]
-      : (sessionFilter.value as string)
-    : undefined;
+  const sessionId = sessionFilter?.value as string | string[] | undefined;
 
   // Fixed values (no UI controls)
   const timeGrouping = "day" as const; // Group by day

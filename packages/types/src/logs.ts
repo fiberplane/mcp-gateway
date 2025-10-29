@@ -67,14 +67,16 @@ export type ApiLogEntry =
 
 /**
  * Query options for log filtering and pagination
+ *
+ * Fields that support arrays enable OR logic (e.g., serverName: ["a", "b"] matches logs from server "a" OR "b")
  */
 export interface LogQueryOptions {
-  serverName?: string;
-  sessionId?: string;
-  method?: string;
-  clientName?: string; // Filter by client name
-  clientVersion?: string; // Filter by client version
-  clientIp?: string; // Filter by client IP
+  serverName?: string | string[]; // Filter by server name(s) - supports multi-select
+  sessionId?: string | string[]; // Filter by session ID(s) - supports multi-select
+  method?: string; // Filter by method (partial match with LIKE) - single value only
+  clientName?: string | string[]; // Filter by client name(s) - supports multi-select
+  clientVersion?: string; // Filter by client version - single value only
+  clientIp?: string; // Filter by client IP - single value only
   after?: string; // ISO timestamp
   before?: string; // ISO timestamp
   limit?: number;

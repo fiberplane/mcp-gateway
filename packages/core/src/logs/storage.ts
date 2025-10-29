@@ -7,7 +7,7 @@ import type {
   ServerInfo,
   SessionInfo,
 } from "@fiberplane/mcp-gateway-types";
-import { and, count, desc, eq, gt, like, lt, sql } from "drizzle-orm";
+import { and, count, desc, eq, gt, inArray, like, lt, sql } from "drizzle-orm";
 import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
 import { logger } from "../logger.js";
 import type * as schema from "./schema.js";
@@ -126,16 +126,28 @@ export async function queryLogs(
   // Build where conditions
   const conditions = [];
   if (serverName) {
-    conditions.push(eq(logs.serverName, serverName));
+    conditions.push(
+      Array.isArray(serverName)
+        ? inArray(logs.serverName, serverName)
+        : eq(logs.serverName, serverName),
+    );
   }
   if (sessionId) {
-    conditions.push(eq(logs.sessionId, sessionId));
+    conditions.push(
+      Array.isArray(sessionId)
+        ? inArray(logs.sessionId, sessionId)
+        : eq(logs.sessionId, sessionId),
+    );
   }
   if (method) {
     conditions.push(like(logs.method, `%${method}%`));
   }
   if (clientName) {
-    conditions.push(eq(logs.clientName, clientName));
+    conditions.push(
+      Array.isArray(clientName)
+        ? inArray(logs.clientName, clientName)
+        : eq(logs.clientName, clientName),
+    );
   }
   if (clientVersion) {
     conditions.push(eq(logs.clientVersion, clientVersion));

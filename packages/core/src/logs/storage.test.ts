@@ -175,6 +175,103 @@ describe("Storage Functions", () => {
       expect(result.data.every((r) => r.method.includes("tools"))).toBe(true);
     });
 
+    test("should filter by multiple server names (OR logic)", async () => {
+      const db = getDb(storageDir);
+      const result = await queryLogs(db, {
+        serverName: ["server-a", "server-b"],
+      });
+
+      expect(result.data).toHaveLength(3);
+      expect(
+        result.data.every((r) =>
+          ["server-a", "server-b"].includes(r.metadata.serverName),
+        ),
+      ).toBe(true);
+    });
+
+    test("should filter by multiple session IDs (OR logic)", async () => {
+      const db = getDb(storageDir);
+      const result = await queryLogs(db, {
+        sessionId: ["session-1", "session-2"],
+      });
+
+      expect(result.data).toHaveLength(3);
+      expect(
+        result.data.every((r) =>
+          ["session-1", "session-2"].includes(r.metadata.sessionId),
+        ),
+      ).toBe(true);
+    });
+
+    test("should filter by single server name from array", async () => {
+      const db = getDb(storageDir);
+      const result = await queryLogs(db, { serverName: ["server-a"] });
+
+      expect(result.data).toHaveLength(2);
+      expect(
+        result.data.every((r) => r.metadata.serverName === "server-a"),
+      ).toBe(true);
+    });
+
+    test("should filter by multiple client names (OR logic)", async () => {
+      const db = getDb(storageDir);
+
+      // First, add records with client metadata
+      await insertLog(
+        db,
+        createTestRecord({
+          timestamp: "2024-01-01T13:00:00Z",
+          method: "test/method-1",
+          metadata: {
+            serverName: "server-a",
+            sessionId: "session-3",
+            durationMs: 100,
+            httpStatus: 200,
+            client: { name: "client-1", version: "1.0" },
+          },
+        }),
+      );
+      await insertLog(
+        db,
+        createTestRecord({
+          timestamp: "2024-01-01T14:00:00Z",
+          method: "test/method-2",
+          metadata: {
+            serverName: "server-a",
+            sessionId: "session-4",
+            durationMs: 100,
+            httpStatus: 200,
+            client: { name: "client-2", version: "1.0" },
+          },
+        }),
+      );
+      await insertLog(
+        db,
+        createTestRecord({
+          timestamp: "2024-01-01T15:00:00Z",
+          method: "test/method-3",
+          metadata: {
+            serverName: "server-a",
+            sessionId: "session-5",
+            durationMs: 100,
+            httpStatus: 200,
+            client: { name: "client-3", version: "1.0" },
+          },
+        }),
+      );
+
+      const result = await queryLogs(db, {
+        clientName: ["client-1", "client-2"],
+      });
+
+      expect(result.data).toHaveLength(2);
+      expect(
+        result.data.every((r) =>
+          ["client-1", "client-2"].includes(r.metadata.client?.name ?? ""),
+        ),
+      ).toBe(true);
+    });
+
     test("should filter by time range (after)", async () => {
       const db = getDb(storageDir);
       const result = await queryLogs(db, { after: "2024-01-01T10:30:00Z" });

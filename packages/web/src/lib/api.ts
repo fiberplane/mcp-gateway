@@ -20,11 +20,14 @@ class APIClient {
    *
    * Returns ApiLogEntry records (transformed from CaptureRecords by the API).
    * Each CaptureRecord is split into separate request/response entries with a direction field.
+   *
+   * Multi-select filters (serverName, clientName, sessionId) can be passed as arrays.
+   * Arrays are sent as repeated query parameters (e.g., ?client=foo&client=bar).
    */
   async getLogs(params: {
-    serverName?: string;
-    clientName?: string;
-    sessionId?: string;
+    serverName?: string | string[];
+    clientName?: string | string[];
+    sessionId?: string | string[];
     method?: string;
     after?: string;
     before?: string;
@@ -46,7 +49,15 @@ class APIClient {
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined) {
         const apiKey = paramMapping[key] || key;
-        url.searchParams.append(apiKey, String(value));
+
+        // Handle arrays by appending each value separately (creates repeated params)
+        if (Array.isArray(value)) {
+          for (const v of value) {
+            url.searchParams.append(apiKey, String(v));
+          }
+        } else {
+          url.searchParams.append(apiKey, String(value));
+        }
       }
     }
 

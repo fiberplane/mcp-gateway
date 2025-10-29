@@ -8,34 +8,6 @@ import { Hono } from "hono";
 import { z } from "zod";
 
 /**
- * Query parameters schema for GET /logs
- */
-const logsQuerySchema = z
-  .object({
-    server: z.string().optional(),
-    session: z.string().optional(),
-    method: z.string().optional(),
-    client: z.string().optional(),
-    after: z.string().datetime().optional(),
-    before: z.string().datetime().optional(),
-    limit: z.coerce.number().int().positive().max(1000).optional(),
-    order: z.enum(["asc", "desc"]).optional(),
-  })
-  .refine(
-    (data) => {
-      // Validate that after timestamp is before the before timestamp
-      if (data.after && data.before) {
-        return new Date(data.after) < new Date(data.before);
-      }
-      return true;
-    },
-    {
-      message: "after timestamp must be before before timestamp",
-      path: ["after"],
-    },
-  );
-
-/**
  * Query parameters schema for GET /sessions
  */
 const sessionsQuerySchema = z.object({
@@ -70,19 +42,89 @@ export function createApiRoutes(queries: QueryFunctions): Hono {
    * GET /logs
    *
    * Query logs with optional filters and pagination
+   *
+   * Supports repeated query parameters for multi-select filtering:
+   * - ?server=foo&server=bar (matches logs from "foo" OR "bar")
+   * - ?client=alice&client=bob (matches logs from "alice" OR "bob")
+   * - ?session=123&session=456 (matches logs from session "123" OR "456")
    */
-  app.get("/logs", sValidator("query", logsQuerySchema), async (c) => {
-    const query = c.req.valid("query") as z.infer<typeof logsQuerySchema>;
+  app.get("/logs", async (c) => {
+    // Manually extract query params to handle arrays from repeated params
+    const serverNames = c.req.queries("server");
+    const sessionIds = c.req.queries("session");
+    const clientNames = c.req.queries("client");
+    const method = c.req.query("method");
+    const after = c.req.query("after");
+    const before = c.req.query("before");
+    const limitStr = c.req.query("limit");
+    const order = c.req.query("order");
+
+    // Parse and validate
+    const limit = limitStr ? Number.parseInt(limitStr, 10) : undefined;
+    if (
+      limit !== undefined &&
+      (Number.isNaN(limit) || limit <= 0 || limit > 1000)
+    ) {
+      return c.json(
+        {
+          error: {
+            code: "INVALID_PARAM",
+            message: "limit must be a positive integer between 1 and 1000",
+          },
+        },
+        400,
+      );
+    }
+
+    if (order && order !== "asc" && order !== "desc") {
+      return c.json(
+        {
+          error: {
+            code: "INVALID_PARAM",
+            message: "order must be 'asc' or 'desc'",
+          },
+        },
+        400,
+      );
+    }
+
+    // Validate timestamps
+    if (after && before && new Date(after) >= new Date(before)) {
+      return c.json(
+        {
+          error: {
+            code: "INVALID_PARAM",
+            message: "after timestamp must be before before timestamp",
+          },
+        },
+        400,
+      );
+    }
 
     const options: LogQueryOptions = {
-      serverName: query.server,
-      sessionId: query.session,
-      method: query.method,
-      clientName: query.client,
-      after: query.after,
-      before: query.before,
-      limit: query.limit,
-      order: query.order,
+      serverName:
+        serverNames && serverNames.length > 0
+          ? serverNames.length === 1
+            ? serverNames[0]
+            : serverNames
+          : undefined,
+      sessionId:
+        sessionIds && sessionIds.length > 0
+          ? sessionIds.length === 1
+            ? sessionIds[0]
+            : sessionIds
+          : undefined,
+      method: method || undefined,
+      clientName:
+        clientNames && clientNames.length > 0
+          ? clientNames.length === 1
+            ? clientNames[0]
+            : clientNames
+          : undefined,
+      after: after || undefined,
+      before: before || undefined,
+      limit,
+      order: (order as "asc" | "desc") || undefined,
     };
 
     const result = await queries.queryLogs(options);
