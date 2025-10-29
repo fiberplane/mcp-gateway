@@ -15,6 +15,7 @@ import {
 } from "../lib/filter-parsers";
 import { addOrReplaceFilter, removeFilter } from "../lib/filter-utils";
 import { AddFilterDropdown } from "./add-filter-dropdown";
+import { CommandFilterInput } from "./command-filter-input";
 import { FilterBadge } from "./filter-badge";
 import { SearchInput } from "./search-input";
 
@@ -128,7 +129,10 @@ export function FilterBar({ actions }: FilterBarProps) {
           {actions}
         </div>
 
-        {/* Row 2: Filters */}
+        {/* Row 2: Command filter input */}
+        <CommandFilterInput onAdd={handleAddFilter} />
+
+        {/* Row 3: Filters */}
         <div className="flex items-center gap-2 flex-wrap">
           {/* Add filter button - always first for stable position */}
           <AddFilterDropdown
