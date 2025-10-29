@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useQueryState, useQueryStates } from "nuqs";
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ExportButton } from "./components/export-button";
 import { FilterBar } from "./components/filter-bar";
@@ -25,12 +25,6 @@ function App() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isClearing, setIsClearing] = useState(false);
   const [clearError, setClearError] = useState<string | null>(null);
-
-  // Track when component is mounted (nuqs needs client-side hydration)
-  const [isMounted, setIsMounted] = useState(false);
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   // Filter state from URL via nuqs
   const [searchQueries] = useQueryState("search", parseAsSearchArray);
@@ -132,7 +126,8 @@ function App() {
     isLoading,
     error,
   } = useInfiniteQuery({
-    queryKey: ["logs", serverName, apiParams],
+    // Include URL state in queryKey so query automatically refetches when params change
+    queryKey: ["logs", serverName, filterParams, searchQueries],
     queryFn: async ({ pageParam }) =>
       api.getLogs({
         serverName,
@@ -149,9 +144,8 @@ function App() {
       }
       return undefined;
     },
-    // Wait for component to mount before executing query
-    // This ensures nuqs has hydrated URL params before we fetch
-    enabled: isMounted,
+    // Keep previous data during refetch for smoother UX
+    placeholderData: (previousData) => previousData,
     // Conditional polling - only when streaming is on
     refetchInterval: isStreaming ? 5000 : false,
     refetchIntervalInBackground: false, // Only poll when tab is active
