@@ -22,6 +22,7 @@ export type LogEntry = {
   errorMessage?: string;
   request?: JsonRpcRequest;
   response?: JsonRpcResponse;
+  methodDetail?: string | null; // Pre-computed human-readable detail
 };
 
 /**

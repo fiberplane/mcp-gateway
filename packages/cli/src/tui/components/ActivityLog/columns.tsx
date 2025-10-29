@@ -1,7 +1,6 @@
 import type { LogEntry } from "@fiberplane/mcp-gateway-types";
 import { useMemo } from "react";
 import type { Theme } from "../../colors";
-import { formatRequestDetails, formatResponseDetails } from "../formatters";
 import type { Column } from "../ui/Table";
 import { formatStatus, getStatusColor, textColumn } from "./helpers.tsx";
 
@@ -96,12 +95,7 @@ export function createActivityLogColumns(theme: Theme): Column<LogEntry>[] {
       id: "details",
       label: "Details",
       width: undefined, // Flexible - will be calculated based on terminal width
-      format: (log) => {
-        if (log.direction === "request") {
-          return formatRequestDetails(log);
-        }
-        return formatResponseDetails(log);
-      },
+      format: (log) => log.methodDetail ?? "−",
       backgroundColor: cellBackground,
       last: true,
     }),

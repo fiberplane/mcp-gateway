@@ -8,10 +8,12 @@ import {
   ArrowUpDown,
   Check,
   Copy,
+  TriangleAlert,
 } from "lucide-react";
 import { Fragment, type ReactNode, useMemo, useState } from "react";
 import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
 import { getMethodBadgeVariant } from "../lib/badge-color";
+import { getMethodDetail } from "../lib/method-detail";
 import { groupLogsByTime, type TimeInterval } from "../lib/time-grouping";
 import { useHandler } from "../lib/use-handler";
 import { getLogKey } from "../lib/utils";
@@ -24,8 +26,10 @@ type SortField =
   | "server"
   | "session"
   | "method"
+  | "methodDetail"
   | "duration"
-  | "client";
+  | "client"
+  | "tokens";
 type SortDirection = "asc" | "desc";
 
 /**
@@ -150,6 +154,38 @@ export function LogTable({
           aValue = a.metadata.client?.name || "";
           bValue = b.metadata.client?.name || "";
           break;
+        case "methodDetail": {
+          const aDetail = a.metadata.methodDetail ?? "";
+          const bDetail = b.metadata.methodDetail ?? "";
+
+          // Sort empty values to end for better UX
+          if (!aDetail && bDetail) {
+            return sortDirection === "asc" ? 1 : -1;
+          }
+          if (aDetail && !bDetail) {
+            return sortDirection === "asc" ? -1 : 1;
+          }
+
+          aValue = aDetail;
+          bValue = bDetail;
+          break;
+        }
+        case "tokens": {
+          const aTokens =
+            (a.metadata.inputTokens ?? 0) + (a.metadata.outputTokens ?? 0);
+          const bTokens =
+            (b.metadata.inputTokens ?? 0) + (b.metadata.outputTokens ?? 0);
+          const aHasTokens = aTokens > 0;
+          const bHasTokens = bTokens > 0;
+
+          if (aHasTokens !== bHasTokens) {
+            // Always push zero-token entries to the end regardless of sort direction
+            return aHasTokens ? -1 : 1;
+          }
+
+          const tokenComparison = aTokens - bTokens;
+          return sortDirection === "asc" ? tokenComparison : -tokenComparison;
+        }
       }
 
       const comparison =
@@ -402,6 +438,43 @@ function createColumns(): Column[] {
       ),
     },
     {
+      id: "methodDetail",
+      header: "Method detail",
+      sortField: "methodDetail",
+      cell: (log) => {
+        const detail = getMethodDetail(log);
+
+        // Parse error - show dash + warning icon
+        if (detail === null) {
+          return (
+            <span
+              className="inline-flex items-center gap-1 text-destructive text-sm"
+              title="Failed to parse request/response parameters. Check browser console for details."
+            >
+              <span className="text-muted-foreground">−</span>
+              <TriangleAlert className="w-3 h-3" />
+            </span>
+          );
+        }
+
+        // Empty/not applicable
+        if (!detail) {
+          return <span className="text-muted-foreground">−</span>;
+        }
+
+        // Normal content
+        const isLong = detail.length > 40;
+        return (
+          <span
+            className="text-sm text-muted-foreground truncate max-w-[200px] inline-block"
+            title={isLong ? detail : undefined}
+          >
+            {detail}
+          </span>
+        );
+      },
+    },
+    {
       id: "server",
       header: "Server",
       sortField: "server",
@@ -437,6 +510,42 @@ function createColumns(): Column[] {
           {log.metadata.durationMs}ms
         </span>
       ),
+    },
+    {
+      id: "tokens",
+      header: "Tokens",
+      sortField: "tokens",
+      cell: (log) => {
+        const inputTokens = log.metadata.inputTokens;
+        const outputTokens = log.metadata.outputTokens;
+
+        // If both are undefined, this method has no token cost (N/A)
+        if (inputTokens === undefined && outputTokens === undefined) {
+          return <span className="text-muted-foreground">−</span>;
+        }
+
+        // Calculate total (treating undefined as 0)
+        const total = (inputTokens ?? 0) + (outputTokens ?? 0);
+
+        // Build tooltip with only present values
+        const tooltipParts: string[] = [];
+        if (inputTokens !== undefined) {
+          tooltipParts.push(`Input: ${inputTokens}`);
+        }
+        if (outputTokens !== undefined) {
+          tooltipParts.push(`Output: ${outputTokens}`);
+        }
+        const tooltip = tooltipParts.join(", ");
+
+        return (
+          <span
+            className="text-sm text-muted-foreground tabular-nums text-right"
+            title={tooltip}
+          >
+            {total.toLocaleString()}
+          </span>
+        );
+      },
     },
   ];
 }
