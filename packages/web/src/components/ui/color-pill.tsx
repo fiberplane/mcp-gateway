@@ -5,7 +5,7 @@
  *
  * @example
  * ```tsx
- * <ColorPill color="#ff6b6b">GET</ColorPill>
+ * <ColorPill color="var(--color-method-tool)">GET</ColorPill>
  * <ColorPill color={getMethodColor("tools/call")}>tools/call</ColorPill>
  * ```
  */
@@ -16,7 +16,8 @@ import { cn } from "@/lib/utils";
 
 export interface ColorPillProps extends React.HTMLAttributes<HTMLDivElement> {
   /**
-   * Background color (hex, rgb, or CSS variable)
+   * Background color (CSS variable, hex, or rgb)
+   * @example "var(--color-method-tool)" or "#f7dd91"
    */
   color: string;
 

@@ -4,6 +4,7 @@
  * These colors match the design system and provide visual distinction
  * between different MCP method types in badges, filters, and logs.
  *
+ * Colors are defined as CSS variables in index.css to support theming.
  * Color palette derived from Figma design:
  * https://www.figma.com/design/sVRANvfGiWr6CJhpXCI02W/MCP-gateway---playground?node-id=216-3266
  */
@@ -13,39 +14,39 @@
  */
 export const METHOD_COLORS = {
   // Initialization and lifecycle methods (purple)
-  initialize: "#dddbff",
-  ping: "#dddbff",
+  initialize: "var(--color-method-init)",
+  ping: "var(--color-method-init)",
 
   // Resource methods (peach/salmon)
-  "resources/list": "#ffe6e0",
-  "resources/read": "#ffe6e0",
-  "resources/templates/list": "#ffe6e0",
-  "resources/subscribe": "#ffe6e0",
-  "resources/unsubscribe": "#ffe6e0",
+  "resources/list": "var(--color-method-resource)",
+  "resources/read": "var(--color-method-resource)",
+  "resources/templates/list": "var(--color-method-resource)",
+  "resources/subscribe": "var(--color-method-resource)",
+  "resources/unsubscribe": "var(--color-method-resource)",
 
   // Tool methods (yellow)
-  "tools/list": "#f7dd91",
-  "tools/call": "#f7dd91",
+  "tools/list": "var(--color-method-tool)",
+  "tools/call": "var(--color-method-tool)",
 
-  // Prompt methods (green)
-  "prompts/list": "#d1eaac",
-  "prompts/get": "#d1eaac",
+  // Prompt methods (lime)
+  "prompts/list": "var(--color-method-prompt)",
+  "prompts/get": "var(--color-method-prompt)",
 
   // Notification methods (pink)
-  "notifications/initialized": "#f8d2e8",
-  "notifications/message": "#f8d2e8",
-  "notifications/progress": "#f8d2e8",
-  "notifications/cancelled": "#f8d2e8",
-  "notifications/tools/list_changed": "#f8d2e8",
-  "notifications/resources/list_changed": "#f8d2e8",
-  "notifications/resources/updated": "#f8d2e8",
-  "notifications/prompts/list_changed": "#f8d2e8",
+  "notifications/initialized": "var(--color-method-notification)",
+  "notifications/message": "var(--color-method-notification)",
+  "notifications/progress": "var(--color-method-notification)",
+  "notifications/cancelled": "var(--color-method-notification)",
+  "notifications/tools/list_changed": "var(--color-method-notification)",
+  "notifications/resources/list_changed": "var(--color-method-notification)",
+  "notifications/resources/updated": "var(--color-method-notification)",
+  "notifications/prompts/list_changed": "var(--color-method-notification)",
 } as const;
 
 /**
  * Default color for methods not in the predefined list
  */
-export const DEFAULT_METHOD_COLOR = "#e5e7eb"; // neutral gray
+export const DEFAULT_METHOD_COLOR = "var(--color-method-default)";
 
 /**
  * Get the color for a method name
@@ -70,11 +71,11 @@ export function getMethodColor(method: string): string {
  */
 export function getMethodCategories() {
   return [
-    { name: "Initialization", color: "#dddbff" },
-    { name: "Resources", color: "#ffe6e0" },
-    { name: "Tools", color: "#f7dd91" },
-    { name: "Prompts", color: "#d1eaac" },
-    { name: "Notifications", color: "#f8d2e8" },
+    { name: "Initialization", color: "var(--color-method-init)" },
+    { name: "Resources", color: "var(--color-method-resource)" },
+    { name: "Tools", color: "var(--color-method-tool)" },
+    { name: "Prompts", color: "var(--color-method-prompt)" },
+    { name: "Notifications", color: "var(--color-method-notification)" },
     { name: "Other", color: DEFAULT_METHOD_COLOR },
   ];
 }
