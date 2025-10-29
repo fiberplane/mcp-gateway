@@ -223,16 +223,17 @@ export function CommandFilterInput({
             </div>
           )}
 
-          {/* Add button */}
-          <Button
-            size="sm"
-            variant={isValid ? "default" : "secondary"}
-            disabled={!isValid}
-            onClick={handleAdd}
-            className="shrink-0"
-          >
-            Add
-          </Button>
+          {/* Add button - only show when valid */}
+          {isValid && (
+            <Button
+              size="sm"
+              variant="default"
+              onClick={handleAdd}
+              className="shrink-0"
+            >
+              Add
+            </Button>
+          )}
         </div>
 
         {/* Autocomplete dropdown */}
