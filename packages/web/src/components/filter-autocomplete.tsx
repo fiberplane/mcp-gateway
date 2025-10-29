@@ -62,7 +62,7 @@ export function FilterAutocomplete({
   // Reset selection when suggestions change
   useEffect(() => {
     setSelectedIndex(0);
-  }, []);
+  }, [suggestions]);
 
   // Handle keyboard navigation
   useEffect(() => {
@@ -129,6 +129,15 @@ export function FilterAutocomplete({
       )}
       aria-label="Filter assistance"
     >
+      {/* Live region for screen reader announcements */}
+      <div role="status" aria-live="polite" className="sr-only">
+        {suggestions.length > 0
+          ? `${suggestions.length} suggestion${suggestions.length === 1 ? "" : "s"} available`
+          : errorContent
+            ? "Error in filter input"
+            : "No suggestions"}
+      </div>
+
       {/* Error/Preview section (sticky at top) */}
       {(errorContent || previewContent) && (
         <div className="sticky top-0 z-10 bg-popover">

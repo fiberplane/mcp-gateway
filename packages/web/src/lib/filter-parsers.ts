@@ -56,7 +56,7 @@ export const parseAsFilterParam = createParser({
   serialize: (value: string | null) => {
     return value ?? ""; // nuqs expects empty string for null
   },
-}).withOptions({ shallow: false }); // Use push history for filter changes
+}).withOptions({ history: "replace" }); // Use replaceState to avoid cluttering history
 
 /**
  * Convert URL filter params to Filter array

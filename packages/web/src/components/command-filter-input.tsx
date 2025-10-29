@@ -92,6 +92,15 @@ export function CommandFilterInput({
     }
   }, [initialValue]);
 
+  // Cleanup blur timeout on unmount to prevent memory leak
+  useEffect(() => {
+    return () => {
+      if (blurTimeoutRef.current !== null) {
+        window.clearTimeout(blurTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Validate current input
   const trimmed = inputValue.trim();
   const validation = trimmed ? validateFilterInput(inputValue) : null;

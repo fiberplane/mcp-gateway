@@ -54,62 +54,69 @@ function App() {
 
     // Extract each filter type
     for (const filter of filters) {
-      switch (filter.field) {
-        case "client":
-          params.clientName = filter.value as string | string[];
-          break;
-        case "session":
-          params.sessionId = filter.value as string | string[];
-          break;
-        case "method":
-          params.method = filter.value as string | string[];
-          break;
-        case "duration": {
-          const value = filter.value;
-          // Map operator to specific param
-          switch (filter.operator) {
-            case "eq":
-              params.durationEq = value as number | number[];
-              break;
-            case "gt":
-              params.durationGt = value as number;
-              break;
-            case "lt":
-              params.durationLt = value as number;
-              break;
-            case "gte":
-              params.durationGte = value as number;
-              break;
-            case "lte":
-              params.durationLte = value as number;
-              break;
-          }
-          break;
+      // Use type guards to safely narrow filter types
+      if (filter.field === "client") {
+        params.clientName = filter.value; // Properly typed by discriminated union
+      } else if (filter.field === "session") {
+        params.sessionId = filter.value;
+      } else if (filter.field === "method") {
+        params.method = filter.value;
+      } else if (filter.field === "duration") {
+        // Map operator to specific param
+        switch (filter.operator) {
+          case "eq":
+            params.durationEq = filter.value;
+            break;
+          case "gt":
+            params.durationGt = Array.isArray(filter.value)
+              ? filter.value[0]
+              : filter.value;
+            break;
+          case "lt":
+            params.durationLt = Array.isArray(filter.value)
+              ? filter.value[0]
+              : filter.value;
+            break;
+          case "gte":
+            params.durationGte = Array.isArray(filter.value)
+              ? filter.value[0]
+              : filter.value;
+            break;
+          case "lte":
+            params.durationLte = Array.isArray(filter.value)
+              ? filter.value[0]
+              : filter.value;
+            break;
         }
-        case "tokens": {
-          const value = filter.value;
-          // Map operator to specific param
-          switch (filter.operator) {
-            case "eq":
-              params.tokensEq = value as number | number[];
-              break;
-            case "gt":
-              params.tokensGt = value as number;
-              break;
-            case "lt":
-              params.tokensLt = value as number;
-              break;
-            case "gte":
-              params.tokensGte = value as number;
-              break;
-            case "lte":
-              params.tokensLte = value as number;
-              break;
-          }
-          break;
+      } else if (filter.field === "tokens") {
+        // Map operator to specific param
+        switch (filter.operator) {
+          case "eq":
+            params.tokensEq = filter.value;
+            break;
+          case "gt":
+            params.tokensGt = Array.isArray(filter.value)
+              ? filter.value[0]
+              : filter.value;
+            break;
+          case "lt":
+            params.tokensLt = Array.isArray(filter.value)
+              ? filter.value[0]
+              : filter.value;
+            break;
+          case "gte":
+            params.tokensGte = Array.isArray(filter.value)
+              ? filter.value[0]
+              : filter.value;
+            break;
+          case "lte":
+            params.tokensLte = Array.isArray(filter.value)
+              ? filter.value[0]
+              : filter.value;
+            break;
         }
-        // Server filter is handled by ServerTabs component, not passed to API
       }
+      // Server filter is handled by ServerTabs component, not passed to API
     }
 
     return params;
@@ -152,7 +159,11 @@ function App() {
   });
 
   // Flatten all pages into single array
-  const allLogs = data?.pages.flatMap((page) => page.data) ?? [];
+  // Memoize to prevent unnecessary re-renders when data reference changes but content is same
+  const allLogs = useMemo(
+    () => data?.pages.flatMap((page) => page.data) ?? [],
+    [data?.pages],
+  );
 
   // Apply client-side search filtering only (backend handles all field filters)
   // Search is the only filter not sent to backend
@@ -164,14 +175,34 @@ function App() {
       return searchQueries.every((query) => {
         const searchLower = query.toLowerCase();
 
-        // Search across multiple fields
-        return (
-          log.method.toLowerCase().includes(searchLower) ||
-          log.metadata.serverName?.toLowerCase().includes(searchLower) ||
-          log.metadata.client?.name?.toLowerCase().includes(searchLower) ||
-          log.metadata.sessionId?.toLowerCase().includes(searchLower) ||
-          JSON.stringify(log).toLowerCase().includes(searchLower)
-        );
+        // Build searchable text from safe, explicit fields only
+        // Avoid JSON.stringify which exposes internal data and is slow
+        const searchableFields = [
+          log.method,
+          log.metadata.serverName,
+          log.metadata.client?.name,
+          log.metadata.client?.version,
+          log.metadata.sessionId,
+        ];
+
+        // Add direction-specific fields using discriminated union
+        if (log.direction === "request" && log.request) {
+          searchableFields.push(log.request.method);
+        } else if (log.direction === "response" && log.response) {
+          if (log.response.error) {
+            searchableFields.push(
+              log.response.error.message,
+              log.response.error.code?.toString(),
+            );
+          }
+        }
+
+        const searchableText = searchableFields
+          .filter((field): field is string => field != null && field !== "")
+          .join(" ")
+          .toLowerCase();
+
+        return searchableText.includes(searchLower);
       });
     });
   }, [allLogs, searchQueries]);
