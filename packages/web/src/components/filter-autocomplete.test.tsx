@@ -4,8 +4,8 @@
  * Tests for FilterAutocomplete component
  */
 
-import { beforeEach, describe, expect, mock, test } from "bun:test";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import type { FilterSuggestion } from "@/lib/filter-parser";
 import { FilterAutocomplete } from "./filter-autocomplete";
@@ -38,6 +38,10 @@ describe("FilterAutocomplete", () => {
   beforeEach(() => {
     onSelect = mock(() => {});
     onClose = mock(() => {});
+  });
+
+  afterEach(() => {
+    cleanup();
   });
 
   describe("visibility", () => {

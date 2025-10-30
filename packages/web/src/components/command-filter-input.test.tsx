@@ -4,8 +4,8 @@
  * Tests for CommandFilterInput component
  */
 
-import { beforeEach, describe, expect, mock, test } from "bun:test";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import {
   mockFilterAutocomplete,
@@ -28,6 +28,10 @@ describe("CommandFilterInput", () => {
     onAddFilter = mock(() => {});
     onUpdateSearch = mock(() => {});
     onCancel = mock(() => {});
+  });
+
+  afterEach(() => {
+    cleanup();
   });
 
   describe("rendering", () => {

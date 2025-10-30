@@ -7,19 +7,21 @@
  * FilterBarUI receives all state and callbacks as props, making it easy to test.
  */
 
-import { beforeEach, describe, expect, mock, test } from "bun:test";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { createFilter } from "@fiberplane/mcp-gateway-types";
 import {
   mockAddFilterDropdown,
-  mockCommandFilterInput,
   mockFilterBadge,
+  mockUseAvailableFilters,
 } from "@/test-utils/mocks";
 import { FilterBarUI } from "./filter-bar";
 
 // Set up mocks for child components
-mockCommandFilterInput();
+// Note: CommandFilterInput is NOT mocked here - we use the real component
+// but mock its dependencies (useAvailableFilters hooks)
+mockUseAvailableFilters();
 mockFilterBadge();
 mockAddFilterDropdown();
 
@@ -42,6 +44,10 @@ describe("FilterBarUI", () => {
     onRemoveFilterByField = mock(() => {});
   });
 
+  afterEach(() => {
+    cleanup();
+  });
+
   describe("rendering", () => {
     test("renders command filter input", () => {
       render(
@@ -62,7 +68,7 @@ describe("FilterBarUI", () => {
         />,
       );
 
-      expect(screen.getByTestId("command-filter-input")).toBeInTheDocument();
+      expect(screen.getByRole("combobox", { name: "Command filter input" })).toBeInTheDocument();
     });
 
     test("renders add filter dropdown", () => {
@@ -210,9 +216,11 @@ describe("FilterBarUI", () => {
         />,
       );
 
-      // Check that both filters are rendered by looking for their text content
-      expect(screen.getByText(/tokens/)).toBeInTheDocument();
-      expect(screen.getByText(/client/)).toBeInTheDocument();
+      // Check that both filters are rendered by finding their filter preview elements
+      const filterBadges = screen.getAllByTestId("filter-preview");
+      expect(filterBadges).toHaveLength(2);
+      expect(filterBadges[0]).toHaveAttribute("data-filter-badge", "tokens");
+      expect(filterBadges[1]).toHaveAttribute("data-filter-badge", "client");
     });
 
     test("removes filter when badge remove button clicked", () => {
@@ -254,7 +262,7 @@ describe("FilterBarUI", () => {
           filters={[]}
           searchValue=""
           announcement=""
-          editingValue={undefined}
+          editingValue="tokens > 150"
           hasActiveItems={false}
           searchQueryCount={0}
           onAddFilter={onAddFilter}
@@ -267,7 +275,8 @@ describe("FilterBarUI", () => {
         />,
       );
 
-      const addButton = screen.getByTestId("add-filter-btn");
+      // Add button only appears when there's valid input
+      const addButton = screen.getByRole("button", { name: "Add" });
       fireEvent.click(addButton);
 
       expect(onAddFilter).toHaveBeenCalled();
@@ -275,7 +284,7 @@ describe("FilterBarUI", () => {
   });
 
   describe("search handling", () => {
-    test("updates search on input change", () => {
+    test("input accepts text entry", () => {
       render(
         <FilterBarUI
           filters={[]}
@@ -294,10 +303,11 @@ describe("FilterBarUI", () => {
         />,
       );
 
-      const input = screen.getByTestId("search-input");
+      const input = screen.getByRole("combobox");
       fireEvent.change(input, { target: { value: "error message" } });
 
-      expect(onUpdateSearch).toHaveBeenCalledWith("error message");
+      // Input value should be updated (managed internally by component)
+      expect(input).toHaveValue("error message");
     });
 
     test("clears search when input cleared", () => {
@@ -319,7 +329,8 @@ describe("FilterBarUI", () => {
         />,
       );
 
-      const input = screen.getByTestId("search-input");
+      const input = screen.getByRole("combobox");
+      // When user clears input (e.g. native X button), component calls onUpdateSearch("")
       fireEvent.change(input, { target: { value: "" } });
 
       expect(onUpdateSearch).toHaveBeenCalledWith("");
@@ -446,7 +457,7 @@ describe("FilterBarUI", () => {
   });
 
   describe("edit mode", () => {
-    test("shows cancel button when editing value is set", () => {
+    test("populates input when editing value is set", () => {
       render(
         <FilterBarUI
           filters={[]}
@@ -465,10 +476,11 @@ describe("FilterBarUI", () => {
         />,
       );
 
-      expect(screen.getByTestId("cancel-edit-btn")).toBeInTheDocument();
+      const input = screen.getByRole("combobox");
+      expect(input).toHaveValue("tokens > 100");
     });
 
-    test("calls onCancelEdit when cancel button clicked", () => {
+    test("calls onCancelEdit when Escape pressed in input", () => {
       render(
         <FilterBarUI
           filters={[]}
@@ -487,8 +499,8 @@ describe("FilterBarUI", () => {
         />,
       );
 
-      const cancelButton = screen.getByTestId("cancel-edit-btn");
-      fireEvent.click(cancelButton);
+      const input = screen.getByRole("combobox");
+      fireEvent.keyDown(input, { key: "Escape" });
 
       expect(onCancelEdit).toHaveBeenCalled();
     });

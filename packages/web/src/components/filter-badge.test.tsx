@@ -4,13 +4,16 @@
  * Tests for FilterBadge component
  */
 
-import { describe, expect, test } from "bun:test";
-import { render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, test } from "bun:test";
+import { cleanup, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { createFilter } from "@fiberplane/mcp-gateway-types";
 import { FilterBadge } from "./filter-badge";
 
 describe("FilterBadge", () => {
+  afterEach(() => {
+    cleanup();
+  });
   describe("rendering", () => {
     test("renders string filter badge", () => {
       const filter = createFilter({
