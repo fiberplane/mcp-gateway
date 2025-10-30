@@ -37,7 +37,7 @@ curl "http://localhost:3333/api/logs?server=demo&limit=10&order=desc"
 
 ### GET /servers
 
-List all servers with log counts and session counts.
+List all servers that have captured logs.
 
 **Example:**
 ```bash
@@ -50,8 +50,7 @@ curl "http://localhost:3333/api/servers"
   "servers": [
     {
       "name": "demo",
-      "logCount": 788,
-      "sessionCount": 1
+      "status": "online"
     }
   ]
 }
@@ -59,7 +58,7 @@ curl "http://localhost:3333/api/servers"
 
 ### GET /sessions
 
-List all sessions with log counts and time ranges.
+List all sessions with time ranges.
 
 **Query Parameters:**
 - `server` - Optional server name filter
@@ -76,7 +75,6 @@ curl "http://localhost:3333/api/sessions?server=demo"
     {
       "sessionId": "stateless",
       "serverName": "demo",
-      "logCount": 788,
       "startTime": "2025-10-08T22:02:08.249Z",
       "endTime": "2025-10-15T16:59:28.570Z"
     }
