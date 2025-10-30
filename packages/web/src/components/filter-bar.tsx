@@ -148,14 +148,14 @@ export function FilterBar({ actions }: FilterBarProps) {
   >();
 
   // URL state management via nuqs
-  // Search terms stored as comma-separated in URL: ?search=error,warning
+  // Search phrase stored as single item array in URL: ?search=error%20message
   const [searchQueries, setSearchQueries] = useQueryState(
     "search",
     parseAsSearchArray,
   );
 
-  // Convert search queries array to space-separated string for input
-  const searchValue = useMemo(() => searchQueries.join(" "), [searchQueries]);
+  // Convert search queries array to string for input (single search phrase)
+  const searchValue = useMemo(() => searchQueries[0] || "", [searchQueries]);
 
   const [filterParams, setFilterParams] = useQueryStates(
     {
@@ -211,15 +211,14 @@ export function FilterBar({ actions }: FilterBarProps) {
   };
 
   const handleUpdateSearch = (newSearchValue: string) => {
-    // Convert space-separated string to array for URL
+    // Treat search as a single phrase (don't split by spaces)
     const trimmed = newSearchValue.trim();
     if (!trimmed) {
       setSearchQueries([]);
       return;
     }
-    // Split by spaces and filter out empty strings
-    const terms = trimmed.split(/\s+/).filter((t) => t.length > 0);
-    setSearchQueries(terms);
+    // Store as single search term
+    setSearchQueries([trimmed]);
   };
 
   const handleEditFilter = (filterId: string) => {
