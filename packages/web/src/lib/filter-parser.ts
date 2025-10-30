@@ -445,7 +445,7 @@ export function getAutocompleteSuggestions(
       text: `${field} ${op} `,
       display: op,
       description: desc,
-      example: FIELD_EXAMPLES[field].find((ex) => ex.includes(op)),
+      example: FIELD_EXAMPLES[field]?.find((ex) => ex.includes(op)),
     }));
   }
 

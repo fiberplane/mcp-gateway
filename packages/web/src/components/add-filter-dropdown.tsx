@@ -91,8 +91,7 @@ export function AddFilterDropdown({
     // Create filter with array values for multi-select
     // Use single value if only one selected, otherwise use array
     const filterValue: string | string[] =
-      // biome-ignore lint/style/noNonNullAssertion: values.length === 1 guarantees values[0] exists
-      values.length === 1 ? values[0]! : values;
+      values.length === 1 ? (values[0] ?? "") : values;
 
     const newFilter = createFilter({
       field,

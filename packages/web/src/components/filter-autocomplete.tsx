@@ -79,11 +79,13 @@ export function FilterAutocomplete({
           !e.shiftKey &&
           suggestions.length > 0 &&
           selectedIndex >= 0 &&
-          selectedIndex < suggestions.length &&
-          suggestions[selectedIndex]
+          selectedIndex < suggestions.length
         ) {
           e.preventDefault();
-          onSelect(suggestions[selectedIndex]);
+          const suggestion = suggestions[selectedIndex];
+          if (suggestion) {
+            onSelect(suggestion);
+          }
         }
         // Otherwise, let Tab navigate normally (don't prevent default)
         break;
