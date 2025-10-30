@@ -1025,20 +1025,26 @@ export function OptimizationView() {
             ) : null}
 
             {/* Metrics Summary */}
-            <text fg={theme.accent}>
-              Overall: {Math.round(metrics.overall * 100)}%
-            </text>
-            <text fg={theme.foreground}>
-              Direct: {Math.round(metrics.directSuccess * 100)}% •
-              Indirect: {Math.round(metrics.indirectSuccess * 100)}% •
-              Negative: {Math.round(metrics.negativeSuccess * 100)}%
-            </text>
+            <box style={{ flexDirection: "column" }}>
+              <text fg={theme.accent}>Overall: {Math.round(metrics.overall * 100)}%</text>
+              <text fg={theme.foreground}>
+                Direct: {Math.round(metrics.directSuccess * 100)}%
+              </text>
+              <text fg={theme.foreground}>
+                Indirect: {Math.round(metrics.indirectSuccess * 100)}%
+              </text>
+              <text fg={theme.foreground}>
+                Negative: {Math.round(metrics.negativeSuccess * 100)}%
+              </text>
+            </box>
 
             <box style={{ height: 1 }} />
 
             {/* Original Description */}
             <text fg={theme.foreground}>Original Description:</text>
-            <text fg={theme.foregroundMuted}>{originalDesc}</text>
+            <text fg={theme.foregroundMuted}>
+              {originalDesc.length > 200 ? originalDesc.substring(0, 200) + "..." : originalDesc}
+            </text>
 
             <box style={{ height: 1 }} />
 
@@ -1047,33 +1053,38 @@ export function OptimizationView() {
               {isPromoted ? "Current Description:" : "Candidate Description:"}
             </text>
             <text fg={isPromoted ? theme.accent : theme.foreground}>
-              {selectedCandidate.description}
+              {selectedCandidate.description.length > 200 ? selectedCandidate.description.substring(0, 200) + "..." : selectedCandidate.description}
             </text>
 
             <box style={{ height: 1 }} />
 
             {/* Evaluation Results */}
             <text fg={theme.foreground}>Evaluation Results ({evalRuns.length} tests):</text>
-            {evalRuns.slice(0, 10).map((run: any) => {
-              const prompt = idleDetailData.prompts.find((p) => p.id === run.promptId);
-              if (!prompt) return null;
+            <box style={{ flexDirection: "column", gap: 0 }}>
+              {evalRuns.slice(0, 10).map((run: any) => {
+                const prompt = idleDetailData.prompts.find((p) => p.id === run.promptId);
+                if (!prompt) return null;
 
-              const statusIcon = run.result.correct ? "✓" : "✗";
-              const statusColor = run.result.correct ? theme.accent : theme.foreground;
+                const statusIcon = run.result.correct ? "✓" : "✗";
+                const statusColor = run.result.correct ? theme.accent : theme.foreground;
+                const truncatedPrompt = prompt.prompt.length > 80
+                  ? prompt.prompt.substring(0, 80) + "..."
+                  : prompt.prompt;
 
-              return (
-                <box key={run.id} style={{ flexDirection: "column" }}>
-                  <text fg={statusColor}>
-                    {statusIcon} [{prompt.category}] {prompt.prompt.substring(0, 80)}
-                  </text>
-                  {run.result.error ? (
-                    <text fg={theme.foregroundMuted} style={{ marginLeft: 2 }}>
-                      ↳ {run.result.error.split('\n')[0].substring(0, 100)}
+                return (
+                  <box key={run.id} style={{ flexDirection: "column", marginBottom: 0 }}>
+                    <text fg={statusColor}>
+                      {statusIcon} [{prompt.category}] {truncatedPrompt}
                     </text>
-                  ) : null}
-                </box>
-              );
-            })}
+                    {run.result.error ? (
+                      <text fg={theme.foregroundMuted} style={{ marginLeft: 2 }}>
+                        ↳ {run.result.error.split('\n')[0].substring(0, 100)}
+                      </text>
+                    ) : null}
+                  </box>
+                );
+              })}
+            </box>
             {evalRuns.length > 10 ? (
               <text fg={theme.foregroundMuted}>
                 ... and {evalRuns.length - 10} more tests
@@ -1322,21 +1333,31 @@ export function OptimizationView() {
         </box>
 
         <box style={{ flexDirection: "column", marginTop: 1 }}>
-          <text fg={theme.accent}>
-            Overall: {Math.round(selectedResult.metrics.overall * 100)}% •
-            Direct: {Math.round(selectedResult.metrics.directSuccess * 100)}% •
-            Indirect: {Math.round(selectedResult.metrics.indirectSuccess * 100)}% •
-            Negative: {Math.round(selectedResult.metrics.negativeSuccess * 100)}%
-          </text>
-
-          <box style={{ marginTop: 1 }}>
-            <text fg={theme.foregroundMuted}>Original: </text>
-            <text fg={theme.foreground}>{originalDesc}</text>
+          <box style={{ flexDirection: "column" }}>
+            <text fg={theme.accent}>Overall: {Math.round(selectedResult.metrics.overall * 100)}%</text>
+            <text fg={theme.foreground}>
+              Direct: {Math.round(selectedResult.metrics.directSuccess * 100)}%
+            </text>
+            <text fg={theme.foreground}>
+              Indirect: {Math.round(selectedResult.metrics.indirectSuccess * 100)}%
+            </text>
+            <text fg={theme.foreground}>
+              Negative: {Math.round(selectedResult.metrics.negativeSuccess * 100)}%
+            </text>
           </box>
 
-          <box style={{ marginTop: 1 }}>
-            <text fg={theme.foregroundMuted}>Optimized: </text>
-            <text fg={theme.accent}>{selectedResult.candidate.description}</text>
+          <box style={{ flexDirection: "column", marginTop: 1 }}>
+            <text fg={theme.foregroundMuted}>Original:</text>
+            <text fg={theme.foreground}>
+              {originalDesc.length > 200 ? originalDesc.substring(0, 200) + "..." : originalDesc}
+            </text>
+          </box>
+
+          <box style={{ flexDirection: "column", marginTop: 1 }}>
+            <text fg={theme.foregroundMuted}>Optimized:</text>
+            <text fg={theme.accent}>
+              {selectedResult.candidate.description.length > 200 ? selectedResult.candidate.description.substring(0, 200) + "..." : selectedResult.candidate.description}
+            </text>
           </box>
 
           <box style={{ flexDirection: "column", marginTop: 1 }}>
@@ -1347,15 +1368,18 @@ export function OptimizationView() {
 
               const statusIcon = run.result.correct ? "✓" : "✗";
               const statusColor = run.result.correct ? theme.accent : theme.foreground;
+              const truncatedPrompt = prompt.prompt.length > 80
+                ? prompt.prompt.substring(0, 80) + "..."
+                : prompt.prompt;
 
               return (
                 <box key={run.id} style={{ flexDirection: "column" }}>
                   <text fg={statusColor}>
-                    {statusIcon} [{prompt.category}] {prompt.prompt.substring(0, 100)}
+                    {statusIcon} [{prompt.category}] {truncatedPrompt}
                   </text>
                   {run.result.error ? (
                     <text fg={theme.foregroundMuted} style={{ marginLeft: 2 }}>
-                      ↳ {run.result.error.split('\n')[0].substring(0, 120)}
+                      ↳ {run.result.error.split('\n')[0].substring(0, 100)}
                     </text>
                   ) : null}
                 </box>

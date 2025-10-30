@@ -232,7 +232,7 @@ async function saveOutputCapture(
  * @param toolName - Name of tool to detect in output
  * @param expectedBehavior - Expected outcome (should tool be called or not)
  * @param cwd - Working directory for the subprocess
- * @param timeout - Maximum time to wait in milliseconds (default: 60 seconds)
+ * @param timeout - Maximum time to wait in milliseconds (default: 600 seconds / 10 minutes)
  * @param onOutput - Optional callback for streaming output lines
  * @param captureOptions - Optional output capture configuration for saving to files
  * @returns Evaluation result with tool call detection and correctness
@@ -242,7 +242,7 @@ export async function runEvaluation(
   toolName: string,
   expectedBehavior: { shouldCallTool: boolean; notes?: string },
   cwd: string,
-  timeout = 60000,
+  timeout = 600000,
   onOutput?: OutputCallback,
   captureOptions?: OutputCaptureOptions,
 ): Promise<EvaluationResult> {
@@ -259,19 +259,29 @@ export async function runEvaluation(
   try {
     // Spawn subprocess with all environment variables from parent process
     // Set HOME to /tmp/claude to avoid sandbox permission issues with ~/.claude.json
+    const subprocessEnv = {
+      ...process.env,
+      HOME: "/tmp/claude",
+    };
+
+    logger.debug("Subprocess environment", {
+      toolName,
+      hasAnthropicKey: !!(subprocessEnv as Record<string, string | undefined>).ANTHROPIC_API_KEY,
+      hasBaseUrl: !!(subprocessEnv as Record<string, string | undefined>).ANTHROPIC_BASE_URL,
+      home: subprocessEnv.HOME,
+    });
+
     const proc = Bun.spawn(command, {
       stdout: "pipe",
       stderr: "pipe",
       cwd,
-      env: {
-        ...process.env,
-        HOME: "/tmp/claude",
-      },
+      env: subprocessEnv,
     });
 
-    logger.debug("Subprocess spawned", {
+    logger.info("Subprocess spawned", {
       toolName,
       pid: proc.pid,
+      spawnedAt: new Date().toISOString(),
     });
 
     // Set up timeout
@@ -286,6 +296,8 @@ export async function runEvaluation(
     const stderrChunks: Uint8Array[] = [];
     let stdoutBuffer = "";
     let stderrBuffer = "";
+    let firstOutputReceived = false;
+    let lastOutputTime = Date.now();
 
     const readStdout = async () => {
       if (!proc.stdout) return;
@@ -298,6 +310,18 @@ export async function runEvaluation(
           if (done) break;
 
           stdoutChunks.push(value);
+          lastOutputTime = Date.now();
+
+          // Log first output received (indicates subprocess started successfully)
+          if (!firstOutputReceived) {
+            firstOutputReceived = true;
+            const timeToFirstOutput = Date.now() - startTime;
+            logger.info("Subprocess first output received", {
+              toolName,
+              pid: proc.pid,
+              timeToFirstOutputMs: timeToFirstOutput,
+            });
+          }
 
           // Always decode for logging, stream to callback if provided
           const chunk = decoder.decode(value, { stream: true });
@@ -369,16 +393,43 @@ export async function runEvaluation(
       }
     };
 
+    // Monitor process exit and log early termination
+    const processExitMonitor = proc.exited.then((exitCode) => {
+      const exitTime = Date.now() - startTime;
+
+      if (!killed) {
+        logger.info("Subprocess exited", {
+          toolName,
+          pid: proc.pid,
+          exitCode,
+          exitTimeMs: exitTime,
+          hadOutput: firstOutputReceived,
+        });
+      }
+
+      return exitCode;
+    });
+
     // Read streams concurrently while process runs
     await Promise.all([
       readStdout(),
       readStderr(),
-      proc.exited,
+      processExitMonitor,
     ]);
 
     clearTimeout(timeoutId);
 
     const duration = Date.now() - startTime;
+
+    // Log if subprocess never produced output
+    if (!firstOutputReceived) {
+      logger.warn("Subprocess completed without producing output", {
+        toolName,
+        pid: proc.pid,
+        duration,
+        exitCode: proc.exitCode,
+      });
+    }
 
     // Combine chunks for final result
     const stdout = new TextDecoder().decode(
@@ -399,7 +450,18 @@ export async function runEvaluation(
 
     // Check if process was killed by timeout
     if (killed) {
-      logger.warn("Subprocess timed out", { toolName, duration, timeout });
+      const timeSinceLastOutput = Date.now() - lastOutputTime;
+
+      logger.warn("Subprocess timed out", {
+        toolName,
+        duration,
+        timeout,
+        hadAnyOutput: firstOutputReceived,
+        stdoutLength: stdout.length,
+        stderrLength: stderr.length,
+        timeSinceLastOutputMs: timeSinceLastOutput,
+        exitCode: proc.exitCode,
+      });
 
       // Parse partial output to detect tool calls even on timeout
       const toolCalled = detectToolCall(stdout, toolName);

@@ -66,7 +66,7 @@ export const DEFAULT_THRESHOLDS: PromotionThresholds = {
  * @param storageDir - Storage directory for promotions
  * @param gatewayPort - Port where the gateway is running
  * @param clientManager - Optional client manager for MCP connections
- * @param evalTimeout - Timeout per evaluation in milliseconds (default: 60000)
+ * @param evalTimeout - Timeout per evaluation in milliseconds (default: 600000 / 10 minutes)
  * @param onOutput - Optional callback for streaming subprocess output
  * @returns Array of evaluation runs with results
  */
@@ -78,7 +78,7 @@ export async function evaluateCandidate(
 	storageDir: string,
 	gatewayPort: number,
 	clientManager?: ClientManager,
-	evalTimeout = 60000,
+	evalTimeout = 600000,
 	onOutput?: OutputCallback,
 ): Promise<EvalRun[]> {
 	// Create temporary server name for this candidate

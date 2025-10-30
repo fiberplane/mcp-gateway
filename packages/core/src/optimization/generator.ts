@@ -39,13 +39,13 @@ export interface GeneratePromptsResult {
  *
  * @param tool - The canonical tool to optimize
  * @param count - Number of candidates to generate
- * @param timeout - Maximum time to wait in milliseconds (default: 60 seconds)
+ * @param timeout - Maximum time to wait in milliseconds (default: 600 seconds / 10 minutes)
  * @returns Generated candidates
  */
 export async function generateCandidates(
 	tool: Tool,
 	count: number,
-	timeout = 60000,
+	timeout = 600000,
 	onOutput?: OutputCallback,
 ): Promise<GenerateCandidatesResult> {
 	const prompt = buildCandidatePrompt(tool, count);
@@ -94,13 +94,13 @@ export async function generateCandidates(
  *
  * @param tool - The canonical tool to generate prompts for
  * @param counts - Number of prompts per category
- * @param timeout - Maximum time to wait in milliseconds (default: 60 seconds)
+ * @param timeout - Maximum time to wait in milliseconds (default: 600 seconds / 10 minutes)
  * @returns Generated prompts
  */
 export async function generateGoldenPrompts(
 	tool: Tool,
 	counts: { direct: number; indirect: number; negative: number },
-	timeout = 60000,
+	timeout = 600000,
 	onOutput?: OutputCallback,
 ): Promise<GeneratePromptsResult> {
 	const prompt = buildPromptsPrompt(tool, counts);
@@ -152,17 +152,23 @@ async function runGenerationSubprocess(
 	timeout: number,
 	onOutput?: OutputCallback,
 ): Promise<{ stdout: string; stderr: string; error?: string }> {
+	const startTime = Date.now();
+
 	// Spawn subprocess with all environment variables from parent process
 	// Set HOME to /tmp/claude to avoid sandbox permission issues with ~/.claude.json
+	const subprocessEnv = {
+		...process.env,
+		HOME: "/tmp/claude",
+	};
+
 	const proc = Bun.spawn(command, {
 		stdout: "pipe",
 		stderr: "pipe",
 		cwd: process.cwd(),
-		env: {
-			...process.env,
-			HOME: "/tmp/claude",
-		},
+		env: subprocessEnv,
 	});
+
+	console.log(`[Generator] Subprocess spawned: pid=${proc.pid}, command=${command[0]}`);
 
 	// Set up timeout
 	let killed = false;
@@ -176,6 +182,7 @@ async function runGenerationSubprocess(
 	const stderrChunks: Uint8Array[] = [];
 	let stdoutBuffer = "";
 	let stderrBuffer = "";
+	let firstOutputReceived = false;
 
 	const readStdout = async () => {
 		if (!proc.stdout) return;
@@ -188,6 +195,13 @@ async function runGenerationSubprocess(
 				if (done) break;
 
 				stdoutChunks.push(value);
+
+				// Log first output received
+				if (!firstOutputReceived) {
+					firstOutputReceived = true;
+					const timeToFirstOutput = Date.now() - startTime;
+					console.log(`[Generator] First output received: pid=${proc.pid}, timeMs=${timeToFirstOutput}`);
+				}
 
 				// Stream output if callback provided
 				if (onOutput) {
@@ -243,15 +257,25 @@ async function runGenerationSubprocess(
 		}
 	};
 
+	// Monitor process exit
+	const processExitMonitor = proc.exited.then((exitCode) => {
+		const exitTime = Date.now() - startTime;
+		if (!killed) {
+			console.log(`[Generator] Subprocess exited: pid=${proc.pid}, exitCode=${exitCode}, timeMs=${exitTime}, hadOutput=${firstOutputReceived}`);
+		}
+		return exitCode;
+	});
+
 	// Read streams concurrently while process runs
 	await Promise.all([
 		readStdout(),
 		readStderr(),
-		proc.exited,
+		processExitMonitor,
 	]);
 
 	clearTimeout(timeoutId);
 
+	const duration = Date.now() - startTime;
 	const stdout = new TextDecoder().decode(
 		Buffer.concat(stdoutChunks.map((chunk) => Buffer.from(chunk))),
 	);
@@ -260,6 +284,7 @@ async function runGenerationSubprocess(
 	);
 
 	if (killed) {
+		console.log(`[Generator] Subprocess timed out: pid=${proc.pid}, durationMs=${duration}, hadOutput=${firstOutputReceived}, stdoutLen=${stdout.length}`);
 		return {
 			stdout,
 			stderr,
@@ -268,6 +293,7 @@ async function runGenerationSubprocess(
 	}
 
 	if (proc.exitCode !== 0) {
+		console.log(`[Generator] Subprocess failed: pid=${proc.pid}, exitCode=${proc.exitCode}, durationMs=${duration}, stderrLen=${stderr.length}`);
 		return {
 			stdout,
 			stderr,
@@ -275,6 +301,7 @@ async function runGenerationSubprocess(
 		};
 	}
 
+	console.log(`[Generator] Subprocess completed successfully: pid=${proc.pid}, durationMs=${duration}, stdoutLen=${stdout.length}`);
 	return { stdout, stderr };
 }
 
