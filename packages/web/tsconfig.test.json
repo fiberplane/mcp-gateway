@@ -1,9 +1,7 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "jsx": "react",
-    "jsxFactory": "React.createElement",
-    "jsxFragmentFactory": "React.Fragment",
+    "jsx": "react-jsx",
     "types": ["bun-types", "@testing-library/jest-dom"]
   },
   "include": ["src/**/*.test.ts", "src/**/*.test.tsx", "test-setup.ts"]
