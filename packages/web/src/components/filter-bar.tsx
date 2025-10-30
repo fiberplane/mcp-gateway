@@ -148,14 +148,17 @@ export function FilterBar({ actions }: FilterBarProps) {
   >();
 
   // URL state management via nuqs
-  // Search phrase stored as single item array in URL: ?search=error%20message
+  // Search terms stored as comma-separated in URL: ?search=error,warning
+  // Quoted searches are stored as single term: ?search=error%20message
   const [searchQueries, setSearchQueries] = useQueryState(
     "search",
     parseAsSearchArray,
   );
 
-  // Convert search queries array to string for input (single search phrase)
-  const searchValue = useMemo(() => searchQueries[0] || "", [searchQueries]);
+  // Convert search queries array back to string for input display
+  // If single term with spaces, it was a quoted search - don't add quotes back
+  // If multiple terms, join with spaces for display
+  const searchValue = useMemo(() => searchQueries.join(" "), [searchQueries]);
 
   const [filterParams, setFilterParams] = useQueryStates(
     {
@@ -211,14 +214,26 @@ export function FilterBar({ actions }: FilterBarProps) {
   };
 
   const handleUpdateSearch = (newSearchValue: string) => {
-    // Treat search as a single phrase (don't split by spaces)
     const trimmed = newSearchValue.trim();
     if (!trimmed) {
       setSearchQueries([]);
       return;
     }
-    // Store as single search term
-    setSearchQueries([trimmed]);
+
+    // Check if search is quoted (exact phrase search)
+    const isQuoted =
+      (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+      (trimmed.startsWith("'") && trimmed.endsWith("'"));
+
+    if (isQuoted) {
+      // Strip quotes and treat as single phrase
+      const phrase = trimmed.slice(1, -1).trim();
+      setSearchQueries(phrase ? [phrase] : []);
+    } else {
+      // Split by spaces for multi-term AND search
+      const terms = trimmed.split(/\s+/).filter((t) => t.length > 0);
+      setSearchQueries(terms);
+    }
   };
 
   const handleEditFilter = (filterId: string) => {
