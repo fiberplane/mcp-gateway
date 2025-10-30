@@ -29,7 +29,7 @@ export function ServerFilter({ value, onChange }: ServerFilterProps) {
         <TabsTrigger value="all">All servers</TabsTrigger>
         {data.servers.map((server) => (
           <TabsTrigger key={server.name} value={server.name}>
-            {server.name} ({server.logCount})
+            {server.name}
           </TabsTrigger>
         ))}
       </TabsList>

@@ -221,6 +221,11 @@ export interface Gateway {
     getClients(): Promise<ClientAggregation[]>;
 
     /**
+     * Get method aggregations from storage
+     */
+    getMethods(serverName?: string): Promise<Array<{ method: string }>>;
+
+    /**
      * Get metrics for a specific server
      *
      * Returns activity metrics for a server computed from stored logs.

@@ -7,7 +7,20 @@ import type {
   ServerInfo,
   SessionInfo,
 } from "@fiberplane/mcp-gateway-types";
-import { and, count, desc, eq, gt, like, lt, sql } from "drizzle-orm";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  gt,
+  gte,
+  inArray,
+  like,
+  lt,
+  lte,
+  or,
+  sql,
+} from "drizzle-orm";
 import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
 import { logger } from "../logger.js";
 import type * as schema from "./schema.js";
@@ -116,12 +129,23 @@ export async function queryLogs(
   options: LogQueryOptions = {},
 ): Promise<LogQueryResult> {
   const {
+    searchQueries,
     serverName,
     sessionId,
     method,
     clientName,
     clientVersion,
     clientIp,
+    durationEq,
+    durationGt,
+    durationLt,
+    durationGte,
+    durationLte,
+    tokensEq,
+    tokensGt,
+    tokensLt,
+    tokensGte,
+    tokensLte,
     after,
     before,
     limit = 100,
@@ -130,17 +154,53 @@ export async function queryLogs(
 
   // Build where conditions
   const conditions = [];
+
+  // Text search (AND logic - all terms must match, each term checks multiple fields with OR)
+  if (searchQueries && searchQueries.length > 0) {
+    for (const query of searchQueries) {
+      const searchPattern = `%${query}%`;
+      const searchConditions = [
+        like(logs.requestJson, searchPattern),
+        like(logs.responseJson, searchPattern),
+        like(logs.method, searchPattern),
+        like(logs.clientName, searchPattern),
+        like(logs.errorJson, searchPattern),
+        like(logs.methodDetail, searchPattern),
+      ];
+      conditions.push(or(...searchConditions));
+    }
+  }
+
+  // String filters (support arrays for OR logic)
   if (serverName) {
-    conditions.push(eq(logs.serverName, serverName));
+    conditions.push(
+      Array.isArray(serverName)
+        ? inArray(logs.serverName, serverName)
+        : eq(logs.serverName, serverName),
+    );
   }
   if (sessionId) {
-    conditions.push(eq(logs.sessionId, sessionId));
+    conditions.push(
+      Array.isArray(sessionId)
+        ? inArray(logs.sessionId, sessionId)
+        : eq(logs.sessionId, sessionId),
+    );
   }
   if (method) {
-    conditions.push(like(logs.method, `%${method}%`));
+    // Support arrays for multi-select with partial match (OR logic)
+    if (Array.isArray(method)) {
+      const methodConditions = method.map((m) => like(logs.method, `%${m}%`));
+      conditions.push(or(...methodConditions));
+    } else {
+      conditions.push(like(logs.method, `%${method}%`));
+    }
   }
   if (clientName) {
-    conditions.push(eq(logs.clientName, clientName));
+    conditions.push(
+      Array.isArray(clientName)
+        ? inArray(logs.clientName, clientName)
+        : eq(logs.clientName, clientName),
+    );
   }
   if (clientVersion) {
     conditions.push(eq(logs.clientVersion, clientVersion));
@@ -148,6 +208,54 @@ export async function queryLogs(
   if (clientIp) {
     conditions.push(eq(logs.clientIp, clientIp));
   }
+
+  // Duration filters (milliseconds)
+  if (durationEq !== undefined) {
+    conditions.push(
+      Array.isArray(durationEq)
+        ? inArray(logs.durationMs, durationEq)
+        : eq(logs.durationMs, durationEq),
+    );
+  }
+  if (durationGt !== undefined) {
+    conditions.push(gt(logs.durationMs, durationGt));
+  }
+  if (durationLt !== undefined) {
+    conditions.push(lt(logs.durationMs, durationLt));
+  }
+  if (durationGte !== undefined) {
+    conditions.push(gte(logs.durationMs, durationGte));
+  }
+  if (durationLte !== undefined) {
+    conditions.push(lte(logs.durationMs, durationLte));
+  }
+
+  // Token filters (calculated as inputTokens + outputTokens)
+  // Note: We use SQL expressions to calculate total tokens on the fly
+  const totalTokensExpr = sql<number>`COALESCE(${logs.inputTokens}, 0) + COALESCE(${logs.outputTokens}, 0)`;
+
+  if (tokensEq !== undefined) {
+    if (Array.isArray(tokensEq)) {
+      const tokenConditions = tokensEq.map((t) => eq(totalTokensExpr, t));
+      conditions.push(or(...tokenConditions));
+    } else {
+      conditions.push(eq(totalTokensExpr, tokensEq));
+    }
+  }
+  if (tokensGt !== undefined) {
+    conditions.push(gt(totalTokensExpr, tokensGt));
+  }
+  if (tokensLt !== undefined) {
+    conditions.push(lt(totalTokensExpr, tokensLt));
+  }
+  if (tokensGte !== undefined) {
+    conditions.push(gte(totalTokensExpr, tokensGte));
+  }
+  if (tokensLte !== undefined) {
+    conditions.push(lte(totalTokensExpr, tokensLte));
+  }
+
+  // Time range filters
   if (after) {
     conditions.push(gt(logs.timestamp, after));
   }
@@ -203,15 +311,12 @@ export async function getServers(
 ): Promise<ServerInfo[]> {
   // Get servers that have logs in the database, with health data
   const logsResult = await db
-    .select({
+    .selectDistinct({
       name: logs.serverName,
-      logCount: count(logs.id),
-      sessionCount: sql<number>`COUNT(DISTINCT ${logs.sessionId})`,
       health: serverHealth.health,
     })
     .from(logs)
     .leftJoin(serverHealth, eq(logs.serverName, serverHealth.serverName))
-    .groupBy(logs.serverName, serverHealth.health)
     .orderBy(sql`LOWER(${logs.serverName}) COLLATE NOCASE`);
 
   // Create a map of registry servers (normalized name -> original name)
@@ -251,8 +356,6 @@ export async function getServers(
 
     serverMap.set(normalizedName, {
       name: registryName || server.name,
-      logCount: server.logCount,
-      sessionCount: server.sessionCount,
       status,
     });
   }
@@ -268,8 +371,6 @@ export async function getServers(
 
         serverMap.set(normalizedName, {
           name: serverName,
-          logCount: 0,
-          sessionCount: 0,
           status,
         });
       }
@@ -295,7 +396,6 @@ export async function getSessions(
     .select({
       sessionId: logs.sessionId,
       serverName: logs.serverName,
-      logCount: count(logs.id),
       startTime: sql<string>`MIN(${logs.timestamp})`,
       endTime: sql<string>`MAX(${logs.timestamp})`,
     })
@@ -319,18 +419,35 @@ export async function getClients(
   db: BunSQLiteDatabase<typeof schema>,
 ): Promise<ClientAggregation[]> {
   const result = await db
-    .select({
+    .selectDistinct({
       clientName: logs.clientName,
       clientVersion: logs.clientVersion,
-      logCount: count(logs.id),
-      sessionCount: sql<number>`COUNT(DISTINCT ${logs.sessionId})`,
     })
     .from(logs)
     .where(sql`${logs.clientName} IS NOT NULL`)
-    .groupBy(logs.clientName, logs.clientVersion)
     .orderBy(logs.clientName);
 
   return result as ClientAggregation[];
+}
+
+/**
+ * Get method aggregations
+ *
+ * Returns all unique methods, optionally filtered by server.
+ */
+export async function getMethods(
+  db: BunSQLiteDatabase<typeof schema>,
+  serverName?: string,
+): Promise<Array<{ method: string }>> {
+  let query = db.selectDistinct({ method: logs.method }).from(logs);
+
+  if (serverName) {
+    query = query.where(eq(logs.serverName, serverName)) as typeof query;
+  }
+
+  const result = await query.orderBy(logs.method);
+
+  return result as Array<{ method: string }>;
 }
 
 /**

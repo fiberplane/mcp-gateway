@@ -7,7 +7,7 @@ Single-page React application for viewing and analyzing MCP Gateway traffic logs
 ## Technology Stack
 
 ### Core
-- **React 18.3+** - UI library with concurrent features
+- **React 19** - UI framework with modern concurrent features
 - **TypeScript 5.3+** - Type safety
 - **Vite 5+** - Build tool and dev server
 
@@ -26,22 +26,20 @@ Single-page React application for viewing and analyzing MCP Gateway traffic logs
   - Request deduplication
 
 ### State Management
-- **Zustand** - Lightweight client state
-  - UI state (sidebar open/closed, theme)
-  - Filter state (active filters, sort order)
-  - Selection state (selected log entries)
+- **URL Parameters** - Filter state persistence
+  - Filter state stored in URL search params
+  - Type-safe parsing with Zod schemas
+  - Shareable links with active filters
+  - No client-side state management library needed
 
 ### Styling
 - **Tailwind CSS 3+** - Utility-first CSS
-- **Radix UI** or **Shadcn/ui** - Accessible component primitives
-  - Dialog, Dropdown, Select, Checkbox, etc.
-  - Full keyboard navigation
-  - ARIA compliant
+- **Radix UI** - Component primitives
+  - DropdownMenu, Checkbox, Tabs, etc.
 
 ### Additional Libraries
-- **TanStack Virtual** - Virtual scrolling for large lists
 - **date-fns** - Date formatting and manipulation
-- **zod** - Runtime validation (shared with API)
+- **zod** - Runtime validation (shared with types package)
 - **lucide-react** - Icon library
 
 ## Project Structure
@@ -56,21 +54,22 @@ packages/web/
 │   │       ├── index.tsx    # Log list page
 │   │       └── $logId.tsx   # Log detail page
 │   ├── components/          # React components
-│   │   ├── ui/             # Shadcn/ui components
-│   │   ├── layout/         # Layout components
-│   │   ├── logs/           # Log-specific components
-│   │   │   ├── LogTable.tsx
-│   │   │   ├── LogFilters.tsx
-│   │   │   ├── LogDetail.tsx
-│   │   │   └── LogRow.tsx
-│   │   └── common/         # Shared components
+│   │   ├── ui/             # Radix UI wrapper components
+│   │   │   ├── button.tsx
+│   │   │   ├── dropdown-menu.tsx
+│   │   │   ├── checkbox.tsx
+│   │   │   └── tabs.tsx
+│   │   ├── filter-bar.tsx          # Filter UI container
+│   │   ├── add-filter-dropdown.tsx # Dropdown menu for adding filters
+│   │   ├── filter-type-menu.tsx    # Cascading menu with filter types
+│   │   ├── filter-value-submenu.tsx # Multi-select submenu
+│   │   ├── filter-badge.tsx        # Active filter badge
+│   │   ├── search-input.tsx        # Global search input
+│   │   ├── log-table.tsx           # Log table component
+│   │   └── log-row.tsx             # Individual log row
 │   ├── hooks/              # Custom React hooks
-│   │   ├── useLogs.ts      # TanStack Query hooks
-│   │   ├── useServers.ts
-│   │   └── useSessions.ts
-│   ├── stores/             # Zustand stores
-│   │   ├── filterStore.ts  # Filter state
-│   │   └── uiStore.ts      # UI state
+│   │   ├── use-logs.ts     # TanStack Query hook for logs
+│   │   └── use-available-filters.ts # Query hooks for filter values
 │   ├── lib/                # Utility functions
 │   │   ├── api.ts          # API client
 │   │   ├── queryClient.ts  # TanStack Query config
@@ -151,81 +150,196 @@ function LogListPage() {
   const search = Route.useSearch();
 
   // TanStack Query for data fetching
-  const { data, isLoading, error } = useLogs(search);
+  const { data, isLoading, error } = useLogs();
 
-  // Zustand for UI state
-  const { isFilterOpen, toggleFilters } = useUIStore();
+  // Parse filters from URL
+  const filters = parseFiltersFromUrl(search);
 
   return (
-    <div className="flex flex-1 overflow-hidden">
-      {/* Server tabs */}
-      <ServerTabs />
+    <div className="flex flex-1 flex-col overflow-hidden">
+      {/* Filter bar with search, badges, and dropdown */}
+      <FilterBar
+        filters={filters}
+        onFiltersChange={(newFilters) => {
+          const params = serializeFiltersToUrl(newFilters);
+          navigate({ search: params });
+        }}
+      />
 
-      <div className="flex flex-1 flex-col">
-        {/* Search and quick filters */}
-        <LogSearchBar />
-
-        {/* Applied filters */}
-        <AppliedFilters />
-
-        {/* Main table */}
-        <LogTable
-          logs={data?.data}
-          isLoading={isLoading}
-          onRowClick={(log) => navigate({ to: '/logs/$logId', params: { logId: log.id } })}
-        />
-
-        {/* Pagination */}
-        <Pagination {...data?.pagination} />
-      </div>
-
-      {/* Filter sidebar */}
-      {isFilterOpen && <LogFilters />}
+      {/* Main table */}
+      <LogTable
+        logs={data}
+        isLoading={isLoading}
+        onRowClick={(log) => navigate({ to: '/logs/$logId', params: { logId: log.id } })}
+      />
     </div>
   );
 }
 ```
 
-### 4. Log Table Component
+### 4. Filter Bar Component
 
-Virtualized table for performance with large datasets:
+Container for filter UI elements:
 
 ```typescript
-import { useVirtualizer } from '@tanstack/react-virtual';
+function FilterBar({ filters, onFiltersChange }) {
+  const [searchQuery, setSearchQuery] = useState('');
 
-function LogTable({ logs, isLoading, onRowClick }) {
-  const parentRef = useRef<HTMLDivElement>(null);
+  const handleAddFilter = (type: string, values: string[]) => {
+    const newFilter = createFilter(type, values);
+    onFiltersChange([...filters, newFilter]);
+  };
 
-  const virtualizer = useVirtualizer({
-    count: logs?.length ?? 0,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 48, // Row height in pixels
-    overscan: 5,
-  });
+  const handleRemoveFilter = (filterId: string) => {
+    onFiltersChange(filters.filter(f => f.id !== filterId));
+  };
 
   return (
-    <div ref={parentRef} className="flex-1 overflow-auto">
+    <div className="flex items-center gap-4 border-b px-6 py-4">
+      {/* Search input */}
+      <SearchInput
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder="Search logs..."
+      />
+
+      {/* Add filter dropdown */}
+      <AddFilterDropdown onAdd={handleAddFilter} activeFilters={filters} />
+
+      {/* Active filter badges */}
+      <div className="flex flex-wrap gap-2">
+        {filters.map((filter) => (
+          <FilterBadge
+            key={filter.id}
+            filter={filter}
+            onRemove={handleRemoveFilter}
+          />
+        ))}
+      </div>
+
+      {/* Clear all button */}
+      {filters.length > 0 && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onFiltersChange([])}
+        >
+          Clear all
+        </Button>
+      )}
+    </div>
+  );
+}
+```
+
+### 5. Add Filter Dropdown Component
+
+Cascading dropdown menu with filter type submenus:
+
+```typescript
+function AddFilterDropdown({ onAdd, activeFilters }) {
+  const [open, setOpen] = useState(false);
+
+  // Fetch available filter values
+  const methodsQuery = useAvailableMethods({ enabled: open });
+  const clientsQuery = useAvailableClients({ enabled: open });
+  const serversQuery = useAvailableServers({ enabled: open });
+
+  return (
+    <DropdownMenu.Root open={open} onOpenChange={setOpen}>
+      <DropdownMenu.Trigger asChild>
+        <Button variant="outline" size="sm">
+          <Plus className="size-4" />
+          Add filter
+        </Button>
+      </DropdownMenu.Trigger>
+
+      <DropdownMenu.Portal>
+        <DropdownMenu.Content>
+          {/* Method submenu */}
+          <FilterValueSubmenu
+            label="Method"
+            values={methodsQuery.data?.methods ?? []}
+            selectedValues={activeFilters.method ?? []}
+            onSelectionChange={(values) => onAdd('method', values)}
+            showColorBadges={true}
+          />
+
+          {/* Client, Server, Session submenus... */}
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
+  );
+}
+```
+
+### 6. Filter Badge Component
+
+Displays active filters with truncation:
+
+```typescript
+function FilterBadge({ filter, onRemove }) {
+  // Format value with truncation for arrays
+  const displayValue = Array.isArray(filter.value)
+    ? filter.value.length > 2
+      ? `${filter.value.slice(0, 2).join(', ')} +${filter.value.length - 2} more`
+      : filter.value.join(', ')
+    : filter.value;
+
+  return (
+    <div className="inline-flex items-center gap-2 px-2 h-9 border rounded-md">
+      <FilterIcon field={filter.field} />
+      <span className="text-sm font-medium">{filter.field}</span>
+      <span className="text-sm">{filter.operator}</span>
+
+      {/* Method filters show colored pills */}
+      {filter.field === 'method' ? (
+        <ColorPill color={getMethodColor(filter.value)}>
+          {displayValue}
+        </ColorPill>
+      ) : (
+        <span className="text-sm font-mono">{displayValue}</span>
+      )}
+
+      <IconButton
+        variant="ghost"
+        size="icon-sm"
+        icon={X}
+        onClick={() => onRemove(filter.id)}
+        aria-label={`Remove ${filter.field} filter`}
+      />
+    </div>
+  );
+}
+```
+
+### 7. Log Table Component
+
+Standard table with sortable columns:
+
+```typescript
+function LogTable({ logs, isLoading, onRowClick }) {
+  return (
+    <div className="flex-1 overflow-auto">
       <table className="w-full">
-        <LogTableHeader />
-        <tbody style={{ height: `${virtualizer.getTotalSize()}px` }}>
-          {virtualizer.getVirtualItems().map((virtualRow) => {
-            const log = logs[virtualRow.index];
-            return (
-              <LogRow
-                key={virtualRow.key}
-                log={log}
-                onClick={() => onRowClick(log)}
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  height: `${virtualRow.size}px`,
-                  transform: `translateY(${virtualRow.start}px)`,
-                }}
-              />
-            );
-          })}
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Session</th>
+            <th>Method</th>
+            <th>Server</th>
+            <th>Duration</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {logs?.map((log) => (
+            <LogRow
+              key={log.id}
+              log={log}
+              onClick={() => onRowClick(log)}
+            />
+          ))}
         </tbody>
       </table>
     </div>
@@ -233,94 +347,7 @@ function LogTable({ logs, isLoading, onRowClick }) {
 }
 ```
 
-**Columns:**
-- Checkbox (for selection)
-- Timestamp
-- Session ID
-- Method (with badge)
-- Method Details
-- Sender
-- Receiver
-- Duration
-- Tokens
-
-### 5. Log Filters Component
-
-Sidebar with advanced filtering options:
-
-```typescript
-function LogFilters() {
-  const { filters, updateFilters, resetFilters } = useFilterStore();
-  const { data: servers } = useServers();
-  const { data: sessions } = useSessions();
-
-  return (
-    <aside className="w-96 border-l bg-gray-50 p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <h3>Filters</h3>
-        <Button variant="ghost" onClick={resetFilters}>Clear all</Button>
-      </div>
-
-      {/* Server filter */}
-      <FilterSection title="Server">
-        <CheckboxGroup
-          options={servers}
-          value={filters.serverNames}
-          onChange={(value) => updateFilters({ serverNames: value })}
-        />
-      </FilterSection>
-
-      {/* Session filter */}
-      <FilterSection title="Session">
-        <Select
-          options={sessions}
-          value={filters.sessionId}
-          onChange={(value) => updateFilters({ sessionId: value })}
-        />
-      </FilterSection>
-
-      {/* Method filter */}
-      <FilterSection title="Method">
-        <CheckboxGroup
-          options={['initialize', 'tools/list', 'tools/call', 'resources/list']}
-          value={filters.methods}
-          onChange={(value) => updateFilters({ methods: value })}
-        />
-      </FilterSection>
-
-      {/* Time range filter */}
-      <FilterSection title="Time Range">
-        <DateRangePicker
-          from={filters.startTime}
-          to={filters.endTime}
-          onChange={(range) => updateFilters(range)}
-        />
-      </FilterSection>
-
-      {/* Duration filter */}
-      <FilterSection title="Duration">
-        <RangeSlider
-          min={0}
-          max={5000}
-          value={[filters.minDuration, filters.maxDuration]}
-          onChange={([min, max]) => updateFilters({ minDuration: min, maxDuration: max })}
-        />
-      </FilterSection>
-
-      {/* Error filter */}
-      <FilterSection title="Status">
-        <Checkbox
-          checked={filters.hasError}
-          onChange={(checked) => updateFilters({ hasError: checked })}
-          label="Show only errors"
-        />
-      </FilterSection>
-    </aside>
-  );
-}
-```
-
-### 6. Log Detail View (`routes/logs/$logId.tsx`)
+### 8. Log Detail View (`routes/logs/$logId.tsx`)
 
 Modal or page showing full request/response details:
 
@@ -371,123 +398,78 @@ function LogDetailPage() {
 }
 ```
 
-### 7. Server Tabs Component
+## Filter Utilities
 
-Quick filter by server:
-
-```typescript
-function ServerTabs() {
-  const { data: servers } = useServers();
-  const { filters, updateFilters } = useFilterStore();
-
-  return (
-    <Tabs value={filters.serverName ?? 'all'} onValueChange={(value) => {
-      updateFilters({ serverName: value === 'all' ? undefined : value });
-    }}>
-      <TabsList>
-        <TabsTrigger value="all">
-          All servers
-          <Badge>{servers?.total}</Badge>
-        </TabsTrigger>
-        {servers?.servers.map((server) => (
-          <TabsTrigger key={server.name} value={server.name}>
-            <ServerIndicator name={server.name} />
-            {server.displayName}
-            <Badge>{server.logCount}</Badge>
-          </TabsTrigger>
-        ))}
-      </TabsList>
-    </Tabs>
-  );
-}
-```
-
-## State Management
-
-### Zustand Filter Store
+### URL State Management
 
 ```typescript
-interface FilterState {
-  // Filter values
-  serverNames: string[];
-  sessionId?: string;
-  methods: string[];
-  search?: string;
-  hasError?: boolean;
-  minDuration?: number;
-  maxDuration?: number;
-  startTime?: Date;
-  endTime?: Date;
+// packages/web/src/lib/filter-utils.ts
 
-  // Sort
-  sortBy: 'timestamp' | 'duration' | 'method' | 'server';
-  sortOrder: 'asc' | 'desc';
+/**
+ * Parses filters from URL search parameters
+ */
+export function parseFiltersFromUrl(search: URLSearchParams): Filter[] {
+  const filters: Filter[] = [];
 
-  // Actions
-  updateFilters: (filters: Partial<FilterState>) => void;
-  resetFilters: () => void;
+  for (const [key, value] of search.entries()) {
+    if (FILTER_FIELDS.includes(key)) {
+      // Parse comma-separated values for multi-value filters
+      const values = value.split(',').map(v => v.trim());
 
-  // Computed
-  activeFilterCount: number;
-}
-
-export const useFilterStore = create<FilterState>((set, get) => ({
-  // Initial state
-  serverNames: [],
-  methods: [],
-  sortBy: 'timestamp',
-  sortOrder: 'desc',
-
-  // Actions
-  updateFilters: (filters) => set((state) => ({ ...state, ...filters })),
-  resetFilters: () => set(getDefaultFilters()),
-
-  // Computed
-  get activeFilterCount() {
-    const state = get();
-    return [
-      state.serverNames.length,
-      state.sessionId ? 1 : 0,
-      state.methods.length,
-      state.search ? 1 : 0,
-      // ... count other active filters
-    ].reduce((a, b) => a + b, 0);
-  },
-}));
-```
-
-### Zustand UI Store
-
-```typescript
-interface UIState {
-  isFilterOpen: boolean;
-  theme: 'light' | 'dark';
-  selectedLogs: Set<string>;
-
-  toggleFilters: () => void;
-  setTheme: (theme: 'light' | 'dark') => void;
-  toggleLogSelection: (logId: string) => void;
-  clearSelection: () => void;
-}
-
-export const useUIStore = create<UIState>((set) => ({
-  isFilterOpen: true,
-  theme: 'light',
-  selectedLogs: new Set(),
-
-  toggleFilters: () => set((state) => ({ isFilterOpen: !state.isFilterOpen })),
-  setTheme: (theme) => set({ theme }),
-  toggleLogSelection: (logId) => set((state) => {
-    const selectedLogs = new Set(state.selectedLogs);
-    if (selectedLogs.has(logId)) {
-      selectedLogs.delete(logId);
-    } else {
-      selectedLogs.add(logId);
+      filters.push({
+        id: generateId(),
+        field: key as FilterField,
+        operator: MULTI_VALUE_FIELDS.includes(key) ? 'is' : 'eq',
+        value: values.length === 1 ? values[0] : values,
+      });
     }
-    return { selectedLogs };
-  }),
-  clearSelection: () => set({ selectedLogs: new Set() }),
-}));
+  }
+
+  return filters;
+}
+
+/**
+ * Serializes filters to URL search parameters
+ */
+export function serializeFiltersToUrl(filters: Filter[]): Record<string, string> {
+  const params: Record<string, string> = {};
+
+  for (const filter of filters) {
+    const value = Array.isArray(filter.value)
+      ? filter.value.join(',')
+      : String(filter.value);
+
+    params[filter.field] = value;
+  }
+
+  return params;
+}
+
+/**
+ * Checks if log entry matches filter criteria
+ */
+export function matchesFilter(log: LogEntry, filter: Filter): boolean {
+  const logValue = log[filter.field];
+
+  if (filter.operator === 'is' || filter.operator === 'contains') {
+    // Multi-value filters (OR logic)
+    const filterValues = Array.isArray(filter.value) ? filter.value : [filter.value];
+    return filterValues.some(fv => String(logValue).includes(String(fv)));
+  }
+
+  // Comparison operators for numeric fields
+  if (typeof logValue === 'number' && typeof filter.value === 'number') {
+    switch (filter.operator) {
+      case 'eq': return logValue === filter.value;
+      case 'gt': return logValue > filter.value;
+      case 'lt': return logValue < filter.value;
+      case 'gte': return logValue >= filter.value;
+      case 'lte': return logValue <= filter.value;
+    }
+  }
+
+  return false;
+}
 ```
 
 ## TanStack Query Hooks
@@ -495,59 +477,55 @@ export const useUIStore = create<UIState>((set) => ({
 ### useLogs Hook
 
 ```typescript
-interface UseLogsOptions {
-  page?: number;
-  limit?: number;
-  serverName?: string;
-  sessionId?: string;
-  method?: string;
-  // ... other filters
-}
-
-export function useLogs(options: UseLogsOptions) {
+export function useLogs() {
   return useQuery({
-    queryKey: ['logs', options],
-    queryFn: () => apiClient.getLogs(options),
+    queryKey: ['logs'],
+    queryFn: () => apiClient.getLogs(),
     staleTime: 30_000, // 30 seconds
+    refetchInterval: 5_000, // Poll every 5 seconds
     refetchOnWindowFocus: true,
-    retry: 2,
   });
 }
 ```
 
-### useLog Hook (single log)
+### useAvailable* Hooks
+
+Query hooks for fetching available filter values:
 
 ```typescript
-export function useLog(logId: string) {
+export function useAvailableMethods(options?: { enabled?: boolean }) {
   return useQuery({
-    queryKey: ['logs', logId],
-    queryFn: () => apiClient.getLog(logId),
-    staleTime: 5 * 60_000, // 5 minutes
-    enabled: !!logId,
-  });
-}
-```
-
-### useServers Hook
-
-```typescript
-export function useServers() {
-  return useQuery({
-    queryKey: ['servers'],
-    queryFn: () => apiClient.getServers(),
+    queryKey: ['available-filters', 'methods'],
+    queryFn: () => apiClient.getAvailableMethods(),
     staleTime: 60_000, // 1 minute
+    enabled: options?.enabled ?? true,
   });
 }
-```
 
-### useSessions Hook
-
-```typescript
-export function useSessions(serverName?: string) {
+export function useAvailableClients(options?: { enabled?: boolean }) {
   return useQuery({
-    queryKey: ['sessions', serverName],
-    queryFn: () => apiClient.getSessions(serverName),
-    staleTime: 60_000, // 1 minute
+    queryKey: ['available-filters', 'clients'],
+    queryFn: () => apiClient.getAvailableClients(),
+    staleTime: 60_000,
+    enabled: options?.enabled ?? true,
+  });
+}
+
+export function useAvailableServers(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: ['available-filters', 'servers'],
+    queryFn: () => apiClient.getAvailableServers(),
+    staleTime: 60_000,
+    enabled: options?.enabled ?? true,
+  });
+}
+
+export function useAvailableSessions(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: ['available-filters', 'sessions'],
+    queryFn: () => apiClient.getAvailableSessions(),
+    staleTime: 60_000,
+    enabled: options?.enabled ?? true,
   });
 }
 ```
@@ -609,39 +587,16 @@ class APIClient {
 export const apiClient = new APIClient();
 ```
 
-## Responsive Design
-
-**Breakpoints:**
-- `sm`: 640px
-- `md`: 768px
-- `lg`: 1024px
-- `xl`: 1280px
-- `2xl`: 1536px
-
-**Mobile Adaptations:**
-- Stack table columns vertically on small screens
-- Drawer-style filter sidebar on mobile
-- Touch-friendly tap targets (min 44x44px)
-- Simplified header on mobile
-
-## Accessibility
-
-- Semantic HTML elements
-- ARIA labels and roles
-- Keyboard navigation support
-- Focus management (modals, dropdowns)
-- Screen reader announcements for dynamic content
-- High contrast mode support
-- Reduced motion support
-
 ## Performance Optimizations
 
 1. **Code Splitting:** Route-based code splitting with TanStack Router
-2. **Virtual Scrolling:** TanStack Virtual for log table
-3. **Memoization:** React.memo, useMemo, useCallback where appropriate
-4. **Lazy Loading:** Lazy load heavy components (JSON viewer, charts)
-5. **Image Optimization:** SVG icons, optimized PNGs
-6. **Bundle Size:** Tree-shaking, no unnecessary dependencies
+2. **Deferred Values:** React 19's `useDeferredValue` for search input debouncing
+3. **Query Caching:** TanStack Query caches API responses to reduce network requests
+4. **Conditional Fetching:** Filter value queries only run when dropdown is open (`enabled` option)
+5. **Client-Side Filtering:** Filters applied in browser for instant response
+6. **Memoization:** React.memo, useMemo, useCallback where appropriate
+7. **Lazy Loading:** Lazy load heavy components (JSON viewer)
+8. **Bundle Size:** Tree-shaking, no unnecessary dependencies
 
 ## Testing Strategy
 

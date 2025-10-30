@@ -49,51 +49,32 @@ export function estimateInputTokens(
   method: string,
   params: unknown,
 ): number | undefined {
-  // No-cost methods (requests initiated by client, not LLM)
+  // Only tools/call has input cost (LLM produces tokens to call the tool)
   // https://github.com/fiberplane/mcp-gateway/issues/55
-  if (
-    method === "tools/list" ||
-    method === "resources/list" ||
-    method === "resources/templates/list" ||
-    method === "resources/read" ||
-    method === "prompts/list" ||
-    method === "prompts/get" ||
-    method === "ping" ||
-    method === "initialize" ||
-    method === "notifications/initialized"
-  ) {
+  if (method !== "tools/call") {
     return undefined;
   }
 
   try {
+    // LLM sends: { name: "tool_name", arguments: {...} }
+    const parsed = toolsCallParamsSchema.safeParse(params);
     let payload: unknown;
 
-    switch (method) {
-      case "tools/call": {
-        // LLM sends: { name: "tool_name", arguments: {...} }
-        const parsed = toolsCallParamsSchema.safeParse(params);
-        if (parsed.success) {
-          payload = {
-            name: parsed.data.name,
-            arguments: parsed.data.arguments,
-          };
-        } else {
-          // Fallback to full params if schema validation fails
-          logger.warn(
-            "[tokens] Failed to parse tools/call params for token estimation",
-            {
-              issues: parsed.error.issues,
-              method,
-            },
-          );
-          payload = params || {};
-        }
-        break;
-      }
-
-      default:
-        // For other methods, use full params
-        payload = params || {};
+    if (parsed.success) {
+      payload = {
+        name: parsed.data.name,
+        arguments: parsed.data.arguments,
+      };
+    } else {
+      // Fallback to full params if schema validation fails
+      logger.warn(
+        "[tokens] Failed to parse tools/call params for token estimation",
+        {
+          issues: parsed.error.issues,
+          method,
+        },
+      );
+      payload = params || {};
     }
 
     return estimateText(JSON.stringify(payload));
@@ -128,19 +109,16 @@ export function estimateOutputTokens(
   method: string,
   result: unknown,
 ): number | undefined {
-  // No-cost methods (responses not read by LLM)
+  // Only these methods have output cost (LLM reads the response)
   // https://github.com/fiberplane/mcp-gateway/issues/55
   if (
-    method === "tools/list" ||
-    method === "resources/list" ||
-    method === "resources/templates/list" ||
-    method === "prompts/list" ||
-    method === "ping" ||
-    method === "initialize" ||
-    method === "notifications/initialized"
+    method !== "tools/call" &&
+    method !== "resources/read" &&
+    method !== "prompts/get"
   ) {
     return undefined;
   }
+
   try {
     // Handle null/undefined explicitly
     if (result === null || result === undefined) {

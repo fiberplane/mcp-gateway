@@ -83,39 +83,56 @@ Click on any log entry to expand and view:
 
 ### Filtering Logs
 
-#### By Server
+Use the **"Add filter"** button to filter logs by multiple criteria. Filters are applied immediately and persist in the URL for easy sharing.
 
-Click the **"Filter by Server"** dropdown to:
-- Show all servers
-- Select specific server
-- Results update automatically
+#### Available Filters
 
-#### By Time Range
+**Method** - Filter by MCP method name
+- Multi-select support (select multiple methods)
+- Shows count of logs for each method
+- Color-coded badges for different method types
+- Example: `tools/call`, `prompts/get`, `resources/list`
 
-Use the **"Date Range"** picker:
+**Session** - Filter by session ID
+- Multi-select support
+- Shows session count
+- Useful for tracing specific client connections
 
-**Quick Options:**
-- Last hour
-- Last 24 hours
-- Last 7 days
-- Custom range (select start and end dates)
+**Client** - Filter by client name/version
+- Multi-select support
+- Shows client connection count
+- Example: `claude-code@2.0.18`, `cursor-ai@1.5.0`
 
-**Example:**
-```
-Show logs from: 2024-10-22
-To: 2024-10-23
-For server: claude-tools
-```
+**Server** - Filter by MCP server name
+- Multi-select support
+- Shows request count per server
+- Example: `figma-server`, `everything-server`
 
-#### By Method
+**Duration** - Filter by response time
+- Single value filter
+- Operators: equals, greater than, less than, ≥, ≤
+- Example: "Duration greater than 100ms"
 
-Type in the **"Method Filter"** to find specific MCP methods:
+#### Using Filters
 
-- `initialize` - Server initialization
-- `list_resources` - List available resources
-- `read_resource` - Read a resource
-- `call_tool` - Execute a tool
-- `list_tools` - List available tools
+1. Click **"Add filter"** button in the filter bar
+2. Hover over filter type (Method, Session, Client, Server, or Duration)
+3. For multi-select filters:
+   - Check boxes for values you want
+   - Use search box to find specific values
+   - Click "Clear all" to unselect all
+4. For duration filters:
+   - Select operator (equals, >, <, ≥, ≤)
+   - Enter millisecond value
+5. Click outside menu or press ESC to apply
+
+#### Managing Filters
+
+**Active filters** appear as badges in the filter bar:
+- Click **X** on badge to remove individual filter
+- Click **"Clear all"** to remove all filters
+- Multi-value filters show first 2-3 values, then "+N more"
+- Filters sync with URL automatically
 
 ### Searching Logs
 

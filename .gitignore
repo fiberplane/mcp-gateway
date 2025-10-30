@@ -55,3 +55,10 @@ packages/mcp-gateway-*/public
 packages/mcp-gateway-*/drizzle
 
 deps.svg
+
+# Plan and documentation files (kept locally, not in git)
+E2E_LLM_TESTS.md
+FILTER_*.md
+REACT_*.md
+TESTING_STRATEGY.md
+TYPESCRIPT_*.md

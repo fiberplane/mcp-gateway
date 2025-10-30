@@ -264,9 +264,7 @@ bun run build:binaries --all
 
 This creates platform-specific binaries:
 - `@fiberplane/mcp-gateway-darwin-arm64`
-- `@fiberplane/mcp-gateway-darwin-x64`
 - `@fiberplane/mcp-gateway-linux-x64`
-- `@fiberplane/mcp-gateway-windows-x64`
 
 ### Build Everything
 
@@ -474,4 +472,3 @@ ls -la ~/.mcp-gateway/captures/
 # View logs for specific server
 cat ~/.mcp-gateway/captures/my-server/*.jsonl
 ```
-

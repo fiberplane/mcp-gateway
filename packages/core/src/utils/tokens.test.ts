@@ -51,13 +51,13 @@ describe("estimateInputTokens", () => {
     expect(tokens).toBeGreaterThanOrEqual(0);
   });
 
-  it("handles unknown methods", () => {
+  it("returns undefined for unknown methods (allowlist approach)", () => {
     const params = { someField: "someValue" };
 
     const tokens = estimateInputTokens("custom/method", params);
 
-    // Should use full params for unknown methods
-    expect(tokens).toBeGreaterThan(0);
+    // Unknown methods have no cost (not in allowlist)
+    expect(tokens).toBeUndefined();
   });
 
   it("handles tools/call with complex nested arguments", () => {

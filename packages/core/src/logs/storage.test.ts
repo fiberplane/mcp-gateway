@@ -175,6 +175,103 @@ describe("Storage Functions", () => {
       expect(result.data.every((r) => r.method.includes("tools"))).toBe(true);
     });
 
+    test("should filter by multiple server names (OR logic)", async () => {
+      const db = getDb(storageDir);
+      const result = await queryLogs(db, {
+        serverName: ["server-a", "server-b"],
+      });
+
+      expect(result.data).toHaveLength(3);
+      expect(
+        result.data.every((r) =>
+          ["server-a", "server-b"].includes(r.metadata.serverName),
+        ),
+      ).toBe(true);
+    });
+
+    test("should filter by multiple session IDs (OR logic)", async () => {
+      const db = getDb(storageDir);
+      const result = await queryLogs(db, {
+        sessionId: ["session-1", "session-2"],
+      });
+
+      expect(result.data).toHaveLength(3);
+      expect(
+        result.data.every((r) =>
+          ["session-1", "session-2"].includes(r.metadata.sessionId),
+        ),
+      ).toBe(true);
+    });
+
+    test("should filter by single server name from array", async () => {
+      const db = getDb(storageDir);
+      const result = await queryLogs(db, { serverName: ["server-a"] });
+
+      expect(result.data).toHaveLength(2);
+      expect(
+        result.data.every((r) => r.metadata.serverName === "server-a"),
+      ).toBe(true);
+    });
+
+    test("should filter by multiple client names (OR logic)", async () => {
+      const db = getDb(storageDir);
+
+      // First, add records with client metadata
+      await insertLog(
+        db,
+        createTestRecord({
+          timestamp: "2024-01-01T13:00:00Z",
+          method: "test/method-1",
+          metadata: {
+            serverName: "server-a",
+            sessionId: "session-3",
+            durationMs: 100,
+            httpStatus: 200,
+            client: { name: "client-1", version: "1.0" },
+          },
+        }),
+      );
+      await insertLog(
+        db,
+        createTestRecord({
+          timestamp: "2024-01-01T14:00:00Z",
+          method: "test/method-2",
+          metadata: {
+            serverName: "server-a",
+            sessionId: "session-4",
+            durationMs: 100,
+            httpStatus: 200,
+            client: { name: "client-2", version: "1.0" },
+          },
+        }),
+      );
+      await insertLog(
+        db,
+        createTestRecord({
+          timestamp: "2024-01-01T15:00:00Z",
+          method: "test/method-3",
+          metadata: {
+            serverName: "server-a",
+            sessionId: "session-5",
+            durationMs: 100,
+            httpStatus: 200,
+            client: { name: "client-3", version: "1.0" },
+          },
+        }),
+      );
+
+      const result = await queryLogs(db, {
+        clientName: ["client-1", "client-2"],
+      });
+
+      expect(result.data).toHaveLength(2);
+      expect(
+        result.data.every((r) =>
+          ["client-1", "client-2"].includes(r.metadata.client?.name ?? ""),
+        ),
+      ).toBe(true);
+    });
+
     test("should filter by time range (after)", async () => {
       const db = getDb(storageDir);
       const result = await queryLogs(db, { after: "2024-01-01T10:30:00Z" });
@@ -288,26 +385,13 @@ describe("Storage Functions", () => {
       expect(result).toHaveLength(2);
     });
 
-    test("should count logs per server", async () => {
+    test("should return distinct servers from logs", async () => {
       const db = getDb(storageDir);
       const result = await getServers(db);
 
-      const serverA = result.find((s) => s.name === "server-a");
-      const serverB = result.find((s) => s.name === "server-b");
-
-      expect(serverA?.logCount).toBe(3);
-      expect(serverB?.logCount).toBe(1);
-    });
-
-    test("should count distinct sessions per server", async () => {
-      const db = getDb(storageDir);
-      const result = await getServers(db);
-
-      const serverA = result.find((s) => s.name === "server-a");
-      const serverB = result.find((s) => s.name === "server-b");
-
-      expect(serverA?.sessionCount).toBe(2);
-      expect(serverB?.sessionCount).toBe(1);
+      expect(result).toHaveLength(2);
+      expect(result.find((s) => s.name === "server-a")).toBeDefined();
+      expect(result.find((s) => s.name === "server-b")).toBeDefined();
     });
 
     test("should default statuses to not-found when registry data is unavailable", async () => {
@@ -347,8 +431,6 @@ describe("Storage Functions", () => {
       expect(serverB?.status).toBe("not-found");
       expect(serverC).toEqual({
         name: "server-c",
-        logCount: 0,
-        sessionCount: 0,
         status: "online",
       });
     });
@@ -408,17 +490,6 @@ describe("Storage Functions", () => {
       expect(result).toHaveLength(1);
       expect(result[0].serverName).toBe("server-a");
       expect(result[0].sessionId).toBe("session-1");
-    });
-
-    test("should count logs per session", async () => {
-      const db = getDb(storageDir);
-      const result = await getSessions(db);
-
-      const session1 = result.find((s) => s.sessionId === "session-1");
-      const session2 = result.find((s) => s.sessionId === "session-2");
-
-      expect(session1?.logCount).toBe(2);
-      expect(session2?.logCount).toBe(1);
     });
 
     test("should track session time ranges", async () => {

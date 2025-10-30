@@ -521,6 +521,7 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
       getServers: async () => await backend.getServers(),
       getSessions: async (serverName?) => await backend.getSessions(serverName),
       getClients: async () => await backend.getClients(),
+      getMethods: async (serverName?) => await backend.getMethods(serverName),
       getServerMetrics: async (serverName: string) =>
         await backend.getServerMetrics(serverName),
       clearAll: async () => await backend.clearAll(),

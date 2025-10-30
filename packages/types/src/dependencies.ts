@@ -119,9 +119,9 @@ export interface QueryFunctions {
   queryLogs: (options?: LogQueryOptions) => Promise<LogQueryResult>;
 
   /**
-   * Get all servers with aggregated stats (without status field)
+   * Get all servers with aggregated stats
    */
-  getServers: () => Promise<Array<Omit<ServerInfo, "status">>>;
+  getServers: () => Promise<ServerInfo[]>;
 
   /**
    * Get all sessions with aggregated stats
@@ -130,7 +130,6 @@ export interface QueryFunctions {
     Array<{
       sessionId: string;
       serverName: string;
-      logCount: number;
       startTime: string;
       endTime: string;
     }>
@@ -143,8 +142,15 @@ export interface QueryFunctions {
     Array<{
       clientName: string;
       clientVersion: string | null;
-      logCount: number;
-      sessionCount: number;
+    }>
+  >;
+
+  /**
+   * Get all methods with aggregated stats
+   */
+  getMethods: (serverName?: string) => Promise<
+    Array<{
+      method: string;
     }>
   >;
 

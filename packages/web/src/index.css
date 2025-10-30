@@ -2,7 +2,7 @@
 
 @theme {
   /* Background colors */
-  --color-background: #ffffff;
+  --color-background: #fafafa;  /* Light gray page background - matches Figma design */
   --color-card: #ffffff;
   --color-muted: #f9fafb;
   --color-primary: #272624;
@@ -13,6 +13,14 @@
   --color-badge-warning: #fef3c7;  /* yellow - for resources/*, notifications/* */
   --color-badge-error: #fee2e2;    /* red - for errors */
 
+  /* Method category colors (for ColorPill components in filters/logs) */
+  --color-method-init: #dddbff;      /* purple - initialization & lifecycle (initialize, ping) */
+  --color-method-resource: #ffe6e0;  /* peach - resource methods (resources/*) */
+  --color-method-tool: #f7dd91;      /* yellow - tool methods (tools/*) */
+  --color-method-prompt: #d1eaac;    /* lime - prompt methods (prompts/*) */
+  --color-method-notification: #f8d2e8; /* pink - notification methods (notifications/*) */
+  --color-method-default: #e5e7eb;   /* gray - unknown/other methods */
+
   /* Foreground colors */
   --color-foreground: #000000;
   --color-primary-foreground: #ffffff;
@@ -22,6 +30,12 @@
   --color-border: #e5e7eb;
   --color-input: #e5e7eb;
   --color-ring: #1e293b;
+
+  /* Status indicator colors (for badges, dots, etc.) */
+  --color-status-success: #22c55e;   /* green - for online status */
+  --color-status-warning: #f59e0b;   /* amber - for warnings */
+  --color-status-error: #ef4444;     /* red - for errors */
+  --color-status-neutral: #9ca3af;   /* gray - for offline/not-found */
 
   /* Shadcn compatibility */
   --color-secondary: #f9fafb;
@@ -50,7 +64,31 @@
     @apply border-border;
   }
 
+  html,
+  body {
+    @apply h-full;
+  }
+
   body {
     @apply bg-background text-foreground font-sans;
+  }
+
+  #root {
+    @apply h-full;
+  }
+}
+
+@layer utilities {
+  /* Screen reader only - visually hidden but accessible to assistive technology */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
   }
 }

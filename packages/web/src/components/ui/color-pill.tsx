@@ -1,0 +1,66 @@
+/**
+ * ColorPill Component
+ *
+ * Pill-shaped badge with dynamic background color.
+ *
+ * @example
+ * ```tsx
+ * <ColorPill color="var(--color-method-tool)">GET</ColorPill>
+ * <ColorPill color={getMethodColor("tools/call")}>tools/call</ColorPill>
+ * ```
+ */
+
+import * as React from "react";
+
+import { cn } from "@/lib/utils";
+
+export interface ColorPillProps extends React.HTMLAttributes<HTMLDivElement> {
+  /**
+   * Background color (CSS variable, hex, or rgb)
+   * @example "var(--color-method-tool)" or "#f7dd91"
+   */
+  color: string;
+
+  /**
+   * Optional icon to display before text
+   */
+  icon?: React.ReactNode;
+
+  /**
+   * Content to display in the pill
+   */
+  children: React.ReactNode;
+}
+
+/**
+ * ColorPill Component
+ *
+ * A pill-shaped badge with customizable background color.
+ * Automatically applies monospace font for code-like content.
+ */
+const ColorPill = React.forwardRef<HTMLDivElement, ColorPillProps>(
+  ({ className, color, icon, children, style, ...props }, ref) => {
+    return (
+      <div
+        ref={ref}
+        className={cn(
+          "inline-flex items-center justify-center gap-1 px-1.5 py-1 rounded-md",
+          className,
+        )}
+        style={{
+          backgroundColor: color,
+          ...style,
+        }}
+        {...props}
+      >
+        {icon}
+        <span className="text-sm font-mono font-normal text-foreground leading-4">
+          {children}
+        </span>
+      </div>
+    );
+  },
+);
+ColorPill.displayName = "ColorPill";
+
+export { ColorPill };

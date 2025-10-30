@@ -48,6 +48,7 @@ const mockGateway: Gateway = {
     getServers: async () => [],
     getSessions: async () => [],
     getClients: async () => [],
+    getMethods: async () => [],
     getServerMetrics: async () => ({ lastActivity: null, exchangeCount: 0 }),
     clearAll: async () => {},
     updateServerInfoForInitializeRequest: async () => {},

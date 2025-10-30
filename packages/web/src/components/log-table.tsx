@@ -12,14 +12,14 @@ import {
 } from "lucide-react";
 import { Fragment, type ReactNode, useMemo, useState } from "react";
 import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
-import { getMethodBadgeVariant } from "../lib/badge-color";
+import { getMethodColor } from "../lib/method-colors";
 import { getMethodDetail } from "../lib/method-detail";
 import { groupLogsByTime, type TimeInterval } from "../lib/time-grouping";
 import { useHandler } from "../lib/use-handler";
-import { getLogKey } from "../lib/utils";
-import { Badge } from "./ui/badge";
+import { cn, getLogKey } from "../lib/utils";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
+import { ColorPill } from "./ui/color-pill";
 
 type SortField =
   | "timestamp"
@@ -42,6 +42,8 @@ interface Column {
   sortField?: SortField;
   size?: string | number;
   isVisible?: (logs: ApiLogEntry[]) => boolean;
+  /** Optional className for the header <th> element */
+  headerClassName?: string;
 }
 
 /**
@@ -84,15 +86,191 @@ function SortHeader({
     <button
       type="button"
       onClick={() => onSort(field)}
-      className="flex items-center gap-1 hover:text-foreground w-full hover:bg-muted transition-colors cursor-pointer"
+      className="flex items-center gap-1 hover:text-foreground w-full hover:bg-muted transition-colors cursor-pointer group"
     >
       {children}
       <Icon
-        className={`w-4 h-4 ${isActive ? "text-foreground" : "text-muted-foreground"}`}
+        className={`w-4 h-4 ${isActive ? "text-foreground" : "text-muted-foreground"} group-hover:text-foreground`}
       />
     </button>
   );
 }
+
+/**
+ * Column definitions for the log table.
+ * Defined outside component to prevent recreation on every render.
+ */
+const COLUMNS: Column[] = [
+  {
+    id: "timestamp",
+    header: "Timestamp",
+    sortField: "timestamp",
+    headerClassName: "min-w-32",
+    cell: (log) => (
+      <span className="font-mono text-sm text-foreground" title={log.timestamp}>
+        {format(new Date(log.timestamp), "HH:mm:ss.SSS")}
+      </span>
+    ),
+  },
+  {
+    id: "client",
+    header: "Client",
+    sortField: "client",
+    headerClassName: "min-w-40",
+    cell: (log) =>
+      log.metadata.client ? (
+        <div className="flex items-center gap-1">
+          <span className="font-medium truncate min-w-0">
+            {log.metadata.client.name}
+          </span>
+          <span className="text-muted-foreground whitespace-nowrap flex-shrink-0">
+            {log.metadata.client.version}
+          </span>
+        </div>
+      ) : (
+        <span className="text-muted-foreground">-</span>
+      ),
+  },
+  {
+    id: "method",
+    header: "Method",
+    sortField: "method",
+    headerClassName: "min-w-44",
+    cell: (log) => {
+      const icon =
+        log.direction === "request" ? (
+          <ArrowRight className="w-3 h-3" aria-hidden="true" />
+        ) : log.direction === "response" ? (
+          <ArrowLeft className="w-3 h-3" aria-hidden="true" />
+        ) : (
+          <ArrowDown className="w-3 h-3" aria-hidden="true" />
+        );
+
+      return (
+        <ColorPill color={getMethodColor(log.method)} icon={icon}>
+          {log.method}
+        </ColorPill>
+      );
+    },
+  },
+  {
+    id: "methodDetail",
+    header: "Method detail",
+    sortField: "methodDetail",
+    headerClassName: "min-w-44",
+    cell: (log) => {
+      const detail = getMethodDetail(log);
+
+      // Parse error - show dash + warning icon
+      if (detail === null) {
+        return (
+          <span
+            className="inline-flex items-center gap-1 text-destructive text-sm"
+            title="Failed to parse request/response parameters. Check browser console for details."
+          >
+            <span className="text-muted-foreground">−</span>
+            <TriangleAlert className="w-3 h-3" />
+          </span>
+        );
+      }
+
+      // Empty/not applicable
+      if (!detail) {
+        return <span className="text-muted-foreground">−</span>;
+      }
+
+      // Normal content
+      const isLong = detail.length > 40;
+      return (
+        <span
+          className="text-sm text-muted-foreground truncate max-w-[200px] inline-block"
+          title={isLong ? detail : undefined}
+        >
+          {detail}
+        </span>
+      );
+    },
+  },
+  {
+    id: "server",
+    header: "Server",
+    sortField: "server",
+    headerClassName: "min-w-40",
+    isVisible: (logs) => logs.some((log) => log.metadata.server),
+    cell: (log) =>
+      log.metadata.server ? (
+        <div className="flex items-center gap-1">
+          <span className="font-medium truncate min-w-0">
+            {log.metadata.server.name}
+          </span>
+          <span className="text-medium text-muted-foreground whitespace-nowrap flex-shrink-0">
+            {log.metadata.server.version}
+          </span>
+        </div>
+      ) : (
+        <span className="text-muted-foreground">-</span>
+      ),
+  },
+  {
+    id: "session",
+    header: "Session",
+    sortField: "session",
+    headerClassName: "min-w-28",
+    cell: (log) => (
+      <span className="font-mono text-xs text-muted-foreground">
+        {log.metadata.sessionId.slice(0, 8)}...
+      </span>
+    ),
+  },
+  {
+    id: "duration",
+    header: "Duration",
+    sortField: "duration",
+    headerClassName: "min-w-24",
+    cell: (log) => (
+      <span className="text-sm text-muted-foreground">
+        {log.metadata.durationMs}ms
+      </span>
+    ),
+  },
+  {
+    id: "tokens",
+    header: "Tokens",
+    sortField: "tokens",
+    headerClassName: "min-w-24",
+    cell: (log) => {
+      const inputTokens = log.metadata.inputTokens;
+      const outputTokens = log.metadata.outputTokens;
+
+      // If both are undefined, this method has no token cost (N/A)
+      if (inputTokens === undefined && outputTokens === undefined) {
+        return <span className="text-muted-foreground">−</span>;
+      }
+
+      // Calculate total (treating undefined as 0)
+      const total = (inputTokens ?? 0) + (outputTokens ?? 0);
+
+      // Build tooltip with only present values
+      const tooltipParts: string[] = [];
+      if (inputTokens !== undefined) {
+        tooltipParts.push(`Input: ${inputTokens}`);
+      }
+      if (outputTokens !== undefined) {
+        tooltipParts.push(`Output: ${outputTokens}`);
+      }
+      const tooltip = tooltipParts.join(", ");
+
+      return (
+        <span
+          className="text-sm text-muted-foreground tabular-nums text-right"
+          title={tooltip}
+        >
+          {total.toLocaleString()}
+        </span>
+      );
+    },
+  },
+];
 
 export function LogTable({
   logs,
@@ -104,13 +282,10 @@ export function LogTable({
   const [sortField, setSortField] = useState<SortField>("timestamp");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
-  // Define columns configuration
-  const columns = useMemo(() => createColumns(), []);
-
-  // Filter visible columns
+  // Filter visible columns based on log data
   const visibleColumns = useMemo(
-    () => columns.filter((col) => !col.isVisible || col.isVisible(logs)),
-    [columns, logs],
+    () => COLUMNS.filter((col) => !col.isVisible || col.isVisible(logs)),
+    [logs],
   );
 
   const handleSort = useHandler((field: SortField) => {
@@ -189,9 +364,11 @@ export function LogTable({
       }
 
       const comparison =
-        typeof aValue === "string"
-          ? aValue.localeCompare(bValue as string)
-          : aValue - (bValue as number);
+        typeof aValue === "string" && typeof bValue === "string"
+          ? aValue.localeCompare(bValue)
+          : typeof aValue === "number" && typeof bValue === "number"
+            ? aValue - bValue
+            : 0; // Fallback for type mismatch (shouldn't happen)
 
       return sortDirection === "asc" ? comparison : -comparison;
     });
@@ -216,12 +393,15 @@ export function LogTable({
     });
 
     for (let i = 0; i < sortedGroupKeys.length; i++) {
-      // biome-ignore lint/style/noNonNullAssertion: Array index is within bounds
-      const groupKey = sortedGroupKeys[i]!;
-      // biome-ignore lint/style/noNonNullAssertion: We know the key exists
-      const groupLogs = groups.get(groupKey)!;
-      // biome-ignore lint/style/noNonNullAssertion: Groups always have at least one log
-      const firstLog = groupLogs[0]!;
+      const groupKey = sortedGroupKeys[i];
+      if (!groupKey) continue;
+
+      const groupLogs = groups.get(groupKey);
+      if (!groupLogs || groupLogs.length === 0) continue;
+
+      const firstLog = groupLogs[0];
+      if (!firstLog) continue;
+
       const label = config.formatLabel(new Date(firstLog.timestamp));
 
       // Skip divider for the current time period
@@ -254,15 +434,18 @@ export function LogTable({
     setExpandedKey((current) => (current === key ? null : key));
   });
 
-  const handleSelectRow = useHandler((logKey: string, checked: boolean) => {
-    const newSelection = new Set(selectedIds);
-    if (checked) {
-      newSelection.add(logKey);
-    } else {
-      newSelection.delete(logKey);
-    }
-    onSelectionChange(newSelection);
-  });
+  const handleSelectRow = useHandler(
+    (logKey: string, checked: boolean | "indeterminate") => {
+      if (checked === "indeterminate") return;
+      const newSelection = new Set(selectedIds);
+      if (checked) {
+        newSelection.add(logKey);
+      } else {
+        newSelection.delete(logKey);
+      }
+      onSelectionChange(newSelection);
+    },
+  );
 
   const allSelected =
     sortedLogs.length > 0 &&
@@ -280,7 +463,7 @@ export function LogTable({
     <table className="w-full border-collapse">
       <thead className="border-b border-border">
         <tr>
-          <th className="w-12 p-3">
+          <th className="w-12 h-8">
             <Checkbox
               checked={allSelected}
               onCheckedChange={handleSelectAll}
@@ -290,7 +473,10 @@ export function LogTable({
           {visibleColumns.map((column) => (
             <th
               key={column.id}
-              className="text-left p-3 text-sm font-semibold text-foreground"
+              className={cn(
+                "text-left h-8 px-2 text-sm font-semibold text-foreground",
+                column.headerClassName,
+              )}
             >
               {column.sortField ? (
                 <SortHeader
@@ -323,7 +509,7 @@ export function LogTable({
               >
                 <td
                   colSpan={visibleColumns.length + 1}
-                  className="p-3 text-sm font-semibold text-muted-foreground text-center"
+                  className="h-8 text-sm font-semibold text-muted-foreground text-center"
                 >
                   {item.label}
                 </td>
@@ -348,7 +534,7 @@ export function LogTable({
                   <Checkbox
                     checked={selectedIds.has(logKey)}
                     onCheckedChange={(checked) =>
-                      handleSelectRow(logKey, checked as boolean)
+                      handleSelectRow(logKey, checked)
                     }
                     aria-label={`Select log ${logKey}`}
                   />
@@ -357,7 +543,7 @@ export function LogTable({
                   // biome-ignore lint/a11y/useKeyWithClickEvents: Table row click for expand/collapse, keyboard nav to be added
                   <td
                     key={column.id}
-                    className="p-3 cursor-pointer"
+                    className="p-2 cursor-pointer"
                     onClick={() => handleRowClick(log)}
                   >
                     {column.cell(log)}
@@ -384,170 +570,6 @@ export function LogTable({
 
 interface LogDetailsProps {
   log: ApiLogEntry;
-}
-
-function createColumns(): Column[] {
-  return [
-    {
-      id: "timestamp",
-      header: "Timestamp",
-      sortField: "timestamp",
-      cell: (log) => (
-        <span
-          className="font-mono text-sm text-foreground"
-          title={log.timestamp}
-        >
-          {format(new Date(log.timestamp), "HH:mm:ss.SSS")}
-        </span>
-      ),
-    },
-    {
-      id: "client",
-      header: "Client",
-      sortField: "client",
-      cell: (log) =>
-        log.metadata.client ? (
-          <div className="flex flex-col">
-            <span className="font-medium">{log.metadata.client.name}</span>
-            <span className="text-xs text-muted-foreground">
-              {log.metadata.client.version}
-            </span>
-          </div>
-        ) : (
-          <span className="text-muted-foreground">-</span>
-        ),
-    },
-    {
-      id: "method",
-      header: "Method",
-      sortField: "method",
-      cell: (log) => (
-        <Badge
-          variant={getMethodBadgeVariant(log.method)}
-          className="inline-flex items-center gap-1"
-        >
-          {log.direction === "request" ? (
-            <ArrowRight className="w-3 h-3" />
-          ) : log.direction === "response" ? (
-            <ArrowLeft className="w-3 h-3" />
-          ) : (
-            <ArrowDown className="w-3 h-3" />
-          )}
-          <span>{log.method}</span>
-        </Badge>
-      ),
-    },
-    {
-      id: "methodDetail",
-      header: "Method detail",
-      sortField: "methodDetail",
-      cell: (log) => {
-        const detail = getMethodDetail(log);
-
-        // Parse error - show dash + warning icon
-        if (detail === null) {
-          return (
-            <span
-              className="inline-flex items-center gap-1 text-destructive text-sm"
-              title="Failed to parse request/response parameters. Check browser console for details."
-            >
-              <span className="text-muted-foreground">−</span>
-              <TriangleAlert className="w-3 h-3" />
-            </span>
-          );
-        }
-
-        // Empty/not applicable
-        if (!detail) {
-          return <span className="text-muted-foreground">−</span>;
-        }
-
-        // Normal content
-        const isLong = detail.length > 40;
-        return (
-          <span
-            className="text-sm text-muted-foreground truncate max-w-[200px] inline-block"
-            title={isLong ? detail : undefined}
-          >
-            {detail}
-          </span>
-        );
-      },
-    },
-    {
-      id: "server",
-      header: "Server",
-      sortField: "server",
-      isVisible: (logs) => logs.some((log) => log.metadata.server),
-      cell: (log) =>
-        log.metadata.server ? (
-          <div className="flex flex-col">
-            <span className="font-medium">{log.metadata.server.name}</span>
-            <span className="text-xs text-muted-foreground">
-              {log.metadata.server.version}
-            </span>
-          </div>
-        ) : (
-          <span className="text-muted-foreground">-</span>
-        ),
-    },
-    {
-      id: "session",
-      header: "Session",
-      sortField: "session",
-      cell: (log) => (
-        <span className="font-mono text-xs text-muted-foreground">
-          {log.metadata.sessionId.slice(0, 8)}...
-        </span>
-      ),
-    },
-    {
-      id: "duration",
-      header: "Duration",
-      sortField: "duration",
-      cell: (log) => (
-        <span className="text-sm text-muted-foreground">
-          {log.metadata.durationMs}ms
-        </span>
-      ),
-    },
-    {
-      id: "tokens",
-      header: "Tokens",
-      sortField: "tokens",
-      cell: (log) => {
-        const inputTokens = log.metadata.inputTokens;
-        const outputTokens = log.metadata.outputTokens;
-
-        // If both are undefined, this method has no token cost (N/A)
-        if (inputTokens === undefined && outputTokens === undefined) {
-          return <span className="text-muted-foreground">−</span>;
-        }
-
-        // Calculate total (treating undefined as 0)
-        const total = (inputTokens ?? 0) + (outputTokens ?? 0);
-
-        // Build tooltip with only present values
-        const tooltipParts: string[] = [];
-        if (inputTokens !== undefined) {
-          tooltipParts.push(`Input: ${inputTokens}`);
-        }
-        if (outputTokens !== undefined) {
-          tooltipParts.push(`Output: ${outputTokens}`);
-        }
-        const tooltip = tooltipParts.join(", ");
-
-        return (
-          <span
-            className="text-sm text-muted-foreground tabular-nums text-right"
-            title={tooltip}
-          >
-            {total.toLocaleString()}
-          </span>
-        );
-      },
-    },
-  ];
 }
 
 function LogDetails({ log }: LogDetailsProps) {
