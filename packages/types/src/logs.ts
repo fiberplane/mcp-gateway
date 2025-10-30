@@ -72,6 +72,9 @@ export type ApiLogEntry =
  * Numeric fields support comparison operators (gt, lt, eq, gte, lte)
  */
 export interface LogQueryOptions {
+  // Text search (searches across request/response content)
+  searchQueries?: string[]; // Text search terms (AND logic - all terms must match)
+
   // String filters (support arrays for multi-select)
   serverName?: string | string[]; // Filter by server name(s) - supports multi-select
   sessionId?: string | string[]; // Filter by session ID(s) - supports multi-select

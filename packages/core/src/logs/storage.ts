@@ -129,6 +129,7 @@ export async function queryLogs(
   options: LogQueryOptions = {},
 ): Promise<LogQueryResult> {
   const {
+    searchQueries,
     serverName,
     sessionId,
     method,
@@ -153,6 +154,22 @@ export async function queryLogs(
 
   // Build where conditions
   const conditions = [];
+
+  // Text search (AND logic - all terms must match, each term checks multiple fields with OR)
+  if (searchQueries && searchQueries.length > 0) {
+    for (const query of searchQueries) {
+      const searchPattern = `%${query}%`;
+      const searchConditions = [
+        like(logs.requestJson, searchPattern),
+        like(logs.responseJson, searchPattern),
+        like(logs.method, searchPattern),
+        like(logs.clientName, searchPattern),
+        like(logs.errorJson, searchPattern),
+        like(logs.methodDetail, searchPattern),
+      ];
+      conditions.push(or(...searchConditions));
+    }
+  }
 
   // String filters (support arrays for OR logic)
   if (serverName) {

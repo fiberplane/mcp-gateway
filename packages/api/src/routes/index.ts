@@ -50,6 +50,7 @@ export function createApiRoutes(queries: QueryFunctions): Hono {
    */
   app.get("/logs", async (c) => {
     // Manually extract query params to handle arrays from repeated params
+    const searchQueries = c.req.queries("q");
     const serverNames = c.req.queries("server");
     const sessionIds = c.req.queries("session");
     const clientNames = c.req.queries("client");
@@ -190,6 +191,10 @@ export function createApiRoutes(queries: QueryFunctions): Hono {
     }
 
     const options: LogQueryOptions = {
+      // Search queries (text search)
+      searchQueries:
+        searchQueries && searchQueries.length > 0 ? searchQueries : undefined,
+
       // String filters (support arrays)
       serverName:
         serverNames && serverNames.length > 0

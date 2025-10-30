@@ -7,6 +7,29 @@
 
 import { mock } from "bun:test";
 import { createFilter } from "@fiberplane/mcp-gateway-types";
+import type { ReactNode } from "react";
+
+type FilterBadgeProps = {
+  filter: ReturnType<typeof createFilter>;
+  onRemove?: (id: string) => void;
+  onEdit?: (id: string) => void;
+};
+
+type FilterAutocompleteProps = {
+  suggestions: Array<{ text: string; id?: string }>;
+  open: boolean;
+  onSelect: (suggestion: { text: string; id?: string }) => void;
+  errorContent?: ReactNode;
+  previewContent?: ReactNode;
+};
+
+type CommandFilterInputProps = {
+  onAddFilter: (filter: ReturnType<typeof createFilter>) => void;
+  searchValue: string;
+  onUpdateSearch: (value: string) => void;
+  onCancel?: () => void;
+  initialValue?: string;
+};
 
 /**
  * Mock for FilterBadge component
@@ -14,7 +37,7 @@ import { createFilter } from "@fiberplane/mcp-gateway-types";
  */
 export const mockFilterBadge = () => {
   mock.module("@/components/filter-badge", () => ({
-    FilterBadge: ({ filter, onRemove, onEdit }: any) => (
+    FilterBadge: ({ filter, onRemove, onEdit }: FilterBadgeProps) => (
       <div data-testid="filter-preview" data-filter-badge={filter.field}>
         <span>
           {filter.field} {filter.operator} {String(filter.value)}
@@ -46,15 +69,15 @@ export const mockFilterAutocomplete = () => {
       onSelect,
       errorContent,
       previewContent,
-    }: any) => {
+    }: FilterAutocompleteProps) => {
       if (!open) return null;
       return (
         <div data-testid="autocomplete-dropdown">
           {errorContent}
           {previewContent}
-          {suggestions.map((s: any, i: number) => (
+          {suggestions.map((s, i) => (
             <button
-              key={i}
+              key={s.id || `suggestion-${i}`}
               type="button"
               onClick={() => onSelect(s)}
               data-testid={`suggestion-${i}`}
@@ -80,7 +103,7 @@ export const mockCommandFilterInput = () => {
       onUpdateSearch,
       onCancel,
       initialValue,
-    }: any) => (
+    }: CommandFilterInputProps) => (
       <div data-testid="command-filter-input">
         <input
           data-testid="search-input"
@@ -102,7 +125,11 @@ export const mockCommandFilterInput = () => {
           Add Filter
         </button>
         {onCancel && (
-          <button type="button" data-testid="cancel-edit-btn" onClick={onCancel}>
+          <button
+            type="button"
+            data-testid="cancel-edit-btn"
+            onClick={onCancel}
+          >
             Cancel
           </button>
         )}
@@ -152,9 +179,9 @@ export const mockUseAvailableFilters = () => {
  */
 export const mockNuqs = (
   mockSearchQueries: string[],
-  mockSetSearchQueries: any,
-  mockFilterParams: Record<string, any>,
-  mockSetFilterParams: any,
+  mockSetSearchQueries: (value: string[]) => void,
+  mockFilterParams: Record<string, unknown>,
+  mockSetFilterParams: (updates: Record<string, unknown>) => void,
 ) => {
   mock.module("nuqs", () => ({
     useQueryState: (key: string) => {

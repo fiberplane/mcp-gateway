@@ -24,8 +24,10 @@ class APIClient {
    * String filters (serverName, clientName, sessionId, method) support arrays for multi-select.
    * Numeric filters (duration, tokens) support comparison operators (eq, gt, lt, gte, lte).
    * Arrays are sent as repeated query parameters (e.g., ?client=foo&client=bar).
+   * Search parameter (q) performs text search across request/response content.
    */
   async getLogs(params: {
+    q?: string[];
     serverName?: string | string[];
     clientName?: string | string[];
     sessionId?: string | string[];

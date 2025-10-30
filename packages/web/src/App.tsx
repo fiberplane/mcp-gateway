@@ -138,6 +138,7 @@ function App() {
     queryKey: ["logs", serverName, filterParams, searchQueries],
     queryFn: async ({ pageParam }) =>
       api.getLogs({
+        q: searchQueries,
         serverName,
         ...apiParams,
         limit: 100,
