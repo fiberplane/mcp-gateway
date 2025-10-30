@@ -156,9 +156,18 @@ export function FilterBar({ actions }: FilterBarProps) {
   );
 
   // Convert search queries array back to string for input display
-  // If single term with spaces, it was a quoted search - don't add quotes back
+  // If single term with spaces, it was a quoted search - add quotes back
   // If multiple terms, join with spaces for display
-  const searchValue = useMemo(() => searchQueries.join(" "), [searchQueries]);
+  const searchValue = useMemo(() => {
+    if (searchQueries.length === 0) return "";
+    if (searchQueries.length === 1) {
+      const term = searchQueries[0];
+      // If single term contains spaces, it was a quoted search - add quotes back
+      return term.includes(" ") ? `"${term}"` : term;
+    }
+    // Multiple terms - join with spaces
+    return searchQueries.join(" ");
+  }, [searchQueries]);
 
   const [filterParams, setFilterParams] = useQueryStates(
     {
