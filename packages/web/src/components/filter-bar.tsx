@@ -33,6 +33,9 @@ export function FilterBar({ actions }: FilterBarProps) {
 
   // State for editing filters
   const [editingValue, setEditingValue] = useState<string | undefined>();
+  const [editingFilter, setEditingFilter] = useState<
+    ReturnType<typeof createFilter> | undefined
+  >();
 
   // URL state management via nuqs
   // Search terms stored as comma-separated in URL: ?search=error,warning
@@ -86,7 +89,9 @@ export function FilterBar({ actions }: FilterBarProps) {
     const updatedFilters = addOrReplaceFilter(filters, filter);
     const newParams = filtersToFilterParams(updatedFilters);
     setFilterParams(newParams);
-    setEditingValue(undefined); // Clear editing state
+    // Clear editing state
+    setEditingValue(undefined);
+    setEditingFilter(undefined);
   };
 
   const handleRemoveFilterByField = (field: string) => {
@@ -115,12 +120,27 @@ export function FilterBar({ actions }: FilterBarProps) {
     const filter = filters.find((f) => f.id === filterId);
     if (!filter) return;
 
+    // Store original filter for restoration on cancel
+    setEditingFilter(filter);
+
     // Format filter as text for editing
     const text = formatFilterForEditing(filter);
     setEditingValue(text);
 
-    // Remove the filter (it will be re-added when user submits)
+    // Remove the filter (it will be re-added when user submits or cancelled)
     handleRemoveFilter(filterId);
+  };
+
+  const handleCancelEdit = () => {
+    // Restore original filter if editing was cancelled
+    if (editingFilter) {
+      const updatedFilters = addOrReplaceFilter(filters, editingFilter);
+      const newParams = filtersToFilterParams(updatedFilters);
+      setFilterParams(newParams);
+    }
+    // Clear editing state
+    setEditingValue(undefined);
+    setEditingFilter(undefined);
   };
 
   const handleClearAll = () => {
@@ -161,7 +181,7 @@ export function FilterBar({ actions }: FilterBarProps) {
               searchValue={searchValue}
               onUpdateSearch={handleUpdateSearch}
               initialValue={editingValue}
-              onCancel={() => setEditingValue(undefined)}
+              onCancel={handleCancelEdit}
             />
           </div>
           {actions}

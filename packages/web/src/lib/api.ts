@@ -118,11 +118,11 @@ class APIClient {
   }
 
   /**
-   * Get list of methods with aggregations
+   * Get list of methods
    */
   async getMethods(
     serverName?: string,
-  ): Promise<{ methods: Array<{ method: string; logCount: number }> }> {
+  ): Promise<{ methods: Array<{ method: string }> }> {
     const url = new URL(`${this.baseURL}/methods`, window.location.origin);
     if (serverName) {
       url.searchParams.append("server", serverName);

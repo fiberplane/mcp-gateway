@@ -18,7 +18,7 @@ interface UseAvailableMethodsOptions {
 }
 
 /**
- * Fetch available methods with log counts
+ * Fetch available methods
  *
  * Used in the Method filter submenu to show which methods are in the logs.
  *
@@ -27,7 +27,7 @@ interface UseAvailableMethodsOptions {
  *
  * @example
  * const { data, isLoading } = useAvailableMethods({ enabled: open });
- * data?.methods // [{ method: "tools/call", logCount: 42 }, ...]
+ * data?.methods // [{ method: "tools/call" }, ...]
  */
 export function useAvailableMethods(options: UseAvailableMethodsOptions = {}) {
   const { serverName, enabled = true } = options;
@@ -46,7 +46,7 @@ interface UseAvailableClientsOptions {
 }
 
 /**
- * Fetch available clients with log counts
+ * Fetch available clients
  *
  * Used in the Client filter submenu to show which clients are in the logs.
  *
@@ -55,7 +55,7 @@ interface UseAvailableClientsOptions {
  *
  * @example
  * const { data, isLoading } = useAvailableClients({ enabled: open });
- * data?.clients // [{ clientName: "claude-code", clientVersion: "1.0.0", ... }, ...]
+ * data?.clients // [{ clientName: "claude-code", clientVersion: "1.0.0" }, ...]
  */
 export function useAvailableClients(options: UseAvailableClientsOptions = {}) {
   const { enabled = true } = options;
@@ -76,7 +76,7 @@ interface UseAvailableSessionsOptions {
 }
 
 /**
- * Fetch available sessions with log counts
+ * Fetch available sessions
  *
  * Used in the Session filter submenu to show which sessions are in the logs.
  *
@@ -85,7 +85,7 @@ interface UseAvailableSessionsOptions {
  *
  * @example
  * const { data, isLoading } = useAvailableSessions({ serverName: "my-server", enabled: open });
- * data?.sessions // [{ sessionId: "abc123", serverName: "...", ... }, ...]
+ * data?.sessions // [{ sessionId: "abc123", serverName: "...", startTime: "...", endTime: "..." }, ...]
  */
 export function useAvailableSessions(
   options: UseAvailableSessionsOptions = {},
@@ -106,7 +106,7 @@ interface UseAvailableServersOptions {
 }
 
 /**
- * Fetch available servers with log counts
+ * Fetch available servers
  *
  * Used in the Server filter submenu to show which servers are in the logs.
  *
@@ -115,7 +115,7 @@ interface UseAvailableServersOptions {
  *
  * @example
  * const { data, isLoading } = useAvailableServers({ enabled: open });
- * data?.servers // [{ name: "my-server", logCount: 100, ... }, ...]
+ * data?.servers // [{ name: "my-server", status: "online" }, ...]
  */
 export function useAvailableServers(options: UseAvailableServersOptions = {}) {
   const { enabled = true } = options;
