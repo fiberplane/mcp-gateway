@@ -162,6 +162,7 @@ export function FilterBar({ actions }: FilterBarProps) {
     if (searchQueries.length === 0) return "";
     if (searchQueries.length === 1) {
       const term = searchQueries[0];
+      if (!term) return "";
       // If single term contains spaces, it was a quoted search - add quotes back
       return term.includes(" ") ? `"${term}"` : term;
     }

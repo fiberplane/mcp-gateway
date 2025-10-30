@@ -68,7 +68,9 @@ describe("FilterBarUI", () => {
         />,
       );
 
-      expect(screen.getByRole("combobox", { name: "Command filter input" })).toBeInTheDocument();
+      expect(
+        screen.getByRole("combobox", { name: "Command filter input" }),
+      ).toBeInTheDocument();
     });
 
     test("renders add filter dropdown", () => {

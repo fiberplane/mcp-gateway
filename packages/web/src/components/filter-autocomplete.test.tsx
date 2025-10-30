@@ -399,9 +399,12 @@ describe("FilterAutocomplete", () => {
     });
 
     test("has screen reader announcement for single suggestion", () => {
+      const firstSuggestion = mockSuggestions[0];
+      if (!firstSuggestion) throw new Error("No suggestions available");
+
       render(
         <FilterAutocomplete
-          suggestions={[mockSuggestions[0]]}
+          suggestions={[firstSuggestion]}
           open={true}
           onSelect={onSelect}
           onClose={onClose}

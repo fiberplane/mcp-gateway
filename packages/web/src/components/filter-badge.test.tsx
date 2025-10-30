@@ -174,10 +174,7 @@ describe("FilterBadge", () => {
         value: 100,
       });
 
-      let editedId: string | null = null;
-      const _onEdit = (id: string) => {
-        editedId = id;
-      };
+      const editedId: string | null = null;
 
       // Render without onEdit prop - button should be disabled
       render(<FilterBadge filter={filter} onRemove={() => {}} />);
