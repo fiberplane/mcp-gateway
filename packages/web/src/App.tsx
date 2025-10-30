@@ -167,48 +167,9 @@ function App() {
     [data?.pages],
   );
 
-  // Note: Search is now sent to backend via ?q= parameter for database-level filtering
-  // This client-side filter is kept for backward compatibility and as a fallback
-  // In practice, backend filtering should handle most search needs
-  const filteredLogs = useMemo(() => {
-    if (!searchQueries || searchQueries.length === 0) return allLogs;
-
-    return allLogs.filter((log) => {
-      // Log must match ALL search terms (AND logic)
-      return searchQueries.every((query) => {
-        const searchLower = query.toLowerCase();
-
-        // Build searchable text from safe, explicit fields only
-        // Avoid JSON.stringify which exposes internal data and is slow
-        const searchableFields = [
-          log.method,
-          log.metadata.serverName,
-          log.metadata.client?.name,
-          log.metadata.client?.version,
-          log.metadata.sessionId,
-        ];
-
-        // Add direction-specific fields using discriminated union
-        if (log.direction === "request" && log.request) {
-          searchableFields.push(log.request.method);
-        } else if (log.direction === "response" && log.response) {
-          if (log.response.error) {
-            searchableFields.push(
-              log.response.error.message,
-              log.response.error.code?.toString(),
-            );
-          }
-        }
-
-        const searchableText = searchableFields
-          .filter((field): field is string => field != null && field !== "")
-          .join(" ")
-          .toLowerCase();
-
-        return searchableText.includes(searchLower);
-      });
-    });
-  }, [allLogs, searchQueries]);
+  // Backend handles all search filtering via ?q= parameter
+  // No need for client-side filtering - backend searches the full JSON content
+  const filteredLogs = useMemo(() => allLogs, [allLogs]);
 
   // Defer table updates to keep checkboxes responsive
   // This allows checkbox state to update immediately while table rendering
