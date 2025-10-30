@@ -161,20 +161,14 @@ function App() {
   });
 
   // Flatten all pages into single array
-  // Memoize to prevent unnecessary re-renders when data reference changes but content is same
+  // All filtering (search, duration, tokens, etc.) happens on backend
   const allLogs = useMemo(
     () => data?.pages.flatMap((page) => page.data) ?? [],
     [data?.pages],
   );
 
-  // Backend handles all search filtering via ?q= parameter
-  // No need for client-side filtering - backend searches the full JSON content
-  const filteredLogs = useMemo(() => allLogs, [allLogs]);
-
   // Defer table updates to keep checkboxes responsive
-  // This allows checkbox state to update immediately while table rendering
-  // happens in the background as a lower-priority update
-  const deferredFilteredLogs = useDeferredValue(filteredLogs);
+  const deferredLogs = useDeferredValue(allLogs);
 
   const handleLoadMore = useHandler(() => {
     fetchNextPage();
@@ -299,7 +293,7 @@ function App() {
                         isClearing={isClearing}
                       />
                       <ExportButton
-                        logs={deferredFilteredLogs}
+                        logs={deferredLogs}
                         selectedIds={selectedIds}
                         getLogKey={getLogKey}
                       />
@@ -311,7 +305,7 @@ function App() {
               {/* Log Table - wrapped for horizontal scroll */}
               <div className="overflow-x-auto -mx-4 px-4">
                 <LogTable
-                  logs={deferredFilteredLogs}
+                  logs={deferredLogs}
                   selectedIds={selectedIds}
                   onSelectionChange={setSelectedIds}
                   timeGrouping={timeGrouping}
