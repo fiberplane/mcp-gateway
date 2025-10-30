@@ -167,8 +167,9 @@ function App() {
     [data?.pages],
   );
 
-  // Apply client-side search filtering only (backend handles all field filters)
-  // Search is the only filter not sent to backend
+  // Note: Search is now sent to backend via ?q= parameter for database-level filtering
+  // This client-side filter is kept for backward compatibility and as a fallback
+  // In practice, backend filtering should handle most search needs
   const filteredLogs = useMemo(() => {
     if (!searchQueries || searchQueries.length === 0) return allLogs;
 
