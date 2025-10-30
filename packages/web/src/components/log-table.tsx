@@ -364,9 +364,11 @@ export function LogTable({
       }
 
       const comparison =
-        typeof aValue === "string"
-          ? aValue.localeCompare(bValue as string)
-          : aValue - (bValue as number);
+        typeof aValue === "string" && typeof bValue === "string"
+          ? aValue.localeCompare(bValue)
+          : typeof aValue === "number" && typeof bValue === "number"
+            ? aValue - bValue
+            : 0; // Fallback for type mismatch (shouldn't happen)
 
       return sortDirection === "asc" ? comparison : -comparison;
     });
@@ -432,15 +434,18 @@ export function LogTable({
     setExpandedKey((current) => (current === key ? null : key));
   });
 
-  const handleSelectRow = useHandler((logKey: string, checked: boolean) => {
-    const newSelection = new Set(selectedIds);
-    if (checked) {
-      newSelection.add(logKey);
-    } else {
-      newSelection.delete(logKey);
-    }
-    onSelectionChange(newSelection);
-  });
+  const handleSelectRow = useHandler(
+    (logKey: string, checked: boolean | "indeterminate") => {
+      if (checked === "indeterminate") return;
+      const newSelection = new Set(selectedIds);
+      if (checked) {
+        newSelection.add(logKey);
+      } else {
+        newSelection.delete(logKey);
+      }
+      onSelectionChange(newSelection);
+    },
+  );
 
   const allSelected =
     sortedLogs.length > 0 &&
@@ -529,7 +534,7 @@ export function LogTable({
                   <Checkbox
                     checked={selectedIds.has(logKey)}
                     onCheckedChange={(checked) =>
-                      handleSelectRow(logKey, checked as boolean)
+                      handleSelectRow(logKey, checked)
                     }
                     aria-label={`Select log ${logKey}`}
                   />

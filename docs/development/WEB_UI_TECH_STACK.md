@@ -169,7 +169,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
   <SelectContent>
     {servers.map(server => (
       <SelectItem key={server.name} value={server.name}>
-        {server.name} ({server.logCount})
+        {server.name}
       </SelectItem>
     ))}
   </SelectContent>

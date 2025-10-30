@@ -66,9 +66,12 @@ function FilterIcon({
 // Format value with units if needed
 // Handles both single values and arrays with truncation
 function formatValue(filter: Filter): string {
-  const formatSingleValue = (value: string | number): string => {
+  const formatSingleValue = (
+    value: string | number,
+    field: Filter["field"],
+  ): string => {
     if (typeof value === "number") {
-      return filter.field === "duration" ? `${value}ms` : String(value);
+      return field === "duration" ? `${value}ms` : String(value);
     }
     return value;
   };
@@ -81,20 +84,18 @@ function formatValue(filter: Filter): string {
     if (values.length > 2) {
       const displayValues = values
         .slice(0, 2)
-        .map((v) => formatSingleValue(v as string | number));
+        .map((v) => formatSingleValue(v, filter.field));
       const remainingCount = values.length - 2;
 
       return `${displayValues.join(", ")} +${remainingCount} more`;
     }
 
     // Show all items for arrays with 2 or fewer items
-    return values
-      .map((v) => formatSingleValue(v as string | number))
-      .join(", ");
+    return values.map((v) => formatSingleValue(v, filter.field)).join(", ");
   }
 
   // Handle single values
-  return formatSingleValue(filter.value as string | number);
+  return formatSingleValue(filter.value, filter.field);
 }
 
 export function FilterBadge({ filter, onRemove, onEdit }: FilterBadgeProps) {

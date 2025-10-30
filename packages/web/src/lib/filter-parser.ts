@@ -8,11 +8,14 @@
  * - method contains tools
  */
 
-import type {
-  FilterField,
-  FilterInput,
-  NumericOperator,
-  StringOperator,
+import {
+  type FilterField,
+  type FilterInput,
+  filterFieldSchema,
+  type NumericOperator,
+  numericOperatorSchema,
+  type StringOperator,
+  stringOperatorSchema,
 } from "@fiberplane/mcp-gateway-types";
 import type { ReactNode } from "react";
 import { type FilterParseError, findClosestField } from "./filter-errors";
@@ -131,7 +134,11 @@ export function parseFilterInput(text: string): FilterInput | null {
   );
   if (!fieldMatch) return null;
 
-  const field = fieldMatch[1]?.toLowerCase() as FilterField;
+  const fieldStr = fieldMatch[1]?.toLowerCase();
+  const fieldResult = filterFieldSchema.safeParse(fieldStr);
+  if (!fieldResult.success) return null;
+
+  const field = fieldResult.data;
   const afterField = trimmed.slice(fieldMatch[0]?.length ?? 0);
 
   // Stage 2: Extract operator
@@ -152,20 +159,28 @@ export function parseFilterInput(text: string): FilterInput | null {
     // Numeric field
     const numValue = Number.parseInt(valueStr, 10);
     if (Number.isNaN(numValue) || numValue < 0) return null;
+
+    const operatorResult = numericOperatorSchema.safeParse(operator);
+    if (!operatorResult.success) return null;
+
     return {
       field,
-      operator: operator as NumericOperator,
+      operator: operatorResult.data,
       value: numValue,
-    } as FilterInput;
+    };
   }
 
   // String field
   if (!valueStr) return null;
+
+  const operatorResult = stringOperatorSchema.safeParse(operator);
+  if (!operatorResult.success) return null;
+
   return {
     field,
-    operator: operator as StringOperator,
+    operator: operatorResult.data,
     value: valueStr,
-  } as FilterInput;
+  };
 }
 
 /**
@@ -201,7 +216,16 @@ export function validateFilterInput(text: string): ValidationResult {
     };
   }
 
-  const field = fieldMatch[1]?.toLowerCase() as FilterField;
+  const fieldStr = fieldMatch[1]?.toLowerCase();
+  const fieldResult = filterFieldSchema.safeParse(fieldStr);
+  if (!fieldResult.success) {
+    return {
+      valid: false,
+      error: { type: "incomplete", message: "Invalid field" },
+    };
+  }
+
+  const field = fieldResult.data;
   const afterField = trimmed.slice(fieldMatch[0]?.length ?? 0);
 
   // Check if we have an operator
@@ -284,24 +308,49 @@ export function validateFilterInput(text: string): ValidationResult {
         },
       };
     }
+
+    const operatorResult = numericOperatorSchema.safeParse(operator);
+    if (!operatorResult.success) {
+      return {
+        valid: false,
+        error: {
+          type: "invalid_operator",
+          operator: String(operator),
+          validOperators: [">", "<", "=", ">=", "<="],
+        },
+      };
+    }
+
     return {
       valid: true,
       filter: {
         field,
-        operator: operator as NumericOperator,
+        operator: operatorResult.data,
         value: numValue,
-      } as FilterInput,
+      },
     };
   }
 
   // String field - any non-empty string is valid
+  const operatorResult = stringOperatorSchema.safeParse(operator);
+  if (!operatorResult.success) {
+    return {
+      valid: false,
+      error: {
+        type: "invalid_operator",
+        operator: String(operator),
+        validOperators: ["is", "contains"],
+      },
+    };
+  }
+
   return {
     valid: true,
     filter: {
       field,
-      operator: operator as StringOperator,
+      operator: operatorResult.data,
       value: valueStr,
-    } as FilterInput,
+    },
   };
 }
 
@@ -342,12 +391,15 @@ export function getAutocompleteSuggestions(
       .filter(
         (field) => field.startsWith(lowerText) && field !== lowerText, // Exclude exact matches
       )
-      .map((field) => ({
-        text: `${field} `,
-        display: field,
-        description: FIELD_DESCRIPTIONS[field],
-        example: FIELD_EXAMPLES[field][0],
-      }));
+      .map((field) => {
+        const examples = FIELD_EXAMPLES[field];
+        return {
+          text: `${field} `,
+          display: field,
+          description: FIELD_DESCRIPTIONS[field],
+          example: examples?.[0],
+        };
+      });
   }
 
   // Try to parse field
@@ -356,7 +408,11 @@ export function getAutocompleteSuggestions(
   );
   if (!fieldMatch) return [];
 
-  const field = fieldMatch[1]?.toLowerCase() as FilterField;
+  const fieldStr = fieldMatch[1]?.toLowerCase();
+  const fieldResult = filterFieldSchema.safeParse(fieldStr);
+  if (!fieldResult.success) return [];
+
+  const field = fieldResult.data;
   const afterField = text.slice(fieldMatch[0]?.length ?? 0);
 
   // Stage 2: Operator suggestions

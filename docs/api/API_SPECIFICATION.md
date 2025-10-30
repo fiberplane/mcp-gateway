@@ -56,10 +56,7 @@ interface LogEntry {
 ```typescript
 interface ServerInfo {
   name: string;                // Server identifier
-  logCount: number;            // Total log entries
-  sessionCount: number;        // Number of unique sessions
-  firstSeen: string;           // ISO timestamp
-  lastSeen: string;            // ISO timestamp
+  status: ServerStatus;        // "online" | "offline" | "not-found"
 }
 ```
 
@@ -69,12 +66,8 @@ interface ServerInfo {
 interface SessionInfo {
   sessionId: string;
   serverName: string;
-  logCount: number;
-  client?: ClientInfo;
   startTime: string;           // ISO timestamp
   endTime: string;             // ISO timestamp
-  methods: string[];           // Methods used in session
-  hasErrors: boolean;
 }
 ```
 
@@ -213,17 +206,11 @@ Get list of all servers with captured logs.
   "servers": [
     {
       "name": "figma-server",
-      "logCount": 150,
-      "sessionCount": 3,
-      "firstSeen": "2025-01-15T08:00:00.000Z",
-      "lastSeen": "2025-01-15T12:00:00.000Z"
+      "status": "online"
     },
     {
       "name": "notion-server",
-      "logCount": 89,
-      "sessionCount": 2,
-      "firstSeen": "2025-01-15T09:00:00.000Z",
-      "lastSeen": "2025-01-15T11:30:00.000Z"
+      "status": "online"
     }
   ]
 }
@@ -246,15 +233,8 @@ Get list of sessions, optionally filtered by server.
     {
       "sessionId": "6b33fe88",
       "serverName": "figma-server",
-      "logCount": 45,
-      "client": {
-        "name": "claude-code",
-        "version": "2.0.10"
-      },
       "startTime": "2025-01-15T10:00:00.000Z",
-      "endTime": "2025-01-15T10:45:00.000Z",
-      "methods": ["initialize", "tools/list", "tools/call"],
-      "hasErrors": false
+      "endTime": "2025-01-15T10:45:00.000Z"
     }
   ]
 }

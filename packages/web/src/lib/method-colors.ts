@@ -49,6 +49,13 @@ export const METHOD_COLORS = {
 export const DEFAULT_METHOD_COLOR = "var(--color-method-default)";
 
 /**
+ * Type guard to check if a method is a known method with a predefined color
+ */
+function isKnownMethod(method: string): method is keyof typeof METHOD_COLORS {
+  return method in METHOD_COLORS;
+}
+
+/**
  * Get the color for a method name
  *
  * @param method - The method name (e.g., "tools/call", "initialize")
@@ -59,9 +66,7 @@ export const DEFAULT_METHOD_COLOR = "var(--color-method-default)";
  * getMethodColor("custom/method") // Returns "#e5e7eb" (gray)
  */
 export function getMethodColor(method: string): string {
-  return (
-    METHOD_COLORS[method as keyof typeof METHOD_COLORS] ?? DEFAULT_METHOD_COLOR
-  );
+  return isKnownMethod(method) ? METHOD_COLORS[method] : DEFAULT_METHOD_COLOR;
 }
 
 /**

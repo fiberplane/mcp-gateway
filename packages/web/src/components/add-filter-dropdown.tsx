@@ -6,7 +6,7 @@
 import {
   createFilter,
   type Filter,
-  type FilterField,
+  filterFieldSchema,
 } from "@fiberplane/mcp-gateway-types";
 import { useHandler } from "@/lib/use-handler";
 import { FilterTypeMenu } from "./filter-type-menu";
@@ -46,7 +46,8 @@ export function AddFilterDropdown({
     } = {};
 
     for (const filter of activeFilters) {
-      const field = filter.field as FilterField;
+      // filter.field is already typed as FilterField from discriminated union
+      const field = filter.field;
 
       // Only handle string filters for now (method, client, server, session)
       if (
@@ -72,7 +73,12 @@ export function AddFilterDropdown({
    * Called for EACH filter type when menu closes
    */
   const handleApply = useHandler((filterType: string, values: string[]) => {
-    const field = filterType as FilterField;
+    const fieldResult = filterFieldSchema.safeParse(filterType);
+    if (!fieldResult.success) {
+      return;
+    }
+
+    const field = fieldResult.data;
 
     if (values.length === 0) {
       // Empty array means remove this filter type

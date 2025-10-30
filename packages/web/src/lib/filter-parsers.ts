@@ -90,7 +90,7 @@ export function filtersToFilterParams(
   const params = serializeFiltersToUrl(filters);
 
   // Convert URLSearchParams to object with null for missing fields
-  const result: Record<string, string | null> = {
+  const result: Record<FilterField, string | null> = {
     client: params.get("client"),
     method: params.get("method"),
     session: params.get("session"),
@@ -99,5 +99,5 @@ export function filtersToFilterParams(
     tokens: params.get("tokens"),
   };
 
-  return result as Record<FilterField, string | null>;
+  return result;
 }
