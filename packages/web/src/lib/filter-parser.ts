@@ -28,14 +28,26 @@ export type ParseResult =
   | { type: "search"; query: string };
 
 /**
+ * Autocomplete suggestion types
+ */
+export type SuggestionType =
+  | "field"
+  | "operator"
+  | "value"
+  | "next-step"
+  | "search";
+
+/**
  * Autocomplete suggestion
  */
 export interface FilterSuggestion {
+  type: SuggestionType; // Type of suggestion
   text: string; // Text to insert
   display: string; // Text to display
   description?: string; // Help text
   example?: string; // Example usage
   icon?: ReactNode; // Optional icon
+  hint?: string; // Keyboard hint (e.g., "Tab", "Enter")
 }
 
 /**
@@ -375,8 +387,7 @@ export function getAutocompleteSuggestions(
   const text = input;
 
   // Stage 1: Field suggestions
-  // Only show field suggestions for partial matches (not exact matches)
-  // This allows searching for words like "duration", "method", etc.
+  // Show field suggestions for partial matches AND next steps for exact matches
   if (!text || !text.includes(" ")) {
     const fields: FilterField[] = [
       "tokens",
@@ -387,19 +398,54 @@ export function getAutocompleteSuggestions(
       "server",
     ];
     const lowerText = text.toLowerCase();
-    return fields
-      .filter(
-        (field) => field.startsWith(lowerText) && field !== lowerText, // Exclude exact matches
-      )
-      .map((field) => {
-        const examples = FIELD_EXAMPLES[field];
-        return {
-          text: `${field} `,
-          display: field,
-          description: FIELD_DESCRIPTIONS[field],
+    const matchingFields = fields.filter((field) =>
+      field.startsWith(lowerText),
+    );
+
+    // Check for exact match
+    const exactMatch = matchingFields.find((field) => field === lowerText);
+
+    if (exactMatch) {
+      // Show next-step guidance for exact match
+      const examples = FIELD_EXAMPLES[exactMatch];
+      return [
+        {
+          type: "field",
+          text: `${exactMatch} `,
+          display: exactMatch,
+          description: FIELD_DESCRIPTIONS[exactMatch],
+          hint: "Tab",
+        },
+        {
+          type: "next-step",
+          text: `${exactMatch} `,
+          display: "Add operator...",
+          description: "Continue building filter",
           example: examples?.[0],
-        };
-      });
+          hint: "Space or Tab",
+        },
+        {
+          type: "search",
+          text: exactMatch,
+          display: `Search for "${exactMatch}"`,
+          description: "Search logs for this text",
+          hint: "Enter",
+        },
+      ];
+    }
+
+    // Partial matches - show field suggestions
+    return matchingFields.map((field) => {
+      const examples = FIELD_EXAMPLES[field];
+      return {
+        type: "field",
+        text: `${field} `,
+        display: field,
+        description: FIELD_DESCRIPTIONS[field],
+        example: examples?.[0],
+        hint: "Tab",
+      };
+    });
   }
 
   // Try to parse field
@@ -442,10 +488,12 @@ export function getAutocompleteSuggestions(
       : operators;
 
     return filtered.map(({ op, desc }) => ({
+      type: "operator" as const,
       text: `${field} ${op} `,
       display: op,
       description: desc,
       example: FIELD_EXAMPLES[field]?.find((ex) => ex.includes(op)),
+      hint: "Tab",
     }));
   }
 
@@ -460,9 +508,11 @@ export function getAutocompleteSuggestions(
     return commonValues
       .filter((val) => !valueStr || String(val).startsWith(valueStr))
       .map((val) => ({
+        type: "value" as const,
         text: `${field} ${operator} ${val}`,
         display: String(val),
         description: `${val} tokens`,
+        hint: "Tab",
       }));
   }
 
@@ -472,9 +522,11 @@ export function getAutocompleteSuggestions(
     return commonValues
       .filter((val) => !valueStr || String(val).startsWith(valueStr))
       .map((val) => ({
+        type: "value" as const,
         text: `${field} ${operator} ${val}`,
         display: String(val),
         description: `${val}ms`,
+        hint: "Tab",
       }));
   }
 
@@ -486,8 +538,10 @@ export function getAutocompleteSuggestions(
           !valueStr || server.toLowerCase().includes(valueStr.toLowerCase()),
       )
       .map((server) => ({
+        type: "value" as const,
         text: `${field} ${operator} ${server}`,
         display: server,
+        hint: "Tab",
       }));
   }
 
@@ -498,8 +552,10 @@ export function getAutocompleteSuggestions(
           !valueStr || client.toLowerCase().includes(valueStr.toLowerCase()),
       )
       .map((client) => ({
+        type: "value" as const,
         text: `${field} ${operator} ${client}`,
         display: client,
+        hint: "Tab",
       }));
   }
 
@@ -510,8 +566,10 @@ export function getAutocompleteSuggestions(
           !valueStr || method.toLowerCase().includes(valueStr.toLowerCase()),
       )
       .map((method) => ({
+        type: "value" as const,
         text: `${field} ${operator} ${method}`,
         display: method,
+        hint: "Tab",
       }));
   }
 
@@ -524,9 +582,11 @@ export function getAutocompleteSuggestions(
       )
       .slice(0, 20)
       .map((session) => ({
+        type: "value" as const,
         text: `${field} ${operator} ${session}`,
         display: session,
         description: "Recent session",
+        hint: "Tab",
       }));
   }
 

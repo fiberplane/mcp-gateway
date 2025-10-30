@@ -277,9 +277,9 @@ describe("FilterBarUI", () => {
         />,
       );
 
-      // Add button only appears when there's valid input
-      const addButton = screen.getByRole("button", { name: "Add" });
-      fireEvent.click(addButton);
+      // When editingValue is set, button shows "Update Filter"
+      const updateButton = screen.getByText("Update Filter");
+      fireEvent.click(updateButton);
 
       expect(onAddFilter).toHaveBeenCalled();
     });

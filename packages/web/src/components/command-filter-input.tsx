@@ -73,6 +73,7 @@ export function CommandFilterInput({
   const [inputValue, setInputValue] = useState(initialValue || searchValue);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const blurTimeoutRef = useRef<number | null>(null);
 
   // Fetch available values for autocomplete
@@ -114,10 +115,14 @@ export function CommandFilterInput({
   const trimmed = inputValue.trim();
   const validation = trimmed ? validateFilterInput(inputValue) : null;
 
-  // Input is valid if:
-  // 1. It's a valid filter, OR
-  // 2. It's non-empty (will be treated as search)
+  // Parse input to determine type
+  const parseResult = trimmed ? parseInput(trimmed) : null;
+
+  // Input is valid if it's non-empty (for Enter key to work)
   const isValid = trimmed.length > 0;
+
+  // Show filter UI (button, checkmark) only for valid filter syntax
+  const isFilter = parseResult?.type === "filter";
 
   // Only show errors for truly invalid input (not incomplete or unknown field)
   // "incomplete" errors (missing operator/value) shouldn't show while typing
@@ -137,9 +142,6 @@ export function CommandFilterInput({
       ...new Set(sessionsData?.sessions.map((s) => s.sessionId) ?? []),
     ], // Dedupe session IDs
   });
-
-  // Parse input for preview
-  const parseResult = trimmed ? parseInput(trimmed) : null;
 
   // Create error content for dropdown (using design tokens)
   // Only show error when there are NO suggestions (suggestions = user making progress)
@@ -188,11 +190,14 @@ export function CommandFilterInput({
     if (!result) return;
 
     if (result.type === "filter") {
-      // Add as filter pill - clear input AND search after
+      // Add as filter pill - clear input after
       const filter = createFilter(result.filter);
       onAddFilter(filter);
       setInputValue("");
-      onUpdateSearch(""); // Clear search when adding filter
+      // Only clear search when adding NEW filter, not when updating existing one
+      if (!initialValue) {
+        onUpdateSearch("");
+      }
       setShowAutocomplete(false);
       inputRef.current?.focus();
     } else {
@@ -217,6 +222,24 @@ export function CommandFilterInput({
         setInputValue("");
         onUpdateSearch("");
         onCancel?.(); // Notify parent that editing was cancelled
+      }
+    } else if (e.key === " ") {
+      // Space after exact field match → auto-show operators
+      const trimmed = inputValue.trim();
+      const fields = [
+        "tokens",
+        "duration",
+        "client",
+        "method",
+        "session",
+        "server",
+      ];
+      const isExactFieldMatch = fields.includes(trimmed.toLowerCase());
+
+      if (isExactFieldMatch && !inputValue.includes(" ")) {
+        // Don't prevent default - allow space to be typed
+        // Autocomplete will automatically show operator suggestions
+        setShowAutocomplete(true);
       }
     }
   });
@@ -253,7 +276,10 @@ export function CommandFilterInput({
       const filter = createFilter(result.filter);
       onAddFilter(filter);
       setInputValue("");
-      onUpdateSearch(""); // Clear search when adding filter via autocomplete
+      // Only clear search when adding NEW filter, not when updating existing one
+      if (!initialValue) {
+        onUpdateSearch("");
+      }
       setShowAutocomplete(false);
       // Don't refocus - let user see the filter pill that was added
     } else {
@@ -272,7 +298,7 @@ export function CommandFilterInput({
       : "invalid";
 
   return (
-    <div>
+    <div ref={containerRef}>
       {/* Input row */}
       <div className="relative">
         <div
@@ -302,9 +328,22 @@ export function CommandFilterInput({
               if (blurTimeoutRef.current !== null) {
                 window.clearTimeout(blurTimeoutRef.current);
               }
-              // Delay to allow clicking autocomplete items
+              // Delay to allow clicking autocomplete items and check if focus left
               blurTimeoutRef.current = window.setTimeout(() => {
                 setShowAutocomplete(false);
+
+                // Check if focus has truly left the component (for edit mode)
+                if (initialValue && containerRef.current) {
+                  const activeElement = document.activeElement;
+                  const focusInContainer =
+                    containerRef.current.contains(activeElement);
+
+                  // If focus left the container entirely, exit edit mode
+                  if (!focusInContainer) {
+                    onCancel?.();
+                  }
+                }
+
                 blurTimeoutRef.current = null;
               }, 200);
             }}
@@ -322,8 +361,8 @@ export function CommandFilterInput({
             aria-autocomplete="list"
           />
 
-          {/* Validation icon + status */}
-          {validationState !== "empty" && (
+          {/* Validation status - only show for filters */}
+          {isFilter && (
             <div className="flex items-center gap-2 shrink-0">
               {isValid ? (
                 <>
@@ -341,15 +380,31 @@ export function CommandFilterInput({
             </div>
           )}
 
-          {/* Add button - only show when valid */}
+          {/* Press Enter hint - show for search terms without checkmark */}
+          {!isFilter && isValid && (
+            <span className="text-xs text-muted-foreground">Press Enter</span>
+          )}
+
+          {/* Action button - show for both search and valid filters */}
           {isValid && (
             <Button
               size="sm"
               variant="default"
               onClick={handleAdd}
               className="shrink-0 h-6 leading-1"
+              aria-label={
+                initialValue
+                  ? "Update existing filter with new criteria"
+                  : isFilter
+                    ? "Add this filter to active filters"
+                    : "Search for logs containing this text"
+              }
             >
-              Add
+              {initialValue
+                ? "Update Filter"
+                : isFilter
+                  ? "Add Filter"
+                  : "Search"}
             </Button>
           )}
         </div>

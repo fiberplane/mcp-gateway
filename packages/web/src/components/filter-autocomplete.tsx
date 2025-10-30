@@ -5,6 +5,7 @@
  * as the user types in the command filter input.
  */
 
+import { ArrowRight, Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { FilterSuggestion } from "@/lib/filter-parser";
 import { useHandler } from "@/lib/use-handler";
@@ -165,39 +166,72 @@ export function FilterAutocomplete({
             role="listbox"
             aria-label="Filter suggestions"
           >
-            {suggestions.map((suggestion, index) => (
-              <button
-                key={`${suggestion.text}-${index}`}
-                id={`filter-suggestion-${index}`}
-                type="button"
-                className={cn(
-                  "w-full px-3 py-1.5 text-left",
-                  "flex flex-col gap-0.5",
-                  "transition-colors cursor-pointer",
-                  "focus:outline-none",
-                  index === selectedIndex
-                    ? "bg-primary/10 text-foreground border-l-2 border-primary"
-                    : "hover:bg-primary/5 border-l-2 border-transparent",
-                )}
-                onClick={() => onSelect(suggestion)}
-                onMouseEnter={() => setSelectedIndex(index)}
-                role="option"
-                aria-selected={index === selectedIndex}
-              >
-                {/* Main suggestion text - field name only */}
-                <div
-                  className="flex items-center gap-2"
-                  title={suggestion.description}
-                >
-                  {suggestion.icon && (
-                    <span className="size-4">{suggestion.icon}</span>
+            {suggestions.map((suggestion, index) => {
+              // Style based on suggestion type
+              const isNextStep = suggestion.type === "next-step";
+              const isSearch = suggestion.type === "search";
+
+              return (
+                <button
+                  key={`${suggestion.text}-${index}`}
+                  id={`filter-suggestion-${index}`}
+                  type="button"
+                  className={cn(
+                    "w-full px-3 py-1.5 text-left",
+                    "flex items-center gap-2",
+                    "transition-colors cursor-pointer",
+                    "focus:outline-none",
+                    // Base styles by type
+                    isNextStep && "italic text-muted-foreground bg-muted/30",
+                    isSearch && "bg-primary/5",
+                    // Highlight styles
+                    index === selectedIndex
+                      ? "bg-primary/10 text-foreground border-l-2 border-primary"
+                      : "hover:bg-primary/5 border-l-2 border-transparent",
                   )}
-                  <span className="font-medium text-sm leading-tight">
-                    {suggestion.display}
-                  </span>
-                </div>
-              </button>
-            ))}
+                  onClick={() => onSelect(suggestion)}
+                  onMouseEnter={() => setSelectedIndex(index)}
+                  role="option"
+                  aria-selected={index === selectedIndex}
+                >
+                  {/* Icon based on type */}
+                  {isSearch && (
+                    <Search className="size-4 shrink-0" aria-hidden="true" />
+                  )}
+                  {isNextStep && (
+                    <ArrowRight
+                      className="size-4 shrink-0"
+                      aria-hidden="true"
+                    />
+                  )}
+                  {suggestion.icon && !isSearch && !isNextStep && (
+                    <span className="size-4 shrink-0">{suggestion.icon}</span>
+                  )}
+
+                  {/* Main suggestion text */}
+                  <div className="flex-1 min-w-0">
+                    <div
+                      className="font-medium text-sm leading-tight truncate"
+                      title={suggestion.description}
+                    >
+                      {suggestion.display}
+                    </div>
+                    {suggestion.description && (
+                      <div className="text-xs text-muted-foreground truncate">
+                        {suggestion.description}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Keyboard hint */}
+                  {suggestion.hint && (
+                    <kbd className="px-1.5 py-0.5 text-xs rounded bg-background border border-border shrink-0 ml-auto">
+                      {suggestion.hint}
+                    </kbd>
+                  )}
+                </button>
+              );
+            })}
           </div>
 
           {/* Keyboard hints */}

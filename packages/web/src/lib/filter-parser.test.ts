@@ -309,4 +309,64 @@ describe("getAutocompleteSuggestions", () => {
     expect(values).toContain("1000");
     expect(values).not.toContain("500"); // doesn't start with 1
   });
+
+  test("shows next-step and search suggestions for exact field match", () => {
+    const suggestions = getAutocompleteSuggestions("client");
+
+    // Should have 3 suggestions: field, next-step, search
+    expect(suggestions.length).toBe(3);
+
+    // Check types
+    expect(suggestions[0]?.type).toBe("field");
+    expect(suggestions[1]?.type).toBe("next-step");
+    expect(suggestions[2]?.type).toBe("search");
+
+    // Check displays
+    expect(suggestions[0]?.display).toBe("client");
+    expect(suggestions[1]?.display).toBe("Add operator...");
+    expect(suggestions[2]?.display).toBe('Search for "client"');
+  });
+
+  test("suggestions include keyboard hints", () => {
+    const suggestions = getAutocompleteSuggestions("client");
+
+    // Field suggestion has Tab hint
+    expect(suggestions[0]?.hint).toBe("Tab");
+
+    // Next-step suggestion has Space or Tab hint
+    expect(suggestions[1]?.hint).toBe("Space or Tab");
+
+    // Search suggestion has Enter hint
+    expect(suggestions[2]?.hint).toBe("Enter");
+  });
+
+  test("partial field matches have correct type", () => {
+    const suggestions = getAutocompleteSuggestions("cl");
+
+    // All suggestions should be field type
+    suggestions.forEach((s) => {
+      expect(s.type).toBe("field");
+      expect(s.hint).toBe("Tab");
+    });
+  });
+
+  test("operator suggestions have correct type", () => {
+    const suggestions = getAutocompleteSuggestions("tokens ");
+
+    // All suggestions should be operator type
+    suggestions.forEach((s) => {
+      expect(s.type).toBe("operator");
+      expect(s.hint).toBe("Tab");
+    });
+  });
+
+  test("value suggestions have correct type", () => {
+    const suggestions = getAutocompleteSuggestions("tokens > ");
+
+    // All suggestions should be value type
+    suggestions.forEach((s) => {
+      expect(s.type).toBe("value");
+      expect(s.hint).toBe("Tab");
+    });
+  });
 });

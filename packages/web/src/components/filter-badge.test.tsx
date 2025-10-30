@@ -70,7 +70,7 @@ describe("FilterBadge", () => {
       expect(screen.getByText("tools/call")).toBeInTheDocument();
     });
 
-    test("renders array filter with multiple values", () => {
+    test("shows count for multi-value non-method filters (2 values)", () => {
       const filter = createFilter({
         field: "client",
         operator: "is",
@@ -80,10 +80,10 @@ describe("FilterBadge", () => {
       render(<FilterBadge filter={filter} onRemove={() => {}} />);
 
       expect(screen.getByText("Client")).toBeInTheDocument();
-      expect(screen.getByText("claude-code, cursor")).toBeInTheDocument();
+      expect(screen.getByText("(2 values)")).toBeInTheDocument();
     });
 
-    test("truncates array filters with more than 2 values", () => {
+    test("shows count for multi-value non-method filters (4 values)", () => {
       const filter = createFilter({
         field: "server",
         operator: "is",
@@ -92,7 +92,7 @@ describe("FilterBadge", () => {
 
       render(<FilterBadge filter={filter} onRemove={() => {}} />);
 
-      expect(screen.getByText("server1, server2 +2 more")).toBeInTheDocument();
+      expect(screen.getByText("(4 values)")).toBeInTheDocument();
     });
 
     test("renders multiple method pills for array values", () => {
@@ -121,6 +121,32 @@ describe("FilterBadge", () => {
       expect(screen.getByText("tools/list")).toBeInTheDocument();
       expect(screen.getByText("resources/read")).toBeInTheDocument();
       expect(screen.getByText("+1 more")).toBeInTheDocument();
+    });
+
+    test("shows count for multi-value non-method filters", () => {
+      const filter = createFilter({
+        field: "client",
+        operator: "is",
+        value: ["claude-code", "cursor", "vscode"],
+      });
+
+      render(<FilterBadge filter={filter} onRemove={() => {}} />);
+
+      expect(screen.getByText("Client")).toBeInTheDocument();
+      expect(screen.getByText("(3 values)")).toBeInTheDocument();
+    });
+
+    test("shows single value for single-item arrays", () => {
+      const filter = createFilter({
+        field: "server",
+        operator: "is",
+        value: ["test-server"],
+      });
+
+      render(<FilterBadge filter={filter} onRemove={() => {}} />);
+
+      expect(screen.getByText("test-server")).toBeInTheDocument();
+      expect(screen.queryByText("(1 values)")).not.toBeInTheDocument();
     });
   });
 
@@ -184,6 +210,47 @@ describe("FilterBadge", () => {
 
       editButton.click();
       expect(editedId).toBe(null);
+    });
+
+    test("disables edit button for multi-value filters", () => {
+      const filter = createFilter({
+        field: "client",
+        operator: "is",
+        value: ["claude-code", "cursor"],
+      });
+
+      let editCalled = false;
+      const onEdit = () => {
+        editCalled = true;
+      };
+
+      render(
+        <FilterBadge filter={filter} onRemove={() => {}} onEdit={onEdit} />,
+      );
+
+      const editButton = screen.getByLabelText(/Edit filter/i);
+      expect(editButton).toBeDisabled();
+
+      editButton.click();
+      expect(editCalled).toBe(false);
+    });
+
+    test("shows tooltip for disabled multi-value filter", () => {
+      const filter = createFilter({
+        field: "method",
+        operator: "is",
+        value: ["tools/call", "tools/list", "resources/read"],
+      });
+
+      render(
+        <FilterBadge filter={filter} onRemove={() => {}} onEdit={() => {}} />,
+      );
+
+      const editButton = screen.getByLabelText(/Edit filter/i);
+      expect(editButton).toHaveAttribute(
+        "title",
+        "This filter has multiple values. Use the dropdown menu to edit.",
+      );
     });
   });
 

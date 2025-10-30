@@ -64,7 +64,8 @@ function FilterIcon({
 }
 
 // Format value with units if needed
-// Handles both single values and arrays with truncation
+// Handles both single values and arrays
+// For multi-value filters, shows count instead of truncating
 function formatValue(filter: Filter): string {
   const formatSingleValue = (
     value: string | number,
@@ -80,18 +81,19 @@ function formatValue(filter: Filter): string {
   if (Array.isArray(filter.value)) {
     const values = filter.value;
 
-    // Truncate long arrays to first 2 items + count
-    if (values.length > 2) {
-      const displayValues = values
-        .slice(0, 2)
-        .map((v) => formatSingleValue(v, filter.field));
-      const remainingCount = values.length - 2;
-
-      return `${displayValues.join(", ")} +${remainingCount} more`;
+    // For multi-value filters (more than 1 item), show count
+    // This makes it clear that editing is blocked for these
+    if (values.length > 1) {
+      return `(${values.length} values)`;
     }
 
-    // Show all items for arrays with 2 or fewer items
-    return values.map((v) => formatSingleValue(v, filter.field)).join(", ");
+    // Single item array - show the value
+    if (values.length === 1 && values[0] !== undefined) {
+      return formatSingleValue(values[0], filter.field);
+    }
+
+    // Empty array (shouldn't happen, but handle gracefully)
+    return "(empty)";
   }
 
   // Handle single values
@@ -103,6 +105,9 @@ export function FilterBadge({ filter, onRemove, onEdit }: FilterBadgeProps) {
   const operatorLabel = OPERATOR_LABELS[filter.operator] || filter.operator;
   const value = formatValue(filter);
 
+  // Detect multi-value filters
+  const isMultiValue = Array.isArray(filter.value) && filter.value.length > 1;
+
   // Method filters get a purple badge for the value (matching Figma)
   const shouldHighlightValue = filter.field === "method";
 
@@ -112,15 +117,27 @@ export function FilterBadge({ filter, onRemove, onEdit }: FilterBadgeProps) {
       ? `${fieldLabel} ${operatorLabel} ${filter.value.join(" or ")}`
       : `${fieldLabel} ${operatorLabel} ${value}`;
 
+  // Determine if editing is allowed
+  const canEdit = onEdit && !isMultiValue;
+  const editTooltip = isMultiValue
+    ? "This filter has multiple values. Use the dropdown menu to edit."
+    : undefined;
+
   return (
     <div className="inline-flex items-center gap-2 h-8 px-2 border border-foreground rounded-md bg-card">
       {/* Clickable area for editing */}
       <button
         type="button"
-        onClick={() => onEdit?.(filter.id)}
-        className="inline-flex items-center gap-2 hover:opacity-70 transition-opacity cursor-pointer disabled:cursor-default disabled:opacity-100"
-        disabled={!onEdit}
+        onClick={() => canEdit && onEdit(filter.id)}
+        className={cn(
+          "inline-flex items-center gap-2 transition-opacity",
+          canEdit
+            ? "hover:opacity-70 cursor-pointer"
+            : "cursor-default opacity-100",
+        )}
+        disabled={!canEdit}
         aria-label={`Edit filter: ${label}`}
+        title={editTooltip}
       >
         {/* Icon */}
         <FilterIcon field={filter.field} className="text-muted-foreground" />
