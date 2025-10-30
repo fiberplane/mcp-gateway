@@ -1,6 +1,10 @@
 /**
  * Filter bar with unified input, active search terms, filter badges, and controls.
  * Filter state is synced with URL parameters via nuqs.
+ *
+ * Implements presenter/container pattern:
+ * - FilterBarUI (below): Pure presentation component, easy to test
+ * - FilterBar (export): Container with URL state management
  */
 
 import type { createFilter } from "@fiberplane/mcp-gateway-types";
@@ -26,6 +30,112 @@ interface FilterBarProps {
    */
   actions?: ReactNode;
 }
+
+/**
+ * FilterBarUI - Pure presentation component (Presenter)
+ * Receives all state and callbacks as props, making it easy to test
+ */
+export interface FilterBarUIProps {
+  filters: ReturnType<typeof createFilter>[];
+  searchValue: string;
+  announcement: string;
+  editingValue: string | undefined;
+  hasActiveItems: boolean;
+  searchQueryCount: number;
+  onAddFilter: (filter: ReturnType<typeof createFilter>) => void;
+  onUpdateSearch: (value: string) => void;
+  onRemoveFilter: (filterId: string) => void;
+  onEditFilter: (filterId: string) => void;
+  onCancelEdit: () => void;
+  onClearAll: () => void;
+  onRemoveFilterByField: (field: string) => void;
+  actions?: ReactNode;
+}
+
+export function FilterBarUI({
+  filters,
+  searchValue,
+  announcement,
+  editingValue,
+  hasActiveItems,
+  searchQueryCount,
+  onAddFilter,
+  onUpdateSearch,
+  onRemoveFilter,
+  onEditFilter,
+  onCancelEdit,
+  onClearAll,
+  onRemoveFilterByField,
+  actions,
+}: FilterBarUIProps) {
+  return (
+    <>
+      {/* Visually hidden live region for screen reader announcements */}
+      {/* biome-ignore lint/a11y/useSemanticElements: div with role="status" is the correct ARIA pattern for live regions */}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {announcement}
+      </div>
+
+      <div className="flex flex-col gap-2">
+        {/* Row 1: Unified input + Action buttons */}
+        <div className="flex items-center gap-3">
+          <div className="flex-1">
+            <CommandFilterInput
+              onAddFilter={onAddFilter}
+              searchValue={searchValue}
+              onUpdateSearch={onUpdateSearch}
+              initialValue={editingValue}
+              onCancel={onCancelEdit}
+            />
+          </div>
+          {actions}
+        </div>
+
+        {/* Row 2: Search pills + Filter pills */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Add filter button - always first for stable position */}
+          <AddFilterDropdown
+            onAdd={onAddFilter}
+            onRemove={onRemoveFilterByField}
+            activeFilters={filters}
+          />
+
+          {/* Active filter badges */}
+          {filters.map((filter) => (
+            <FilterBadge
+              key={filter.id}
+              filter={filter}
+              onRemove={onRemoveFilter}
+              onEdit={onEditFilter}
+            />
+          ))}
+
+          {/* Clear all button - positioned right after pills */}
+          {hasActiveItems && (
+            <button
+              type="button"
+              onClick={onClearAll}
+              aria-label={`Clear all ${filters.length} filter${filters.length === 1 ? "" : "s"}${searchQueryCount > 0 ? ` and ${searchQueryCount} search term${searchQueryCount === 1 ? "" : "s"}` : ""}`}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            >
+              Clear all
+            </button>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+/**
+ * FilterBar - Container component with URL state management (Container)
+ * Wraps FilterBarUI and provides state from nuqs hooks
+ */
 
 export function FilterBar({ actions }: FilterBarProps) {
   // Live region announcement for screen readers
@@ -160,65 +270,21 @@ export function FilterBar({ actions }: FilterBarProps) {
   const hasActiveItems = filters.length > 0 || searchValue.length > 0;
 
   return (
-    <>
-      {/* Visually hidden live region for screen reader announcements */}
-      {/* biome-ignore lint/a11y/useSemanticElements: div with role="status" is the correct ARIA pattern for live regions */}
-      <div
-        role="status"
-        aria-live="polite"
-        aria-atomic="true"
-        className="sr-only"
-      >
-        {announcement}
-      </div>
-
-      <div className="flex flex-col gap-2">
-        {/* Row 1: Unified input + Action buttons */}
-        <div className="flex items-center gap-3">
-          <div className="flex-1">
-            <CommandFilterInput
-              onAddFilter={handleAddFilter}
-              searchValue={searchValue}
-              onUpdateSearch={handleUpdateSearch}
-              initialValue={editingValue}
-              onCancel={handleCancelEdit}
-            />
-          </div>
-          {actions}
-        </div>
-
-        {/* Row 2: Search pills + Filter pills */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Add filter button - always first for stable position */}
-          <AddFilterDropdown
-            onAdd={handleAddFilter}
-            onRemove={handleRemoveFilterByField}
-            activeFilters={filters}
-          />
-
-          {/* Active filter badges */}
-          {filters.map((filter) => (
-            <FilterBadge
-              key={filter.id}
-              filter={filter}
-              onRemove={handleRemoveFilter}
-              onEdit={handleEditFilter}
-            />
-          ))}
-
-          {/* Clear all button - positioned right after pills */}
-          {hasActiveItems && (
-            <button
-              type="button"
-              onClick={handleClearAll}
-              aria-label={`Clear all ${filters.length} filter${filters.length === 1 ? "" : "s"}${searchQueries.length > 0 ? ` and ${searchQueries.length} search term${searchQueries.length === 1 ? "" : "s"}` : ""}`}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-            >
-              Clear all
-            </button>
-          )}
-        </div>
-      </div>
-    </>
+    <FilterBarUI
+      filters={filters}
+      searchValue={searchValue}
+      announcement={announcement}
+      editingValue={editingValue}
+      hasActiveItems={hasActiveItems}
+      searchQueryCount={searchQueries.length}
+      onAddFilter={handleAddFilter}
+      onUpdateSearch={handleUpdateSearch}
+      onRemoveFilter={handleRemoveFilter}
+      onEditFilter={handleEditFilter}
+      onCancelEdit={handleCancelEdit}
+      onClearAll={handleClearAll}
+      onRemoveFilterByField={handleRemoveFilterByField}
+      actions={actions}
+    />
   );
 }

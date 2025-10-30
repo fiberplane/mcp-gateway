@@ -7,58 +7,17 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
+import {
+  mockFilterAutocomplete,
+  mockFilterBadge,
+  mockUseAvailableFilters,
+} from "@/test-utils/mocks";
 import { CommandFilterInput } from "./command-filter-input";
 
-// Mock dependencies
-mock.module("@/lib/use-available-filters", () => ({
-  useAvailableServers: () => ({
-    data: { servers: [{ name: "test-server" }] },
-  }),
-  useAvailableClients: () => ({
-    data: { clients: [{ clientName: "claude-code" }] },
-  }),
-  useAvailableMethods: () => ({
-    data: { methods: [{ method: "tools/call" }] },
-  }),
-  useAvailableSessions: () => ({
-    data: { sessions: [{ sessionId: "session-123" }] },
-  }),
-}));
-
-mock.module("./filter-autocomplete", () => ({
-  FilterAutocomplete: ({
-    suggestions,
-    open,
-    onSelect,
-    errorContent,
-    previewContent,
-  }: any) => {
-    if (!open) return null;
-    return (
-      <div data-testid="autocomplete-dropdown">
-        {errorContent}
-        {previewContent}
-        {suggestions.map((s: any, i: number) => (
-          <button
-            key={i}
-            onClick={() => onSelect(s)}
-            data-testid={`suggestion-${i}`}
-          >
-            {s.text}
-          </button>
-        ))}
-      </div>
-    );
-  },
-}));
-
-mock.module("./filter-badge", () => ({
-  FilterBadge: ({ filter }: any) => (
-    <div data-testid="filter-preview">
-      {filter.field} {filter.operator} {String(filter.value)}
-    </div>
-  ),
-}));
+// Set up mocks
+mockUseAvailableFilters();
+mockFilterAutocomplete();
+mockFilterBadge();
 
 describe("CommandFilterInput", () => {
   let onAddFilter: ReturnType<typeof mock>;
