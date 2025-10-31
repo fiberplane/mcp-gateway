@@ -1,15 +1,25 @@
+import {
+  brandOperatorValue,
+  isClientFilter,
+  isDurationFilter,
+  isMethodFilter,
+  isServerFilter,
+  isSessionFilter,
+  isTokensFilter,
+  type OperatorPrefixedValue,
+} from "@fiberplane/mcp-gateway-types";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useQueryState, useQueryStates } from "nuqs";
-import { useDeferredValue, useMemo, useState } from "react";
+import { useDeferredValue, useId, useMemo, useState } from "react";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ExportButton } from "./components/export-button";
+import { FiberplaneLogo } from "./components/fiberplane-logo";
 import { FilterBar } from "./components/filter-bar";
 import { LogTable } from "./components/log-table";
 import { Pagination } from "./components/pagination";
 import { ServerTabs } from "./components/server-tabs";
-import { SettingsMenu } from "./components/settings-menu";
+import { SettingsDropdown } from "./components/settings-dropdown";
 import { StreamingBadge } from "./components/streaming-badge";
-import { TopNavigation } from "./components/top-navigation";
 import { api } from "./lib/api";
 import {
   filterParamsToFilters,
@@ -19,7 +29,29 @@ import {
 import { useHandler } from "./lib/use-handler";
 import { getLogKey } from "./lib/utils";
 
+/**
+ * API parameters for getLogs query
+ */
+type GetLogsParams = Parameters<typeof api.getLogs>[0];
+
+/**
+ * Helper to format string filter value with operator prefix for API
+ * Converts filter operator and value into "operator:value" format with branded type
+ * @example formatStringFilter("is", "claude-code") => "is:claude-code"
+ * @example formatStringFilter("contains", ["foo", "bar"]) => ["contains:foo", "contains:bar"]
+ */
+function formatStringFilter(
+  operator: string,
+  value: string | string[],
+): OperatorPrefixedValue | OperatorPrefixedValue[] {
+  if (Array.isArray(value)) {
+    return value.map((v) => brandOperatorValue(`${operator}:${v}`));
+  }
+  return brandOperatorValue(`${operator}:${value}`);
+}
+
 function App() {
+  const logsPanelId = useId();
   const queryClient = useQueryClient();
   const [serverName, setServerName] = useState<string | undefined>();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -50,73 +82,78 @@ function App() {
   // Extract filters and convert to API parameters
   // Backend now supports all filter types with proper operators
   const apiParams = useMemo(() => {
-    const params: Parameters<typeof api.getLogs>[0] = {};
+    const params: GetLogsParams = {};
 
-    // Extract each filter type
+    // Helper to extract first value from array or return single value
+    const firstValue = (value: string | number | (string | number)[]) =>
+      Array.isArray(value) ? value[0] : value;
+
+    // Map numeric operators to API param names
+    const numericOperatorMap: Record<
+      string,
+      Record<string, keyof GetLogsParams>
+    > = {
+      duration: {
+        eq: "durationEq",
+        gt: "durationGt",
+        lt: "durationLt",
+        gte: "durationGte",
+        lte: "durationLte",
+      },
+      tokens: {
+        eq: "tokensEq",
+        gt: "tokensGt",
+        lt: "tokensLt",
+        gte: "tokensGte",
+        lte: "tokensLte",
+      },
+    };
+
+    // Process each filter using type predicates
     for (const filter of filters) {
-      // Use type guards to safely narrow filter types
-      if (filter.field === "client") {
-        params.clientName = filter.value; // Properly typed by discriminated union
-      } else if (filter.field === "session") {
-        params.sessionId = filter.value;
-      } else if (filter.field === "method") {
-        params.method = filter.value;
-      } else if (filter.field === "duration") {
-        // Map operator to specific param
-        switch (filter.operator) {
-          case "eq":
-            params.durationEq = filter.value;
-            break;
-          case "gt":
-            params.durationGt = Array.isArray(filter.value)
-              ? filter.value[0]
-              : filter.value;
-            break;
-          case "lt":
-            params.durationLt = Array.isArray(filter.value)
-              ? filter.value[0]
-              : filter.value;
-            break;
-          case "gte":
-            params.durationGte = Array.isArray(filter.value)
-              ? filter.value[0]
-              : filter.value;
-            break;
-          case "lte":
-            params.durationLte = Array.isArray(filter.value)
-              ? filter.value[0]
-              : filter.value;
-            break;
+      // Client filter
+      if (isClientFilter(filter)) {
+        params.clientName = formatStringFilter(
+          filter.operator,
+          filter.value,
+        ) as never;
+      }
+      // Session filter
+      else if (isSessionFilter(filter)) {
+        params.sessionId = formatStringFilter(
+          filter.operator,
+          filter.value,
+        ) as never;
+      }
+      // Method filter
+      else if (isMethodFilter(filter)) {
+        params.method = formatStringFilter(
+          filter.operator,
+          filter.value,
+        ) as never;
+      }
+      // Server filter
+      else if (isServerFilter(filter)) {
+        params.serverName = formatStringFilter(
+          filter.operator,
+          filter.value,
+        ) as never;
+      }
+      // Duration filter
+      else if (isDurationFilter(filter)) {
+        const operatorMap = numericOperatorMap.duration;
+        const paramKey = operatorMap?.[filter.operator];
+        if (paramKey) {
+          params[paramKey] = firstValue(filter.value) as never;
         }
-      } else if (filter.field === "tokens") {
-        // Map operator to specific param
-        switch (filter.operator) {
-          case "eq":
-            params.tokensEq = filter.value;
-            break;
-          case "gt":
-            params.tokensGt = Array.isArray(filter.value)
-              ? filter.value[0]
-              : filter.value;
-            break;
-          case "lt":
-            params.tokensLt = Array.isArray(filter.value)
-              ? filter.value[0]
-              : filter.value;
-            break;
-          case "gte":
-            params.tokensGte = Array.isArray(filter.value)
-              ? filter.value[0]
-              : filter.value;
-            break;
-          case "lte":
-            params.tokensLte = Array.isArray(filter.value)
-              ? filter.value[0]
-              : filter.value;
-            break;
+      }
+      // Tokens filter
+      else if (isTokensFilter(filter)) {
+        const operatorMap = numericOperatorMap.tokens;
+        const paramKey = operatorMap?.[filter.operator];
+        if (paramKey) {
+          params[paramKey] = firstValue(filter.value) as never;
         }
-      } else if (filter.field === "server") {
-        params.serverName = filter.value;
       }
     }
 
@@ -135,7 +172,7 @@ function App() {
     error,
   } = useInfiniteQuery({
     // Include URL state in queryKey so query automatically refetches when params change
-    queryKey: ["logs", serverName, filterParams, searchQueries],
+    queryKey: ["logs", serverName, apiParams, searchQueries],
     queryFn: async ({ pageParam }) =>
       api.getLogs({
         q:
@@ -221,18 +258,33 @@ function App() {
 
   return (
     <div className="min-h-screen bg-background">
-      <TopNavigation />
+      <header className="bg-card border-b border-border">
+        <div className="flex items-center justify-between px-6 py-6">
+          <div className="flex items-center gap-3">
+            <FiberplaneLogo className="text-foreground shrink-0" />
+            <span className="text-base font-medium text-foreground">
+              Fiberplane
+            </span>
+          </div>
+        </div>
+      </header>
 
       <main className="max-w-[1600px] mx-auto px-6 py-6">
-        <h1 className="text-2xl font-semibold text-foreground mb-6">
-          MCP server logs
-        </h1>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-semibold text-foreground">
+            MCP server logs
+          </h1>
+          <SettingsDropdown
+            onClearSessions={handleClearSessions}
+            isClearing={isClearing}
+          />
+        </div>
 
         <div className="mb-6">
           <ServerTabs
             value={serverName}
             onChange={handleServerChange}
-            panelId="logs-panel"
+            panelId={logsPanelId}
           />
         </div>
 
@@ -255,9 +307,8 @@ function App() {
         ) : (
           <>
             {/* Combined container: Filter Bar + Log Table with white background and border */}
-            {/* biome-ignore lint/correctness/useUniqueElementIds: Static ID needed for ARIA tabpanel association */}
             <div
-              id="logs-panel"
+              id={logsPanelId}
               role="tabpanel"
               className="bg-card rounded-lg border border-border p-4 gap-6 grid"
             >
@@ -289,10 +340,6 @@ function App() {
                         isStreaming={isStreaming}
                         onToggle={handleStreamingToggle}
                       />
-                      <SettingsMenu
-                        onClearSessions={handleClearSessions}
-                        isClearing={isClearing}
-                      />
                       <ExportButton
                         logs={deferredLogs}
                         selectedIds={selectedIds}
@@ -305,12 +352,27 @@ function App() {
 
               {/* Log Table - wrapped for horizontal scroll */}
               <div className="overflow-x-auto -mx-4 px-4">
-                <LogTable
-                  logs={deferredLogs}
-                  selectedIds={selectedIds}
-                  onSelectionChange={setSelectedIds}
-                  timeGrouping={timeGrouping}
-                />
+                {deferredLogs.length === 0 ? (
+                  <div className="p-10 text-center text-muted-foreground">
+                    {filters.length > 0 || searchQueries?.length ? (
+                      <>
+                        <p className="mb-2">No logs match your filters</p>
+                        <p className="text-sm">
+                          Try adjusting your filters or search terms
+                        </p>
+                      </>
+                    ) : (
+                      <p>No logs captured yet</p>
+                    )}
+                  </div>
+                ) : (
+                  <LogTable
+                    logs={deferredLogs}
+                    selectedIds={selectedIds}
+                    onSelectionChange={setSelectedIds}
+                    timeGrouping={timeGrouping}
+                  />
+                )}
               </div>
             </div>
 

@@ -40,9 +40,16 @@ interface FilterValueSubmenuProps {
   selectedValues: string[];
 
   /**
-   * Callback when selection changes
+   * Initial operator value (preserves existing filter operator)
    */
-  onSelectionChange: (values: string[]) => void;
+  initialOperator?: "is" | "contains";
+
+  /**
+   * Callback when selection changes
+   * @param values - Selected values
+   * @param operator - Selected operator (is or contains)
+   */
+  onSelectionChange: (values: string[], operator: "is" | "contains") => void;
 
   /**
    * Whether data is loading
@@ -65,12 +72,16 @@ export function FilterValueSubmenu({
   icon,
   values,
   selectedValues,
+  initialOperator,
   onSelectionChange,
   isLoading = false,
   showColorPills = false,
   searchPlaceholder = "Search...",
 }: FilterValueSubmenuProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [operator, setOperator] = useState<"is" | "contains">(
+    initialOperator ?? "is",
+  );
 
   // Filter values based on search query
   const filteredValues = useMemo(() => {
@@ -88,15 +99,18 @@ export function FilterValueSubmenu({
 
     if (isSelected) {
       // Remove from selection
-      onSelectionChange(selectedValues.filter((v) => v !== value));
+      onSelectionChange(
+        selectedValues.filter((v) => v !== value),
+        operator,
+      );
     } else {
       // Add to selection
-      onSelectionChange([...selectedValues, value]);
+      onSelectionChange([...selectedValues, value], operator);
     }
   };
 
   const handleClearAll = () => {
-    onSelectionChange([]);
+    onSelectionChange([], operator);
     setSearchQuery("");
   };
 
@@ -127,6 +141,41 @@ export function FilterValueSubmenu({
               className="flex-1 text-sm bg-transparent outline-none placeholder:text-muted-foreground"
               aria-label={`Search ${label.toLowerCase()}`}
             />
+          </div>
+
+          {/* Operator Selection */}
+          <div className="px-2 py-1.5 mb-1 border-b border-border">
+            <div className="text-xs font-medium text-muted-foreground mb-1.5">
+              Match type
+            </div>
+            <div className="flex gap-1">
+              <button
+                type="button"
+                onClick={() => setOperator("is")}
+                className={`flex-1 px-2 py-1 text-xs rounded transition-colors ${
+                  operator === "is"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted hover:bg-muted/80"
+                }`}
+                aria-label="Exact match"
+                title="Exact match - only shows logs where the value matches exactly"
+              >
+                Exact match
+              </button>
+              <button
+                type="button"
+                onClick={() => setOperator("contains")}
+                className={`flex-1 px-2 py-1 text-xs rounded transition-colors ${
+                  operator === "contains"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted hover:bg-muted/80"
+                }`}
+                aria-label="Contains"
+                title="Contains - shows logs where the value contains the search term"
+              >
+                Contains
+              </button>
+            </div>
           </div>
 
           {/* Clear All Button */}

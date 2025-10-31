@@ -191,6 +191,23 @@ export type FilterState = z.infer<typeof filterStateSchema>;
 // ============================================================================
 
 /**
+ * Branded type for operator-prefixed filter values
+ * Prevents mixing raw strings with formatted API values
+ * @example "is:claude-code" | "contains:error"
+ */
+export type OperatorPrefixedValue = string & {
+  readonly __brand: "operator:value";
+};
+
+/**
+ * Helper to create branded operator-prefixed value
+ * @example brandOperatorValue("is:claude-code")
+ */
+export function brandOperatorValue(value: string): OperatorPrefixedValue {
+  return value as OperatorPrefixedValue;
+}
+
+/**
  * Map filter fields to their allowed operators
  */
 export type FilterOperator<F extends FilterField> = F extends

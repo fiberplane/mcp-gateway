@@ -1,0 +1,9 @@
+# Root Bun configuration
+#
+# NOTE: Running 'bun test' from root will fail immediately with a helpful message.
+# Use 'bun run test' instead to run each workspace's tests with proper config.
+
+[test]
+# Run tests only from the test/ directory (sentinel test)
+# This prevents discovering tests in packages/
+root = "test"

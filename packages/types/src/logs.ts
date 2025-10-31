@@ -66,22 +66,30 @@ export type ApiLogEntry =
   | ApiSseEventLogEntry;
 
 /**
+ * String filter with operator support
+ */
+export interface StringFilter {
+  operator: "is" | "contains";
+  value: string | string[];
+}
+
+/**
  * Query options for log filtering and pagination
  *
- * String fields support arrays for OR logic (e.g., serverName: ["a", "b"] matches logs from server "a" OR "b")
+ * String fields support arrays for OR logic and operators ("is" for exact match, "contains" for partial match)
  * Numeric fields support comparison operators (gt, lt, eq, gte, lte)
  */
 export interface LogQueryOptions {
   // Text search (searches across request/response content)
   searchQueries?: string[]; // Text search terms (AND logic - all terms must match)
 
-  // String filters (support arrays for multi-select)
-  serverName?: string | string[]; // Filter by server name(s) - supports multi-select
-  sessionId?: string | string[]; // Filter by session ID(s) - supports multi-select
-  method?: string | string[]; // Filter by method name(s) - supports multi-select with partial match
-  clientName?: string | string[]; // Filter by client name(s) - supports multi-select
-  clientVersion?: string; // Filter by client version - single value only
-  clientIp?: string; // Filter by client IP - single value only
+  // String filters (support arrays for multi-select and operators)
+  serverName?: StringFilter; // Filter by server name(s) - supports "is" (exact) or "contains" (partial)
+  sessionId?: StringFilter; // Filter by session ID(s) - supports "is" (exact) or "contains" (partial)
+  method?: StringFilter; // Filter by method name(s) - supports "is" (exact) or "contains" (partial)
+  clientName?: StringFilter; // Filter by client name(s) - supports "is" (exact) or "contains" (partial)
+  clientVersion?: string; // Filter by client version - single value only (exact match)
+  clientIp?: string; // Filter by client IP - single value only (exact match)
 
   // Numeric filters (duration in milliseconds)
   durationEq?: number | number[]; // Duration equals (supports array for OR logic)

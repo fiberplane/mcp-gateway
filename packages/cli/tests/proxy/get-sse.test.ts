@@ -4,13 +4,13 @@ import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { McpServer } from "@fiberplane/mcp-gateway-types";
 import {
   InMemorySessionAdapter,
-  McpServer,
+  McpServer as McpServerLib,
   StreamableHttpTransport,
 } from "mcp-lite";
 import { createApp, saveRegistry } from "../helpers/test-app.js";
-import type { Registry } from "./helpers/test-app.js";
 
 // Test harness for MCP server
 interface TestServer {
@@ -21,7 +21,7 @@ interface TestServer {
 
 // Create test MCP server that supports SSE via GET
 function createTestMcpServer(name: string, port: number): TestServer {
-  const mcp = new McpServer({
+  const mcp = new McpServerLib({
     name,
     version: "1.0.0",
   });
@@ -141,33 +141,31 @@ describe("GET /mcp SSE Integration Tests", () => {
       createTestMcpServer("sse-server2", 8402),
     ];
 
-    // Create test registry
-    const registry: Registry = {
-      servers: [
-        {
-          name: "sse-server1",
-          type: "http" as const,
-          url: testServers[0]?.url || "",
-          headers: {},
-          lastActivity: null,
-          exchangeCount: 0,
-        },
-        {
-          name: "sse-server2",
-          type: "http" as const,
-          url: testServers[1]?.url || "",
-          headers: {},
-          lastActivity: null,
-          exchangeCount: 0,
-        },
-      ],
-    };
+    // Create test servers
+    const servers: McpServer[] = [
+      {
+        name: "sse-server1",
+        type: "http" as const,
+        url: testServers[0]?.url || "",
+        headers: {},
+        lastActivity: null,
+        exchangeCount: 0,
+      },
+      {
+        name: "sse-server2",
+        type: "http" as const,
+        url: testServers[1]?.url || "",
+        headers: {},
+        lastActivity: null,
+        exchangeCount: 0,
+      },
+    ];
 
     // Save registry to storage
-    await saveRegistry(storageDir, registry.servers);
+    await saveRegistry(storageDir, servers);
 
     // Create and start gateway app
-    const { app } = await createApp(registry.servers, storageDir);
+    const { app } = await createApp(servers, storageDir);
     const server = Bun.serve({
       port: 8400,
       fetch: app.fetch,

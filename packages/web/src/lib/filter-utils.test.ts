@@ -24,7 +24,7 @@ import {
 // Test Fixtures
 // ============================================================================
 
-const _mockLog: ApiLogEntry = {
+const _mockLog = {
   id: "request-1",
   timestamp: "2024-01-01T00:00:00Z",
   method: "tools/call",
@@ -43,7 +43,7 @@ const _mockLog: ApiLogEntry = {
     method: "tools/call",
     params: {},
   },
-};
+} satisfies ApiLogEntry;
 
 // ============================================================================
 // URL Serialization Tests

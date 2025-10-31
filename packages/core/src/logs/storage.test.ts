@@ -151,7 +151,9 @@ describe("Storage Functions", () => {
 
     test("should filter by server name", async () => {
       const db = getDb(storageDir);
-      const result = await queryLogs(db, { serverName: "server-a" });
+      const result = await queryLogs(db, {
+        serverName: { operator: "is", value: "server-a" },
+      });
 
       expect(result.data).toHaveLength(2);
       expect(
@@ -161,24 +163,157 @@ describe("Storage Functions", () => {
 
     test("should filter by session id", async () => {
       const db = getDb(storageDir);
-      const result = await queryLogs(db, { sessionId: "session-2" });
+      const result = await queryLogs(db, {
+        sessionId: { operator: "is", value: "session-2" },
+      });
 
       expect(result.data).toHaveLength(1);
       expect(result.data[0].metadata.sessionId).toBe("session-2");
     });
 
-    test("should filter by method (partial match)", async () => {
+    test("should filter by method with 'contains' operator (partial match)", async () => {
       const db = getDb(storageDir);
-      const result = await queryLogs(db, { method: "tools" });
+      const result = await queryLogs(db, {
+        method: { operator: "contains", value: "tools" },
+      });
 
       expect(result.data).toHaveLength(2);
       expect(result.data.every((r) => r.method.includes("tools"))).toBe(true);
     });
 
+    test("should filter by method with 'is' operator (exact match)", async () => {
+      const db = getDb(storageDir);
+      const result = await queryLogs(db, {
+        method: { operator: "is", value: "tools/list" },
+      });
+
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].method).toBe("tools/list");
+    });
+
+    test("should filter by client name with 'contains' operator", async () => {
+      const db = getDb(storageDir);
+
+      // Add test record with client metadata
+      await insertLog(
+        db,
+        createTestRecord({
+          timestamp: "2024-01-01T13:00:00Z",
+          method: "test/method",
+          metadata: {
+            serverName: "server-a",
+            sessionId: "session-3",
+            durationMs: 100,
+            httpStatus: 200,
+            client: { name: "inspector-client", version: "0.17.2" },
+          },
+        }),
+      );
+
+      const result = await queryLogs(db, {
+        clientName: { operator: "contains", value: "inspector" },
+      });
+
+      expect(result.data.length).toBeGreaterThan(0);
+      expect(
+        result.data.every((r) => r.metadata.client?.name.includes("inspector")),
+      ).toBe(true);
+    });
+
+    test("should filter by client name with 'is' operator (exact match)", async () => {
+      const db = getDb(storageDir);
+
+      // Add test records
+      await insertLog(
+        db,
+        createTestRecord({
+          timestamp: "2024-01-01T13:00:00Z",
+          metadata: {
+            serverName: "server-a",
+            sessionId: "session-3",
+            durationMs: 100,
+            httpStatus: 200,
+            client: { name: "inspector-client", version: "0.17.2" },
+          },
+        }),
+      );
+      await insertLog(
+        db,
+        createTestRecord({
+          timestamp: "2024-01-01T14:00:00Z",
+          metadata: {
+            serverName: "server-a",
+            sessionId: "session-4",
+            durationMs: 100,
+            httpStatus: 200,
+            client: { name: "inspector", version: "1.0.0" },
+          },
+        }),
+      );
+
+      const result = await queryLogs(db, {
+        clientName: { operator: "is", value: "inspector" },
+      });
+
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].metadata.client?.name).toBe("inspector");
+    });
+
+    test("should filter by session with 'contains' operator (partial match)", async () => {
+      const db = getDb(storageDir);
+
+      // Add test record with UUID session
+      await insertLog(
+        db,
+        createTestRecord({
+          timestamp: "2024-01-01T13:00:00Z",
+          metadata: {
+            serverName: "server-a",
+            sessionId: "f4a3b2c1-1234-5678-9abc-def012345678",
+            durationMs: 100,
+            httpStatus: 200,
+          },
+        }),
+      );
+
+      const result = await queryLogs(db, {
+        sessionId: { operator: "contains", value: "f4" },
+      });
+
+      expect(result.data.length).toBeGreaterThan(0);
+      expect(result.data.some((r) => r.metadata.sessionId.includes("f4"))).toBe(
+        true,
+      );
+    });
+
+    test("should filter by server with 'contains' operator (partial match)", async () => {
+      const db = getDb(storageDir);
+      const result = await queryLogs(db, {
+        serverName: { operator: "contains", value: "server" },
+      });
+
+      expect(result.data).toHaveLength(3);
+      expect(
+        result.data.every((r) => r.metadata.serverName.includes("server")),
+      ).toBe(true);
+    });
+
+    test("should filter by server with 'is' operator (exact match)", async () => {
+      const db = getDb(storageDir);
+      const result = await queryLogs(db, {
+        serverName: { operator: "is", value: "server-a" },
+      });
+
+      expect(result.data).toHaveLength(2);
+      expect(
+        result.data.every((r) => r.metadata.serverName === "server-a"),
+      ).toBe(true);
+    });
+
     test("should filter by multiple server names (OR logic)", async () => {
       const db = getDb(storageDir);
       const result = await queryLogs(db, {
-        serverName: ["server-a", "server-b"],
+        serverName: { operator: "is", value: ["server-a", "server-b"] },
       });
 
       expect(result.data).toHaveLength(3);
@@ -192,7 +327,7 @@ describe("Storage Functions", () => {
     test("should filter by multiple session IDs (OR logic)", async () => {
       const db = getDb(storageDir);
       const result = await queryLogs(db, {
-        sessionId: ["session-1", "session-2"],
+        sessionId: { operator: "is", value: ["session-1", "session-2"] },
       });
 
       expect(result.data).toHaveLength(3);
@@ -205,7 +340,9 @@ describe("Storage Functions", () => {
 
     test("should filter by single server name from array", async () => {
       const db = getDb(storageDir);
-      const result = await queryLogs(db, { serverName: ["server-a"] });
+      const result = await queryLogs(db, {
+        serverName: { operator: "is", value: ["server-a"] },
+      });
 
       expect(result.data).toHaveLength(2);
       expect(
@@ -261,7 +398,7 @@ describe("Storage Functions", () => {
       );
 
       const result = await queryLogs(db, {
-        clientName: ["client-1", "client-2"],
+        clientName: { operator: "is", value: ["client-1", "client-2"] },
       });
 
       expect(result.data).toHaveLength(2);

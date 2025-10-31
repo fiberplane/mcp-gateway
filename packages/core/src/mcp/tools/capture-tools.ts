@@ -55,7 +55,20 @@ Examples:
     inputSchema: SearchRecordsSchema,
     handler: async (args) => {
       try {
-        const result = await deps.query(args);
+        // Convert simple string filters to StringFilter format
+        const queryOptions = {
+          ...args,
+          serverName: args.serverName
+            ? { operator: "is" as const, value: args.serverName }
+            : undefined,
+          sessionId: args.sessionId
+            ? { operator: "is" as const, value: args.sessionId }
+            : undefined,
+          method: args.method
+            ? { operator: "contains" as const, value: args.method }
+            : undefined,
+        };
+        const result = await deps.query(queryOptions);
 
         // Format results for MCP output
         const summary = `Found ${result.data.length} records (limit: ${result.pagination.limit}, hasMore: ${result.pagination.hasMore})`;

@@ -21,6 +21,7 @@ export * from "./logs/query";
 // MCP server exports
 export * from "./mcp/server";
 // Registry exports
+export * from "./registry/errors";
 export * from "./registry/index";
 // Storage exports
 export { getStorageRoot } from "./registry/storage";
@@ -28,3 +29,4 @@ export { getStorageRoot } from "./registry/storage";
 // Utility exports
 export * from "./utils/method-detail";
 export * from "./utils/storage";
+export * from "./utils/url";
