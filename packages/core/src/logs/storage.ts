@@ -6,6 +6,7 @@ import type {
   LogQueryResult,
   ServerInfo,
   SessionInfo,
+  StringFilter,
 } from "@fiberplane/mcp-gateway-types";
 import {
   and,
@@ -122,6 +123,20 @@ export async function updateServerInfoForInitializeRequest(
 }
 
 /**
+ * Normalize string filter value to StringFilter format
+ * Provides backward compatibility for plain string inputs
+ */
+function normalizeStringFilter(
+  value: string | StringFilter | undefined,
+): StringFilter | undefined {
+  if (!value) return undefined;
+  if (typeof value === "string") {
+    return { operator: "is", value };
+  }
+  return value;
+}
+
+/**
  * Query logs with filtering and pagination
  */
 export async function queryLogs(
@@ -130,10 +145,10 @@ export async function queryLogs(
 ): Promise<LogQueryResult> {
   const {
     searchQueries,
-    serverName,
-    sessionId,
-    method,
-    clientName,
+    serverName: serverNameInput,
+    sessionId: sessionIdInput,
+    method: methodInput,
+    clientName: clientNameInput,
     clientVersion,
     clientIp,
     durationEq,
@@ -151,6 +166,20 @@ export async function queryLogs(
     limit = 100,
     order = "desc",
   } = options;
+
+  // Normalize string filters for backward compatibility
+  const serverName = normalizeStringFilter(
+    serverNameInput as string | StringFilter | undefined,
+  );
+  const sessionId = normalizeStringFilter(
+    sessionIdInput as string | StringFilter | undefined,
+  );
+  const method = normalizeStringFilter(
+    methodInput as string | StringFilter | undefined,
+  );
+  const clientName = normalizeStringFilter(
+    clientNameInput as string | StringFilter | undefined,
+  );
 
   // Build where conditions
   const conditions = [];
@@ -197,8 +226,7 @@ export async function queryLogs(
     // Exact match
     if (values.length === 1) {
       const value = values[0];
-      if (value === undefined) return undefined; // Should never happen after filter
-      return eq(column, value);
+      return value ? eq(column, value) : undefined;
     }
     return inArray(column, values as [string, ...string[]]);
   };

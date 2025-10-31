@@ -78,16 +78,19 @@ export interface StringFilter {
  *
  * String fields support arrays for OR logic and operators ("is" for exact match, "contains" for partial match)
  * Numeric fields support comparison operators (gt, lt, eq, gte, lte)
+ *
+ * For backward compatibility, string filter fields also accept plain strings (treated as exact match)
  */
 export interface LogQueryOptions {
   // Text search (searches across request/response content)
   searchQueries?: string[]; // Text search terms (AND logic - all terms must match)
 
   // String filters (support arrays for multi-select and operators)
-  serverName?: StringFilter; // Filter by server name(s) - supports "is" (exact) or "contains" (partial)
-  sessionId?: StringFilter; // Filter by session ID(s) - supports "is" (exact) or "contains" (partial)
-  method?: StringFilter; // Filter by method name(s) - supports "is" (exact) or "contains" (partial)
-  clientName?: StringFilter; // Filter by client name(s) - supports "is" (exact) or "contains" (partial)
+  // Also accept plain strings for backward compatibility (treated as exact match with "is" operator)
+  serverName?: string | StringFilter; // Filter by server name(s) - supports "is" (exact) or "contains" (partial)
+  sessionId?: string | StringFilter; // Filter by session ID(s) - supports "is" (exact) or "contains" (partial)
+  method?: string | StringFilter; // Filter by method name(s) - supports "is" (exact) or "contains" (partial)
+  clientName?: string | StringFilter; // Filter by client name(s) - supports "is" (exact) or "contains" (partial)
   clientVersion?: string; // Filter by client version - single value only (exact match)
   clientIp?: string; // Filter by client IP - single value only (exact match)
 

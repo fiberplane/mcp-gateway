@@ -113,38 +113,28 @@ function App() {
     for (const filter of filters) {
       // Client filter
       if (isClientFilter(filter)) {
-        params.clientName = formatStringFilter(
-          filter.operator,
-          filter.value,
-        ) as never;
+        params.clientName = formatStringFilter(filter.operator, filter.value);
       }
       // Session filter
       else if (isSessionFilter(filter)) {
-        params.sessionId = formatStringFilter(
-          filter.operator,
-          filter.value,
-        ) as never;
+        params.sessionId = formatStringFilter(filter.operator, filter.value);
       }
       // Method filter
       else if (isMethodFilter(filter)) {
-        params.method = formatStringFilter(
-          filter.operator,
-          filter.value,
-        ) as never;
+        params.method = formatStringFilter(filter.operator, filter.value);
       }
       // Server filter
       else if (isServerFilter(filter)) {
-        params.serverName = formatStringFilter(
-          filter.operator,
-          filter.value,
-        ) as never;
+        params.serverName = formatStringFilter(filter.operator, filter.value);
       }
       // Duration filter
       else if (isDurationFilter(filter)) {
         const operatorMap = numericOperatorMap.duration;
         const paramKey = operatorMap?.[filter.operator];
         if (paramKey) {
-          params[paramKey] = firstValue(filter.value) as never;
+          (params as Record<string, number>)[paramKey] = firstValue(
+            filter.value,
+          ) as number;
         }
       }
       // Tokens filter
@@ -152,7 +142,9 @@ function App() {
         const operatorMap = numericOperatorMap.tokens;
         const paramKey = operatorMap?.[filter.operator];
         if (paramKey) {
-          params[paramKey] = firstValue(filter.value) as never;
+          (params as Record<string, number>)[paramKey] = firstValue(
+            filter.value,
+          ) as number;
         }
       }
     }

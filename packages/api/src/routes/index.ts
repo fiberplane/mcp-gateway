@@ -78,13 +78,20 @@ export function createApiRoutes(
         return { operator: defaultOperator, values: params };
       }
 
-      const operator = first.slice(0, colonIndex) as "is" | "contains";
+      // Extract and validate operator from first param
+      const operatorStr = first.slice(0, colonIndex);
+      if (operatorStr !== "is" && operatorStr !== "contains") {
+        // Invalid operator, use default
+        return { operator: defaultOperator, values: params };
+      }
+
+      // Extract values from all params, stripping operator prefix
       const values = params.map((p) => {
         const idx = p.indexOf(":");
         return idx === -1 ? p : p.slice(idx + 1);
       });
 
-      return { operator, values };
+      return { operator: operatorStr, values };
     };
 
     // Manually extract query params to handle arrays from repeated params
@@ -241,13 +248,13 @@ export function createApiRoutes(
       const nonEmptyValues = params.values.filter((v): v is string => !!v);
       if (nonEmptyValues.length === 0) return undefined;
 
-      // TypeScript doesn't know nonEmptyValues[0] exists after filter and length check
       const firstValue = nonEmptyValues[0];
-      if (!firstValue) return undefined; // Should never happen but satisfies TS
-
       return {
         operator: params.operator,
-        value: nonEmptyValues.length === 1 ? firstValue : nonEmptyValues,
+        value:
+          nonEmptyValues.length === 1 && firstValue
+            ? firstValue
+            : nonEmptyValues,
       };
     };
 
