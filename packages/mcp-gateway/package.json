@@ -1,8 +1,8 @@
 {
   "name": "@fiberplane/mcp-gateway",
-  "version": "0.4.2",
-  "description": "Interactive CLI for managing MCP servers and running the gateway",
   "type": "module",
+  "version": "0.4.2",
+  "description": "HTTP server for proxying and observing MCP traffic",
   "keywords": [
     "mcp",
     "gateway",
@@ -11,27 +11,65 @@
     "claude",
     "model-context-protocol"
   ],
-  "homepage": "https://github.com/fiberplane/mcp-gateway#readme",
-  "bugs": {
-    "url": "https://github.com/fiberplane/mcp-gateway/issues"
-  },
+  "license": "Apache-2.0",
+  "author": "Fiberplane <info@fiberplane.com>",
+  "homepage": "https://github.com/fiberplane/mcp-gateway",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/fiberplane/mcp-gateway.git"
   },
-  "license": "Apache-2.0",
-  "author": "Fiberplane <info@fiberplane.com>",
+  "files": [
+    "dist",
+    "public",
+    "README.md",
+    "CHANGELOG.md"
+  ],
   "bin": {
-    "mcp-gateway": "./bin/mcp-gateway.cjs"
+    "mcp-gateway": "dist/cli.js"
   },
+  "sideEffects": false,
   "scripts": {
-    "postinstall": "node postinstall.mjs"
+    "dev": "LOG_LEVEL=debug bun run --watch src/cli.ts",
+    "dev:server": "LOG_LEVEL=debug bun run src/server --watch",
+    "build": "bun run ../../scripts/build.ts && bun run postbuild",
+    "postbuild": "mkdir -p public && cp -r ../web/dist/* public/",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome ci .",
+    "format": "biome check --write .",
+    "prepublishOnly": "bun run build"
   },
-  "optionalDependencies": {
-    "@fiberplane/mcp-gateway-darwin-arm64": "workspace:*",
-    "@fiberplane/mcp-gateway-linux-x64": "workspace:*"
+  "exports": {
+    ".": "./src/index.ts"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/types/index.d.ts",
+        "import": "./dist/index.js"
+      }
+    }
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.4",
+    "@hono/standard-validator": "^0.1.5",
+    "drizzle-orm": "^0.44.6",
+    "hono": "^4.9.8",
+    "libsql": "^0.5.22",
+    "mcp-lite": "^0.8.1",
+    "zod": "^4.1.11"
+  },
+  "devDependencies": {
+    "@fiberplane/mcp-gateway-types": "workspace:*",
+    "@fiberplane/mcp-gateway-core": "workspace:*",
+    "@fiberplane/mcp-gateway-api": "workspace:*",
+    "@fiberplane/mcp-gateway-server": "workspace:*",
+    "@fiberplane/mcp-gateway-web": "workspace:*",
+    "@biomejs/biome": "^2.2.4",
+    "@changesets/cli": "^2.29.7",
+    "@types/bun": "^1.3.0",
+    "@types/node": "^24.7.1",
+    "typescript": "^5"
   }
 }

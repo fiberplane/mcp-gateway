@@ -163,7 +163,9 @@ test("CLI shows help when --help flag is used", async () => {
 
   expect(output).toContain("Usage: mcp-gateway");
   expect(output).toContain("--storage-dir");
-  expect(output).toContain("Interactive CLI for managing MCP servers");
+  expect(output).toContain(
+    "HTTP server for proxying and observing MCP traffic",
+  );
   expect(proc.exitCode).toBe(0);
 });
 
@@ -197,17 +199,14 @@ test("Headless mode: CLI runs without TUI when stdin is not a TTY", async () => 
   const reader = proc.stdout.getReader();
   const decoder = new TextDecoder();
 
-  // Read output until we see both expected messages
+  // Read output until we see the expected message
   const checkOutput = async () => {
     while (true) {
       const { value, done } = await reader.read();
       if (done) break;
       output += decoder.decode(value, { stream: true });
 
-      if (
-        output.includes("MCP Gateway server started") &&
-        output.includes("Running in headless mode")
-      ) {
+      if (output.includes("MCP Gateway server started")) {
         break;
       }
     }
@@ -226,79 +225,105 @@ test("Headless mode: CLI runs without TUI when stdin is not a TTY", async () => 
   expect(output).toContain(
     "MCP Gateway server started at http://localhost:8100",
   );
-  expect(output).toContain("Running in headless mode (no TTY detected)");
 
   await proc.exited;
 });
 
-test("Headless mode: CLI server responds to SIGTERM gracefully", async () => {
-  const proc = Bun.spawn(
-    ["bun", "run", "./src/cli.ts", "--storage-dir", tempDir, "--port", "8200"],
-    {
-      stdin: "pipe",
-      stdout: "pipe",
-      stderr: "pipe",
-      cwd: `${import.meta.dir}/..`,
-    },
-  );
+test(
+  "Headless mode: CLI server responds to SIGTERM gracefully",
+  { timeout: 15000 },
+  async () => {
+    // Use random high port to avoid conflicts
+    const randomPort = 9000 + Math.floor(Math.random() * 1000);
+    const proc = Bun.spawn(
+      [
+        "bun",
+        "run",
+        "./src/cli.ts",
+        "--storage-dir",
+        tempDir,
+        "--port",
+        String(randomPort),
+      ],
+      {
+        stdin: "pipe",
+        stdout: "pipe",
+        stderr: "pipe",
+        cwd: `${import.meta.dir}/..`,
+      },
+    );
 
-  // Continuously read stdout in background to capture all output
-  let stdoutData = "";
-  const stdoutReader = proc.stdout.getReader();
-  const decoder = new TextDecoder();
+    // Continuously read stdout and stderr in background to capture all output
+    let stdoutData = "";
+    let stderrData = "";
+    const stdoutReader = proc.stdout.getReader();
+    const stderrReader = proc.stderr.getReader();
+    const decoder = new TextDecoder();
 
-  const collectOutput = async () => {
-    try {
-      while (true) {
-        const { value, done } = await stdoutReader.read();
-        if (done) break;
-        stdoutData += decoder.decode(value, { stream: true });
+    const collectOutput = async () => {
+      try {
+        while (true) {
+          const { value, done } = await stdoutReader.read();
+          if (done) break;
+          stdoutData += decoder.decode(value, { stream: true });
+        }
+      } catch {
+        // Stream closed, that's fine
       }
-    } catch {
-      // Stream closed, that's fine
-    }
-  };
+    };
 
-  // Start collecting output in background
-  const outputCollector = collectOutput();
-
-  // Wait until we see both "server started" and "headless mode" messages
-  await Promise.race([
-    (async () => {
-      while (
-        !(
-          stdoutData.includes("MCP Gateway server started") &&
-          stdoutData.includes("Running in headless mode")
-        )
-      ) {
-        await new Promise((resolve) => setTimeout(resolve, 50));
+    const collectErrors = async () => {
+      try {
+        while (true) {
+          const { value, done } = await stderrReader.read();
+          if (done) break;
+          stderrData += decoder.decode(value, { stream: true });
+        }
+      } catch {
+        // Stream closed, that's fine
       }
-    })(),
-    new Promise((_, reject) =>
-      setTimeout(
-        () => reject(new Error("Timeout waiting for server start")),
-        3000,
+    };
+
+    // Start collecting output in background
+    const outputCollector = collectOutput();
+    const errorCollector = collectErrors();
+
+    // Wait until we see "server started" message
+    await Promise.race([
+      (async () => {
+        while (!stdoutData.includes("MCP Gateway server started")) {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+      })(),
+      new Promise((_, reject) =>
+        setTimeout(
+          () => {
+            const errorMsg = `Timeout waiting for server start.\nStdout: ${stdoutData}\nStderr: ${stderrData}`;
+            reject(new Error(errorMsg));
+          },
+          10000, // Increase timeout to 10 seconds for slower CI environments
+        ),
       ),
-    ),
-  ]);
+    ]);
 
-  // Now send SIGTERM
-  proc.kill("SIGTERM");
+    // Now send SIGTERM
+    proc.kill("SIGTERM");
 
-  // Give the process a moment to handle SIGTERM and write output
-  await new Promise((resolve) => setTimeout(resolve, 100));
+    // Give the process a moment to handle SIGTERM and write output
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
-  // Wait for process to exit and output collection to complete
-  await Promise.all([proc.exited, outputCollector]);
+    // Wait for process to exit and output collection to complete
+    await Promise.all([proc.exited, outputCollector, errorCollector]);
 
-  const fullOutput = stdoutData;
+    const fullOutput = stdoutData;
 
-  // Verify headless mode message appears
-  expect(fullOutput).toContain("Running in headless mode (no TTY detected)");
+    // Verify server started
+    expect(fullOutput).toContain("MCP Gateway server started");
 
-  // Verify graceful shutdown via exit code
-  // Note: The "Received SIGTERM, shutting down..." message may not always be
-  // captured due to stdout buffering when process.exit() is called immediately
-  // after console.log(). The exit code of 0 confirms the handler ran successfully.
-  expect(proc.exitCode).toBe(0);
-});
+    // Verify graceful shutdown via exit code
+    // Note: The "Received SIGTERM, shutting down..." message may not always be
+    // captured due to stdout buffering when process.exit() is called immediately
+    // after console.log(). The exit code of 0 confirms the handler ran successfully.
+    expect(proc.exitCode).toBe(0);
+  },
+);

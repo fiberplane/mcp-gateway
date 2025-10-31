@@ -1,9 +1,8 @@
 /**
- * Run script for OpenTUI version (v2)
- * This is identical to run.ts but uses the new OpenTUI interface
+ * MCP Gateway CLI - Headless HTTP server for proxying and observing MCP traffic
  */
 
-import { existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
@@ -18,38 +17,20 @@ import {
 } from "@fiberplane/mcp-gateway-core";
 
 import { createApp as createServerApp } from "@fiberplane/mcp-gateway-server";
-import type { Context, ProxyDependencies } from "@fiberplane/mcp-gateway-types";
+import type { ProxyDependencies } from "@fiberplane/mcp-gateway-types";
 import { serve } from "@hono/node-server";
+import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
-import { serveStatic } from "hono/bun";
-import { emitLog, emitRegistryUpdate } from "./events.js";
-import { runOpenTUI } from "./tui/App.js";
-import { useAppStore } from "./tui/store.js";
 import { getVersion } from "./utils/version.js";
 
 /**
  * Find the public directory containing web UI assets.
- * In development: packages/cli/public/
- * In binary: relative to the executable
+ * Located at packages/cli/public/ (built from packages/web/dist/)
  */
-function findPublicDir(): string | undefined {
+function findPublicDir(): string {
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = dirname(__filename);
-
-  // Try relative to the CLI source directory (development)
-  const devPublicDir = join(__dirname, "..", "public");
-  if (existsSync(devPublicDir)) {
-    return devPublicDir;
-  }
-
-  // Try relative to the executable (binary)
-  const binaryPublicDir = join(process.execPath, "..", "public");
-  if (existsSync(binaryPublicDir)) {
-    return binaryPublicDir;
-  }
-
-  // Web UI not available
-  return undefined;
+  return join(__dirname, "..", "public");
 }
 
 function showHelp(): void {
@@ -58,7 +39,7 @@ function showHelp(): void {
 Usage: mcp-gateway [options]
 
 Description:
-  Interactive CLI for managing MCP servers and running the gateway
+  HTTP server for proxying and observing MCP traffic
 
 Options:
   -h, --help                    Show help
@@ -67,14 +48,11 @@ Options:
                                (default: 3333)
   --storage-dir <path>          Storage directory for registry and captures
                                (default: ~/.mcp-gateway)
-  --no-tui                      Run in headless mode without terminal UI
-                               (default: false, auto-detects TTY)
 
 Examples:
   mcp-gateway
   mcp-gateway --port 8080
   mcp-gateway --storage-dir /tmp/mcp-data
-  mcp-gateway --no-tui
   mcp-gateway --help
   mcp-gateway --version
 `);
@@ -108,10 +86,6 @@ export async function runCli(): Promise<void> {
         "storage-dir": {
           type: "string",
           default: undefined,
-        },
-        "no-tui": {
-          type: "boolean",
-          default: false,
         },
       },
       allowPositionals: false,
@@ -267,19 +241,16 @@ export async function runCli(): Promise<void> {
       appLogger: logger,
       proxyDependencies,
       gateway,
-      onProxyEvent: emitLog,
-      onRegistryUpdate: emitRegistryUpdate,
     });
 
     // Create main application that orchestrates everything
     const app = new Hono();
 
-    // Add landing page at root if web UI is available
+    // Add landing page at root
     const publicDir = findPublicDir();
-    if (publicDir) {
-      app.get("/", (c) => {
-        const version = getVersion();
-        return c.html(`
+    app.get("/", (c) => {
+      const version = getVersion();
+      return c.html(`
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -427,8 +398,7 @@ export async function runCli(): Promise<void> {
 </body>
 </html>
         `);
-      });
-    }
+    });
 
     // Mount the MCP protocol server
     app.route("/", serverApp);
@@ -463,52 +433,42 @@ export async function runCli(): Promise<void> {
     });
     app.route("/api", apiApp);
 
-    // Serve Web UI for management (if available)
-    if (publicDir) {
-      // Serve static files under /ui prefix
-      app.use(
-        "/ui/*",
-        serveStatic({
-          root: publicDir,
-          rewriteRequestPath: (path) => path.replace(/^\/ui/, ""),
-        }),
-      );
+    // Serve Web UI for management
+    // Serve static files under /ui prefix
+    app.use(
+      "/ui/*",
+      serveStatic({
+        root: publicDir,
+        rewriteRequestPath: (path) => path.replace(/^\/ui/, ""),
+      }),
+    );
 
-      // Serve index.html for /ui root
-      app.get("/ui", async (c) => {
-        const indexPath = `${publicDir}/index.html`;
-        try {
-          const file = Bun.file(indexPath);
-          const html = await file.text();
-          return c.html(html);
-        } catch {
-          return c.text("Web UI not available", 404);
-        }
-      });
+    // Serve index.html for /ui root
+    app.get("/ui", async (c) => {
+      const indexPath = `${publicDir}/index.html`;
+      try {
+        const html = await readFile(indexPath, "utf-8");
+        return c.html(html);
+      } catch {
+        return c.text("Web UI not available", 404);
+      }
+    });
 
-      // Fallback to index.html for SPA client-side routing under /ui
-      app.get("/ui/*", async (c) => {
-        const indexPath = `${publicDir}/index.html`;
-        try {
-          const file = Bun.file(indexPath);
-          const html = await file.text();
-          return c.html(html);
-        } catch {
-          return c.text("Web UI not available", 404);
-        }
-      });
-    }
+    // Fallback to index.html for SPA client-side routing under /ui
+    app.get("/ui/*", async (c) => {
+      const indexPath = `${publicDir}/index.html`;
+      try {
+        const html = await readFile(indexPath, "utf-8");
+        return c.html(html);
+      } catch {
+        return c.text("Web UI not available", 404);
+      }
+    });
 
     // Start health checks BEFORE server starts to ensure accurate initial status
     // This runs the first health check synchronously before any Web UI requests can be made
     // Health check interval: 5 seconds (5000ms)
-    await gateway.health.start(5000, (updates) => {
-      const updateServerHealth = useAppStore.getState().updateServerHealth;
-      // Update UI state for each health check result
-      for (const update of updates) {
-        updateServerHealth(update.name, update.health, update.lastHealthCheck);
-      }
-    });
+    await gateway.health.start(5000);
 
     // Start server and wait for it to be listening or error
     const server = serve({
@@ -562,51 +522,35 @@ export async function runCli(): Promise<void> {
 
     // biome-ignore lint/suspicious/noConsole: actually want to print to console
     console.log(`✓ MCP Gateway server started at http://localhost:${port}`);
+    // biome-ignore lint/suspicious/noConsole: actually want to print to console
+    console.log(`  Web UI: http://localhost:${port}/ui`);
+    // biome-ignore lint/suspicious/noConsole: actually want to print to console
+    console.log(`  API: http://localhost:${port}/api`);
     logger.info("MCP Gateway server started", { port });
 
-    // Create context for TUI
-    const context: Context = {
-      storageDir,
-      port,
-      gateway,
-      onExit: async () => {
-        await gateway.close(); // Close Gateway connections (includes stopping health checks)
-        return new Promise<void>((resolve) => {
-          server.close(() => {
-            resolve();
-          });
+    // Keep process alive and handle graceful shutdown signals
+    const shutdown = async () => {
+      await gateway.close(); // Close Gateway connections (includes stopping health checks)
+      await new Promise<void>((resolve) => {
+        server.close(() => {
+          resolve();
         });
-      },
+      });
     };
 
-    // Start TUI only if running in a TTY and --no-tui flag is not set
-    if (process.stdin.isTTY && !values["no-tui"]) {
-      logger.info("Starting UI", { version: getVersion() });
-      // Load servers from Gateway storage for TUI initialization
-      const servers = await gateway.storage.getRegisteredServers();
-      await runOpenTUI(context, servers);
-    } else {
-      const reason = !process.stdin.isTTY
-        ? "no TTY detected"
-        : "--no-tui flag set";
+    process.on("SIGTERM", async () => {
       // biome-ignore lint/suspicious/noConsole: actually want to print to console
-      console.log(
-        `Running in headless mode (${reason}). Server will run until terminated.`,
-      );
-      // Keep process alive and handle signals
-      process.on("SIGTERM", async () => {
-        // biome-ignore lint/suspicious/noConsole: actually want to print to console
-        console.log("\nReceived SIGTERM, shutting down...");
-        await context.onExit?.();
-        process.exit(0);
-      });
-      process.on("SIGINT", async () => {
-        // biome-ignore lint/suspicious/noConsole: actually want to print to console
-        console.log("\nReceived SIGINT, shutting down...");
-        await context.onExit?.();
-        process.exit(0);
-      });
-    }
+      console.log("\nReceived SIGTERM, shutting down...");
+      await shutdown();
+      process.exit(0);
+    });
+
+    process.on("SIGINT", async () => {
+      // biome-ignore lint/suspicious/noConsole: actually want to print to console
+      console.log("\nReceived SIGINT, shutting down...");
+      await shutdown();
+      process.exit(0);
+    });
   } catch (error) {
     if (error instanceof Error) {
       // print error message to user
@@ -627,13 +571,10 @@ export async function runCli(): Promise<void> {
   }
 }
 
-// Auto-run if this is the main module (but not in compiled binary)
-// Compiled binaries use binary-entry.ts as the entry point
+// Auto-run if this is the main module
 if (
   process.argv[1] &&
-  import.meta.url === pathToFileURL(process.argv[1]).href &&
-  // @ts-expect-error - BUILD_VERSION is defined by --define flag during binary build
-  typeof BUILD_VERSION === "undefined"
+  import.meta.url === pathToFileURL(process.argv[1]).href
 ) {
   runCli();
 }

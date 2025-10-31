@@ -12,75 +12,8 @@ permissions:
   id-token: write
 
 jobs:
-  # Build the libraries
-  build-libs:
-    name: Build packages
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Check for circular dependencies
-        run: bun run check-circular
-
-      - name: Type check
-        run: bun run typecheck
-
-      - name: Lint
-        run: bun run lint
-
-      - name: Build all packages
-        run: bun run build
-
-  # Build platform-specific binaries
-  build-binaries:
-    name: Build ${{ matrix.platform }} binary
-    needs: build-libs
-    strategy:
-      matrix:
-        include:
-          - platform: linux-x64
-            os: ubuntu-latest
-          - platform: darwin-arm64
-            os: macos-latest
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile --verbose
-
-      - name: Build web and CLI packages
-        run: bun run --filter @fiberplane/mcp-gateway-web build && bun run --filter @fiberplane/mcp-gateway-cli build
-
-      - name: Build binary for ${{ matrix.platform }}
-        run: bun run build:binaries
-
-      - name: Upload binary artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: binary-${{ matrix.platform }}
-          path: packages/mcp-gateway-${{ matrix.platform }}/
-          retention-days: 1
-
-  # Create version PR or publish normal release
   release:
     name: Release via Changesets
-    needs: build-binaries
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
@@ -102,16 +35,17 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Download all binary artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: packages/
+      - name: Check for circular dependencies
+        run: bun run check-circular
 
-      - name: Restore binary artifacts to correct locations
-        run: |
-          mv packages/binary-linux-x64/* packages/mcp-gateway-linux-x64/
-          mv packages/binary-darwin-arm64/* packages/mcp-gateway-darwin-arm64/
-          rm -rf packages/binary-*
+      - name: Type check
+        run: bun run typecheck
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Build all packages
+        run: bun run build
 
       - name: Create Release Pull Request or Publish to npm
         id: changesets
@@ -121,19 +55,17 @@ jobs:
           commit: "Version and publish packages"
           title: "Version and publish packages"
           createGithubReleases: true
-          publish: bun run ci:publish
+          publish: bun run release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-  # Publish snapshot releases
   snapshot:
     name: Publish snapshot
-    needs: build-binaries
     runs-on: ubuntu-latest
-    # Run on main (when NOT a version commit) or refactor branch
+    # Run on main (when NOT a version commit)
     if: |
       (github.ref == 'refs/heads/main' && !startsWith(github.event.head_commit.message, 'Version and publish packages'))
     steps:
@@ -155,16 +87,8 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Download all binary artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: packages/
-
-      - name: Restore binary artifacts to correct locations
-        run: |
-          mv packages/binary-linux-x64/* packages/mcp-gateway-linux-x64/
-          mv packages/binary-darwin-arm64/* packages/mcp-gateway-darwin-arm64/
-          rm -rf packages/binary-*
+      - name: Build all packages
+        run: bun run build
 
       - name: Create snapshot versions
         run: |
@@ -172,7 +96,7 @@ jobs:
           bun update
 
       - name: Publish snapshot to npm
-        run: bun run ci:publish
+        run: bun run release
         env:
           SNAPSHOT: true
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

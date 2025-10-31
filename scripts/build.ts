@@ -25,17 +25,8 @@ await Bun.build({
   sourcemap: "inline",
   target: "node",
   external: [
-    // Mark @opentui packages as external (they have native modules)
-    "@opentui/*",
-    // Mark React and related packages as external (must be singleton)
-    "react",
-    "react-dom",
-    "react-reconciler",
-    "zustand",
-    // Mark workspace packages as external
-    "@fiberplane/mcp-gateway-types",
-    "@fiberplane/mcp-gateway-core",
-    "@fiberplane/mcp-gateway-server",
+    // Mark node built-ins and external npm packages as external
+    // Internal workspace packages will be bundled
   ],
 });
 

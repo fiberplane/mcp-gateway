@@ -7,12 +7,11 @@
     "test-mcp-server"
   ],
   "scripts": {
-    "dev": "bun run --filter @fiberplane/mcp-gateway-cli dev",
+    "dev": "bun run --filter @fiberplane/mcp-gateway dev",
     "dev:ui": "bun run --filter @fiberplane/mcp-gateway-web dev",
-    "build": "bun run --filter @fiberplane/mcp-gateway-types build && bun run --filter @fiberplane/mcp-gateway-core build && bun run --filter @fiberplane/mcp-gateway-api build && bun run --filter @fiberplane/mcp-gateway-server build && bun run --filter @fiberplane/mcp-gateway-web build && bun run --filter @fiberplane/mcp-gateway-cli build",
-    "build:types": "bun run --filter @fiberplane/mcp-gateway-cli build:types",
-    "build:binaries": "bun run scripts/build-binaries.ts",
-    "clean": "rm -rf packages/*/dist && rm -rf packages/*/public && rm -rf packages/mcp-gateway-*/drizzle",
+    "build": "bun run --filter @fiberplane/mcp-gateway-types build && bun run --filter @fiberplane/mcp-gateway-core build && bun run --filter @fiberplane/mcp-gateway-api build && bun run --filter @fiberplane/mcp-gateway-server build && bun run --filter @fiberplane/mcp-gateway-web build && bun run --filter @fiberplane/mcp-gateway build",
+    "build:types": "bun run --filter @fiberplane/mcp-gateway build:types",
+    "clean": "rm -rf packages/*/dist && rm -rf packages/*/public",
     "test": "bun run --filter '*' test",
     "typecheck": "bun run --filter '*' typecheck",
     "lint": "biome ci .",
@@ -22,8 +21,7 @@
     "changeset": "changeset",
     "changeset:check": "changeset status",
     "release": "changeset publish",
-    "ci:version": "changeset version && bun update",
-    "ci:publish": "bun run scripts/ci-publish.ts"
+    "ci:version": "changeset version && bun update"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.2.6",
