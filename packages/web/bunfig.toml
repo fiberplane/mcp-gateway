@@ -2,3 +2,6 @@
 
 [test]
 preload = ["./test-setup.ts"]
+# Only run tests in src/ directory (excludes root sentinel test)
+# Matches both .test.ts and .test.tsx files
+paths = ["./src/**/*.test.ts", "./src/**/*.test.tsx"]

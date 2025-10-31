@@ -1,0 +1,5 @@
+# Bun configuration for core package tests
+
+[test]
+# Only run tests in the src/ directory (excludes root sentinel test)
+paths = ["./src/**/*.test.ts"]

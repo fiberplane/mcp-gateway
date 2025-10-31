@@ -1,13 +1,10 @@
 /** biome-ignore-all lint/suspicious/noConsole: tests */
 
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import type { Gateway } from "@fiberplane/mcp-gateway-core";
-import { McpServer, StreamableHttpTransport } from "mcp-lite";
-import { createApp, saveRegistry } from "../helpers/test-app.js";
-import type { Registry } from "./helpers/test-app.js";
+import type { McpServer } from "@fiberplane/mcp-gateway-types";
+import { McpServer as McpServerLib, StreamableHttpTransport } from "mcp-lite";
+import { createApp } from "../helpers/test-app.js";
 
 // JSON-RPC response type
 interface JsonRpcResponse {
@@ -30,7 +27,7 @@ interface TestServer {
 
 // Create test MCP server
 function createTestMcpServer(name: string, port: number): TestServer {
-  const mcp = new McpServer({
+  const mcp = new McpServerLib({
     name,
     version: "1.0.0",
   });
@@ -127,8 +124,8 @@ describe("Proxy Integration Tests", () => {
   };
 
   beforeAll(async () => {
-    // Create temp directory for storage
-    storageDir = await mkdtemp(join(tmpdir(), "mcp-gateway-test-"));
+    // Use in-memory SQLite database for tests (faster and automatic cleanup)
+    storageDir = ":memory:";
 
     // Create test MCP servers
     testServers = [
@@ -136,34 +133,29 @@ describe("Proxy Integration Tests", () => {
       createTestMcpServer("server2", 8002),
     ];
 
-    // Create test registry
-    const registry: Registry = {
-      servers: [
-        {
-          name: "server1",
-          type: "http" as const,
-          url: testServers[0]?.url || "",
-          headers: {},
-          lastActivity: null,
-          exchangeCount: 0,
-        },
-        {
-          name: "server2",
-          type: "http" as const,
-          url: testServers[1]?.url || "",
-          headers: {},
-          lastActivity: null,
-          exchangeCount: 0,
-        },
-      ],
-    };
+    // Create test servers
+    const servers: McpServer[] = [
+      {
+        name: "server1",
+        type: "http" as const,
+        url: testServers[0]?.url || "",
+        headers: {},
+        lastActivity: null,
+        exchangeCount: 0,
+      },
+      {
+        name: "server2",
+        type: "http" as const,
+        url: testServers[1]?.url || "",
+        headers: {},
+        lastActivity: null,
+        exchangeCount: 0,
+      },
+    ];
 
-    // Save registry to storage
-    await saveRegistry(storageDir, registry.servers);
-
-    // Create and start gateway app
+    // Create and start gateway app (createApp will add servers to storage)
     const { app, gateway: gatewayInstance } = await createApp(
-      registry.servers,
+      servers,
       storageDir,
     );
     const server = Bun.serve({
@@ -196,12 +188,7 @@ describe("Proxy Integration Tests", () => {
       await server.stop();
     }
 
-    // Clean up temp directory
-    try {
-      await rm(storageDir, { recursive: true, force: true });
-    } catch (error) {
-      console.warn("Failed to clean up temp directory:", error);
-    }
+    // In-memory database is automatically cleaned up when connection closes
   });
 
   describe("Proxy Routing", () => {
@@ -318,8 +305,8 @@ describe("Proxy Integration Tests", () => {
 
       // Query logs from database
       const queryResult = await gateway.instance.storage.query({
-        serverName: "server1",
-        sessionId,
+        serverName: { operator: "is", value: "server1" },
+        sessionId: { operator: "is", value: sessionId },
       });
 
       // Should have captured the request and response
@@ -345,8 +332,8 @@ describe("Proxy Integration Tests", () => {
 
       // Query logs from database
       const queryResult = await gateway.instance.storage.query({
-        serverName: "server2",
-        sessionId,
+        serverName: { operator: "is", value: "server2" },
+        sessionId: { operator: "is", value: sessionId },
         order: "asc",
       });
 

@@ -21,8 +21,13 @@ interface FilterTypeMenuProps {
    * Callback when filters change
    * @param filterType - The type of filter (method, client, server, session)
    * @param values - Array of selected values (empty array = remove filter)
+   * @param operator - The filter operator (is or contains)
    */
-  onApply: (filterType: string, values: string[]) => void;
+  onApply: (
+    filterType: string,
+    values: string[],
+    operator: "is" | "contains",
+  ) => void;
 
   /**
    * Currently active filter values by type
@@ -34,11 +39,23 @@ interface FilterTypeMenuProps {
     server?: string[];
     session?: string[];
   };
+
+  /**
+   * Currently active filter operators by type
+   * Used to preserve operator when editing existing filters
+   */
+  activeOperators?: {
+    method?: "is" | "contains";
+    client?: "is" | "contains";
+    server?: "is" | "contains";
+    session?: "is" | "contains";
+  };
 }
 
 export function FilterTypeMenu({
   onApply,
   activeFilters = {},
+  activeOperators = {},
 }: FilterTypeMenuProps) {
   const [open, setOpen] = useState(false);
 
@@ -136,7 +153,10 @@ export function FilterTypeMenu({
             }
             values={methodValues}
             selectedValues={activeFilters.method ?? []}
-            onSelectionChange={(values) => onApply("method", values)}
+            initialOperator={activeOperators.method}
+            onSelectionChange={(values, operator) =>
+              onApply("method", values, operator)
+            }
             isLoading={methodsQuery.isLoading}
             showColorPills={true}
             searchPlaceholder="Search methods..."
@@ -154,7 +174,10 @@ export function FilterTypeMenu({
             }
             values={sessionValues}
             selectedValues={activeFilters.session ?? []}
-            onSelectionChange={(values) => onApply("session", values)}
+            initialOperator={activeOperators.session}
+            onSelectionChange={(values, operator) =>
+              onApply("session", values, operator)
+            }
             isLoading={sessionsQuery.isLoading}
             searchPlaceholder="Search sessions..."
           />
@@ -171,7 +194,10 @@ export function FilterTypeMenu({
             }
             values={clientValues}
             selectedValues={activeFilters.client ?? []}
-            onSelectionChange={(values) => onApply("client", values)}
+            initialOperator={activeOperators.client}
+            onSelectionChange={(values, operator) =>
+              onApply("client", values, operator)
+            }
             isLoading={clientsQuery.isLoading}
             searchPlaceholder="Search clients..."
           />
@@ -188,7 +214,10 @@ export function FilterTypeMenu({
             }
             values={serverValues}
             selectedValues={activeFilters.server ?? []}
-            onSelectionChange={(values) => onApply("server", values)}
+            initialOperator={activeOperators.server}
+            onSelectionChange={(values, operator) =>
+              onApply("server", values, operator)
+            }
             isLoading={serversQuery.isLoading}
             searchPlaceholder="Search servers..."
           />

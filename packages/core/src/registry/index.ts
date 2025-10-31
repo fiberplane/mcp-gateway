@@ -1,4 +1,6 @@
 import type { McpServer } from "@fiberplane/mcp-gateway-types";
+import { normalizeUrl } from "../utils/url";
+import { ServerAlreadyExistsError, ServerNotFoundError } from "./errors";
 
 /**
  * Pure registry manipulation functions
@@ -11,17 +13,6 @@ import type { McpServer } from "@fiberplane/mcp-gateway-types";
  * - gateway.storage.removeServer() instead of removeServer()
  * - gateway.storage.getServer() instead of getServer()
  */
-
-// URL normalization helper
-function normalizeUrl(url: string): string {
-  try {
-    const parsed = new URL(url);
-    // Remove trailing slash
-    return parsed.toString().replace(/\/$/, "");
-  } catch {
-    throw new Error("Invalid URL format");
-  }
-}
 
 // Check if server exists (case-insensitive)
 export function hasServer(servers: McpServer[], name: string): boolean {
@@ -42,7 +33,7 @@ export function addServer(
   };
 
   if (hasServer(servers, normalized.name)) {
-    throw new Error(`Server '${server.name}' already exists`);
+    throw new ServerAlreadyExistsError(server.name);
   }
 
   if (!normalized.name) {
@@ -58,7 +49,7 @@ export function removeServer(servers: McpServer[], name: string): McpServer[] {
   const filtered = servers.filter((s) => s.name !== normalizedName);
 
   if (filtered.length === servers.length) {
-    throw new Error(`Server '${name}' not found`);
+    throw new ServerNotFoundError(name);
   }
 
   return filtered;
@@ -123,14 +114,4 @@ export function fromMcpJson(data: unknown): McpServer[] {
     );
 
   return servers;
-}
-
-// Validate URL format
-export function isValidUrl(url: string): boolean {
-  try {
-    const parsed = new URL(url);
-    return parsed.protocol === "http:" || parsed.protocol === "https:";
-  } catch {
-    return false;
-  }
 }

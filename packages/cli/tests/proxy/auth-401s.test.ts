@@ -4,9 +4,9 @@ import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { McpServer, StreamableHttpTransport } from "mcp-lite";
+import type { McpServer } from "@fiberplane/mcp-gateway-types";
+import { McpServer as McpServerLib, StreamableHttpTransport } from "mcp-lite";
 import { createApp, saveRegistry } from "../helpers/test-app.js";
-import type { Registry } from "./helpers/test-app.js";
 
 // JSON-RPC response type
 interface JsonRpcResponse {
@@ -29,7 +29,7 @@ interface TestServer {
 
 // Create test MCP server
 function createTestMcpServer(name: string, port: number): TestServer {
-  const mcp = new McpServer({
+  const mcp = new McpServerLib({
     name,
     version: "1.0.0",
   });
@@ -131,33 +131,31 @@ describe("Proxy Integration Tests", () => {
       createTestMcpServer("server2", 8002),
     ];
 
-    // Create test registry
-    const registry: Registry = {
-      servers: [
-        {
-          name: "server1",
-          type: "http" as const,
-          url: testServers[0]?.url || "",
-          headers: {},
-          lastActivity: null,
-          exchangeCount: 0,
-        },
-        {
-          name: "server2",
-          type: "http" as const,
-          url: testServers[1]?.url || "",
-          headers: {},
-          lastActivity: null,
-          exchangeCount: 0,
-        },
-      ],
-    };
+    // Create test servers
+    const servers: McpServer[] = [
+      {
+        name: "server1",
+        type: "http" as const,
+        url: testServers[0]?.url || "",
+        headers: {},
+        lastActivity: null,
+        exchangeCount: 0,
+      },
+      {
+        name: "server2",
+        type: "http" as const,
+        url: testServers[1]?.url || "",
+        headers: {},
+        lastActivity: null,
+        exchangeCount: 0,
+      },
+    ];
 
     // Save registry to storage
-    await saveRegistry(storageDir, registry.servers);
+    await saveRegistry(storageDir, servers);
 
     // Create and start gateway app
-    const { app } = await createApp(registry.servers, storageDir);
+    const { app } = await createApp(servers, storageDir);
     const server = Bun.serve({
       port: 8000,
       fetch: app.fetch,
@@ -240,23 +238,21 @@ describe("Proxy Integration Tests", () => {
 
       try {
         // Add auth server to registry
-        const authRegistry: Registry = {
-          servers: [
-            {
-              name: "auth-server",
-              type: "http" as const,
-              url: `http://localhost:${authServerPort}/mcp`,
-              headers: {},
-              lastActivity: null,
-              exchangeCount: 0,
-            },
-          ],
-        };
+        const authServers: McpServer[] = [
+          {
+            name: "auth-server",
+            type: "http" as const,
+            url: `http://localhost:${authServerPort}/mcp`,
+            headers: {},
+            lastActivity: null,
+            exchangeCount: 0,
+          },
+        ];
 
-        await saveRegistry(storageDir, authRegistry.servers);
+        await saveRegistry(storageDir, authServers);
 
         // Create gateway with auth server
-        const { app } = await createApp(authRegistry.servers, storageDir);
+        const { app } = await createApp(authServers, storageDir);
         const authGateway = Bun.serve({
           port: 8204,
           fetch: app.fetch,
@@ -355,22 +351,20 @@ describe("Proxy Integration Tests", () => {
       });
 
       try {
-        const authRegistry: Registry = {
-          servers: [
-            {
-              name: "auth-server-2",
-              type: "http" as const,
-              url: `http://localhost:${authServerPort}/mcp`,
-              headers: {},
-              lastActivity: null,
-              exchangeCount: 0,
-            },
-          ],
-        };
+        const authServers: McpServer[] = [
+          {
+            name: "auth-server-2",
+            type: "http" as const,
+            url: `http://localhost:${authServerPort}/mcp`,
+            headers: {},
+            lastActivity: null,
+            exchangeCount: 0,
+          },
+        ];
 
-        await saveRegistry(storageDir, authRegistry.servers);
+        await saveRegistry(storageDir, authServers);
 
-        const { app } = await createApp(authRegistry.servers, storageDir);
+        const { app } = await createApp(authServers, storageDir);
         const authGateway = Bun.serve({
           port: 8206,
           fetch: app.fetch,

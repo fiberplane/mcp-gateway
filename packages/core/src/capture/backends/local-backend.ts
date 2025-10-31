@@ -32,8 +32,13 @@ import {
   updateServerInfoForInitializeRequest,
   upsertServerHealth,
 } from "../../logs/storage.js";
-import { fromMcpJson, isValidUrl, toMcpJson } from "../../registry/index";
+import {
+  ServerAlreadyExistsError,
+  ServerNotFoundError,
+} from "../../registry/errors";
+import { fromMcpJson, toMcpJson } from "../../registry/index";
 import { ensureStorageDir } from "../../utils/storage";
+import { isValidUrl } from "../../utils/url";
 
 /**
  * Local file system storage backend
@@ -57,6 +62,7 @@ export class LocalStorageBackend implements StorageBackend {
   private storageDir: string;
   private db: BunSQLiteDatabase<typeof schema>;
   private sqlite: Database;
+  private inMemoryRegistry: McpServer[] = []; // For :memory: databases
 
   /**
    * Private constructor - use LocalStorageBackend.create() instead
@@ -76,6 +82,11 @@ export class LocalStorageBackend implements StorageBackend {
    * @private Internal method for registry persistence
    */
   private async loadRegistry(): Promise<McpServer[]> {
+    // Use in-memory registry for in-memory databases (tests)
+    if (this.storageDir === ":memory:") {
+      return this.inMemoryRegistry;
+    }
+
     const mcpPath = join(this.storageDir, "mcp.json");
 
     try {
@@ -125,6 +136,12 @@ export class LocalStorageBackend implements StorageBackend {
    * @private Internal method for registry persistence
    */
   private async saveRegistry(servers: McpServer[]): Promise<void> {
+    // Use in-memory registry for in-memory databases (tests)
+    if (this.storageDir === ":memory:") {
+      this.inMemoryRegistry = servers;
+      return;
+    }
+
     await ensureStorageDir(this.storageDir);
 
     const mcpPath = join(this.storageDir, "mcp.json");
@@ -148,7 +165,9 @@ export class LocalStorageBackend implements StorageBackend {
    * @throws Error if database initialization fails
    */
   static async create(storageDir: string): Promise<LocalStorageBackend> {
-    const dbPath = join(storageDir, "logs.db");
+    // Support in-memory database for tests
+    const dbPath =
+      storageDir === ":memory:" ? ":memory:" : join(storageDir, "logs.db");
 
     try {
       // Create database connection
@@ -408,9 +427,7 @@ export class LocalStorageBackend implements StorageBackend {
 
       // Check for duplicate server name
       if (servers.some((s) => s.name === server.name)) {
-        throw new Error(
-          `Server '${server.name}' already exists in the registry`,
-        );
+        throw new ServerAlreadyExistsError(server.name);
       }
 
       // Add new server with zero metrics (will be computed from logs)
@@ -439,7 +456,7 @@ export class LocalStorageBackend implements StorageBackend {
       // Find server to remove
       const index = servers.findIndex((s) => s.name === name);
       if (index === -1) {
-        throw new Error(`Server '${name}' not found in the registry`);
+        throw new ServerNotFoundError(name);
       }
 
       // Remove server from registry
@@ -467,7 +484,7 @@ export class LocalStorageBackend implements StorageBackend {
       // Find server to update
       const server = servers.find((s) => s.name === name);
       if (!server) {
-        throw new Error(`Server '${name}' not found in the registry`);
+        throw new ServerNotFoundError(name);
       }
 
       // Update the server's mutable fields (url, headers)

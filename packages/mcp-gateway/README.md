@@ -281,12 +281,19 @@ bun run build:binaries
 ### Run Tests
 
 ```bash
-# All tests
-bun test
+# All tests (from root - runs each workspace's tests with proper config)
+bun run test
 
-# CLI package only
+# Specific package tests
 bun run --filter @fiberplane/mcp-gateway-cli test
+bun run --filter @fiberplane/mcp-gateway-web test
+bun run --filter @fiberplane/mcp-gateway-core test
+
+# Or run tests from within a package directory
+cd packages/web && bun test
 ```
+
+> **Note:** Use `bun run test` (not `bun test`) from the root to ensure each workspace uses its own test configuration. This is important for the web package which requires happy-dom for React component tests.
 
 ### Test MCP Server
 

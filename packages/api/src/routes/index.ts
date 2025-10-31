@@ -6,6 +6,8 @@ import type {
 import { sValidator } from "@hono/standard-validator";
 import { Hono } from "hono";
 import { z } from "zod";
+import type { ServerManagementFunctions } from "./server-management.js";
+import { createServerManagementRoutes } from "./server-management.js";
 
 /**
  * Query parameters schema for GET /sessions
@@ -22,7 +24,7 @@ const methodsQuerySchema = z.object({
 });
 
 /**
- * Create API routes for querying logs
+ * Create API routes for querying logs and managing servers
  *
  * Routes:
  * - GET /logs - Query logs with filters and pagination
@@ -31,11 +33,19 @@ const methodsQuerySchema = z.object({
  * - GET /clients - List clients with aggregated stats
  * - GET /methods - List methods with aggregated stats
  * - POST /sessions/clear - Clear all session data
+ * - GET /servers/config - List all server configurations
+ * - POST /servers/config - Add a new server
+ * - PUT /servers/config/:name - Update an existing server
+ * - DELETE /servers/config/:name - Delete a server
  *
  * @param queries - Query functions to use for data access
+ * @param serverManagement - Server management functions (optional, for backward compatibility)
  * @returns Hono app with API routes
  */
-export function createApiRoutes(queries: QueryFunctions): Hono {
+export function createApiRoutes(
+  queries: QueryFunctions,
+  serverManagement?: ServerManagementFunctions,
+): Hono {
   const app = new Hono();
 
   /**
@@ -49,12 +59,50 @@ export function createApiRoutes(queries: QueryFunctions): Hono {
    * - ?session=123&session=456 (matches logs from session "123" OR "456")
    */
   app.get("/logs", async (c) => {
+    // Helper to parse operator:value format from query params
+    // Returns { operator, values } where values is array for multi-select
+    // defaultOperator allows per-field backward compatibility
+    const parseFilterParam = (
+      params: string[] | undefined,
+      defaultOperator: "is" | "contains" = "is",
+    ): { operator: "is" | "contains"; values: string[] } | undefined => {
+      if (!params || params.length === 0) return undefined;
+
+      // Parse first param to extract operator (all params should have same operator)
+      const first = params[0];
+      if (!first) return undefined;
+
+      const colonIndex = first.indexOf(":");
+      if (colonIndex === -1) {
+        // No operator specified, use field-specific default for backward compat
+        return { operator: defaultOperator, values: params };
+      }
+
+      // Extract and validate operator from first param
+      const operatorStr = first.slice(0, colonIndex);
+      if (operatorStr !== "is" && operatorStr !== "contains") {
+        // Invalid operator, use default
+        return { operator: defaultOperator, values: params };
+      }
+
+      // Extract values from all params, stripping operator prefix
+      const values = params.map((p) => {
+        const idx = p.indexOf(":");
+        return idx === -1 ? p : p.slice(idx + 1);
+      });
+
+      return { operator: operatorStr, values };
+    };
+
     // Manually extract query params to handle arrays from repeated params
     const searchQueries = c.req.queries("q");
-    const serverNames = c.req.queries("server");
-    const sessionIds = c.req.queries("session");
-    const clientNames = c.req.queries("client");
-    const methodNames = c.req.queries("method");
+    // String filters with field-specific defaults for backward compatibility:
+    // - server, session, client: default to "is" (exact match)
+    // - method: default to "contains" (partial match, legacy behavior)
+    const serverParams = parseFilterParam(c.req.queries("server"), "is");
+    const sessionParams = parseFilterParam(c.req.queries("session"), "is");
+    const clientParams = parseFilterParam(c.req.queries("client"), "is");
+    const methodParams = parseFilterParam(c.req.queries("method"), "contains");
     const after = c.req.query("after");
     const before = c.req.query("before");
     const limitStr = c.req.query("limit");
@@ -190,36 +238,36 @@ export function createApiRoutes(queries: QueryFunctions): Hono {
       );
     }
 
+    // Helper to create StringFilter from parsed params
+    const createStringFilter = (
+      params: { operator: "is" | "contains"; values: string[] } | undefined,
+    ):
+      | { operator: "is" | "contains"; value: string | string[] }
+      | undefined => {
+      if (!params || params.values.length === 0) return undefined;
+      const nonEmptyValues = params.values.filter((v): v is string => !!v);
+      if (nonEmptyValues.length === 0) return undefined;
+
+      const firstValue = nonEmptyValues[0];
+      return {
+        operator: params.operator,
+        value:
+          nonEmptyValues.length === 1 && firstValue
+            ? firstValue
+            : nonEmptyValues,
+      };
+    };
+
     const options: LogQueryOptions = {
       // Search queries (text search)
       searchQueries:
         searchQueries && searchQueries.length > 0 ? searchQueries : undefined,
 
-      // String filters (support arrays)
-      serverName:
-        serverNames && serverNames.length > 0
-          ? serverNames.length === 1
-            ? serverNames[0]
-            : serverNames
-          : undefined,
-      sessionId:
-        sessionIds && sessionIds.length > 0
-          ? sessionIds.length === 1
-            ? sessionIds[0]
-            : sessionIds
-          : undefined,
-      method:
-        methodNames && methodNames.length > 0
-          ? methodNames.length === 1
-            ? methodNames[0]
-            : methodNames
-          : undefined,
-      clientName:
-        clientNames && clientNames.length > 0
-          ? clientNames.length === 1
-            ? clientNames[0]
-            : clientNames
-          : undefined,
+      // String filters (support arrays and operators)
+      serverName: createStringFilter(serverParams),
+      sessionId: createStringFilter(sessionParams),
+      method: createStringFilter(methodParams),
+      clientName: createStringFilter(clientParams),
 
       // Duration filters
       durationEq,
@@ -356,6 +404,12 @@ export function createApiRoutes(queries: QueryFunctions): Hono {
 
     return c.json({ success: true });
   });
+
+  // Mount server management routes if provided
+  if (serverManagement) {
+    const serverManagementApp = createServerManagementRoutes(serverManagement);
+    app.route("/", serverManagementApp);
+  }
 
   return app;
 }

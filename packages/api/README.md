@@ -1,10 +1,10 @@
 # @fiberplane/mcp-gateway-api
 
-REST API for querying MCP Gateway logs.
+REST API for querying MCP Gateway logs and managing servers.
 
 ## Overview
 
-This package provides HTTP endpoints for querying logs captured by the MCP Gateway. It exposes a read-only API for accessing log data, server statistics, and session information.
+This package provides HTTP endpoints for querying logs captured by the MCP Gateway and managing MCP server configurations. It exposes both read-only log query endpoints and CRUD operations for server management.
 
 The API is built with [Hono](https://hono.dev/) and can be mounted in any Hono application or run as a standalone server.
 
@@ -13,6 +13,7 @@ The API is built with [Hono](https://hono.dev/) and can be mounted in any Hono a
 - **Query logs** - Search and filter captured MCP traffic
 - **Server aggregations** - View statistics per MCP server
 - **Session tracking** - Analyze individual client sessions
+- **Server management** - Add, update, and delete MCP server configurations (optional)
 - **Dependency injection** - Pass in your own query implementations for testing
 
 ## API Endpoints
@@ -82,22 +83,119 @@ curl "http://localhost:3333/api/sessions?server=demo"
 }
 ```
 
+### GET /servers/config
+
+List all registered server configurations (requires `serverManagement` option).
+
+**Example:**
+```bash
+curl "http://localhost:3333/api/servers/config"
+```
+
+**Response:**
+```json
+{
+  "servers": [
+    {
+      "name": "demo",
+      "url": "http://localhost:3001",
+      "type": "http",
+      "headers": {
+        "Authorization": "Bearer token"
+      }
+    }
+  ]
+}
+```
+
+### POST /servers/config
+
+Add a new server configuration (requires `serverManagement` option).
+
+**Request Body:**
+```json
+{
+  "name": "my-server",
+  "url": "http://localhost:3001",
+  "type": "http",
+  "headers": {
+    "Authorization": "Bearer token"
+  }
+}
+```
+
+### PUT /servers/config/:name
+
+Update an existing server configuration (requires `serverManagement` option).
+
+**Request Body:**
+```json
+{
+  "url": "http://localhost:3002",
+  "headers": {
+    "X-Custom-Header": "value"
+  }
+}
+```
+
+### DELETE /servers/config/:name
+
+Delete a server configuration (requires `serverManagement` option).
+
 ## Usage
 
-### Mounting in a Hono App
+### Basic Usage (Query API Only)
 
 ```typescript
 import { createApp } from "@fiberplane/mcp-gateway-api";
-import { queryLogs, getServers, getSessions } from "@fiberplane/mcp-gateway-core";
+import { logger } from "@fiberplane/mcp-gateway-core";
 import { Hono } from "hono";
 
 const app = new Hono();
 
-// Create API with injected query functions
-const apiApp = createApp("~/.mcp-gateway", {
-  queryLogs,
-  getServers,
-  getSessions,
+// Create API with query functions only
+const apiApp = createApp({
+  queries: {
+    queryLogs: (options) => storage.query(options),
+    getServers: () => storage.getServers(),
+    getSessions: (serverName) => storage.getSessions(serverName),
+    getClients: () => storage.getClients(),
+    clearSessions: () => storage.clearAll(),
+  },
+  logger,
+});
+
+// Mount at /api
+app.route("/api", apiApp);
+
+export default app;
+```
+
+### With Server Management
+
+```typescript
+import { createApp } from "@fiberplane/mcp-gateway-api";
+import { logger } from "@fiberplane/mcp-gateway-core";
+import { Hono } from "hono";
+
+const app = new Hono();
+
+// Create API with query functions AND server management
+const apiApp = createApp({
+  queries: {
+    queryLogs: (options) => storage.query(options),
+    getServers: () => storage.getServers(),
+    getSessions: (serverName) => storage.getSessions(serverName),
+    getClients: () => storage.getClients(),
+    clearSessions: () => storage.clearAll(),
+  },
+  logger,
+  serverManagement: {
+    getRegisteredServers: () => storage.getRegisteredServers(),
+    addServer: (config) => storage.addServer(config),
+    updateServer: (name, changes) => storage.updateServer(name, changes),
+    removeServer: (name) => storage.removeServer(name),
+  },
 });
 
 // Mount at /api
@@ -110,12 +208,17 @@ export default app;
 
 ```typescript
 import { createApp } from "@fiberplane/mcp-gateway-api";
-import { queryLogs, getServers, getSessions } from "@fiberplane/mcp-gateway-core";
+import { logger } from "@fiberplane/mcp-gateway-core";
 
-const apiApp = createApp("~/.mcp-gateway", {
-  queryLogs,
-  getServers,
-  getSessions,
+const apiApp = createApp({
+  queries: {
+    queryLogs: (options) => storage.query(options),
+    getServers: () => storage.getServers(),
+    getSessions: (serverName) => storage.getSessions(serverName),
+    getClients: () => storage.getClients(),
+    clearSessions: () => storage.clearAll(),
+  },
+  logger,
 });
 
 Bun.serve({

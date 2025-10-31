@@ -434,8 +434,8 @@ export async function runCli(): Promise<void> {
     app.route("/", serverApp);
 
     // Mount API for observability (query logs, servers, sessions, clients)
-    const apiApp = createApiApp(
-      {
+    const apiApp = createApiApp({
+      queries: {
         queryLogs: (options) => gateway.storage.query(options),
         getServers: async () => {
           // Return ServerInfo[] including status for Web UI
@@ -453,7 +453,14 @@ export async function runCli(): Promise<void> {
         },
       },
       logger,
-    );
+      serverManagement: {
+        getRegisteredServers: () => gateway.storage.getRegisteredServers(),
+        addServer: (config) => gateway.storage.addServer(config),
+        updateServer: (name, changes) =>
+          gateway.storage.updateServer(name, changes),
+        removeServer: (name) => gateway.storage.removeServer(name),
+      },
+    });
     app.route("/api", apiApp);
 
     // Serve Web UI for management (if available)

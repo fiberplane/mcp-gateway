@@ -42,6 +42,7 @@ export interface FilterBarUIProps {
   editingValue: string | undefined;
   hasActiveItems: boolean;
   searchQueryCount: number;
+  newlyAddedFilterField: string | undefined;
   onAddFilter: (filter: ReturnType<typeof createFilter>) => void;
   onUpdateSearch: (value: string) => void;
   onRemoveFilter: (filterId: string) => void;
@@ -59,6 +60,7 @@ export function FilterBarUI({
   editingValue,
   hasActiveItems,
   searchQueryCount,
+  newlyAddedFilterField,
   onAddFilter,
   onUpdateSearch,
   onRemoveFilter,
@@ -112,6 +114,7 @@ export function FilterBarUI({
               filter={filter}
               onRemove={onRemoveFilter}
               onEdit={onEditFilter}
+              isNew={filter.field === newlyAddedFilterField}
             />
           ))}
 
@@ -145,6 +148,12 @@ export function FilterBar({ actions }: FilterBarProps) {
   const [editingValue, setEditingValue] = useState<string | undefined>();
   const [editingFilter, setEditingFilter] = useState<
     ReturnType<typeof createFilter> | undefined
+  >();
+
+  // Track newly added filter field for intro animation
+  // Track by field (not ID) since IDs change during URL round-trip
+  const [newlyAddedFilterField, setNewlyAddedFilterField] = useState<
+    string | undefined
   >();
 
   // URL state management via nuqs
@@ -215,6 +224,9 @@ export function FilterBar({ actions }: FilterBarProps) {
     // Clear editing state
     setEditingValue(undefined);
     setEditingFilter(undefined);
+
+    // Mark filter field as newly added for animation (CSS handles cleanup via onAnimationEnd)
+    setNewlyAddedFilterField(filter.field);
   };
 
   const handleRemoveFilterByField = (field: string) => {
@@ -301,6 +313,7 @@ export function FilterBar({ actions }: FilterBarProps) {
       editingValue={editingValue}
       hasActiveItems={hasActiveItems}
       searchQueryCount={searchQueries.length}
+      newlyAddedFilterField={newlyAddedFilterField}
       onAddFilter={handleAddFilter}
       onUpdateSearch={handleUpdateSearch}
       onRemoveFilter={handleRemoveFilter}
