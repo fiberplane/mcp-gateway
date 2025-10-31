@@ -170,15 +170,15 @@ describe("DELETE /mcp Session Termination Tests", () => {
     // Save registry to storage
     await saveRegistry(storageDir, servers);
 
-    // Create and start gateway app
+    // Create and start gateway app with port 0 to get random available port
     const { app } = await createApp(servers, storageDir);
     const server = Bun.serve({
-      port: 8210,
+      port: 0, // Let OS assign available port
       fetch: app.fetch,
     });
 
     gateway = {
-      port: 8210,
+      port: server.port,
       stop: () => server.stop(),
     };
 

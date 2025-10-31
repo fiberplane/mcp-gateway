@@ -1,6 +1,9 @@
-import { Database } from "bun:sqlite";
 import { join } from "node:path";
-import { type BunSQLiteDatabase, drizzle } from "drizzle-orm/bun-sqlite";
+import {
+  type BetterSQLite3Database,
+  drizzle,
+} from "drizzle-orm/better-sqlite3";
+import Database from "libsql";
 import * as schema from "./schema.js";
 
 /**
@@ -12,7 +15,7 @@ import * as schema from "./schema.js";
  * Key: storage directory path
  * Value: Drizzle database instance
  */
-const dbCache = new Map<string, BunSQLiteDatabase<typeof schema>>();
+const dbCache = new Map<string, BetterSQLite3Database<typeof schema>>();
 
 /**
  * Get or create a Drizzle database connection for the given storage directory.
@@ -25,7 +28,9 @@ const dbCache = new Map<string, BunSQLiteDatabase<typeof schema>>();
  * @param storageDir - Path to storage directory (e.g., ~/.mcp-gateway/capture)
  * @returns Drizzle database instance
  */
-export function getDb(storageDir: string): BunSQLiteDatabase<typeof schema> {
+export function getDb(
+  storageDir: string,
+): BetterSQLite3Database<typeof schema> {
   // Return cached connection if exists
   const cached = dbCache.get(storageDir);
   if (cached) {
@@ -34,7 +39,7 @@ export function getDb(storageDir: string): BunSQLiteDatabase<typeof schema> {
 
   // Create new connection
   const dbPath = join(storageDir, "logs.db");
-  const sqlite = new Database(dbPath, { create: true });
+  const sqlite = new Database(dbPath); // libsql auto-creates the database
 
   // Enable WAL mode for better concurrency (multiple readers, single writer)
   // WAL (Write-Ahead Logging) allows concurrent reads while writes are happening
@@ -46,6 +51,8 @@ export function getDb(storageDir: string): BunSQLiteDatabase<typeof schema> {
   // Use NORMAL synchronous mode for better performance (WAL provides safety)
   sqlite.exec("PRAGMA synchronous = NORMAL;");
 
+  // Type assertion: libsql is better-sqlite3 compatible at runtime but has different types
+  // @ts-expect-error - libsql and better-sqlite3 have compatible APIs but incompatible type definitions
   const db = drizzle(sqlite, { schema });
 
   // Cache and return

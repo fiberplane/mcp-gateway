@@ -1,4 +1,3 @@
-import { Database } from "bun:sqlite";
 import { constants } from "node:fs";
 import { access, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -16,7 +15,11 @@ import type {
   StorageWriteResult,
 } from "@fiberplane/mcp-gateway-types";
 import { eq } from "drizzle-orm";
-import { type BunSQLiteDatabase, drizzle } from "drizzle-orm/bun-sqlite";
+import {
+  type BetterSQLite3Database,
+  drizzle,
+} from "drizzle-orm/better-sqlite3";
+import Database from "libsql";
 import { logger } from "../../logger";
 import { ensureMigrations } from "../../logs/migrations.js";
 import * as schema from "../../logs/schema.js";
@@ -60,8 +63,8 @@ import { isValidUrl } from "../../utils/url";
 export class LocalStorageBackend implements StorageBackend {
   readonly name = "local";
   private storageDir: string;
-  private db: BunSQLiteDatabase<typeof schema>;
-  private sqlite: Database;
+  private db: BetterSQLite3Database<typeof schema>;
+  private sqlite: ReturnType<typeof Database>;
   private inMemoryRegistry: McpServer[] = []; // For :memory: databases
 
   /**
@@ -69,8 +72,8 @@ export class LocalStorageBackend implements StorageBackend {
    */
   private constructor(
     storageDir: string,
-    db: BunSQLiteDatabase<typeof schema>,
-    sqlite: Database,
+    db: BetterSQLite3Database<typeof schema>,
+    sqlite: ReturnType<typeof Database>,
   ) {
     this.storageDir = storageDir;
     this.db = db;
@@ -170,8 +173,8 @@ export class LocalStorageBackend implements StorageBackend {
       storageDir === ":memory:" ? ":memory:" : join(storageDir, "logs.db");
 
     try {
-      // Create database connection
-      const sqlite = new Database(dbPath, { create: true });
+      // Create database connection (libsql auto-creates)
+      const sqlite = new Database(dbPath);
 
       // Configure SQLite for performance and concurrency
       sqlite.exec("PRAGMA journal_mode = WAL;");
@@ -179,6 +182,8 @@ export class LocalStorageBackend implements StorageBackend {
       sqlite.exec("PRAGMA synchronous = NORMAL;");
 
       // Create Drizzle instance
+      // Type assertion: libsql is better-sqlite3 compatible at runtime but has different types
+      // @ts-expect-error - libsql and better-sqlite3 have compatible APIs but incompatible type definitions
       const db = drizzle(sqlite, { schema });
 
       // Ensure migrations are applied before returning
@@ -294,12 +299,14 @@ export class LocalStorageBackend implements StorageBackend {
     try {
       // Wrap all deletions in a transaction to ensure atomicity
       this.sqlite.transaction(() => {
-        this.sqlite.run("DELETE FROM logs");
-        this.sqlite.run("DELETE FROM session_metadata");
-        this.sqlite.run("DELETE FROM sqlite_sequence WHERE name='logs'");
-        this.sqlite.run(
-          "DELETE FROM sqlite_sequence WHERE name='session_metadata'",
-        );
+        this.sqlite.prepare("DELETE FROM logs").run();
+        this.sqlite.prepare("DELETE FROM session_metadata").run();
+        this.sqlite
+          .prepare("DELETE FROM sqlite_sequence WHERE name='logs'")
+          .run();
+        this.sqlite
+          .prepare("DELETE FROM sqlite_sequence WHERE name='session_metadata'")
+          .run();
       })();
       logger.info("Local storage logs cleared");
     } catch (error) {

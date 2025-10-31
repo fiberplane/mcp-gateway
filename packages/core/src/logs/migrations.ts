@@ -1,7 +1,7 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
-import { migrate } from "drizzle-orm/bun-sqlite/migrator";
+import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
+import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import type * as schema from "./schema.js";
 
 /**
@@ -15,31 +15,6 @@ let migrationPromise: Promise<void> | null = null;
  * Works in both development and production builds
  */
 function getMigrationsFolder(): string {
-  // Detect if we're running as a compiled binary
-  // In compiled binaries, Bun.main starts with "/$bunfs/root/" (virtual bundled filesystem)
-  const isCompiledBinary = Bun.main.startsWith("/$bunfs/root/");
-
-  if (isCompiledBinary) {
-    // In compiled binary: migrations are in drizzle/ folder next to executable
-    const binaryDrizzleDir = join(process.execPath, "..", "drizzle");
-    const journalPath = join(binaryDrizzleDir, "meta", "_journal.json");
-
-    try {
-      const journalFile = Bun.file(journalPath);
-      if (journalFile.size > 0) {
-        return binaryDrizzleDir;
-      }
-    } catch {
-      throw new Error(
-        `Migrations folder not found in binary distribution at: ${binaryDrizzleDir}`,
-      );
-    }
-
-    throw new Error(
-      `Invalid migrations folder in binary distribution at: ${binaryDrizzleDir}`,
-    );
-  }
-
   // In development: packages/core/src/logs/migrations.ts
   // Migrations are in: packages/core/drizzle
   const currentFile = fileURLToPath(import.meta.url);
@@ -59,7 +34,7 @@ function getMigrationsFolder(): string {
  * @param db - Drizzle database instance
  */
 export async function ensureMigrations(
-  db: BunSQLiteDatabase<typeof schema>,
+  db: BetterSQLite3Database<typeof schema>,
 ): Promise<void> {
   // If migrations are already running or complete, wait/return
   if (migrationPromise) {
