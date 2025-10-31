@@ -398,6 +398,32 @@ export function createApiRoutes(
     return c.json({ success: true });
   });
 
+  /**
+   * GET /conversations
+   *
+   * List all conversations with summary stats
+   */
+  app.get("/conversations", async (c) => {
+    const conversations = await queries.getConversations();
+
+    return c.json({ conversations });
+  });
+
+  /**
+   * GET /conversations/:id
+   *
+   * Get timeline for a specific conversation
+   */
+  app.get("/conversations/:id", async (c) => {
+    const conversationId = c.req.param("id");
+    const timeline = await queries.getConversationTimeline(conversationId);
+
+    return c.json({
+      conversationId,
+      events: timeline,
+    });
+  });
+
   // Mount server management routes if provided
   if (serverManagement) {
     const serverManagementApp = createServerManagementRoutes(serverManagement);

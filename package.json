@@ -4,7 +4,8 @@
   "type": "module",
   "workspaces": [
     "packages/*",
-    "test-mcp-server"
+    "test-mcp-server",
+    "test-llm-agent"
   ],
   "scripts": {
     "dev": "bun run --filter @fiberplane/mcp-gateway-cli dev",

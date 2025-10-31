@@ -7,6 +7,7 @@ import type {
 import type { Hono } from "hono";
 import { Hono as HonoApp } from "hono";
 import { logger as loggerMiddleware } from "hono/logger";
+import { createLLMProxyRoutes } from "./routes/llm-proxy";
 import { createOAuthRoutes } from "./routes/oauth";
 import { createProxyRoutes } from "./routes/proxy";
 
@@ -17,6 +18,7 @@ import { createProxyRoutes } from "./routes/proxy";
  * - Proxy routes for forwarding MCP requests to upstream servers
  * - OAuth routes for MCP authentication/authorization
  * - Gateway's own MCP server for querying the gateway via MCP protocol
+ * - LLM proxy for capturing LLM requests/responses
  * - Health check endpoint
  *
  * Note: This does NOT include the query API or Web UI - those should be
@@ -103,6 +105,10 @@ export async function createApp(options: {
   app.route("/gateway", gatewayMcp);
   // Short alias for gateway's own MCP server
   app.route("/g", gatewayMcp);
+
+  // Mount LLM proxy routes (with gateway for LLM request/response capture and correlation)
+  const llmProxy = createLLMProxyRoutes({ gateway });
+  app.route("/llm", llmProxy);
 
   return { app };
 }

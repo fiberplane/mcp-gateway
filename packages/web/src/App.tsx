@@ -11,6 +11,7 @@ import {
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useQueryState, useQueryStates } from "nuqs";
 import { useDeferredValue, useId, useMemo, useState } from "react";
+import { Conversations } from "./components/conversations";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ExportButton } from "./components/export-button";
 import { FiberplaneLogo } from "./components/fiberplane-logo";
@@ -53,6 +54,7 @@ function formatStringFilter(
 function App() {
   const logsPanelId = useId();
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState<"logs" | "conversations">("logs");
   const [serverName, setServerName] = useState<string | undefined>();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isClearing, setIsClearing] = useState(false);
@@ -272,7 +274,7 @@ function App() {
       <main className="max-w-[1600px] mx-auto px-6 py-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-semibold text-foreground">
-            MCP server logs
+            {activeTab === "logs" ? "MCP server logs" : "Conversations"}
           </h1>
           <SettingsDropdown
             onClearSessions={handleClearSessions}
@@ -280,13 +282,43 @@ function App() {
           />
         </div>
 
-        <div className="mb-6">
-          <ServerTabs
-            value={serverName}
-            onChange={handleServerChange}
-            panelId={logsPanelId}
-          />
+        {/* Tab navigation */}
+        <div className="mb-6 border-b border-border">
+          <div className="flex gap-4">
+            <button
+              type="button"
+              onClick={() => setActiveTab("logs")}
+              className={`pb-3 px-1 border-b-2 transition-colors ${
+                activeTab === "logs"
+                  ? "border-foreground text-foreground font-medium"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Logs
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("conversations")}
+              className={`pb-3 px-1 border-b-2 transition-colors ${
+                activeTab === "conversations"
+                  ? "border-foreground text-foreground font-medium"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Conversations
+            </button>
+          </div>
         </div>
+
+        {activeTab === "logs" && (
+          <div className="mb-6">
+            <ServerTabs
+              value={serverName}
+              onChange={handleServerChange}
+              panelId={logsPanelId}
+            />
+          </div>
+        )}
 
         {clearError && (
           <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive mb-5">
@@ -294,94 +326,100 @@ function App() {
           </div>
         )}
 
-        {error && (
-          <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive mb-5">
-            Error: {String(error)}
-          </div>
-        )}
-
-        {isLoading ? (
-          <div className="p-10 text-center text-muted-foreground bg-card rounded-lg border border-border">
-            Loading logs...
-          </div>
+        {activeTab === "conversations" ? (
+          <Conversations />
         ) : (
           <>
-            {/* Combined container: Filter Bar + Log Table with white background and border */}
-            <div
-              id={logsPanelId}
-              role="tabpanel"
-              className="bg-card rounded-lg border border-border p-4 gap-6 grid"
-            >
-              {/* Filter Bar - Phase 1-2 with two-row layout */}
-              <ErrorBoundary
-                fallback={(error) => (
-                  <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive">
-                    <p className="font-medium">Filter system unavailable</p>
-                    <p className="text-sm mt-1">
-                      Please refresh the page to try again.
-                    </p>
-                    {import.meta.env.DEV && (
-                      <details className="mt-2 text-xs">
-                        <summary className="cursor-pointer">
-                          Error details
-                        </summary>
-                        <pre className="mt-1 overflow-auto">
-                          {error.message}
-                        </pre>
-                      </details>
+            {error && (
+              <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive mb-5">
+                Error: {String(error)}
+              </div>
+            )}
+
+            {isLoading ? (
+              <div className="p-10 text-center text-muted-foreground bg-card rounded-lg border border-border">
+                Loading logs...
+              </div>
+            ) : (
+              <>
+                {/* Combined container: Filter Bar + Log Table with white background and border */}
+                <div
+                  id={logsPanelId}
+                  role="tabpanel"
+                  className="bg-card rounded-lg border border-border p-4 gap-6 grid"
+                >
+                  {/* Filter Bar - Phase 1-2 with two-row layout */}
+                  <ErrorBoundary
+                    fallback={(error) => (
+                      <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive">
+                        <p className="font-medium">Filter system unavailable</p>
+                        <p className="text-sm mt-1">
+                          Please refresh the page to try again.
+                        </p>
+                        {import.meta.env.DEV && (
+                          <details className="mt-2 text-xs">
+                            <summary className="cursor-pointer">
+                              Error details
+                            </summary>
+                            <pre className="mt-1 overflow-auto">
+                              {error.message}
+                            </pre>
+                          </details>
+                        )}
+                      </div>
                     )}
-                  </div>
-                )}
-              >
-                <FilterBar
-                  actions={
-                    <>
-                      <StreamingBadge
-                        isStreaming={isStreaming}
-                        onToggle={handleStreamingToggle}
-                      />
-                      <ExportButton
+                  >
+                    <FilterBar
+                      actions={
+                        <>
+                          <StreamingBadge
+                            isStreaming={isStreaming}
+                            onToggle={handleStreamingToggle}
+                          />
+                          <ExportButton
+                            logs={deferredLogs}
+                            selectedIds={selectedIds}
+                            getLogKey={getLogKey}
+                          />
+                        </>
+                      }
+                    />
+                  </ErrorBoundary>
+
+                  {/* Log Table - wrapped for horizontal scroll */}
+                  <div className="overflow-x-auto -mx-4 px-4">
+                    {deferredLogs.length === 0 ? (
+                      <div className="p-10 text-center text-muted-foreground">
+                        {filters.length > 0 || searchQueries?.length ? (
+                          <>
+                            <p className="mb-2">No logs match your filters</p>
+                            <p className="text-sm">
+                              Try adjusting your filters or search terms
+                            </p>
+                          </>
+                        ) : (
+                          <p>No logs captured yet</p>
+                        )}
+                      </div>
+                    ) : (
+                      <LogTable
                         logs={deferredLogs}
                         selectedIds={selectedIds}
-                        getLogKey={getLogKey}
+                        onSelectionChange={setSelectedIds}
+                        timeGrouping={timeGrouping}
                       />
-                    </>
-                  }
-                />
-              </ErrorBoundary>
-
-              {/* Log Table - wrapped for horizontal scroll */}
-              <div className="overflow-x-auto -mx-4 px-4">
-                {deferredLogs.length === 0 ? (
-                  <div className="p-10 text-center text-muted-foreground">
-                    {filters.length > 0 || searchQueries?.length ? (
-                      <>
-                        <p className="mb-2">No logs match your filters</p>
-                        <p className="text-sm">
-                          Try adjusting your filters or search terms
-                        </p>
-                      </>
-                    ) : (
-                      <p>No logs captured yet</p>
                     )}
                   </div>
-                ) : (
-                  <LogTable
-                    logs={deferredLogs}
-                    selectedIds={selectedIds}
-                    onSelectionChange={setSelectedIds}
-                    timeGrouping={timeGrouping}
-                  />
-                )}
-              </div>
-            </div>
+                </div>
 
-            {/* Load More button at bottom */}
-            <Pagination
-              hasMore={hasNextPage || false}
-              onLoadMore={handleLoadMore}
-              isLoading={isFetchingNextPage}
-            />
+                {/* Load More button at bottom */}
+                <Pagination
+                  hasMore={hasNextPage || false}
+                  onLoadMore={handleLoadMore}
+                  isLoading={isFetchingNextPage}
+                />
+              </>
+            )}
           </>
         )}
       </main>

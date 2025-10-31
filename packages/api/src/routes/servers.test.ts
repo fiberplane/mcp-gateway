@@ -45,6 +45,8 @@ describe("API /servers endpoint", () => {
         getClients: async () => [],
         getMethods: async () => [],
         clearSessions: async () => {},
+        getConversations: async () => [],
+        getConversationTimeline: async () => [],
       };
 
       const app = createApp({ queries, logger: mockLogger });
@@ -83,6 +85,8 @@ describe("API /servers endpoint", () => {
         getClients: async () => [],
         getMethods: async () => [],
         clearSessions: async () => {},
+        getConversations: async () => [],
+        getConversationTimeline: async () => [],
       };
 
       const app = createApp({ queries, logger: mockLogger });
@@ -115,6 +119,8 @@ describe("API /servers endpoint", () => {
         getClients: async () => [],
         getMethods: async () => [],
         clearSessions: async () => {},
+        getConversations: async () => [],
+        getConversationTimeline: async () => [],
       };
 
       const app = createApp({ queries, logger: mockLogger });
@@ -147,6 +153,8 @@ describe("API /servers endpoint", () => {
         getClients: async () => [],
         getMethods: async () => [],
         clearSessions: async () => {},
+        getConversations: async () => [],
+        getConversationTimeline: async () => [],
       };
 
       const app = createApp({ queries, logger: mockLogger });
@@ -187,6 +195,8 @@ describe("API /servers endpoint", () => {
         getClients: async () => [],
         getMethods: async () => [],
         clearSessions: async () => {},
+        getConversations: async () => [],
+        getConversationTimeline: async () => [],
       };
 
       const app = createApp({ queries, logger: mockLogger });
@@ -228,6 +238,8 @@ describe("API /servers endpoint", () => {
         getClients: async () => [],
         getMethods: async () => [],
         clearSessions: async () => {},
+        getConversations: async () => [],
+        getConversationTimeline: async () => [],
       };
 
       const app = createApp({ queries, logger: mockLogger });
@@ -258,6 +270,8 @@ describe("API /servers endpoint", () => {
         getClients: async () => [],
         getMethods: async () => [],
         clearSessions: async () => {},
+        getConversations: async () => [],
+        getConversationTimeline: async () => [],
       };
 
       const app = createApp({ queries, logger: mockLogger });

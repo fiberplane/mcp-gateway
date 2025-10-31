@@ -1,0 +1,20 @@
+{
+  "name": "test-llm-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "bun src/agent.ts",
+    "weather": "bun src/agent.ts weather",
+    "research": "bun src/agent.ts research",
+    "multi-step": "bun src/agent.ts multiStep"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^2.0.58",
+    "ai": "^5.0.84",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}

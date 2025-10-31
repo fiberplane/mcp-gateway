@@ -1,3 +1,4 @@
+import type { ConversationSummary, TimelineEvent } from "./conversations.js";
 import type {
   ClientAggregation,
   LogQueryOptions,
@@ -78,6 +79,46 @@ export interface StorageBackend {
    * Use with caution.
    */
   clearAll(): Promise<void>;
+
+  /**
+   * Capture LLM request to storage
+   *
+   * Stores an LLM API request for correlation with MCP tool calls.
+   */
+  captureLLMRequest(data: {
+    traceId: string;
+    conversationId: string;
+    provider: "openai" | "anthropic";
+    model: string;
+    requestBody: unknown;
+    streaming: boolean;
+    userAgent?: string;
+    clientIp?: string;
+  }): void;
+
+  /**
+   * Capture LLM response to storage
+   *
+   * Stores an LLM API response including token usage and tool calls
+   * for correlation with MCP tool invocations.
+   */
+  captureLLMResponse(data: {
+    traceId: string;
+    conversationId: string;
+    provider: "openai" | "anthropic";
+    model: string;
+    responseBody: unknown;
+    finishReason?: string;
+    inputTokens?: number;
+    outputTokens?: number;
+    totalTokens?: number;
+    durationMs: number;
+    httpStatus: number;
+    toolCalls?: unknown[];
+    error?: unknown;
+    userAgent?: string;
+    clientIp?: string;
+  }): void;
 
   /**
    * Update server info for an initialize request after getting the response
@@ -193,6 +234,27 @@ export interface StorageBackend {
     lastCheck: string,
     url: string,
   ): Promise<void>;
+
+  /**
+   * Get all conversations with summary stats
+   *
+   * Returns list of conversations with LLM request counts, MCP call counts,
+   * and provider/model information.
+   *
+   * @returns List of conversation summaries sorted by most recent
+   */
+  getConversations(): Promise<ConversationSummary[]>;
+
+  /**
+   * Get conversation timeline
+   *
+   * Returns chronological timeline of LLM requests/responses and MCP calls
+   * for a specific conversation.
+   *
+   * @param conversationId - Conversation ID to retrieve timeline for
+   * @returns Timeline events sorted chronologically
+   */
+  getConversationTimeline(conversationId: string): Promise<TimelineEvent[]>;
 
   /**
    * Close/cleanup the storage backend

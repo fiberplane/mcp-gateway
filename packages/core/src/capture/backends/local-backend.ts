@@ -5,6 +5,7 @@ import { join } from "node:path";
 import type {
   CaptureRecord,
   ClientAggregation,
+  ConversationSummary,
   HealthStatus,
   LogQueryOptions,
   LogQueryResult,
@@ -14,6 +15,7 @@ import type {
   SessionInfo,
   StorageBackend,
   StorageWriteResult,
+  TimelineEvent,
 } from "@fiberplane/mcp-gateway-types";
 import { eq } from "drizzle-orm";
 import { type BunSQLiteDatabase, drizzle } from "drizzle-orm/bun-sqlite";
@@ -296,9 +298,13 @@ export class LocalStorageBackend implements StorageBackend {
       this.sqlite.transaction(() => {
         this.sqlite.run("DELETE FROM logs");
         this.sqlite.run("DELETE FROM session_metadata");
+        this.sqlite.run("DELETE FROM llm_requests");
         this.sqlite.run("DELETE FROM sqlite_sequence WHERE name='logs'");
         this.sqlite.run(
           "DELETE FROM sqlite_sequence WHERE name='session_metadata'",
+        );
+        this.sqlite.run(
+          "DELETE FROM sqlite_sequence WHERE name='llm_requests'",
         );
       })();
       logger.info("Local storage logs cleared");
@@ -307,6 +313,115 @@ export class LocalStorageBackend implements StorageBackend {
         error: error instanceof Error ? error.message : String(error),
       });
       throw error;
+    }
+  }
+
+  /**
+   * Capture LLM request to database
+   */
+  captureLLMRequest(data: {
+    traceId: string;
+    conversationId: string;
+    provider: "openai" | "anthropic";
+    model: string;
+    requestBody: unknown;
+    streaming: boolean;
+    userAgent?: string;
+    clientIp?: string;
+  }): void {
+    try {
+      const entry: schema.NewLLMRequest = {
+        uuid: crypto.randomUUID(),
+        traceId: data.traceId,
+        conversationId: data.conversationId,
+        timestamp: new Date().toISOString(),
+        provider: data.provider,
+        model: data.model,
+        direction: "request",
+        requestBody: JSON.stringify(data.requestBody),
+        responseBody: null,
+        finishReason: null,
+        streaming: data.streaming,
+        inputTokens: null,
+        outputTokens: null,
+        totalTokens: null,
+        durationMs: 0,
+        httpStatus: 0,
+        toolCallsJson: null,
+        userAgent: data.userAgent || null,
+        clientIp: data.clientIp || null,
+        errorJson: null,
+      };
+
+      this.db.insert(schema.llmRequests).values(entry).run();
+      logger.debug("LLM request captured", {
+        traceId: data.traceId,
+        model: data.model,
+      });
+    } catch (error) {
+      logger.error("Failed to capture LLM request", {
+        error: error instanceof Error ? error.message : String(error),
+        traceId: data.traceId,
+      });
+    }
+  }
+
+  /**
+   * Capture LLM response to database
+   */
+  captureLLMResponse(data: {
+    traceId: string;
+    conversationId: string;
+    provider: "openai" | "anthropic";
+    model: string;
+    responseBody: unknown;
+    finishReason?: string;
+    inputTokens?: number;
+    outputTokens?: number;
+    totalTokens?: number;
+    durationMs: number;
+    httpStatus: number;
+    toolCalls?: unknown[];
+    error?: unknown;
+    userAgent?: string;
+    clientIp?: string;
+  }): void {
+    try {
+      const entry: schema.NewLLMRequest = {
+        uuid: crypto.randomUUID(),
+        traceId: data.traceId,
+        conversationId: data.conversationId,
+        timestamp: new Date().toISOString(),
+        provider: data.provider,
+        model: data.model,
+        direction: "response",
+        requestBody: null,
+        responseBody: JSON.stringify(data.responseBody),
+        finishReason: data.finishReason || null,
+        streaming: false,
+        inputTokens: data.inputTokens || null,
+        outputTokens: data.outputTokens || null,
+        totalTokens: data.totalTokens || null,
+        durationMs: data.durationMs,
+        httpStatus: data.httpStatus,
+        toolCallsJson: data.toolCalls ? JSON.stringify(data.toolCalls) : null,
+        userAgent: data.userAgent || null,
+        clientIp: data.clientIp || null,
+        errorJson: data.error ? JSON.stringify(data.error) : null,
+      };
+
+      this.db.insert(schema.llmRequests).values(entry).run();
+      logger.debug("LLM response captured", {
+        traceId: data.traceId,
+        model: data.model,
+        httpStatus: data.httpStatus,
+        toolCalls: data.toolCalls?.length || 0,
+      });
+    } catch (error) {
+      logger.error("Failed to capture LLM response", {
+        error: error instanceof Error ? error.message : String(error),
+        traceId: data.traceId,
+      });
     }
   }
 
@@ -528,6 +643,33 @@ export class LocalStorageBackend implements StorageBackend {
       logger.error("Local storage upsertServerHealth failed", {
         error: error instanceof Error ? error.message : String(error),
         serverName,
+      });
+      throw error;
+    }
+  }
+
+  async getConversations(): Promise<ConversationSummary[]> {
+    try {
+      const { getConversations } = await import("../../logs/storage.js");
+      return await getConversations(this.db);
+    } catch (error) {
+      logger.error("Local storage getConversations failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
+
+  async getConversationTimeline(
+    conversationId: string,
+  ): Promise<TimelineEvent[]> {
+    try {
+      const { getConversationTimeline } = await import("../../logs/storage.js");
+      return await getConversationTimeline(this.db, conversationId);
+    } catch (error) {
+      logger.error("Local storage getConversationTimeline failed", {
+        error: error instanceof Error ? error.message : String(error),
+        conversationId,
       });
       throw error;
     }

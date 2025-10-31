@@ -40,6 +40,9 @@ export const logs = sqliteTable(
     outputTokens: integer("output_tokens"),
     // Human-readable method detail for display and sorting
     methodDetail: text("method_detail"),
+    // LLM correlation fields
+    llmTraceId: text("llm_trace_id"),
+    conversationId: text("conversation_id"),
   },
   (table) => ({
     // Index for time-based queries (newest first)
@@ -62,6 +65,9 @@ export const logs = sqliteTable(
     ),
     // Index for IP-based queries (debugging)
     clientIpIdx: index("idx_client_ip").on(table.clientIp),
+    // Indexes for LLM correlation
+    llmTraceIdIdx: index("idx_llm_trace_id").on(table.llmTraceId),
+    conversationIdIdx: index("idx_conversation_id").on(table.conversationId),
   }),
 );
 
@@ -120,3 +126,69 @@ export const serverHealth = sqliteTable("server_health", {
 
 export type ServerHealth = typeof serverHealth.$inferSelect;
 export type NewServerHealth = typeof serverHealth.$inferInsert;
+
+/**
+ * SQLite table schema for LLM requests/responses
+ *
+ * This table stores all LLM API calls (OpenAI, Anthropic) that pass through
+ * the gateway proxy. Used for correlating LLM calls with MCP tool invocations.
+ */
+export const llmRequests = sqliteTable(
+  "llm_requests",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    uuid: text("uuid").notNull().unique(), // UUID for external reference
+    traceId: text("trace_id").notNull(), // Links to logs.llm_trace_id
+    conversationId: text("conversation_id").notNull(),
+    timestamp: text("timestamp").notNull(),
+    provider: text("provider", {
+      enum: ["openai", "anthropic"],
+    }).notNull(),
+    model: text("model").notNull(),
+    direction: text("direction", { enum: ["request", "response"] }).notNull(),
+
+    // Request/response data
+    requestBody: text("request_body"), // Full request JSON
+    responseBody: text("response_body"), // Full response JSON
+    finishReason: text("finish_reason"),
+    streaming: integer("streaming", { mode: "boolean" }).default(false),
+
+    // Metrics
+    inputTokens: integer("input_tokens"),
+    outputTokens: integer("output_tokens"),
+    totalTokens: integer("total_tokens"),
+    durationMs: integer("duration_ms").default(0),
+    httpStatus: integer("http_status").default(0),
+
+    // Tool calls (for correlation)
+    toolCallsJson: text("tool_calls_json"), // Extracted tool calls
+
+    // HTTP context
+    userAgent: text("user_agent"),
+    clientIp: text("client_ip"),
+
+    // Error information
+    errorJson: text("error_json"),
+  },
+  (table) => ({
+    // Index for correlation queries
+    traceIdIdx: index("llm_trace_id_idx").on(table.traceId),
+    conversationIdIdx: index("llm_conversation_id_idx").on(
+      table.conversationId,
+    ),
+    // Index for time-based queries
+    timestampIdx: index("llm_timestamp_idx").on(table.timestamp),
+    // Composite indexes for common queries
+    providerModelIdx: index("llm_provider_model_idx").on(
+      table.provider,
+      table.model,
+    ),
+    conversationTimestampIdx: index("llm_conversation_timestamp_idx").on(
+      table.conversationId,
+      table.timestamp,
+    ),
+  }),
+);
+
+export type LLMRequest = typeof llmRequests.$inferSelect;
+export type NewLLMRequest = typeof llmRequests.$inferInsert;

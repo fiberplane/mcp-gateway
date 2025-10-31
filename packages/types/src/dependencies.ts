@@ -1,3 +1,4 @@
+import type { ConversationSummary, TimelineEvent } from "./conversations.js";
 import type { HttpContext } from "./gateway.js";
 import type { LogQueryOptions, LogQueryResult, ServerInfo } from "./logs.js";
 import type { McpServer, McpServerConfig } from "./registry.js";
@@ -102,6 +103,9 @@ export interface ProxyDependencies {
     serverInfo: McpServerInfo,
   ) => Promise<void>;
 
+  /** Get conversation ID for a session (auto-correlation) */
+  getConversationIdForSession: (sessionId: string) => string | undefined;
+
   /** Get a server by name */
   getServer: (name: string) => Promise<McpServer | undefined>;
 }
@@ -158,6 +162,16 @@ export interface QueryFunctions {
    * Clear all session data (client info and server info)
    */
   clearSessions: () => Promise<void>;
+
+  /**
+   * Get all conversations with summary stats
+   */
+  getConversations: () => Promise<ConversationSummary[]>;
+
+  /**
+   * Get conversation timeline for a specific conversation
+   */
+  getConversationTimeline: (conversationId: string) => Promise<TimelineEvent[]>;
 }
 
 /**

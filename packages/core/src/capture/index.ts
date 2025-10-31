@@ -115,6 +115,7 @@ export function createRequestCaptureRecord(
       server,
       userAgent: httpContext?.userAgent,
       clientIp: httpContext?.clientIp,
+      conversationId: httpContext?.conversationId,
       inputTokens: estimateInputTokens(request.method, request.params),
       methodDetail,
     },
@@ -175,6 +176,7 @@ export function createResponseCaptureRecord(
       server,
       userAgent: httpContext?.userAgent,
       clientIp: httpContext?.clientIp,
+      conversationId: httpContext?.conversationId,
       // Estimate tokens from either result (success) or error (failure)
       outputTokens: estimateOutputTokens(
         method,
@@ -219,6 +221,7 @@ export function createSSEEventCaptureRecord(
       client,
       userAgent: httpContext?.userAgent,
       clientIp: httpContext?.clientIp,
+      conversationId: httpContext?.conversationId,
       sseEventId: sseEvent.id,
       sseEventType: sseEvent.event,
     },
@@ -316,6 +319,7 @@ export function createSSEJsonRpcCaptureRecord(
       server,
       userAgent: httpContext?.userAgent,
       clientIp: httpContext?.clientIp,
+      conversationId: httpContext?.conversationId,
       sseEventId: sseEvent.id,
       sseEventType: sseEvent.event,
       // Add token estimation for SSE JSON-RPC messages

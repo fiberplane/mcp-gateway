@@ -77,6 +77,7 @@ export const captureMetadataSchema = z.object({
   server: mcpServerInfoSchema.optional(),
   userAgent: z.string().optional(),
   clientIp: z.string().optional(),
+  conversationId: z.string().optional(), // For LLM-MCP correlation
   sseEventId: z.string().optional(), // For SSE events
   sseEventType: z.string().optional(), // For SSE events
   inputTokens: z.number().optional(), // Estimated tokens for request

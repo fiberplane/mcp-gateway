@@ -4,11 +4,13 @@
 import type {
   ApiLogEntry,
   ClientAggregation,
+  ConversationSummary,
   LogQueryResult,
   McpServer,
   McpServerConfig,
   ServerInfo,
   SessionInfo,
+  TimelineEvent,
 } from "@fiberplane/mcp-gateway-types";
 
 /**
@@ -252,6 +254,43 @@ class APIClient {
       );
     }
 
+    return response.json();
+  }
+
+  /**
+   * Get all conversations with summary stats
+   *
+   * Returns list of conversations with LLM request counts, MCP call counts,
+   * and provider/model information.
+   */
+  async getConversations(): Promise<{ conversations: ConversationSummary[] }> {
+    const response = await fetch(`${this.baseURL}/conversations`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch conversations: ${response.statusText}`);
+    }
+    return response.json();
+  }
+
+  /**
+   * Get conversation timeline
+   *
+   * Returns chronological timeline of LLM requests/responses and MCP calls
+   * for a specific conversation.
+   *
+   * @param conversationId - Conversation ID to retrieve timeline for
+   */
+  async getConversationTimeline(conversationId: string): Promise<{
+    conversationId: string;
+    events: TimelineEvent[];
+  }> {
+    const response = await fetch(
+      `${this.baseURL}/conversations/${encodeURIComponent(conversationId)}`,
+    );
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch conversation timeline: ${response.statusText}`,
+      );
+    }
     return response.json();
   }
 }

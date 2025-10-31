@@ -23,6 +23,12 @@ const mockGateway: Gateway = {
     clear: () => {},
     clearAll: () => {},
   },
+  conversation: {
+    store: () => {},
+    get: () => undefined,
+    clear: () => {},
+    clearAll: () => {},
+  },
   requestTracker: {
     trackRequest: () => {},
     calculateDuration: () => 0,
@@ -52,6 +58,10 @@ const mockGateway: Gateway = {
     getServerMetrics: async () => ({ lastActivity: null, exchangeCount: 0 }),
     clearAll: async () => {},
     updateServerInfoForInitializeRequest: async () => {},
+    captureLLMRequest: () => {},
+    captureLLMResponse: () => {},
+    getConversations: async () => [],
+    getConversationTimeline: async () => [],
   },
   health: {
     start: async () => {},

@@ -400,9 +400,16 @@ export async function createProxyRoutes(options: {
         }
       }
 
+      // Auto-inject conversationId from session mapping if not explicitly provided
+      const explicitConversationId = c.req.header("X-Conversation-Id");
+      const autoConversationId = !explicitConversationId
+        ? deps.getConversationIdForSession(sessionId)
+        : undefined;
+
       const httpContext: HttpContext = {
         userAgent: c.req.header("User-Agent"),
         clientIp: clientIp && clientIp !== "unknown" ? clientIp : undefined,
+        conversationId: explicitConversationId || autoConversationId,
       };
 
       // Build proxy headers for GET request
@@ -596,9 +603,16 @@ export async function createProxyRoutes(options: {
         }
       }
 
+      // Auto-inject conversationId from session mapping if not explicitly provided
+      const explicitConversationId = c.req.header("X-Conversation-Id");
+      const autoConversationId = !explicitConversationId
+        ? deps.getConversationIdForSession(sessionId)
+        : undefined;
+
       const httpContext: HttpContext = {
         userAgent: c.req.header("User-Agent"),
         clientIp: clientIp && clientIp !== "unknown" ? clientIp : undefined,
+        conversationId: explicitConversationId || autoConversationId,
       };
 
       // Differentiate between requests and responses

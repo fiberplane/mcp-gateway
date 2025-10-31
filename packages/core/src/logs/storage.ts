@@ -1,11 +1,14 @@
 import type {
   CaptureRecord,
   ClientAggregation,
+  ConversationSummary,
   HealthStatus,
+  LLMEventData,
   LogQueryOptions,
   LogQueryResult,
   ServerInfo,
   SessionInfo,
+  TimelineEvent,
 } from "@fiberplane/mcp-gateway-types";
 import {
   and,
@@ -26,6 +29,7 @@ import { logger } from "../logger.js";
 import type * as schema from "./schema.js";
 import {
   type Log,
+  llmRequests,
   logs,
   type NewLog,
   type NewServerHealth,
@@ -66,6 +70,8 @@ export async function insertLog(
     // HTTP context for fallback identification
     userAgent: record.metadata.userAgent ?? null,
     clientIp: record.metadata.clientIp ?? null,
+    // LLM-MCP correlation
+    conversationId: record.metadata.conversationId ?? null,
     // Token estimation for cost tracking
     inputTokens: record.metadata.inputTokens ?? null,
     outputTokens: record.metadata.outputTokens ?? null,
@@ -707,6 +713,123 @@ function safeJsonParse<T = unknown>(json: string | null): T | undefined {
 }
 
 /**
+ * Get all conversations with summary stats
+ *
+ * Returns list of conversations with:
+ * - conversationId
+ * - First/last timestamp
+ * - Count of LLM requests
+ * - Count of MCP calls
+ * - Provider/model info
+ */
+export async function getConversations(
+  db: BunSQLiteDatabase<typeof schema>,
+): Promise<ConversationSummary[]> {
+  // Get conversations from llmRequests table
+  const conversationsFromLLM = await db
+    .select({
+      conversationId: llmRequests.conversationId,
+      startTime: sql<string>`MIN(${llmRequests.timestamp})`,
+      endTime: sql<string>`MAX(${llmRequests.timestamp})`,
+      llmRequestCount: count(llmRequests.id),
+      provider: sql<string | null>`MAX(${llmRequests.provider})`, // Pick any provider
+      model: sql<string | null>`MAX(${llmRequests.model})`, // Pick any model
+    })
+    .from(llmRequests)
+    .groupBy(llmRequests.conversationId)
+    .orderBy(desc(sql`MAX(${llmRequests.timestamp})`));
+
+  // For each conversation, get MCP call count from logs table
+  const results = await Promise.all(
+    conversationsFromLLM.map(async (conv) => {
+      const mcpCallsResult = await db
+        .select({
+          count: count(logs.id),
+        })
+        .from(logs)
+        .where(eq(logs.conversationId, conv.conversationId));
+
+      return {
+        conversationId: conv.conversationId,
+        startTime: conv.startTime,
+        endTime: conv.endTime,
+        llmRequestCount: conv.llmRequestCount,
+        mcpCallCount: mcpCallsResult[0]?.count ?? 0,
+        provider: conv.provider,
+        model: conv.model,
+      };
+    }),
+  );
+
+  return results;
+}
+
+/**
+ * Get conversation timeline (LLM + MCP events)
+ *
+ * Returns chronological timeline of:
+ * - LLM requests/responses
+ * - MCP tool calls
+ */
+export async function getConversationTimeline(
+  db: BunSQLiteDatabase<typeof schema>,
+  conversationId: string,
+): Promise<TimelineEvent[]> {
+  // Get LLM requests/responses
+  const llmRecords = await db
+    .select()
+    .from(llmRequests)
+    .where(eq(llmRequests.conversationId, conversationId))
+    .orderBy(llmRequests.timestamp);
+
+  // Get MCP calls
+  const mcpRecords = await db
+    .select()
+    .from(logs)
+    .where(eq(logs.conversationId, conversationId))
+    .orderBy(logs.timestamp);
+
+  // Combine and sort by timestamp
+  const timeline: TimelineEvent[] = [];
+
+  // Add LLM events
+  for (const record of llmRecords) {
+    const llmData: LLMEventData = {
+      provider: record.provider,
+      model: record.model,
+      requestBody: safeJsonParse(record.requestBody),
+      responseBody: safeJsonParse(record.responseBody),
+      inputTokens: record.inputTokens,
+      outputTokens: record.outputTokens,
+      durationMs: record.durationMs,
+      httpStatus: record.httpStatus,
+      toolCalls: safeJsonParse(record.toolCallsJson),
+      error: safeJsonParse(record.errorJson),
+    };
+
+    timeline.push({
+      type: record.direction === "request" ? "llm-request" : "llm-response",
+      timestamp: record.timestamp,
+      data: llmData,
+    });
+  }
+
+  // Add MCP events
+  for (const record of mcpRecords) {
+    timeline.push({
+      type: "mcp-call",
+      timestamp: record.timestamp,
+      data: rowToRecord(record),
+    });
+  }
+
+  // Sort by timestamp
+  timeline.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+
+  return timeline;
+}
+
+/**
  * Convert database row to CaptureRecord
  */
 function rowToRecord(row: Log): CaptureRecord {
@@ -742,6 +865,7 @@ function rowToRecord(row: Log): CaptureRecord {
       server,
       userAgent: row.userAgent ?? undefined,
       clientIp: row.clientIp ?? undefined,
+      conversationId: row.conversationId ?? undefined,
       inputTokens: row.inputTokens ?? undefined,
       outputTokens: row.outputTokens ?? undefined,
       methodDetail: row.methodDetail,

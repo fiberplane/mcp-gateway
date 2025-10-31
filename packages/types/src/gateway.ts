@@ -1,4 +1,5 @@
 import type { RequestTracker } from "./capture";
+import type { ConversationSummary, TimelineEvent } from "./conversations";
 import type {
   ClientAggregation,
   LogQueryOptions,
@@ -24,6 +25,7 @@ import type {
 export interface HttpContext {
   userAgent?: string;
   clientIp?: string;
+  conversationId?: string; // For LLM-MCP correlation
 }
 
 /**
@@ -159,6 +161,38 @@ export interface Gateway {
   };
 
   /**
+   * Conversation mapping for automatic LLM-MCP correlation
+   *
+   * Maps MCP session IDs to conversation IDs from LLM requests.
+   * Enables automatic correlation without requiring explicit X-Conversation-Id headers.
+   */
+  conversation: {
+    /**
+     * Store conversation ID for a session
+     *
+     * Associates an MCP session with an LLM conversation for automatic correlation.
+     */
+    store(sessionId: string, conversationId: string): void;
+
+    /**
+     * Get conversation ID for a session
+     *
+     * Returns the conversation ID associated with this MCP session, if any.
+     */
+    get(sessionId: string): string | undefined;
+
+    /**
+     * Clear conversation mapping for a session
+     */
+    clear(sessionId: string): void;
+
+    /**
+     * Clear all conversation mappings
+     */
+    clearAll(): void;
+  };
+
+  /**
    * Request tracker for correlating requests and responses
    *
    * Tracks requests and calculates response times for JSON-RPC request/response pairs.
@@ -257,6 +291,64 @@ export interface Gateway {
       requestId: string | number,
       serverInfo: { name?: string; version: string; title?: string },
     ): Promise<void>;
+
+    /**
+     * Capture LLM request to storage
+     *
+     * Stores an LLM API request for correlation with MCP tool calls.
+     */
+    captureLLMRequest(data: {
+      traceId: string;
+      conversationId: string;
+      provider: "openai" | "anthropic";
+      model: string;
+      requestBody: unknown;
+      streaming: boolean;
+      userAgent?: string;
+      clientIp?: string;
+    }): void;
+
+    /**
+     * Capture LLM response to storage
+     *
+     * Stores an LLM API response including token usage and tool calls
+     * for correlation with MCP tool invocations.
+     */
+    captureLLMResponse(data: {
+      traceId: string;
+      conversationId: string;
+      provider: "openai" | "anthropic";
+      model: string;
+      responseBody: unknown;
+      finishReason?: string;
+      inputTokens?: number;
+      outputTokens?: number;
+      totalTokens?: number;
+      durationMs: number;
+      httpStatus: number;
+      toolCalls?: unknown[];
+      error?: unknown;
+      userAgent?: string;
+      clientIp?: string;
+    }): void;
+
+    /**
+     * Get all conversations with summary stats
+     *
+     * Returns list of conversations with LLM request counts, MCP call counts,
+     * and provider/model information.
+     */
+    getConversations(): Promise<ConversationSummary[]>;
+
+    /**
+     * Get conversation timeline
+     *
+     * Returns chronological timeline of LLM requests/responses and MCP calls
+     * for a specific conversation.
+     *
+     * @param conversationId - Conversation ID to retrieve timeline for
+     */
+    getConversationTimeline(conversationId: string): Promise<TimelineEvent[]>;
   };
 
   /**

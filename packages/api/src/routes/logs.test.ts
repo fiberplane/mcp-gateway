@@ -32,6 +32,8 @@ function createMockQueries() {
     getClients: async () => [],
     getMethods: async () => [],
     clearSessions: async () => {},
+    getConversations: async () => [],
+    getConversationTimeline: async () => [],
   };
 
   return {

@@ -138,6 +138,27 @@ class ServerInfoStore {
   }
 }
 
+// In-memory storage for conversation IDs by session (scoped to Gateway instance)
+class ConversationStore {
+  private sessionConversations = new Map<string, string>();
+
+  store(sessionId: string, conversationId: string): void {
+    this.sessionConversations.set(sessionId, conversationId);
+  }
+
+  get(sessionId: string): string | undefined {
+    return this.sessionConversations.get(sessionId);
+  }
+
+  clear(sessionId: string): void {
+    this.sessionConversations.delete(sessionId);
+  }
+
+  clearAll(): void {
+    this.sessionConversations.clear();
+  }
+}
+
 // Store request start times for duration calculation (scoped to Gateway instance)
 class InMemoryRequestTracker implements RequestTracker {
   private requestStartTimes = new Map<string | number, number>();
@@ -342,6 +363,9 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
   // Create scoped server info store with storage fallback
   const serverInfoStore = new ServerInfoStore(backend);
 
+  // Create scoped conversation store for session→conversation mapping
+  const conversationStore = new ConversationStore();
+
   // Create scoped request tracker
   const requestTracker = new InMemoryRequestTracker();
 
@@ -501,6 +525,14 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
       clearAll: () => serverInfoStore.clearAll(),
     },
 
+    conversation: {
+      store: (sessionId: string, conversationId: string) =>
+        conversationStore.store(sessionId, conversationId),
+      get: (sessionId: string) => conversationStore.get(sessionId),
+      clear: (sessionId: string) => conversationStore.clear(sessionId),
+      clearAll: () => conversationStore.clearAll(),
+    },
+
     requestTracker: {
       trackRequest: (id: string | number, method: string) =>
         requestTracker.trackRequest(id, method),
@@ -537,6 +569,11 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
           requestId,
           serverInfo,
         ),
+      captureLLMRequest: (data) => backend.captureLLMRequest(data),
+      captureLLMResponse: (data) => backend.captureLLMResponse(data),
+      getConversations: async () => await backend.getConversations(),
+      getConversationTimeline: async (conversationId: string) =>
+        await backend.getConversationTimeline(conversationId),
     },
 
     health: {

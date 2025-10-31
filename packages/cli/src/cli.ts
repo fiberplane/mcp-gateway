@@ -13,6 +13,7 @@ import {
   createMcpApp,
   createRequestCaptureRecord,
   createResponseCaptureRecord,
+  getDb,
   getStorageRoot,
   logger,
 } from "@fiberplane/mcp-gateway-core";
@@ -257,16 +258,22 @@ export async function runCli(): Promise<void> {
           requestId,
           serverInfo,
         ),
+      getConversationIdForSession: (sessionId) =>
+        gateway.conversation.get(sessionId),
       getServer: (name) => gateway.storage.getServer(name),
     };
 
-    // Create MCP protocol server (proxy, OAuth, gateway MCP server)
+    // Get database for LLM request/response capture
+    const db = getDb(storageDir);
+
+    // Create MCP protocol server (proxy, OAuth, gateway MCP server, LLM proxy)
     const { app: serverApp } = await createServerApp({
       storageDir,
       createMcpApp,
       appLogger: logger,
       proxyDependencies,
       gateway,
+      db,
       onProxyEvent: emitLog,
       onRegistryUpdate: emitRegistryUpdate,
     });
@@ -451,6 +458,9 @@ export async function runCli(): Promise<void> {
           // Clear all logs from database
           await gateway.storage.clearAll();
         },
+        getConversations: () => gateway.storage.getConversations(),
+        getConversationTimeline: (conversationId) =>
+          gateway.storage.getConversationTimeline(conversationId),
       },
       logger,
       serverManagement: {
