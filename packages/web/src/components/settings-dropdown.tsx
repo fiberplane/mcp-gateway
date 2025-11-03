@@ -5,9 +5,10 @@
  */
 
 import type { McpServerConfig } from "@fiberplane/mcp-gateway-types";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Server, Settings, Trash2 } from "lucide-react";
 import { useCallback, useState } from "react";
+import { useServerConfigs } from "../hooks/use-server-configs";
 import { api } from "../lib/api";
 import { ServerEditModal } from "./server-edit-modal";
 import { Button } from "./ui/button";
@@ -30,15 +31,7 @@ export function SettingsDropdown({
   >();
 
   // Fetch server configurations
-  const {
-    data: serversData,
-    isLoading,
-    isError,
-    error,
-  } = useQuery({
-    queryKey: ["server-configs"],
-    queryFn: () => api.getServerConfigs(),
-  });
+  const { data: serversData, isLoading, isError, error } = useServerConfigs();
 
   // Add server mutation
   const addServerMutation = useMutation({

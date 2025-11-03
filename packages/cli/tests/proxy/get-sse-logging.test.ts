@@ -206,9 +206,18 @@ describe("GET /mcp SSE Logging and Capture Tests", () => {
   });
 
   afterAll(async () => {
-    // Stop all servers
-    gateway?.stop();
-    await testServer?.stop();
+    // Stop all servers with error handling
+    try {
+      gateway?.stop();
+    } catch (err) {
+      console.warn("Failed to stop gateway:", err);
+    }
+
+    try {
+      await testServer?.stop();
+    } catch (err) {
+      console.warn("Failed to stop test server:", err);
+    }
 
     // Clean up temp directory
     try {

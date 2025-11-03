@@ -173,12 +173,12 @@ describe("DELETE /mcp Session Termination Tests", () => {
     // Create and start gateway app
     const { app } = await createApp(servers, storageDir);
     const server = Bun.serve({
-      port: 8200,
+      port: 8210,
       fetch: app.fetch,
     });
 
     gateway = {
-      port: 8200,
+      port: 8210,
       stop: () => server.stop(),
     };
 
@@ -195,10 +195,19 @@ describe("DELETE /mcp Session Termination Tests", () => {
   });
 
   afterAll(async () => {
-    // Stop all servers
-    gateway?.stop();
+    // Stop all servers with error handling
+    try {
+      gateway?.stop();
+    } catch (err) {
+      console.warn("Failed to stop gateway:", err);
+    }
+
     for (const server of testServers) {
-      await server.stop();
+      try {
+        await server.stop();
+      } catch (err) {
+        console.warn("Failed to stop test server:", err);
+      }
     }
 
     // Clean up temp directory

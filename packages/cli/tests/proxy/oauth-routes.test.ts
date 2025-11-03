@@ -119,9 +119,18 @@ describe("OAuth Routes Integration Tests", () => {
   });
 
   afterAll(async () => {
-    // Stop servers
-    gateway?.stop();
-    mockOAuthServer?.stop();
+    // Stop servers with error handling
+    try {
+      gateway?.stop();
+    } catch (err) {
+      console.warn("Failed to stop gateway:", err);
+    }
+
+    try {
+      mockOAuthServer?.stop();
+    } catch (err) {
+      console.warn("Failed to stop mock OAuth server:", err);
+    }
 
     // Clean up temp directory
     try {

@@ -20,6 +20,7 @@ import { Pagination } from "./components/pagination";
 import { ServerTabs } from "./components/server-tabs";
 import { SettingsDropdown } from "./components/settings-dropdown";
 import { StreamingBadge } from "./components/streaming-badge";
+import { TooltipProvider } from "./components/ui/tooltip";
 import { api } from "./lib/api";
 import {
   filterParamsToFilters,
@@ -249,135 +250,137 @@ function App() {
   });
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="bg-card border-b border-border">
-        <div className="flex items-center justify-between px-6 py-6">
-          <div className="flex items-center gap-3">
-            <FiberplaneLogo className="text-foreground shrink-0" />
-            <span className="text-base font-medium text-foreground">
-              Fiberplane
-            </span>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-[1600px] mx-auto px-6 py-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-semibold text-foreground">
-            MCP server logs
-          </h1>
-          <SettingsDropdown
-            onClearSessions={handleClearSessions}
-            isClearing={isClearing}
-          />
-        </div>
-
-        <div className="mb-6">
-          <ServerTabs
-            value={serverName}
-            onChange={handleServerChange}
-            panelId={logsPanelId}
-          />
-        </div>
-
-        {clearError && (
-          <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive mb-5">
-            {clearError}
-          </div>
-        )}
-
-        {error && (
-          <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive mb-5">
-            Error: {String(error)}
-          </div>
-        )}
-
-        {isLoading ? (
-          <div className="p-10 text-center text-muted-foreground bg-card rounded-lg border border-border">
-            Loading logs...
-          </div>
-        ) : (
-          <>
-            {/* Combined container: Filter Bar + Log Table with white background and border */}
-            <div
-              id={logsPanelId}
-              role="tabpanel"
-              className="bg-card rounded-lg border border-border p-4 gap-6 grid"
-            >
-              {/* Filter Bar - Phase 1-2 with two-row layout */}
-              <ErrorBoundary
-                fallback={(error) => (
-                  <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive">
-                    <p className="font-medium">Filter system unavailable</p>
-                    <p className="text-sm mt-1">
-                      Please refresh the page to try again.
-                    </p>
-                    {import.meta.env.DEV && (
-                      <details className="mt-2 text-xs">
-                        <summary className="cursor-pointer">
-                          Error details
-                        </summary>
-                        <pre className="mt-1 overflow-auto">
-                          {error.message}
-                        </pre>
-                      </details>
-                    )}
-                  </div>
-                )}
-              >
-                <FilterBar
-                  actions={
-                    <>
-                      <StreamingBadge
-                        isStreaming={isStreaming}
-                        onToggle={handleStreamingToggle}
-                      />
-                      <ExportButton
-                        logs={deferredLogs}
-                        selectedIds={selectedIds}
-                        getLogKey={getLogKey}
-                      />
-                    </>
-                  }
-                />
-              </ErrorBoundary>
-
-              {/* Log Table - wrapped for horizontal scroll */}
-              <div className="overflow-x-auto -mx-4 px-4">
-                {deferredLogs.length === 0 ? (
-                  <div className="p-10 text-center text-muted-foreground">
-                    {filters.length > 0 || searchQueries?.length ? (
-                      <>
-                        <p className="mb-2">No logs match your filters</p>
-                        <p className="text-sm">
-                          Try adjusting your filters or search terms
-                        </p>
-                      </>
-                    ) : (
-                      <p>No logs captured yet</p>
-                    )}
-                  </div>
-                ) : (
-                  <LogTable
-                    logs={deferredLogs}
-                    selectedIds={selectedIds}
-                    onSelectionChange={setSelectedIds}
-                    timeGrouping={timeGrouping}
-                  />
-                )}
-              </div>
+    <TooltipProvider delayDuration={300}>
+      <div className="min-h-screen bg-background">
+        <header className="bg-card border-b border-border">
+          <div className="flex items-center justify-between px-6 py-6">
+            <div className="flex items-center gap-3">
+              <FiberplaneLogo className="text-foreground shrink-0" />
+              <span className="text-base font-medium text-foreground">
+                Fiberplane
+              </span>
             </div>
+          </div>
+        </header>
 
-            {/* Load More button at bottom */}
-            <Pagination
-              hasMore={hasNextPage || false}
-              onLoadMore={handleLoadMore}
-              isLoading={isFetchingNextPage}
+        <main className="max-w-[1600px] mx-auto px-6 py-6">
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-2xl font-semibold text-foreground">
+              MCP server logs
+            </h1>
+            <SettingsDropdown
+              onClearSessions={handleClearSessions}
+              isClearing={isClearing}
             />
-          </>
-        )}
-      </main>
-    </div>
+          </div>
+
+          <div className="mb-6">
+            <ServerTabs
+              value={serverName}
+              onChange={handleServerChange}
+              panelId={logsPanelId}
+            />
+          </div>
+
+          {clearError && (
+            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive mb-5">
+              {clearError}
+            </div>
+          )}
+
+          {error && (
+            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive mb-5">
+              Error: {String(error)}
+            </div>
+          )}
+
+          {isLoading ? (
+            <div className="p-10 text-center text-muted-foreground bg-card rounded-lg border border-border">
+              Loading logs...
+            </div>
+          ) : (
+            <>
+              {/* Combined container: Filter Bar + Log Table with white background and border */}
+              <div
+                id={logsPanelId}
+                role="tabpanel"
+                className="bg-card rounded-lg border border-border p-4 gap-6 grid"
+              >
+                {/* Filter Bar - Phase 1-2 with two-row layout */}
+                <ErrorBoundary
+                  fallback={(error) => (
+                    <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive">
+                      <p className="font-medium">Filter system unavailable</p>
+                      <p className="text-sm mt-1">
+                        Please refresh the page to try again.
+                      </p>
+                      {import.meta.env.DEV && (
+                        <details className="mt-2 text-xs">
+                          <summary className="cursor-pointer">
+                            Error details
+                          </summary>
+                          <pre className="mt-1 overflow-auto">
+                            {error.message}
+                          </pre>
+                        </details>
+                      )}
+                    </div>
+                  )}
+                >
+                  <FilterBar
+                    actions={
+                      <>
+                        <StreamingBadge
+                          isStreaming={isStreaming}
+                          onToggle={handleStreamingToggle}
+                        />
+                        <ExportButton
+                          logs={deferredLogs}
+                          selectedIds={selectedIds}
+                          getLogKey={getLogKey}
+                        />
+                      </>
+                    }
+                  />
+                </ErrorBoundary>
+
+                {/* Log Table - wrapped for horizontal scroll */}
+                <div className="overflow-x-auto -mx-4 px-4">
+                  {deferredLogs.length === 0 ? (
+                    <div className="p-10 text-center text-muted-foreground">
+                      {filters.length > 0 || searchQueries?.length ? (
+                        <>
+                          <p className="mb-2">No logs match your filters</p>
+                          <p className="text-sm">
+                            Try adjusting your filters or search terms
+                          </p>
+                        </>
+                      ) : (
+                        <p>No logs captured yet</p>
+                      )}
+                    </div>
+                  ) : (
+                    <LogTable
+                      logs={deferredLogs}
+                      selectedIds={selectedIds}
+                      onSelectionChange={setSelectedIds}
+                      timeGrouping={timeGrouping}
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Load More button at bottom */}
+              <Pagination
+                hasMore={hasNextPage || false}
+                onLoadMore={handleLoadMore}
+                isLoading={isFetchingNextPage}
+              />
+            </>
+          )}
+        </main>
+      </div>
+    </TooltipProvider>
   );
 }
 

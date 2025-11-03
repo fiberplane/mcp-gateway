@@ -122,9 +122,18 @@ describe("SSE Integration Tests", () => {
   });
 
   afterAll(async () => {
-    // Stop all servers
-    gateway?.stop();
-    sseServer?.stop();
+    // Stop all servers with error handling
+    try {
+      gateway?.stop();
+    } catch (err) {
+      console.warn("Failed to stop gateway:", err);
+    }
+
+    try {
+      sseServer?.stop();
+    } catch (err) {
+      console.warn("Failed to stop SSE server:", err);
+    }
 
     // Clean up temp directory
     try {

@@ -1,8 +1,10 @@
 import type { ServerStatus } from "@fiberplane/mcp-gateway-types";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef } from "react";
+import { useServerConfig } from "../hooks/use-server-configs";
 import { api } from "../lib/api";
 import { StatusDot } from "./ui/status-dot";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
 interface ServerTabsProps {
   value?: string;
@@ -36,22 +38,36 @@ function getTextColor(status: ServerStatus, isSelected: boolean): string {
   return "text-foreground";
 }
 
-interface ServerTabProps {
+type ServerTabProps = {
   isSelected: boolean;
   panelId: string;
-  onClick: () => void;
-  children: React.ReactNode;
-}
+  onChange: (name: string) => void;
+  title?: string;
+  name: string;
+  status: ServerStatus;
+};
 
-function ServerTab({ isSelected, panelId, onClick, children }: ServerTabProps) {
-  return (
+function ServerTab({
+  isSelected,
+  panelId,
+  onChange,
+  title,
+  name,
+  status,
+}: ServerTabProps) {
+  const serverConfig = useServerConfig(name);
+
+  // Use server config URL as title if available, otherwise use provided title
+  const displayTitle = title ?? serverConfig?.url;
+
+  const tabButton = (
     <button
       type="button"
       role="tab"
       aria-selected={isSelected}
       aria-controls={panelId}
       tabIndex={isSelected ? 0 : -1}
-      onClick={onClick}
+      onClick={() => onChange(name)}
       className={`
         flex items-center gap-2 h-8 px-3 py-1 rounded-md text-sm transition-colors cursor-pointer
         ${
@@ -61,8 +77,29 @@ function ServerTab({ isSelected, panelId, onClick, children }: ServerTabProps) {
         }
       `}
     >
-      {children}
+      <StatusDot variant={getStatusVariant(status)} aria-label={status} />
+      <span className={getTextColor(status, isSelected)}>
+        {name}
+        {status === "offline" && (
+          <span className="text-xs ml-1">(offline)</span>
+        )}
+        {status === "not-found" && (
+          <span className="text-xs ml-1">(not found)</span>
+        )}
+      </span>
     </button>
+  );
+
+  // Only show tooltip if there's a displayTitle (server URL)
+  if (!displayTitle) {
+    return tabButton;
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{tabButton}</TooltipTrigger>
+      <TooltipContent>{displayTitle}</TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -185,13 +222,24 @@ export function ServerTabs({ value, onChange, panelId }: ServerTabsProps) {
       aria-label="Server filter tabs"
       className="flex gap-2 items-center flex-wrap"
     >
-      <ServerTab
-        isSelected={selectedServer === "all"}
-        panelId={panelId}
+      <button
+        type="button"
+        role="tab"
+        aria-selected={selectedServer === "all"}
+        aria-controls={panelId}
+        tabIndex={selectedServer === "all" ? 0 : -1}
         onClick={() => onChange(undefined)}
+        className={`
+          flex items-center gap-2 h-8 px-3 py-1 rounded-md text-sm transition-colors cursor-pointer
+          ${
+            selectedServer === "all"
+              ? "bg-foreground text-background"
+              : "bg-card text-foreground border border-border hover:bg-muted"
+          }
+        `}
       >
         All servers
-      </ServerTab>
+      </button>
       {data.servers.map((server) => {
         const isSelected = selectedServer === server.name;
         return (
@@ -199,22 +247,10 @@ export function ServerTabs({ value, onChange, panelId }: ServerTabsProps) {
             key={server.name}
             isSelected={isSelected}
             panelId={panelId}
-            onClick={() => onChange(server.name)}
-          >
-            <StatusDot
-              variant={getStatusVariant(server.status)}
-              aria-label={server.status}
-            />
-            <span className={getTextColor(server.status, isSelected)}>
-              {server.name}
-              {server.status === "offline" && (
-                <span className="text-xs ml-1">(offline)</span>
-              )}
-              {server.status === "not-found" && (
-                <span className="text-xs ml-1">(not found)</span>
-              )}
-            </span>
-          </ServerTab>
+            onChange={onChange}
+            name={server.name}
+            status={server.status}
+          />
         );
       })}
     </div>

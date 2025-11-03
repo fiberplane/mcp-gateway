@@ -189,10 +189,19 @@ describe("GET /mcp SSE Integration Tests", () => {
   });
 
   afterAll(async () => {
-    // Stop all servers
-    gateway?.stop();
+    // Stop all servers with error handling
+    try {
+      gateway?.stop();
+    } catch (err) {
+      console.warn("Failed to stop gateway:", err);
+    }
+
     for (const server of testServers) {
-      await server.stop();
+      try {
+        await server.stop();
+      } catch (err) {
+        console.warn("Failed to stop test server:", err);
+      }
     }
 
     // Clean up temp directory
