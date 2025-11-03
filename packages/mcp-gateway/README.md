@@ -258,7 +258,7 @@ See [CLAUDE.md](../../CLAUDE.md) for detailed development guidelines.
 
 ## License
 
-Apache-2.0
+MIT
 
 ## Links
 
