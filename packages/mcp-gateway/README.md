@@ -6,12 +6,21 @@ MCP Gateway provides a centralized platform for discovering, routing, and loggin
 
 ## Features
 
-- **Server Management** - Add, remove, and monitor MCP servers from a single dashboard
+### Core Capabilities
+- **Dual-Mode Operation** - Acts as both an MCP proxy server AND an MCP server itself
+- **Server Management** - Add, remove, and monitor MCP servers from web UI, API, or via MCP tools
 - **Traffic Capture** - Automatic logging of all MCP requests, responses, and errors
 - **Health Monitoring** - Real-time health checks and status tracking for all servers
-- **Web Dashboard** - Intuitive web UI for browsing logs and managing servers
-- **REST API** - Query logs programmatically for integration with other tools
+- **Programmatic Control** - Manage gateway via REST API, web UI, or MCP protocol
+
+### User Interfaces
+- **Web Dashboard** - Intuitive React UI for browsing logs and managing servers
+- **Gateway MCP Server** - Control gateway itself using MCP tools (add/remove servers, query traffic)
+- **REST API** - Programmatic access to logs and server management (powers web UI)
+
+### Analytics
 - **Metrics & Analytics** - Track server activity, response times, and error patterns
+- **Traffic Analysis** - Search captured traffic by server, session, method, or content
 
 ## Quick Start
 
@@ -33,49 +42,103 @@ mcp-gateway
 ```
 
 This launches:
-- **Web UI** - http://localhost:3333/ui
-- **API** - REST API on http://localhost:3333/api
+- **Web UI** - http://localhost:3333/ui (visual dashboard)
+- **Gateway MCP Server** - http://localhost:3333/gateway/mcp (control gateway via MCP)
+- **Proxy Endpoints** - http://localhost:3333/s/{server-name}/mcp (access registered servers)
 
 ### Add Your First Server
 
-1. Open the Web UI at http://localhost:3333/ui
+You can add servers in three ways:
+
+#### Option 1: Web UI
+1. Open http://localhost:3333/ui
 2. Click "Add Server"
 3. Enter server name and URL
-4. Gateway will perform a health check
-5. Start making MCP requests - traffic will be captured automatically
+4. Gateway performs health check automatically
+
+#### Option 2: Gateway MCP Server (via Claude Desktop)
+Configure Claude Desktop to use the gateway's MCP server:
+
+```json
+{
+  "mcpServers": {
+    "gateway": {
+      "url": "http://localhost:3333/gateway/mcp"
+    }
+  }
+}
+```
+
+Then ask Claude: "Add an MCP server named 'weather' with URL http://localhost:3001/mcp"
+
+Claude will use the `add_server` tool to register it with the gateway.
+
+#### Option 3: Edit Configuration File
+Edit `~/.mcp-gateway/mcp.json`:
+
+```json
+{
+  "servers": [
+    {
+      "name": "weather",
+      "url": "http://localhost:3001/mcp",
+      "enabled": true
+    }
+  ]
+}
+```
+
+Once added, all MCP traffic through the gateway is captured automatically.
 
 ## Architecture Overview
 
+The gateway operates in **dual mode**: it's both a proxy for MCP servers AND an MCP server itself.
+
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    MCP Gateway                              │
-│                                                             │
-│  ┌──────────────┐  ┌─────────────┐  ┌──────────────────┐  │
-│  │  Web UI      │  │   REST API  │  │   MCP Protocol   │  │
-│  │  (React)     │  │   (/api)    │  │   Gateway        │  │
-│  └──────┬───────┘  └──────┬──────┘  └────────┬─────────┘  │
-│         │                 │                  │             │
-│         └─────────────────┼──────────────────┘             │
-│                           │                                 │
-│         ┌─────────────────▼──────────────────┐             │
-│         │     Storage & Log Management       │             │
-│         │  (SQLite + mcp.json registry)      │             │
-│         └─────────────────┬──────────────────┘             │
-│                           │                                 │
-│         ┌─────────────────▼──────────────────┐             │
-│         │    MCP Server Router & Proxy       │             │
-│         │  (Routes requests to servers)      │             │
-│         └─────────────────┬──────────────────┘             │
-│                           │                                 │
-└───────────────────────────┼────────────────────────────────┘
-                            │
-                ┌───────────┼───────────┐
-                │           │           │
-         ┌──────▼───┐ ┌────▼────┐ ┌───▼──────┐
-         │  MCP     │ │   MCP   │ │   MCP    │
-         │ Server 1 │ │ Server 2│ │ Server N │
-         └──────────┘ └─────────┘ └──────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                       MCP Gateway                               │
+│                                                                 │
+│  ┌─────────────┐  ┌──────────────┐  ┌───────────────────────┐ │
+│  │  Web UI     │  │ Gateway MCP  │  │   MCP Proxy Router    │ │
+│  │  (React)    │  │   Server     │  │  (/s/{name}/mcp)      │ │
+│  │  (/ui)      │  │ (/gateway/   │  │                       │ │
+│  │             │  │     mcp)     │  │  - Traffic capture    │ │
+│  └──────┬──────┘  │              │  │  - Request routing    │ │
+│         │         │  Tools:      │  └───────────┬───────────┘ │
+│         │         │  • add_server│              │             │
+│         │         │  • remove_   │              │             │
+│         │         │    server    │              │             │
+│         │         │  • list_     │              │             │
+│         │         │    servers   │              │             │
+│         │         │  • search_   │              │             │
+│         │         │    records   │              │             │
+│         └─────────┴──────┬───────┴──────────────┘             │
+│                          │                                     │
+│         ┌────────────────▼──────────────────┐                 │
+│         │     REST API (/api)               │                 │
+│         │   (Powers Web UI)                 │                 │
+│         └────────────────┬──────────────────┘                 │
+│                          │                                     │
+│         ┌────────────────▼──────────────────┐                 │
+│         │  Storage & Log Management         │                 │
+│         │  (SQLite + mcp.json registry)     │                 │
+│         └────────────────┬──────────────────┘                 │
+│                          │                                     │
+└──────────────────────────┼─────────────────────────────────────┘
+                           │
+               ┌───────────┼───────────┐
+               │           │           │
+        ┌──────▼───┐ ┌────▼────┐ ┌───▼──────┐
+        │  MCP     │ │   MCP   │ │   MCP    │
+        │ Server 1 │ │ Server 2│ │ Server N │
+        └──────────┘ └─────────┘ └──────────┘
 ```
+
+**Key Endpoints:**
+- `/ui` - Web dashboard for visual management
+- `/gateway/mcp` - Gateway's own MCP server (manage gateway via MCP protocol)
+- `/s/{server-name}/mcp` - Proxy to registered MCP servers (traffic capture enabled)
+- `/api/*` - REST API (used by web UI, available for programmatic access)
 
 ## CLI Options
 
@@ -120,6 +183,111 @@ Servers are managed through the Web UI or by editing `~/.mcp-gateway/mcp.json`:
 }
 ```
 
+## Gateway MCP Server
+
+The gateway exposes its own MCP server with tools for programmatic control. This lets you manage the gateway using any MCP client (like Claude Desktop, Continue, etc.).
+
+### Endpoint
+
+```
+http://localhost:3333/gateway/mcp
+```
+
+### Available Tools
+
+#### `add_server`
+Add a new MCP server to the gateway registry.
+
+**Parameters:**
+- `name` (string) - Unique server identifier (alphanumeric, hyphens, underscores)
+- `url` (string) - Full HTTP/HTTPS URL to the MCP server
+- `headers` (object, optional) - Custom HTTP headers for authentication
+
+**Example:**
+```json
+{
+  "name": "weather-api",
+  "url": "http://localhost:3001/mcp",
+  "headers": {
+    "Authorization": "Bearer token123"
+  }
+}
+```
+
+#### `remove_server`
+Remove a server from the gateway registry.
+
+**Parameters:**
+- `name` (string) - Name of the server to remove
+
+#### `list_servers`
+List all registered servers with optional filtering.
+
+**Parameters:**
+- `filter` (enum, optional) - "all", "active", or "inactive" (default: "all")
+- `format` (enum, optional) - "concise" or "detailed" (default: "concise")
+
+#### `search_records`
+Search and analyze captured MCP traffic.
+
+**Parameters:**
+- `serverName` (string, optional) - Filter by server name
+- `sessionId` (string, optional) - Filter by session ID
+- `method` (string, optional) - Filter by JSON-RPC method (partial match)
+- `limit` (number, optional) - Max records to return (default: 100, max: 1000)
+- `order` (enum, optional) - "asc" or "desc" (default: "desc")
+
+### Using with Claude Desktop
+
+Add the gateway's MCP server to your Claude Desktop configuration:
+
+**Location:** `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
+
+```json
+{
+  "mcpServers": {
+    "gateway": {
+      "url": "http://localhost:3333/gateway/mcp"
+    }
+  }
+}
+```
+
+**Now you can ask Claude to:**
+- "Add a new MCP server named 'filesystem' at http://localhost:3002/mcp"
+- "List all registered servers"
+- "Show me recent traffic to the weather-api server"
+- "Remove the test-server from the gateway"
+
+Claude will use the gateway's MCP tools to manage your gateway configuration!
+
+### Using with Other MCP Clients
+
+Any MCP client that supports HTTP transport can connect to the gateway's MCP server:
+
+```typescript
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { HttpTransport } from "@modelcontextprotocol/sdk/transport/http.js";
+
+const client = new Client({
+  name: "my-client",
+  version: "1.0.0"
+});
+
+await client.connect(
+  new HttpTransport("http://localhost:3333/gateway/mcp")
+);
+
+// List all servers
+const result = await client.request({
+  method: "tools/call",
+  params: {
+    name: "list_servers",
+    arguments: { filter: "all", format: "detailed" }
+  }
+});
+```
+
 ## Web UI
 
 Access the web dashboard at `http://localhost:3333/ui` after starting the gateway.
@@ -133,7 +301,7 @@ Features:
 
 ## REST API
 
-The gateway exposes a REST API for programmatic access to logs and server management.
+The gateway includes a REST API primarily used by the web UI. It's available for programmatic access if needed.
 
 ### Base URL
 
@@ -141,61 +309,65 @@ The gateway exposes a REST API for programmatic access to logs and server manage
 http://localhost:3333/api
 ```
 
-### Endpoints
+### Common Endpoints
 
-#### Get Logs
-```bash
-GET /api/logs
-GET /api/logs?server=my-server
-GET /api/logs?session=abc123
-```
+- `GET /api/logs` - Query captured traffic (supports filtering by server, session)
+- `GET /api/servers` - List registered servers
+- `POST /api/servers` - Add new server
+- `GET /api/health` - Health check
 
-#### Get Servers
-```bash
-GET /api/servers
-```
+**Note:** For programmatic control, consider using the gateway's MCP server instead (see "Gateway MCP Server" section above). The REST API is primarily designed for web UI integration.
 
-#### Add Server
-```bash
-POST /api/servers
-Content-Type: application/json
+## Using the Gateway as a Proxy
 
-{
-  "name": "my-server",
-  "url": "http://localhost:3000/mcp"
-}
-```
+The gateway proxies MCP requests to registered servers through the `/s/{serverName}/mcp` endpoint pattern. This enables traffic capture and centralized management.
 
-#### Health Check
-```bash
-GET /api/health
-```
-
-See full API documentation at `/api/docs` when the gateway is running.
-
-## MCP Protocol Gateway
-
-The gateway proxies MCP requests through the `/s/{serverName}/mcp` endpoint pattern:
+### Proxy Endpoint Pattern
 
 ```
-http://localhost:3333/s/my-server/mcp
+http://localhost:3333/s/{serverName}/mcp
 ```
 
-### Example: Using with Claude Desktop
+**Example:** For a server named "weather-api":
+```
+http://localhost:3333/s/weather-api/mcp
+```
 
-Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/claude_desktop_config.json`):
+### Connecting Claude Desktop
+
+To connect Claude Desktop to an MCP server **through the gateway** (enabling traffic capture):
+
+**Location:** `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 
 ```json
 {
   "mcpServers": {
-    "my-server": {
-      "url": "http://localhost:3333/s/my-server/mcp"
+    "weather-api": {
+      "url": "http://localhost:3333/s/weather-api/mcp"
     }
   }
 }
 ```
 
-All MCP traffic will be captured and logged automatically.
+All requests to "weather-api" will:
+1. Route through the gateway
+2. Be captured and logged to SQLite
+3. Be proxied to the actual server
+4. Return responses to Claude
+
+You can then view all captured traffic in the web UI at http://localhost:3333/ui
+
+### Direct vs Proxied Connections
+
+```
+Direct Connection (no capture):
+Claude Desktop → http://localhost:3001/mcp → MCP Server
+
+Proxied Connection (with capture):
+Claude Desktop → http://localhost:3333/s/weather/mcp → Gateway → MCP Server
+                                                      ↓
+                                               SQLite Storage
+```
 
 ## Troubleshooting
 
