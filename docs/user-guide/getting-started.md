@@ -55,11 +55,8 @@ You'll see output like:
 
 🌐 Web UI:      http://localhost:3333/ui
 📡 REST API:    http://localhost:3333/api
-🖥️  Terminal UI:  Ready (use keyboard shortcuts below)
 
-Available commands:
-  [A]dd server      [R]emove server    [C]lear logs
-  [?]Help           [Q]uit
+Gateway ready on port 3333
 ```
 
 The gateway now runs in your terminal. Don't close it!
@@ -81,11 +78,6 @@ You'll see an empty dashboard with a "Add Server" button.
 4. Click "Add"
 
 Gateway will perform a health check and show the result.
-
-**Using Terminal UI:**
-1. Press `A` for Add Server
-2. Follow the prompts
-3. Press Enter to confirm
 
 **Using REST API:**
 ```bash
@@ -117,7 +109,7 @@ The gateway captures all traffic automatically! 📝
 
 ### 4. View Captured Logs
 
-Refresh the Web UI or press `L` in the TUI to see captured requests and responses:
+Refresh the Web UI to see captured requests and responses:
 
 - **Request details**: Method, parameters, headers
 - **Response details**: Result or error
@@ -133,10 +125,6 @@ Click on a log entry to see full JSON details.
 **Web UI:**
 - Look at the status indicator next to each server
 - See "Last Activity" and request count
-
-**Terminal UI:**
-- Press `H` to see health status
-- View metrics in the server list
 
 **REST API:**
 ```bash
@@ -163,11 +151,6 @@ curl "http://localhost:3333/api/logs?server=my-server&since=2024-10-22"
 2. Click "Remove"
 3. Confirm deletion (logs are preserved)
 
-**Terminal UI:**
-1. Navigate to server
-2. Press `Delete` or `R`
-3. Confirm
-
 **REST API:**
 ```bash
 curl -X DELETE http://localhost:3333/api/servers/my-server
@@ -176,34 +159,14 @@ curl -X DELETE http://localhost:3333/api/servers/my-server
 ### Clear Logs
 
 **Web UI:**
-1. Press `Cmd+K` (or click menu)
+1. Click the menu
 2. Find "Clear Logs"
 3. Confirm
-
-**Terminal UI:**
-1. Press `C` for Clear
-2. Confirm
 
 **REST API:**
 ```bash
 curl -X DELETE http://localhost:3333/api/logs
 ```
-
-## Keyboard Shortcuts (Terminal UI)
-
-| Key | Action |
-|-----|--------|
-| `A` | Add server |
-| `R` | Remove server |
-| `L` | View logs (Activity Log) |
-| `S` | Server management |
-| `C` | Clear logs |
-| `?` | Help |
-| `Q` | Quit |
-| `↑/↓` | Navigate list |
-| `Enter` | Select item |
-| `Delete` | Remove item |
-| `Esc` | Go back / Close modal |
 
 ## Configuration
 
@@ -234,9 +197,6 @@ MCP_GATEWAY_PORT=8080
 
 # Enable debug logging
 DEBUG=*
-
-# Disable TUI (API only mode)
-MCP_GATEWAY_NO_TUI=1
 ```
 
 ## Troubleshooting
@@ -318,7 +278,7 @@ See [Troubleshooting Guide](./troubleshooting.md) for more issues.
 ### Development
 
 ✅ Keep gateway running while developing
-✅ Use terminal UI for quick server management
+✅ Use web UI for server management and monitoring
 ✅ Check "Last Activity" to confirm requests
 ✅ Search logs by timestamp for debugging
 

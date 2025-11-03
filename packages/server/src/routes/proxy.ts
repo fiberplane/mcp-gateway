@@ -279,7 +279,7 @@ function logResponse(options: {
     methodDetail,
   };
 
-  // Emit proxy event to TUI (if handler provided)
+  // Emit proxy event (if handler provided)
   onProxyEvent?.(logEntry);
 }
 
@@ -432,7 +432,7 @@ export async function createProxyRoutes(options: {
             responseHeaders.delete(header);
           }
 
-          // Log the 401 response (for TUI visibility)
+          // Log the 401 response for visibility
           // FIXME - The `method` parameter is kinda unknown here, since it's not a JSON-RPC request
           //         I don't know what to record.
           logResponse({
@@ -647,7 +647,7 @@ export async function createProxyRoutes(options: {
         );
         await deps.appendRecord(responseRecord);
 
-        // Log the response to TUI
+        // Log the response
         logResponse({
           server,
           sessionId,
@@ -751,7 +751,7 @@ export async function createProxyRoutes(options: {
             responseHeaders.delete(header);
           }
 
-          // Log the 401 response (for TUI visibility)
+          // Log the 401 response for visibility
           logResponse({
             server,
             sessionId,
@@ -1152,7 +1152,7 @@ async function processSSECapture(
             serverInfo,
           );
 
-          // Log response to TUI if it's a response (even if capture failed)
+          // Log response if it's a response (even if capture failed)
           if (isResponse) {
             const method = record?.method ?? "unknown";
             const durationMs = record?.metadata.durationMs ?? 0;

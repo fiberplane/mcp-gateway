@@ -361,15 +361,6 @@ The Web UI is optimized for:
 - Use time range filters to reduce data
 - Disable real-time updates if not needed
 
-## Integration with Terminal UI
-
-If using the Terminal UI alongside Web UI:
-
-- Both share the same data (logs and servers)
-- Changes in TUI appear in Web UI (with slight delay)
-- Changes in Web UI appear in TUI instantly
-- Both can filter and manage servers independently
-
 ## Preferences
 
 Settings are stored in browser localStorage:

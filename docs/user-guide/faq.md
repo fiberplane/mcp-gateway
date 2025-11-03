@@ -8,7 +8,7 @@ MCP Gateway is a centralized management system for Model Context Protocol (MCP) 
 
 - **Server Management**: Register and monitor multiple MCP servers
 - **Traffic Capture**: Automatic logging of all MCP requests and responses
-- **Multiple Interfaces**: Web UI, Terminal UI, and REST API
+- **Multiple Interfaces**: Web UI and REST API
 - **Debugging**: Inspect exact MCP messages for troubleshooting
 - **Health Monitoring**: Real-time status tracking for all servers
 
@@ -101,7 +101,6 @@ mcp-gateway
 This starts:
 - Web UI: http://localhost:3333/ui
 - REST API: http://localhost:3333/api
-- Terminal UI: Interactive TUI in terminal
 
 ### Can I run multiple gateway instances?
 
@@ -125,11 +124,6 @@ Each instance has separate storage and logs.
 1. Click "Add Server" button
 2. Enter server name and URL
 3. Click "Add"
-
-**Terminal UI:**
-1. Press `A` for Add Server
-2. Enter details
-3. Press Enter
 
 **REST API:**
 ```bash
@@ -177,11 +171,6 @@ Headers are stored in plain text in `mcp.json`. Use carefully and never commit t
 **Web UI:**
 1. Click on server
 2. Click "Remove Server"
-3. Confirm
-
-**Terminal UI:**
-1. Select server
-2. Press `R`
 3. Confirm
 
 **REST API:**
@@ -257,7 +246,6 @@ By default: **Indefinitely**
 To clear logs:
 - Web UI: Click "Clear Logs" button
 - REST API: `curl -X DELETE http://localhost:3333/api/logs`
-- Terminal UI: Press `C`
 
 ### Can I search across all logs?
 
@@ -270,37 +258,6 @@ Example searches:
 - `initialize` - Find all initialization requests
 - `error` - Find failed requests
 - `my-server` - Find logs from specific server
-
-## Using the Terminal UI
-
-### How do I navigate the TUI?
-
-**Keys:**
-- `↑/↓` - Navigate list items
-- `Tab` - Switch between sections
-- `Enter` - Select item
-- `Escape` - Close modal
-
-### What do the TUI commands do?
-
-| Key | Action |
-|-----|--------|
-| `A` | Add new server |
-| `R` | Remove server |
-| `H` | Show health status |
-| `L` | View activity logs |
-| `C` | Clear all logs |
-| `?` | Show help |
-| `Q` | Quit |
-
-### Can I use TUI with mouse?
-
-Limited mouse support:
-- Click to select items
-- Click buttons
-- Scroll with mouse wheel
-
-Full keyboard navigation recommended.
 
 ## Logs and Data
 
@@ -348,9 +305,8 @@ Example:
 curl -X DELETE http://localhost:3333/api/logs
 ```
 
-Or via Web UI/TUI:
+Or via Web UI:
 - Web UI: Click "Clear Logs"
-- TUI: Press `C`
 
 **Specific logs:**
 Not currently supported. Use SQL query if needed:
@@ -529,7 +485,7 @@ Yes, example Dockerfile:
 FROM node:18-alpine
 RUN npm install -g @fiberplane/mcp-gateway
 EXPOSE 3333
-CMD ["mcp-gateway", "--no-tui"]
+CMD ["mcp-gateway"]
 ```
 
 Build and run:

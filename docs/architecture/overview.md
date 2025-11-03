@@ -11,14 +11,14 @@ MCP Gateway is designed as a **multi-layered system** that provides centralized 
 │                                                                     │
 │  ┌─────────────────────────────────────────────────────────────┐  │
 │  │                    Presentation Layer                       │  │
-│  │  ┌──────────────┐  ┌────────────────┐  ┌──────────────┐   │  │
-│  │  │  Web UI      │  │  Terminal UI   │  │  REST API    │   │  │
-│  │  │  (React)     │  │  (OpenTUI)     │  │  (Hono)      │   │  │
-│  │  └──────────────┘  └────────────────┘  └──────────────┘   │  │
-│  │         │                  │                   │           │  │
-│  └─────────┼──────────────────┼───────────────────┼───────────┘  │
-│            │                  │                   │              │
-│  ┌─────────┼──────────────────┼───────────────────┼───────────┐  │
+│  │  ┌──────────────┐                        ┌──────────────┐   │  │
+│  │  │  Web UI      │                        │  REST API    │   │  │
+│  │  │  (React)     │                        │  (Hono)      │   │  │
+│  │  └──────────────┘                        └──────────────┘   │  │
+│  │         │                                        │           │  │
+│  └─────────┼────────────────────────────────────────┼───────────┘  │
+│            │                                        │              │
+│  ┌─────────┼────────────────────────────────────────┼───────────┐  │
 │  │  Application Layer (Gateway Business Logic)    │           │  │
 │  │                                                 │           │  │
 │  │  ┌────────────────────────────────────────┐   │           │  │
@@ -77,16 +77,6 @@ MCP Gateway is designed as a **multi-layered system** that provides centralized 
   - Log browsing with filtering
   - Real-time metrics display
   - Health status monitoring
-
-#### Terminal UI (TUI)
-- **Location**: `packages/mcp-gateway/src/tui/`
-- **Purpose**: Full-featured CLI for power users
-- **Technology**: OpenTUI, React for terminal components
-- **Features**:
-  - Server management
-  - Activity log viewing
-  - Keyboard shortcuts
-  - Real-time updates
 
 #### REST API
 - **Location**: `packages/api/`
@@ -404,11 +394,11 @@ See [SECURITY.md](../../SECURITY.md) for complete security model.
 - Better binary distribution
 - Excellent package manager
 
-### Why Dual UI (Web + TUI)?
-- Web UI for most users
-- TUI for power users and CI/CD
-- Share same API backend
-- Independent development
+### Why Web UI?
+- User-friendly interface for most users
+- Real-time log browsing and filtering
+- Server management and monitoring
+- Uses REST API backend
 
 ## Testing Architecture
 

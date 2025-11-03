@@ -1,72 +1,30 @@
-# Binary-Only Distribution
+# Package Distribution
 
-MCP Gateway is distributed as compiled Bun binaries via npm, not as source code.
+MCP Gateway is distributed via npm as a standard Node.js package.
 
-## Published Packages
+## Published Package
 
-Only the following packages are published to npm:
+The main package published to npm:
 
-- **`@fiberplane/mcp-gateway`** - Main wrapper package with platform detection
-- **`@fiberplane/mcp-gateway-linux-x64`** - Linux x64 binary
-- **`@fiberplane/mcp-gateway-darwin-arm64`** - macOS ARM64 (Apple Silicon) binary
+- **`@fiberplane/mcp-gateway`** - Main CLI package
 
 ## Private Internal Packages
 
 The following packages are built internally but NOT published to npm:
 
-- **`@fiberplane/mcp-gateway-cli`** - CLI source code (private)
 - **`@fiberplane/mcp-gateway-types`** - Type definitions (private)
 - **`@fiberplane/mcp-gateway-core`** - Core functionality (private)
+- **`@fiberplane/mcp-gateway-api`** - REST API (private)
 - **`@fiberplane/mcp-gateway-server`** - HTTP server (private)
+- **`@fiberplane/mcp-gateway-web`** - Web UI (private)
 
 These packages are marked as `"private": true` and ignored by Changesets.
-
-## Why Binary Distribution?
-
-The CLI uses OpenTUI which has `bun:ffi` dependencies that cannot be distributed via npm as source code:
-- `bunx @fiberplane/mcp-gateway` fails with FFI errors when running from npm
-- Even Bun cannot execute the package from npm - it requires local installation
-- The only viable solution is to distribute pre-compiled binaries
 
 ## How It Works
 
 1. **Development**: Use `bun run dev` to run CLI from source
-2. **CI Build**: GitHub Actions builds binaries for each platform in parallel
-3. **Platform Detection**: `postinstall.mjs` detects platform and creates symlink to appropriate binary
-4. **Installation**: `npm install -g @fiberplane/mcp-gateway` installs wrapper + platform binary
-
-## Supported Platforms
-
-- ✅ Linux x64 (linux-x64)
-- ✅ macOS ARM64 (darwin-arm64) - Apple Silicon
-
-## Adding New Platforms
-
-To add support for additional platforms (e.g., darwin-x64, windows-x64):
-
-1. Update `.github/workflows/release.yml` build matrix:
-   ```yaml
-   matrix:
-     include:
-       - platform: linux-x64
-         os: ubuntu-latest
-       - platform: darwin-arm64
-         os: macos-latest
-       - platform: darwin-x64  # Add new platform
-         os: macos-13          # Intel Mac runner
-   ```
-
-2. Update `packages/mcp-gateway/package.json` optionalDependencies:
-   ```json
-   "optionalDependencies": {
-     "@fiberplane/mcp-gateway-darwin-arm64": "workspace:*",
-     "@fiberplane/mcp-gateway-darwin-x64": "workspace:*",  // Add new platform
-     "@fiberplane/mcp-gateway-linux-x64": "workspace:*"
-   }
-   ```
-
-3. Create platform package directory: `packages/mcp-gateway-darwin-x64/`
-4. Update `packages/mcp-gateway/postinstall.mjs` to handle the new platform
+2. **Build**: `bun run build` compiles TypeScript to JavaScript
+3. **Installation**: `npm install -g @fiberplane/mcp-gateway` installs the CLI globally
 
 ## Changesets Configuration
 
@@ -78,16 +36,18 @@ Changesets ignores internal packages to reduce noise:
     "test-mcp-server",
     "@fiberplane/mcp-gateway-types",
     "@fiberplane/mcp-gateway-core",
-    "@fiberplane/mcp-gateway-server"
+    "@fiberplane/mcp-gateway-api",
+    "@fiberplane/mcp-gateway-server",
+    "@fiberplane/mcp-gateway-web"
   ]
 }
 ```
 
-Only changes to the wrapper and binary packages require changesets.
+Only changes to the main package require changesets.
 
 ## Publishing
 
-The CI publish script (`scripts/ci-publish.ts`) automatically:
+The CI publish script automatically:
 - Skips packages marked as `"private": true`
-- Publishes wrapper + platform binaries
+- Publishes the main CLI package
 - Handles both normal releases and snapshot releases (with `--tag next`)

@@ -50,22 +50,13 @@ This is a Bun workspace monorepo containing the MCP Gateway project. The reposit
 │   │   ├── package.json         # Web package configuration
 │   │   ├── tsconfig.json
 │   │   └── vite.config.ts       # Vite configuration
-│   ├── mcp-gateway/             # @fiberplane/mcp-gateway-cli (private)
-│   │   ├── src/                 # CLI orchestration & TUI
-│   │   │   ├── tui/             # Terminal UI components
-│   │   │   ├── cli.ts           # CLI entry point
-│   │   │   ├── binary-entry.ts  # Binary compilation entry point
-│   │   │   └── events.ts        # TUI event system
+│   ├── mcp-gateway/             # @fiberplane/mcp-gateway (main package)
+│   │   ├── src/                 # CLI orchestration
+│   │   │   └── cli.ts           # CLI entry point
 │   │   ├── bin/                 # Development CLI executable
 │   │   ├── tests/               # Integration tests
 │   │   ├── package.json         # CLI package configuration
 │   │   └── tsconfig.json
-│   ├── cli/                     # @fiberplane/mcp-gateway (public)
-│   │   ├── bin/                 # Symlink to platform binary
-│   │   ├── package.json         # Wrapper package with optionalDeps
-│   │   └── postinstall.mjs      # Platform detection & binary setup
-│   ├── mcp-gateway-darwin-arm64/  # Binary package for macOS ARM64
-│   ├── mcp-gateway-linux-x64/     # Binary package for Linux x64
 ├── test-mcp-server/             # Test MCP server for validation
 │   ├── *.ts                     # Test server configurations
 │   └── package.json             # Test server dependencies
@@ -82,7 +73,6 @@ This is a Bun workspace monorepo containing the MCP Gateway project. The reposit
 - `bun install` - Install all workspace dependencies
 - `bun run dev` - Start development mode (filters to CLI package)
 - `bun run build` - Build all packages in dependency order (types → core → api → server → web → cli)
-- `bun run build:binaries` - Build platform-specific binaries (current platform or --all)
 - `bun run clean` - Clean all dist folders
 - `bun run test` - Run all tests across workspace (runs each workspace's tests with proper config)
 - `bun run typecheck` - Type check all packages
@@ -98,13 +88,13 @@ This is a Bun workspace monorepo containing the MCP Gateway project. The reposit
 - `bun run --filter @fiberplane/mcp-gateway-server build` - Build server package
 - `bun run --filter @fiberplane/mcp-gateway-web build` - Build web UI
 - `bun run --filter @fiberplane/mcp-gateway-web dev` - Dev mode for web UI (Vite dev server)
-- `bun run --filter @fiberplane/mcp-gateway-cli build` - Build CLI package
-- `bun run --filter @fiberplane/mcp-gateway-cli dev` - Dev mode for CLI
+- `bun run --filter @fiberplane/mcp-gateway build` - Build CLI package
+- `bun run --filter @fiberplane/mcp-gateway dev` - Dev mode for CLI
 - `bun run --filter test-mcp-server dev` - Run test MCP server
 
 ### Testing Commands
 - `bun run test` - Run all tests (uses workspace-specific configs)
-- `bun run --filter @fiberplane/mcp-gateway-cli test` - Test CLI package only
+- `bun run --filter @fiberplane/mcp-gateway test` - Test CLI package only
 
 > **Note:** Use `bun run test` instead of `bun test` from the root. This ensures each workspace uses its own bunfig.toml configuration. The web package requires happy-dom for React tests, which conflicts with CLI tests if loaded globally.
 
@@ -118,12 +108,9 @@ This is a Bun workspace monorepo containing the MCP Gateway project. The reposit
   - `@fiberplane/mcp-gateway-api` - REST API for querying logs (uses dependency injection)
   - `@fiberplane/mcp-gateway-server` - MCP protocol HTTP server (proxy, OAuth, gateway MCP server)
   - `@fiberplane/mcp-gateway-web` - React-based web UI for browsing logs (relies on the REST API)
-  - `@fiberplane/mcp-gateway-cli` (private) - CLI orchestrator (mounts server + API + web UI + TUI)
-  - `@fiberplane/mcp-gateway` (public) - Wrapper package for binary distribution
-  - `@fiberplane/mcp-gateway-*` (2 platform packages) - Compiled binaries for darwin-arm64, linux-x64
+  - `@fiberplane/mcp-gateway` - Main CLI package that orchestrates server + API + web UI
 - Use `--filter` flags for package-specific operations
 - Test MCP server is a separate workspace for testing proxy functionality
-- **Binary Distribution**: CLI is distributed as platform-specific compiled binaries, not source code
 
 ### 2. Package Dependencies
 ```
@@ -134,7 +121,7 @@ types (no deps) → core (types) → api (core types only, DI) → cli (orchestr
 - **No circular dependencies** - enforced by `madge` in CI
 - **API uses dependency injection** - query functions passed at runtime
 - **Server focuses on MCP protocol** - proxy, OAuth, gateway MCP server only
-- **CLI orchestrates everything** - mounts server, API, web UI, and runs TUI
+- **CLI orchestrates everything** - mounts server, API, and web UI
 - During development, packages use `workspace:*` protocol
 - During publishing, `workspace:*` is replaced with actual version ranges
 - All packages are published to npm independently
@@ -156,7 +143,6 @@ types (no deps) → core (types) → api (core types only, DI) → cli (orchestr
 ### 5. Package Management
 - Root `package.json` defines workspace structure
 - Main public package maintains original name: `@fiberplane/mcp-gateway`
-- CLI source is in `@fiberplane/mcp-gateway-cli` (private, not published directly)
 - Internal dependencies use `workspace:*` protocol
 - All devDependencies consolidated at root level
 - Use `bun add -D` at root for dev dependencies
@@ -253,23 +239,15 @@ When adding new packages to the monorepo, follow this structured approach:
 bun run test
 
 # Specific package tests
-bun run --filter @fiberplane/mcp-gateway-cli test
+bun run --filter @fiberplane/mcp-gateway test
 bun run --filter @fiberplane/mcp-gateway-web test
 bun run --filter @fiberplane/mcp-gateway-core test
 ```
 
 ### Building and Development
 ```bash
-# Build CLI package
+# Build all packages
 bun run build
-# or explicitly:
-bun run --filter @fiberplane/mcp-gateway-cli build
-
-# Build binaries (current platform only)
-bun run build:binaries
-
-# Build binaries for all platforms (requires platform-specific deps)
-bun run build:binaries --all
 
 # Development mode
 bun run dev
@@ -309,7 +287,6 @@ curl http://localhost:3333/s/everything/mcp \
   -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}'
 
 # 4. View logs
-# - TUI: Automatically displays in terminal
 # - Web UI: http://localhost:3333/ui
 # - API: http://localhost:3333/api/logs
 ```
@@ -346,18 +323,13 @@ bun changeset publish
 
 #### Why This Matters
 
-All internal packages (`types`, `core`, `api`, `server`, `web`, `cli`) are:
+All internal packages (`types`, `core`, `api`, `server`, `web`) are:
 - ✅ **Private** - Not published to npm independently
 - ✅ **Ignored by changesets** - See `.changeset/config.json`
-- ✅ **Bundled into binaries** - Distributed as part of the compiled CLI
+- ✅ **Distributed as part of the main package** - Bundled with `@fiberplane/mcp-gateway`
 
-The only packages that get versioned and published are:
-- `@fiberplane/mcp-gateway` (public wrapper)
-- `@fiberplane/mcp-gateway-darwin-arm64` (binary)
-- `@fiberplane/mcp-gateway-linux-x64` (binary)
-- And other platform binaries
-
-The `fixed` configuration in changesets ensures these three packages always version together.
+The only package that gets versioned and published is:
+- `@fiberplane/mcp-gateway` (main public package)
 
 #### How to Create Changesets
 
@@ -417,7 +389,7 @@ Resulting changeset:
 
 **Web**: Improved accessibility with better focus indicators and keyboard navigation
 **Core**: Added health check support for MCP servers
-**CLI**: Updated TUI to display server health status
+**CLI**: Updated server health status display
 ```
 
 #### Version Bump Guidelines
@@ -534,63 +506,7 @@ The refactored monorepo structure provides:
 - ✅ **Focused responsibilities** - Server handles MCP protocol, CLI handles orchestration
 - ✅ **Independent versioning** - Packages can be versioned and released independently
 - ✅ **No circular dependencies** - Enforced by CI checks with madge
-- ✅ **Multiple UIs** - Both TUI (terminal) and web UI share the same API backend
-
-## Binary Distribution
-
-The CLI is distributed as **compiled Bun binaries** rather than source code, following the pattern used by esbuild, @swc/core, and prettier.
-
-### Why Binary Distribution?
-
-The CLI uses OpenTUI which has `bun:ffi` dependencies that **cannot be distributed via npm** as source code:
-- `bunx @fiberplane/mcp-gateway` fails with FFI errors when running from npm
-- Even Bun cannot execute the package from npm - it requires local installation as a dependency
-- The only viable solution is to distribute pre-compiled binaries
-
-### Package Structure
-
-```
-@fiberplane/mcp-gateway (public)
-├── Wrapper package with optionalDependencies
-├── postinstall.mjs detects platform & creates symlink
-└── Depends on platform-specific binary packages:
-    ├── @fiberplane/mcp-gateway-darwin-arm64 (61MB binary)
-    ├── @fiberplane/mcp-gateway-linux-x64 (61MB binary)
-
-@fiberplane/mcp-gateway-cli (private)
-└── Source code for CLI (not published directly)
-```
-
-### Building Binaries
-
-```bash
-# Build for current platform only (default)
-bun run build:binaries
-
-# Build for all platforms (requires GitHub Actions - OpenTUI has platform-specific native modules)
-bun run build:binaries --all  # Will fail locally on most platforms
-```
-
-### How It Works
-
-1. **Development**: Use `bun run dev` to run CLI from source
-2. **Binary Build**: `scripts/build-binaries.ts` compiles with `bun build --compile`
-3. **Version Injection**: Uses `--define BUILD_VERSION="x.y.z"` for version detection
-4. **Platform Detection**: postinstall.mjs detects platform and symlinks appropriate binary
-5. **Installation**: `npm install -g @fiberplane/mcp-gateway` installs wrapper + platform binary
-
-### Platform Support
-
-- ✅ macOS ARM64 (darwin-arm64) - Apple Silicon
-- ✅ Linux x64 (linux-x64) - Most Linux distributions
-
-### CI/CD Strategy
-
-Use GitHub Actions matrix builds:
-- Each platform builds its own binary in parallel
-- Platform-specific binary packages published independently
-- Wrapper package published with references to binary packages
-- All packages synchronized to same version
+- ✅ **Multiple UIs** - Web UI for visual management and monitoring
 
 ## Web UI
 
@@ -630,11 +546,9 @@ mcp-gateway
 ## Future Enhancements
 
 The monorepo structure enables:
-- Standalone server deployment (without CLI/TUI)
-- Shared UI component library between TUI and web
+- Standalone server deployment (without CLI)
 - Additional export formats (CSV, Excel, etc.)
 - Real-time WebSocket updates (instead of polling)
-- Multiple distribution formats (ESM, CJS, bundled)
 
 ---
 

@@ -246,7 +246,6 @@ Error: Request timeout after 5000ms
 **Symptom:**
 - Making requests to gateway
 - No logs appearing in UI
-- No activity in TUI
 
 **Causes:**
 - Requests going to server directly instead of gateway
@@ -301,7 +300,6 @@ Error: Request timeout after 5000ms
 2. **Add server:**
    - Via Web UI: Click "Add Server"
    - Via API: See [CLI Reference](./cli-reference.md)
-   - Via TUI: Press `A`
 
 3. **Verify spelling:**
    - Server names are case-sensitive
@@ -455,85 +453,6 @@ from origin 'http://localhost:3333' has been blocked by CORS policy
    - Stop gateway with Ctrl+C
    - Start again
    - Fresh memory and state
-
-## Terminal UI Issues
-
-### TUI not responding to keyboard
-
-**Symptom:**
-- Pressing keys does nothing
-- Cannot navigate menu
-- Cursor stuck in one place
-
-**Causes:**
-- Terminal focus issue
-- Terminal doesn't support input
-- TUI process crashed
-- Stdin not connected
-
-**Solutions:**
-
-1. **Click terminal window to focus:**
-   - Ensure terminal has focus
-   - Try clicking in terminal area
-
-2. **Exit and restart:**
-   ```bash
-   # Press Ctrl+C to exit
-   # Then start again
-   mcp-gateway
-   ```
-
-3. **Try different terminal:**
-   - iTerm2, Terminal.app (macOS)
-   - GNOME Terminal, Konsole (Linux)
-   - PowerShell, Windows Terminal (Windows)
-
-4. **Check stdin is connected:**
-   ```bash
-   # Interactive mode
-   mcp-gateway
-
-   # Not interactive (piped)
-   echo "" | mcp-gateway  # Won't work for TUI
-   ```
-
-### TUI display is corrupted
-
-**Symptom:**
-- Text appears garbled
-- Colors are wrong
-- Layout is broken
-
-**Causes:**
-- Terminal size too small
-- Terminal encoding issue
-- Terminal doesn't support Unicode
-- Font issue
-
-**Solutions:**
-
-1. **Resize terminal:**
-   - Make terminal larger
-   - TUI needs minimum width/height
-   - Try fullscreen
-
-2. **Check terminal encoding:**
-   ```bash
-   echo $LANG
-   # Should show UTF-8
-   export LANG=en_US.UTF-8
-   ```
-
-3. **Use different terminal:**
-   - Try native terminal (Terminal.app, PowerShell)
-   - Try tmux or screen
-
-4. **Disable TUI if needed:**
-   ```bash
-   mcp-gateway --no-tui
-   # Use Web UI instead
-   ```
 
 ## Data and Storage Issues
 

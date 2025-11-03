@@ -13,7 +13,6 @@ mcp-gateway
 Starts the gateway with default settings:
 - Web UI: http://localhost:3333/ui
 - REST API: http://localhost:3333/api
-- TUI: Terminal UI (interactive)
 - Storage: ~/.mcp-gateway/
 
 ### View Help
@@ -83,26 +82,6 @@ mcp-gateway --storage /tmp/mcp-gateway
 mcp-gateway --storage ~/.config/mcp-gateway
 ```
 
-### Disable Terminal UI
-
-**Option:** `--no-tui`
-
-```bash
-mcp-gateway --no-tui
-```
-
-Starts gateway with only REST API and Web UI (no interactive TUI).
-
-**Use Cases:**
-- Running in headless environment
-- Docker containers
-- Background service
-- Automated testing
-
-**Environment Variable Alternative:**
-```bash
-MCP_GATEWAY_NO_TUI=1 mcp-gateway
-```
 
 ### Debug Logging
 
@@ -140,7 +119,6 @@ Load configuration from file instead of environment variables.
 {
   "port": 3333,
   "storage": "~/.mcp-gateway",
-  "tui": true,
   "debug": false,
   "servers": [
     {
@@ -150,45 +128,6 @@ Load configuration from file instead of environment variables.
   ]
 }
 ```
-
-## Terminal UI Commands
-
-When running with TUI enabled, use these keyboard shortcuts:
-
-### Navigation
-
-| Key | Action |
-|-----|--------|
-| `↑` / `↓` | Navigate list items |
-| `←` / `→` | Navigate between sections |
-| `Tab` | Move to next section |
-| `Shift+Tab` | Move to previous section |
-| `Page Up` / `Page Down` | Scroll pages |
-| `Home` / `End` | Jump to start/end |
-
-### Operations
-
-| Key | Action |
-|-----|--------|
-| `A` | Add new server |
-| `R` | Remove selected server |
-| `E` | Edit selected server |
-| `H` | Show health status |
-| `L` | View activity logs |
-| `C` | Clear all logs |
-| `S` | Server settings |
-| `/` | Search/filter |
-| `?` | Show help |
-| `Q` | Quit gateway |
-
-### Modal Navigation
-
-| Key | Action |
-|-----|--------|
-| `Enter` | Confirm action |
-| `Escape` | Cancel/close modal |
-| `Tab` | Next field |
-| `Shift+Tab` | Previous field |
 
 ## REST API Examples
 
@@ -259,7 +198,6 @@ curl -X DELETE http://localhost:3333/api/logs
 |----------|-------------|---------|
 | `MCP_GATEWAY_PORT` | Server port | `3333` |
 | `MCP_GATEWAY_STORAGE` | Storage directory | `~/.mcp-gateway` |
-| `MCP_GATEWAY_NO_TUI` | Disable TUI | `1` |
 | `DEBUG` | Debug logging | `*` or `@fiberplane/*` |
 
 ### Combined Example
@@ -268,7 +206,7 @@ curl -X DELETE http://localhost:3333/api/logs
 DEBUG=* \
 MCP_GATEWAY_PORT=8080 \
 MCP_GATEWAY_STORAGE=/data/mcp \
-mcp-gateway --no-tui
+mcp-gateway
 ```
 
 ## Common Use Cases
@@ -283,10 +221,10 @@ DEBUG=* MCP_GATEWAY_PORT=3334 mcp-gateway
 
 ### Docker Container
 
-Run headless without TUI:
+Run with custom storage:
 
 ```bash
-mcp-gateway --no-tui --storage /data/mcp-gateway
+mcp-gateway --storage /data/mcp-gateway
 ```
 
 ### Multiple Instances
@@ -307,7 +245,6 @@ Run gateway in background with custom storage:
 
 ```bash
 MCP_GATEWAY_STORAGE=/tmp/test-mcp \
-MCP_GATEWAY_NO_TUI=1 \
 mcp-gateway &
 GATEWAY_PID=$!
 
@@ -324,7 +261,7 @@ With external reverse proxy:
 MCP_GATEWAY_STORAGE=/var/lib/mcp-gateway \
 MCP_GATEWAY_PORT=3333 \
 DEBUG=* \
-mcp-gateway --no-tui
+mcp-gateway
 ```
 
 ## Exit Codes
@@ -357,11 +294,8 @@ The gateway responds to these signals:
 
 🌐 Web UI:      http://localhost:3333/ui
 📡 REST API:    http://localhost:3333/api
-🖥️  Terminal UI:  Ready (use keyboard shortcuts below)
 
-Available commands:
-  [A]dd server      [R]emove server    [C]lear logs
-  [?]Help           [Q]uit
+Gateway ready on port 3333
 ```
 
 ### Log Format
@@ -434,7 +368,7 @@ After=network.target
 Type=simple
 User=mcp-gateway
 WorkingDirectory=/home/mcp-gateway
-ExecStart=/usr/local/bin/mcp-gateway --no-tui
+ExecStart=/usr/local/bin/mcp-gateway
 Restart=on-failure
 RestartSec=10
 
@@ -464,7 +398,7 @@ RUN npm install -g @fiberplane/mcp-gateway
 
 EXPOSE 3333
 
-CMD ["mcp-gateway", "--no-tui"]
+CMD ["mcp-gateway"]
 ```
 
 Build and run:

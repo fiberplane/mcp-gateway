@@ -187,14 +187,13 @@ types (base types)
 The CLI package will optionally start the API server:
 
 ```bash
-mcp-gateway --ui             # Start with web UI on http://localhost:3000
-mcp-gateway --ui-port 8080   # Custom port
-mcp-gateway                  # TUI only (existing behavior)
+mcp-gateway                  # Start with web UI on http://localhost:3333/ui
+mcp-gateway --port 8080      # Custom port
 ```
 
-When `--ui` flag is provided:
+When started:
 1. CLI starts the API server from `@fiberplane/mcp-gateway-api`
-2. API serves static web UI assets
+2. API serves static web UI assets at `/ui`
 3. CLI logs the web UI URL
 4. User can access logs via browser while CLI continues proxying
 
