@@ -56,22 +56,22 @@ You can add servers in three ways:
 3. Enter server name and URL
 4. Gateway performs health check automatically
 
-#### Option 2: Gateway MCP Server (via Claude Desktop)
-Configure Claude Desktop to use the gateway's MCP server:
+#### Option 2: Gateway MCP Server (via MCP Client)
+Use any MCP client that supports HTTP transport to manage the gateway:
 
-```json
-{
-  "mcpServers": {
-    "gateway": {
-      "url": "http://localhost:3333/gateway/mcp"
-    }
-  }
-}
+```typescript
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { HttpTransport } from "@modelcontextprotocol/sdk/transport/http.js";
+
+const client = new Client({ name: "my-client", version: "1.0.0" });
+await client.connect(new HttpTransport("http://localhost:3333/gateway/mcp"));
+
+// Add a server
+await client.callTool("add_server", {
+  name: "weather",
+  url: "http://localhost:3001/mcp"
+});
 ```
-
-Then ask Claude: "Add an MCP server named 'weather' with URL http://localhost:3001/mcp"
-
-Claude will use the `add_server` tool to register it with the gateway.
 
 #### Option 3: Edit Configuration File
 Edit `~/.mcp-gateway/mcp.json`:
@@ -237,31 +237,7 @@ Search and analyze captured MCP traffic.
 - `limit` (number, optional) - Max records to return (default: 100, max: 1000)
 - `order` (enum, optional) - "asc" or "desc" (default: "desc")
 
-### Using with Claude Desktop
-
-Add the gateway's MCP server to your Claude Desktop configuration:
-
-**Location:** `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
-
-```json
-{
-  "mcpServers": {
-    "gateway": {
-      "url": "http://localhost:3333/gateway/mcp"
-    }
-  }
-}
-```
-
-**Now you can ask Claude to:**
-- "Add a new MCP server named 'filesystem' at http://localhost:3002/mcp"
-- "List all registered servers"
-- "Show me recent traffic to the weather-api server"
-- "Remove the test-server from the gateway"
-
-Claude will use the gateway's MCP tools to manage your gateway configuration!
-
-### Using with Other MCP Clients
+### Using with MCP Clients
 
 Any MCP client that supports HTTP transport can connect to the gateway's MCP server:
 
@@ -333,40 +309,44 @@ http://localhost:3333/s/{serverName}/mcp
 http://localhost:3333/s/weather-api/mcp
 ```
 
-### Connecting Claude Desktop
+### Connecting MCP Clients Through the Proxy
 
-To connect Claude Desktop to an MCP server **through the gateway** (enabling traffic capture):
+To connect any MCP client (that supports HTTP transport) to an MCP server **through the gateway** (enabling traffic capture):
 
-**Location:** `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
+**Example with custom MCP client:**
 
-```json
-{
-  "mcpServers": {
-    "weather-api": {
-      "url": "http://localhost:3333/s/weather-api/mcp"
-    }
-  }
-}
+```typescript
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { HttpTransport } from "@modelcontextprotocol/sdk/transport/http.js";
+
+const client = new Client({ name: "my-app", version: "1.0.0" });
+
+// Connect to the MCP server THROUGH the gateway proxy
+await client.connect(
+  new HttpTransport("http://localhost:3333/s/weather-api/mcp")
+);
 ```
 
-All requests to "weather-api" will:
+All requests will:
 1. Route through the gateway
 2. Be captured and logged to SQLite
-3. Be proxied to the actual server
-4. Return responses to Claude
+3. Be proxied to the actual server at its configured URL
+4. Return responses to your client
 
 You can then view all captured traffic in the web UI at http://localhost:3333/ui
+
+**Note:** Claude Desktop does not support HTTP-based MCP servers, so it cannot connect through the gateway's proxy endpoints. The gateway is primarily useful for custom MCP clients or applications that support HTTP transport.
 
 ### Direct vs Proxied Connections
 
 ```
 Direct Connection (no capture):
-Claude Desktop → http://localhost:3001/mcp → MCP Server
+MCP Client → http://localhost:3001/mcp → MCP Server
 
 Proxied Connection (with capture):
-Claude Desktop → http://localhost:3333/s/weather/mcp → Gateway → MCP Server
-                                                      ↓
-                                               SQLite Storage
+MCP Client → http://localhost:3333/s/weather/mcp → Gateway → MCP Server
+                                                   ↓
+                                            SQLite Storage
 ```
 
 ## Troubleshooting
