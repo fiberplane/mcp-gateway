@@ -48,45 +48,13 @@ This launches:
 
 ### Add Your First Server
 
-You can add servers in three ways:
+You can add servers via the web UI:
 
-#### Option 1: Web UI
 1. Open http://localhost:3333/ui
 2. Click "Add Server"
 3. Enter server name and URL
 4. Gateway performs health check automatically
 
-#### Option 2: Gateway MCP Server (via MCP Client)
-Use any MCP client that supports HTTP transport to manage the gateway:
-
-```typescript
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { HttpTransport } from "@modelcontextprotocol/sdk/transport/http.js";
-
-const client = new Client({ name: "my-client", version: "1.0.0" });
-await client.connect(new HttpTransport("http://localhost:3333/gateway/mcp"));
-
-// Add a server
-await client.callTool("add_server", {
-  name: "weather",
-  url: "http://localhost:3001/mcp"
-});
-```
-
-#### Option 3: Edit Configuration File
-Edit `~/.mcp-gateway/mcp.json`:
-
-```json
-{
-  "servers": [
-    {
-      "name": "weather",
-      "url": "http://localhost:3001/mcp",
-      "enabled": true
-    }
-  ]
-}
-```
 
 Once added, all MCP traffic through the gateway is captured automatically.
 
@@ -95,9 +63,9 @@ Once added, all MCP traffic through the gateway is captured automatically.
 The gateway operates in **dual mode**: it's both a proxy for MCP servers AND an MCP server itself.
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                       MCP Gateway                               │
-│                                                                 │
+┌───────────────────────────────────────────────────────────────┐
+│                       MCP Gateway                             │
+│                                                               │
 │  ┌─────────────┐  ┌──────────────┐  ┌───────────────────────┐ │
 │  │  Web UI     │  │ Gateway MCP  │  │   MCP Proxy Router    │ │
 │  │  (React)    │  │   Server     │  │  (/s/{name}/mcp)      │ │
@@ -113,18 +81,18 @@ The gateway operates in **dual mode**: it's both a proxy for MCP servers AND an 
 │         │         │  • search_   │              │             │
 │         │         │    records   │              │             │
 │         └─────────┴──────┬───────┴──────────────┘             │
-│                          │                                     │
+│                          │                                    │
 │         ┌────────────────▼──────────────────┐                 │
 │         │     REST API (/api)               │                 │
 │         │   (Powers Web UI)                 │                 │
 │         └────────────────┬──────────────────┘                 │
-│                          │                                     │
+│                          │                                    │
 │         ┌────────────────▼──────────────────┐                 │
 │         │  Storage & Log Management         │                 │
 │         │  (SQLite + mcp.json registry)     │                 │
 │         └────────────────┬──────────────────┘                 │
-│                          │                                     │
-└──────────────────────────┼─────────────────────────────────────┘
+│                          │                                    │
+└──────────────────────────┼────────────────────────────────────┘
                            │
                ┌───────────┼───────────┐
                │           │           │

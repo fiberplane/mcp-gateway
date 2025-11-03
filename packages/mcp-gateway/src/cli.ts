@@ -25,7 +25,7 @@ import { getVersion } from "./utils/version.js";
 
 /**
  * Find the public directory containing web UI assets.
- * Located at packages/cli/public/ (built from packages/web/dist/)
+ * Located at packages/mcp-gateway/public/ (built from packages/web/dist/)
  */
 function findPublicDir(): string {
   const __filename = fileURLToPath(import.meta.url);

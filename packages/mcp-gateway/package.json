@@ -11,7 +11,7 @@
     "claude",
     "model-context-protocol"
   ],
-  "license": "Apache-2.0",
+  "license": "MIT",
   "author": "Fiberplane <info@fiberplane.com>",
   "homepage": "https://github.com/fiberplane/mcp-gateway",
   "repository": {

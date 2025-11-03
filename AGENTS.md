@@ -403,7 +403,7 @@ Added health check support for MCP servers
 
 3. **Multiple package changes:**
 ```bash
-# You edited packages/web/, packages/core/, and packages/cli/
+# You edited packages/web/, packages/core/, and packages/api/
 bun changeset
 # Select: @fiberplane/mcp-gateway
 # Select: minor
