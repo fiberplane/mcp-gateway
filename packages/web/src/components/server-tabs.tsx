@@ -1,8 +1,11 @@
 import type { ServerStatus } from "@fiberplane/mcp-gateway-types";
 import { useQuery } from "@tanstack/react-query";
+import { Check, Copy } from "lucide-react";
 import { useEffect, useMemo, useRef } from "react";
 import { useServerConfig } from "../hooks/use-server-configs";
+import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
 import { api } from "../lib/api";
+import { Button } from "./ui/button";
 import { StatusDot } from "./ui/status-dot";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
@@ -56,9 +59,17 @@ function ServerTab({
   status,
 }: ServerTabProps) {
   const serverConfig = useServerConfig(name);
+  const { copy, copied } = useCopyToClipboard();
 
   // Use server config URL as title if available, otherwise use provided title
-  const displayTitle = title ?? serverConfig?.url;
+  const originalUrl = title ?? serverConfig?.url;
+  const gatewayUrl = `${window.location.origin}/s/${name}/mcp`;
+
+  const handleCopyTooltip = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    copy(gatewayUrl);
+  };
 
   const tabButton = (
     <button
@@ -90,15 +101,46 @@ function ServerTab({
     </button>
   );
 
-  // Only show tooltip if there's a displayTitle (server URL)
-  if (!displayTitle) {
+  // Only show tooltip if there's an original URL (server config available)
+  if (!originalUrl) {
     return tabButton;
   }
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>{tabButton}</TooltipTrigger>
-      <TooltipContent>{displayTitle}</TooltipContent>
+      <TooltipContent className="flex flex-col gap-3 text-sm cursor-pointer max-w-md">
+        <div className="font-semibold text-foreground">
+          Routing for "{name}"
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <div className="grid">
+            <div>
+              <p className="text-xs text-muted-foreground mb-0.5 max-w-xs">
+                Use this URL to connect your MCP client to the gateway
+              </p>
+              <div className="grid grid-cols-[1fr_auto] items-center gap-2">
+                <code className="text-xs bg-muted px-2 py-1 rounded text-foreground font-mono block">
+                  {gatewayUrl}
+                </code>
+                <Button
+                  size="icon"
+                  variant="outline"
+                  onClick={handleCopyTooltip}
+                  className="w-7 h-7"
+                >
+                  {copied ? (
+                    <Check size={12} className="text-muted-foreground" />
+                  ) : (
+                    <Copy size={12} className="text-muted-foreground" />
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </TooltipContent>
     </Tooltip>
   );
 }
@@ -212,6 +254,30 @@ export function ServerTabs({ value, onChange, panelId }: ServerTabsProps) {
   if (isLoading || !data) {
     return (
       <div className="text-sm text-muted-foreground">Loading servers...</div>
+    );
+  }
+
+  // Empty state: no servers configured
+  if (data.servers.length === 0) {
+    return (
+      <div className="p-6 bg-card rounded-lg border border-border">
+        <div className="text-center">
+          <p className="text-muted-foreground mb-4">
+            <em>No servers configured yet</em>
+          </p>
+          <div className="max-w-md mx-auto p-4 border border-border rounded-md bg-muted/30">
+            <p className="text-sm text-foreground mb-3">
+              Add an MCP server to start capturing traffic through the gateway
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Once configured, connect your MCP clients using:
+            </p>
+            <code className="text-xs text-accent block mt-2">
+              {window.location.origin}/s/{"{serverName}"}/mcp
+            </code>
+          </div>
+        </div>
+      </div>
     );
   }
 

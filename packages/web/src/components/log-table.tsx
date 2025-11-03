@@ -582,7 +582,7 @@ interface LogDetailsProps {
 }
 
 function LogDetails({ log }: LogDetailsProps) {
-  const { copy: copyToClipboard, copiedType: copied } = useCopyToClipboard<
+  const { copy: copyToClipboard, copiedId: copied } = useCopyToClipboard<
     "request" | "response" | "sseEvent"
   >();
 
@@ -726,7 +726,12 @@ function LogDetails({ log }: LogDetailsProps) {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => copyToClipboard(log.request, "request")}
+                onClick={() =>
+                  copyToClipboard(
+                    JSON.stringify(log.request, null, 2),
+                    "request",
+                  )
+                }
               >
                 {copied === "request" ? (
                   <>
@@ -758,7 +763,12 @@ function LogDetails({ log }: LogDetailsProps) {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => copyToClipboard(log.response, "response")}
+                onClick={() =>
+                  copyToClipboard(
+                    JSON.stringify(log.response, null, 2),
+                    "response",
+                  )
+                }
               >
                 {copied === "response" ? (
                   <>
@@ -788,7 +798,12 @@ function LogDetails({ log }: LogDetailsProps) {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => copyToClipboard(formattedSseEvent, "sseEvent")}
+                onClick={() =>
+                  copyToClipboard(
+                    JSON.stringify(formattedSseEvent, null, 2),
+                    "sseEvent",
+                  )
+                }
               >
                 {copied === "sseEvent" ? (
                   <>
