@@ -4,8 +4,8 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { McpServer } from "@fiberplane/mcp-gateway-types";
 import { createApp, saveRegistry } from "../helpers/test-app.js";
-import type { Registry } from "./helpers/test-app.js";
 
 describe("OAuth Routes Integration Tests", () => {
   let storageDir: string;
@@ -91,24 +91,22 @@ describe("OAuth Routes Integration Tests", () => {
       stop: () => mockServer.stop(),
     };
 
-    // Create test registry with OAuth-enabled server
-    const registry: Registry = {
-      servers: [
-        {
-          name: "figma",
-          type: "http" as const,
-          url: `http://localhost:${mockServerPort}/mcp`,
-          headers: {},
-          lastActivity: null,
-          exchangeCount: 0,
-        },
-      ],
-    };
+    // Create test servers
+    const servers: McpServer[] = [
+      {
+        name: "figma",
+        type: "http" as const,
+        url: `http://localhost:${mockServerPort}/mcp`,
+        headers: {},
+        lastActivity: null,
+        exchangeCount: 0,
+      },
+    ];
 
-    await saveRegistry(storageDir, registry.servers);
+    await saveRegistry(storageDir, servers);
 
     // Create and start gateway app
-    const { app } = await createApp(registry.servers, storageDir);
+    const { app } = await createApp(servers, storageDir);
     const gatewayServer = Bun.serve({
       port: 8301,
       fetch: app.fetch,
@@ -121,9 +119,18 @@ describe("OAuth Routes Integration Tests", () => {
   });
 
   afterAll(async () => {
-    // Stop servers
-    gateway?.stop();
-    mockOAuthServer?.stop();
+    // Stop servers with error handling
+    try {
+      gateway?.stop();
+    } catch (err) {
+      console.warn("Failed to stop gateway:", err);
+    }
+
+    try {
+      mockOAuthServer?.stop();
+    } catch (err) {
+      console.warn("Failed to stop mock OAuth server:", err);
+    }
 
     // Clean up temp directory
     try {

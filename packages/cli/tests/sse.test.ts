@@ -10,7 +10,7 @@ import {
   resetCaptureState,
   type SSEEvent,
 } from "@fiberplane/mcp-gateway-core";
-import type { Registry } from "./helpers/test-app.js";
+import type { McpServer } from "@fiberplane/mcp-gateway-types";
 import { createApp, saveRegistry } from "./helpers/test-app.js";
 
 // Real SSE server for testing
@@ -90,25 +90,23 @@ describe("SSE Integration Tests", () => {
     // Create SSE test server
     sseServer = createSSEServer(8003);
 
-    // Create test registry with SSE server
-    const registry: Registry = {
-      servers: [
-        {
-          name: "sse-server",
-          type: "http" as const,
-          url: `${sseServer.url}/sse`,
-          headers: {},
-          lastActivity: null,
-          exchangeCount: 0,
-        },
-      ],
-    };
+    // Create test servers
+    const servers: McpServer[] = [
+      {
+        name: "sse-server",
+        type: "http" as const,
+        url: `${sseServer.url}/sse`,
+        headers: {},
+        lastActivity: null,
+        exchangeCount: 0,
+      },
+    ];
 
-    await saveRegistry(storageDir, registry.servers);
+    await saveRegistry(storageDir, servers);
 
     // Create and start gateway app
     const { app, gateway: gatewayInstance } = await createApp(
-      registry.servers,
+      servers,
       storageDir,
     );
     const server = Bun.serve({
@@ -124,9 +122,18 @@ describe("SSE Integration Tests", () => {
   });
 
   afterAll(async () => {
-    // Stop all servers
-    gateway?.stop();
-    sseServer?.stop();
+    // Stop all servers with error handling
+    try {
+      gateway?.stop();
+    } catch (err) {
+      console.warn("Failed to stop gateway:", err);
+    }
+
+    try {
+      sseServer?.stop();
+    } catch (err) {
+      console.warn("Failed to stop SSE server:", err);
+    }
 
     // Clean up temp directory
     try {

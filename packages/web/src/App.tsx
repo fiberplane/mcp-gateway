@@ -1,15 +1,30 @@
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  brandOperatorValue,
+  isClientFilter,
+  isDurationFilter,
+  isMethodFilter,
+  isServerFilter,
+  isSessionFilter,
+  isTokensFilter,
+  type OperatorPrefixedValue,
+} from "@fiberplane/mcp-gateway-types";
+import {
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useQueryState, useQueryStates } from "nuqs";
-import { useDeferredValue, useMemo, useState } from "react";
+import { useDeferredValue, useId, useMemo, useState } from "react";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ExportButton } from "./components/export-button";
+import { FiberplaneLogo } from "./components/fiberplane-logo";
 import { FilterBar } from "./components/filter-bar";
 import { LogTable } from "./components/log-table";
 import { Pagination } from "./components/pagination";
 import { ServerTabs } from "./components/server-tabs";
-import { SettingsMenu } from "./components/settings-menu";
+import { SettingsDropdown } from "./components/settings-dropdown";
 import { StreamingBadge } from "./components/streaming-badge";
-import { TopNavigation } from "./components/top-navigation";
+import { TooltipProvider } from "./components/ui/tooltip";
 import { api } from "./lib/api";
 import {
   filterParamsToFilters,
@@ -19,12 +34,42 @@ import {
 import { useHandler } from "./lib/use-handler";
 import { getLogKey } from "./lib/utils";
 
+/**
+ * API parameters for getLogs query
+ */
+type GetLogsParams = Parameters<typeof api.getLogs>[0];
+
+/**
+ * Helper to format string filter value with operator prefix for API
+ * Converts filter operator and value into "operator:value" format with branded type
+ * @example formatStringFilter("is", "claude-code") => "is:claude-code"
+ * @example formatStringFilter("contains", ["foo", "bar"]) => ["contains:foo", "contains:bar"]
+ */
+function formatStringFilter(
+  operator: string,
+  value: string | string[],
+): OperatorPrefixedValue | OperatorPrefixedValue[] {
+  if (Array.isArray(value)) {
+    return value.map((v) => brandOperatorValue(`${operator}:${v}`));
+  }
+  return brandOperatorValue(`${operator}:${value}`);
+}
+
 function App() {
+  const logsPanelId = useId();
   const queryClient = useQueryClient();
   const [serverName, setServerName] = useState<string | undefined>();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isClearing, setIsClearing] = useState(false);
   const [clearError, setClearError] = useState<string | null>(null);
+  const [copiedServer, setCopiedServer] = useState<string | null>(null);
+
+  // Fetch servers to check if any exist for empty state
+  const { data: serversData } = useQuery({
+    queryKey: ["servers"],
+    queryFn: () => api.getServers(),
+    refetchInterval: 5000,
+  });
 
   // Filter state from URL via nuqs
   const [searchQueries] = useQueryState("search", parseAsSearchArray);
@@ -50,73 +95,70 @@ function App() {
   // Extract filters and convert to API parameters
   // Backend now supports all filter types with proper operators
   const apiParams = useMemo(() => {
-    const params: Parameters<typeof api.getLogs>[0] = {};
+    const params: GetLogsParams = {};
 
-    // Extract each filter type
+    // Helper to extract first value from array or return single value
+    const firstValue = (value: string | number | (string | number)[]) =>
+      Array.isArray(value) ? value[0] : value;
+
+    // Map numeric operators to API param names
+    const numericOperatorMap: Record<
+      string,
+      Record<string, keyof GetLogsParams>
+    > = {
+      duration: {
+        eq: "durationEq",
+        gt: "durationGt",
+        lt: "durationLt",
+        gte: "durationGte",
+        lte: "durationLte",
+      },
+      tokens: {
+        eq: "tokensEq",
+        gt: "tokensGt",
+        lt: "tokensLt",
+        gte: "tokensGte",
+        lte: "tokensLte",
+      },
+    };
+
+    // Process each filter using type predicates
     for (const filter of filters) {
-      // Use type guards to safely narrow filter types
-      if (filter.field === "client") {
-        params.clientName = filter.value; // Properly typed by discriminated union
-      } else if (filter.field === "session") {
-        params.sessionId = filter.value;
-      } else if (filter.field === "method") {
-        params.method = filter.value;
-      } else if (filter.field === "duration") {
-        // Map operator to specific param
-        switch (filter.operator) {
-          case "eq":
-            params.durationEq = filter.value;
-            break;
-          case "gt":
-            params.durationGt = Array.isArray(filter.value)
-              ? filter.value[0]
-              : filter.value;
-            break;
-          case "lt":
-            params.durationLt = Array.isArray(filter.value)
-              ? filter.value[0]
-              : filter.value;
-            break;
-          case "gte":
-            params.durationGte = Array.isArray(filter.value)
-              ? filter.value[0]
-              : filter.value;
-            break;
-          case "lte":
-            params.durationLte = Array.isArray(filter.value)
-              ? filter.value[0]
-              : filter.value;
-            break;
+      // Client filter
+      if (isClientFilter(filter)) {
+        params.clientName = formatStringFilter(filter.operator, filter.value);
+      }
+      // Session filter
+      else if (isSessionFilter(filter)) {
+        params.sessionId = formatStringFilter(filter.operator, filter.value);
+      }
+      // Method filter
+      else if (isMethodFilter(filter)) {
+        params.method = formatStringFilter(filter.operator, filter.value);
+      }
+      // Server filter
+      else if (isServerFilter(filter)) {
+        params.serverName = formatStringFilter(filter.operator, filter.value);
+      }
+      // Duration filter
+      else if (isDurationFilter(filter)) {
+        const operatorMap = numericOperatorMap.duration;
+        const paramKey = operatorMap?.[filter.operator];
+        if (paramKey) {
+          (params as Record<string, number>)[paramKey] = firstValue(
+            filter.value,
+          ) as number;
         }
-      } else if (filter.field === "tokens") {
-        // Map operator to specific param
-        switch (filter.operator) {
-          case "eq":
-            params.tokensEq = filter.value;
-            break;
-          case "gt":
-            params.tokensGt = Array.isArray(filter.value)
-              ? filter.value[0]
-              : filter.value;
-            break;
-          case "lt":
-            params.tokensLt = Array.isArray(filter.value)
-              ? filter.value[0]
-              : filter.value;
-            break;
-          case "gte":
-            params.tokensGte = Array.isArray(filter.value)
-              ? filter.value[0]
-              : filter.value;
-            break;
-          case "lte":
-            params.tokensLte = Array.isArray(filter.value)
-              ? filter.value[0]
-              : filter.value;
-            break;
+      }
+      // Tokens filter
+      else if (isTokensFilter(filter)) {
+        const operatorMap = numericOperatorMap.tokens;
+        const paramKey = operatorMap?.[filter.operator];
+        if (paramKey) {
+          (params as Record<string, number>)[paramKey] = firstValue(
+            filter.value,
+          ) as number;
         }
-      } else if (filter.field === "server") {
-        params.serverName = filter.value;
       }
     }
 
@@ -135,7 +177,7 @@ function App() {
     error,
   } = useInfiniteQuery({
     // Include URL state in queryKey so query automatically refetches when params change
-    queryKey: ["logs", serverName, filterParams, searchQueries],
+    queryKey: ["logs", serverName, apiParams, searchQueries],
     queryFn: async ({ pageParam }) =>
       api.getLogs({
         q:
@@ -220,110 +262,253 @@ function App() {
   });
 
   return (
-    <div className="min-h-screen bg-background">
-      <TopNavigation />
-
-      <main className="max-w-[1600px] mx-auto px-6 py-6">
-        <h1 className="text-2xl font-semibold text-foreground mb-6">
-          MCP server logs
-        </h1>
-
-        <div className="mb-6">
-          <ServerTabs
-            value={serverName}
-            onChange={handleServerChange}
-            panelId="logs-panel"
-          />
-        </div>
-
-        {clearError && (
-          <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive mb-5">
-            {clearError}
-          </div>
-        )}
-
-        {error && (
-          <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive mb-5">
-            Error: {String(error)}
-          </div>
-        )}
-
-        {isLoading ? (
-          <div className="p-10 text-center text-muted-foreground bg-card rounded-lg border border-border">
-            Loading logs...
-          </div>
-        ) : (
-          <>
-            {/* Combined container: Filter Bar + Log Table with white background and border */}
-            {/* biome-ignore lint/correctness/useUniqueElementIds: Static ID needed for ARIA tabpanel association */}
-            <div
-              id="logs-panel"
-              role="tabpanel"
-              className="bg-card rounded-lg border border-border p-4 gap-6 grid"
-            >
-              {/* Filter Bar - Phase 1-2 with two-row layout */}
-              <ErrorBoundary
-                fallback={(error) => (
-                  <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive">
-                    <p className="font-medium">Filter system unavailable</p>
-                    <p className="text-sm mt-1">
-                      Please refresh the page to try again.
-                    </p>
-                    {import.meta.env.DEV && (
-                      <details className="mt-2 text-xs">
-                        <summary className="cursor-pointer">
-                          Error details
-                        </summary>
-                        <pre className="mt-1 overflow-auto">
-                          {error.message}
-                        </pre>
-                      </details>
-                    )}
-                  </div>
-                )}
-              >
-                <FilterBar
-                  actions={
-                    <>
-                      <StreamingBadge
-                        isStreaming={isStreaming}
-                        onToggle={handleStreamingToggle}
-                      />
-                      <SettingsMenu
-                        onClearSessions={handleClearSessions}
-                        isClearing={isClearing}
-                      />
-                      <ExportButton
-                        logs={deferredLogs}
-                        selectedIds={selectedIds}
-                        getLogKey={getLogKey}
-                      />
-                    </>
-                  }
-                />
-              </ErrorBoundary>
-
-              {/* Log Table - wrapped for horizontal scroll */}
-              <div className="overflow-x-auto -mx-4 px-4">
-                <LogTable
-                  logs={deferredLogs}
-                  selectedIds={selectedIds}
-                  onSelectionChange={setSelectedIds}
-                  timeGrouping={timeGrouping}
-                />
-              </div>
+    <TooltipProvider delayDuration={300}>
+      <div className="min-h-screen bg-background">
+        <header className="bg-card border-b border-border">
+          <div className="flex items-center justify-between px-6 py-6">
+            <div className="flex items-center gap-3">
+              <FiberplaneLogo className="text-foreground shrink-0" />
+              <span className="text-base font-medium text-foreground">
+                Fiberplane
+              </span>
             </div>
+          </div>
+        </header>
 
-            {/* Load More button at bottom */}
-            <Pagination
-              hasMore={hasNextPage || false}
-              onLoadMore={handleLoadMore}
-              isLoading={isFetchingNextPage}
+        <main className="max-w-[1600px] mx-auto px-6 py-6">
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-2xl font-semibold text-foreground">
+              MCP server logs
+            </h1>
+            <SettingsDropdown
+              onClearSessions={handleClearSessions}
+              isClearing={isClearing}
             />
-          </>
-        )}
-      </main>
-    </div>
+          </div>
+
+          <div className="mb-6">
+            <ServerTabs
+              value={serverName}
+              onChange={handleServerChange}
+              panelId={logsPanelId}
+            />
+          </div>
+
+          {clearError && (
+            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive mb-5">
+              {clearError}
+            </div>
+          )}
+
+          {error && (
+            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive mb-5">
+              Error: {String(error)}
+            </div>
+          )}
+
+          {isLoading ? (
+            <div className="p-10 text-center text-muted-foreground bg-card rounded-lg border border-border">
+              Loading logs...
+            </div>
+          ) : (
+            <>
+              {/* Combined container: Filter Bar + Log Table with white background and border */}
+              <div
+                id={logsPanelId}
+                role="tabpanel"
+                className="bg-card rounded-lg border border-border p-4 gap-6 grid"
+              >
+                {/* Filter Bar - Phase 1-2 with two-row layout */}
+                <ErrorBoundary
+                  fallback={(error) => (
+                    <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive">
+                      <p className="font-medium">Filter system unavailable</p>
+                      <p className="text-sm mt-1">
+                        Please refresh the page to try again.
+                      </p>
+                      {import.meta.env.DEV && (
+                        <details className="mt-2 text-xs">
+                          <summary className="cursor-pointer">
+                            Error details
+                          </summary>
+                          <pre className="mt-1 overflow-auto">
+                            {error.message}
+                          </pre>
+                        </details>
+                      )}
+                    </div>
+                  )}
+                >
+                  <FilterBar
+                    actions={
+                      <>
+                        <StreamingBadge
+                          isStreaming={isStreaming}
+                          onToggle={handleStreamingToggle}
+                        />
+                        <ExportButton
+                          logs={deferredLogs}
+                          selectedIds={selectedIds}
+                          getLogKey={getLogKey}
+                        />
+                      </>
+                    }
+                  />
+                </ErrorBoundary>
+
+                {/* Log Table - wrapped for horizontal scroll */}
+                <div className="overflow-x-auto -mx-4 px-4">
+                  {deferredLogs.length === 0 ? (
+                    <div className="p-10 text-center text-muted-foreground">
+                      {filters.length > 0 || searchQueries?.length ? (
+                        <>
+                          <p className="mb-2">No logs match your filters</p>
+                          <p className="text-sm">
+                            Try adjusting your filters or search terms
+                          </p>
+                        </>
+                      ) : serversData?.servers &&
+                        serversData.servers.length > 0 ? (
+                        <div className="max-w-2xl mx-auto">
+                          <p className="text-lg mb-6">
+                            <em>Waiting for activity...</em>
+                          </p>
+                          <div className="p-6 border border-border rounded-md bg-card text-left space-y-6">
+                            <div>
+                              <p className="text-sm text-foreground font-medium mb-3">
+                                Configure your MCP client to use the gateway:
+                              </p>
+                              {serversData.servers.length === 1 ? (
+                                <div className="space-y-3">
+                                  <div>
+                                    <p className="text-xs text-muted-foreground mb-1">
+                                      Configured server:
+                                    </p>
+                                    <p className="text-sm text-accent font-mono">
+                                      {serversData.servers[0]?.name}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-muted-foreground mb-1">
+                                      Gateway URL:
+                                    </p>
+                                    <div className="flex items-center gap-2">
+                                      <code className="text-xs text-accent bg-muted px-2 py-1 rounded flex-1">
+                                        {window.location.origin}/s/
+                                        {serversData.servers[0]?.name}
+                                        /mcp
+                                      </code>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const serverName =
+                                            serversData.servers[0]?.name;
+                                          if (serverName) {
+                                            navigator.clipboard.writeText(
+                                              `${window.location.origin}/s/${serverName}/mcp`,
+                                            );
+                                            setCopiedServer(serverName);
+                                            setTimeout(
+                                              () => setCopiedServer(null),
+                                              2000,
+                                            );
+                                          }
+                                        }}
+                                        className="px-3 py-1 text-xs border border-border rounded hover:bg-muted transition-colors"
+                                      >
+                                        {copiedServer ===
+                                        serversData.servers[0]?.name
+                                          ? "Copied!"
+                                          : "Copy"}
+                                      </button>
+                                    </div>
+                                  </div>
+                                  <div className="pt-2">
+                                    <p className="text-xs text-muted-foreground mb-2">
+                                      To add to Claude Code:
+                                    </p>
+                                    <code className="text-xs text-accent bg-muted px-2 py-1 rounded block">
+                                      claude mcp add -s project -t http{" "}
+                                      {serversData.servers[0]?.name}{" "}
+                                      {window.location.origin}/s/
+                                      {serversData.servers[0]?.name}
+                                      /mcp
+                                    </code>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="space-y-3">
+                                  <p className="text-sm text-foreground">
+                                    {serversData.servers.length} servers
+                                    configured
+                                  </p>
+                                  <div className="space-y-2">
+                                    {serversData.servers.map((server) => (
+                                      <div
+                                        key={server.name}
+                                        className="flex items-center justify-between p-2 bg-muted/30 rounded"
+                                      >
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-xs text-muted-foreground">
+                                            {server.name}
+                                          </p>
+                                          <code className="text-xs text-accent block truncate">
+                                            {window.location.origin}/s/
+                                            {server.name}/mcp
+                                          </code>
+                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            navigator.clipboard.writeText(
+                                              `${window.location.origin}/s/${server.name}/mcp`,
+                                            );
+                                            setCopiedServer(server.name);
+                                            setTimeout(
+                                              () => setCopiedServer(null),
+                                              2000,
+                                            );
+                                          }}
+                                          className="ml-3 px-3 py-1 text-xs border border-border rounded hover:bg-muted transition-colors whitespace-nowrap"
+                                        >
+                                          {copiedServer === server.name
+                                            ? "Copied!"
+                                            : "Copy"}
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <p>No logs captured yet</p>
+                      )}
+                    </div>
+                  ) : (
+                    <LogTable
+                      logs={deferredLogs}
+                      selectedIds={selectedIds}
+                      onSelectionChange={setSelectedIds}
+                      timeGrouping={timeGrouping}
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Load More button at bottom */}
+              <Pagination
+                hasMore={hasNextPage || false}
+                onLoadMore={handleLoadMore}
+                isLoading={isFetchingNextPage}
+              />
+            </>
+          )}
+        </main>
+      </div>
+    </TooltipProvider>
   );
 }
 

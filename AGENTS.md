@@ -84,7 +84,7 @@ This is a Bun workspace monorepo containing the MCP Gateway project. The reposit
 - `bun run build` - Build all packages in dependency order (types → core → api → server → web → cli)
 - `bun run build:binaries` - Build platform-specific binaries (current platform or --all)
 - `bun run clean` - Clean all dist folders
-- `bun test` - Run all tests across workspace
+- `bun run test` - Run all tests across workspace (runs each workspace's tests with proper config)
 - `bun run typecheck` - Type check all packages
 - `bun run lint` - Lint all files with Biome
 - `bun run format` - Format all files with Biome
@@ -103,8 +103,10 @@ This is a Bun workspace monorepo containing the MCP Gateway project. The reposit
 - `bun run --filter test-mcp-server dev` - Run test MCP server
 
 ### Testing Commands
-- `bun test` - Run all tests
+- `bun run test` - Run all tests (uses workspace-specific configs)
 - `bun run --filter @fiberplane/mcp-gateway-cli test` - Test CLI package only
+
+> **Note:** Use `bun run test` instead of `bun test` from the root. This ensures each workspace uses its own bunfig.toml configuration. The web package requires happy-dom for React tests, which conflicts with CLI tests if loaded globally.
 
 ## Key Points for Claude Code
 
@@ -247,11 +249,13 @@ When adding new packages to the monorepo, follow this structured approach:
 
 ### Running Tests
 ```bash
-# All tests
-bun test
+# All tests (from root - runs each workspace's tests with proper config)
+bun run test
 
-# CLI package only
+# Specific package tests
 bun run --filter @fiberplane/mcp-gateway-cli test
+bun run --filter @fiberplane/mcp-gateway-web test
+bun run --filter @fiberplane/mcp-gateway-core test
 ```
 
 ### Building and Development

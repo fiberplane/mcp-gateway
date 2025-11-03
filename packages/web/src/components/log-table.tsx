@@ -107,7 +107,10 @@ const COLUMNS: Column[] = [
     sortField: "timestamp",
     headerClassName: "min-w-32",
     cell: (log) => (
-      <span className="font-mono text-sm text-foreground" title={log.timestamp}>
+      <span
+        className="font-mono text-sm text-foreground min-w-0 truncate"
+        title={log.timestamp}
+      >
         {format(new Date(log.timestamp), "HH:mm:ss.SSS")}
       </span>
     ),
@@ -119,7 +122,7 @@ const COLUMNS: Column[] = [
     headerClassName: "min-w-40",
     cell: (log) =>
       log.metadata.client ? (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 min-w-0">
           <span className="font-medium truncate min-w-0">
             {log.metadata.client.name}
           </span>
@@ -139,15 +142,19 @@ const COLUMNS: Column[] = [
     cell: (log) => {
       const icon =
         log.direction === "request" ? (
-          <ArrowRight className="w-3 h-3" aria-hidden="true" />
+          <ArrowRight className="w-3 h-3 shrink-0" aria-hidden="true" />
         ) : log.direction === "response" ? (
-          <ArrowLeft className="w-3 h-3" aria-hidden="true" />
+          <ArrowLeft className="w-3 h-3 shrink-0" aria-hidden="true" />
         ) : (
           <ArrowDown className="w-3 h-3" aria-hidden="true" />
         );
 
       return (
-        <ColorPill color={getMethodColor(log.method)} icon={icon}>
+        <ColorPill
+          color={getMethodColor(log.method)}
+          icon={icon}
+          className="min-w-0 truncate"
+        >
           {log.method}
         </ColorPill>
       );
@@ -199,7 +206,7 @@ const COLUMNS: Column[] = [
     isVisible: (logs) => logs.some((log) => log.metadata.server),
     cell: (log) =>
       log.metadata.server ? (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 min-w-0">
           <span className="font-medium truncate min-w-0">
             {log.metadata.server.name}
           </span>
@@ -460,10 +467,10 @@ export function LogTable({
   }
 
   return (
-    <table className="w-full border-collapse">
+    <table className="w-full border-collapse table-fixed">
       <thead className="border-b border-border">
         <tr>
-          <th className="w-12 h-8">
+          <th className="w-9 px-3 h-8">
             <Checkbox
               checked={allSelected}
               onCheckedChange={handleSelectAll}
@@ -546,7 +553,9 @@ export function LogTable({
                     className="p-2 cursor-pointer"
                     onClick={() => handleRowClick(log)}
                   >
-                    {column.cell(log)}
+                    <div className="flex items-center gap-2 min-w-0">
+                      {column.cell(log)}
+                    </div>
                   </td>
                 ))}
               </tr>
@@ -573,7 +582,7 @@ interface LogDetailsProps {
 }
 
 function LogDetails({ log }: LogDetailsProps) {
-  const { copy: copyToClipboard, copiedType: copied } = useCopyToClipboard<
+  const { copy: copyToClipboard, copiedId: copied } = useCopyToClipboard<
     "request" | "response" | "sseEvent"
   >();
 
@@ -717,7 +726,12 @@ function LogDetails({ log }: LogDetailsProps) {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => copyToClipboard(log.request, "request")}
+                onClick={() =>
+                  copyToClipboard(
+                    JSON.stringify(log.request, null, 2),
+                    "request",
+                  )
+                }
               >
                 {copied === "request" ? (
                   <>
@@ -732,7 +746,7 @@ function LogDetails({ log }: LogDetailsProps) {
                 )}
               </Button>
             </div>
-            <pre className="max-h-96 overflow-auto rounded-md border border-border bg-card p-4 text-xs font-mono">
+            <pre className="max-h-96 max-w-full overflow-auto rounded-md border border-border bg-card p-4 text-xs font-mono">
               {formattedRequest}
             </pre>
           </div>
@@ -749,7 +763,12 @@ function LogDetails({ log }: LogDetailsProps) {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => copyToClipboard(log.response, "response")}
+                onClick={() =>
+                  copyToClipboard(
+                    JSON.stringify(log.response, null, 2),
+                    "response",
+                  )
+                }
               >
                 {copied === "response" ? (
                   <>
@@ -764,7 +783,7 @@ function LogDetails({ log }: LogDetailsProps) {
                 )}
               </Button>
             </div>
-            <pre className="max-h-96 overflow-auto rounded-md border border-border bg-card p-4 text-xs font-mono">
+            <pre className="max-h-96 max-w-full overflow-auto rounded-md border border-border bg-card p-4 text-xs font-mono">
               {formattedResponse}
             </pre>
           </div>
@@ -779,7 +798,12 @@ function LogDetails({ log }: LogDetailsProps) {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => copyToClipboard(formattedSseEvent, "sseEvent")}
+                onClick={() =>
+                  copyToClipboard(
+                    JSON.stringify(formattedSseEvent, null, 2),
+                    "sseEvent",
+                  )
+                }
               >
                 {copied === "sseEvent" ? (
                   <>
@@ -815,7 +839,7 @@ function LogDetails({ log }: LogDetailsProps) {
                 <div className="text-xs font-medium uppercase text-muted-foreground">
                   Data
                 </div>
-                <pre className="mt-1 max-h-48 overflow-auto rounded-sm bg-muted p-2 text-xs font-mono text-foreground">
+                <pre className="mt-1 max-h-48 max-w-full overflow-auto rounded-sm bg-muted p-2 text-xs font-mono text-foreground">
                   {formattedSseEvent.data}
                 </pre>
               </div>

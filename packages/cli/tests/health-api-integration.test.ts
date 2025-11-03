@@ -90,8 +90,8 @@ describe("Health Check → API Integration", () => {
 
   test("API endpoint returns servers with correct status", async () => {
     // Create API app with gateway's storage
-    const apiApp = createApiApp(
-      {
+    const apiApp = createApiApp({
+      queries: {
         queryLogs: (options) => gateway.storage.query(options),
         getServers: async () => await gateway.storage.getServers(),
         getSessions: (serverName) => gateway.storage.getSessions(serverName),
@@ -101,7 +101,7 @@ describe("Health Check → API Integration", () => {
         },
       },
       logger,
-    );
+    });
 
     // Query API endpoint
     const response = await apiApp.request("/servers");
@@ -128,8 +128,8 @@ describe("Health Check → API Integration", () => {
     expect(servers[0]?.health).toBe("down");
 
     // Verify API shows offline
-    const apiApp = createApiApp(
-      {
+    const apiApp = createApiApp({
+      queries: {
         queryLogs: (options) => gateway.storage.query(options),
         getServers: async () => await gateway.storage.getServers(),
         getSessions: (serverName) => gateway.storage.getSessions(serverName),
@@ -139,7 +139,7 @@ describe("Health Check → API Integration", () => {
         },
       },
       logger,
-    );
+    });
 
     const response = await apiApp.request("/servers");
     const data = (await response.json()) as ServersResponse;
@@ -166,8 +166,8 @@ describe("Health Check → API Integration", () => {
     await gateway.health.check();
 
     // Create API
-    const apiApp = createApiApp(
-      {
+    const apiApp = createApiApp({
+      queries: {
         queryLogs: (options) => gateway.storage.query(options),
         getServers: async () => await gateway.storage.getServers(),
         getSessions: (serverName) => gateway.storage.getSessions(serverName),
@@ -177,7 +177,7 @@ describe("Health Check → API Integration", () => {
         },
       },
       logger,
-    );
+    });
 
     // Query API
     const response = await apiApp.request("/servers");
@@ -221,8 +221,8 @@ describe("Health Check → API Integration", () => {
     expect(newServer?.exchangeCount).toBe(0); // No logs yet
 
     // Verify in API
-    const apiApp = createApiApp(
-      {
+    const apiApp = createApiApp({
+      queries: {
         queryLogs: (options) => gateway.storage.query(options),
         getServers: async () => await gateway.storage.getServers(),
         getSessions: (serverName) => gateway.storage.getSessions(serverName),
@@ -232,7 +232,7 @@ describe("Health Check → API Integration", () => {
         },
       },
       logger,
-    );
+    });
 
     const response = await apiApp.request("/servers");
     const data = (await response.json()) as ServersResponse;

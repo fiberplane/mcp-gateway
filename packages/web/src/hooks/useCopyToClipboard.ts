@@ -10,16 +10,21 @@ interface UseCopyToClipboardOptions {
 
 interface UseCopyToClipboardReturn<T> {
   /**
-   * Copy data to clipboard
-   * @param data - Data to copy (will be JSON.stringify'd)
-   * @param type - Optional type identifier for tracking which item was copied
+   * Copy text to clipboard
+   * @param text - Text to copy
+   * @param contentId - Optional identifier for tracking which content was copied (useful when copying different items)
    */
-  copy: (data: unknown, type?: T) => Promise<void>;
+  copy: (text: string, contentId?: T) => Promise<void>;
 
   /**
-   * The type of the last copied item (null if nothing copied or after reset delay)
+   * Simple boolean indicating if anything was copied recently
    */
-  copiedType: T | null;
+  copied: boolean;
+
+  /**
+   * The identifier of the last copied content (null if nothing copied, no identifier provided, or after reset delay)
+   */
+  copiedId: T | null;
 
   /**
    * Whether the last copy operation failed
@@ -28,14 +33,31 @@ interface UseCopyToClipboardReturn<T> {
 }
 
 /**
- * Hook for copying data to clipboard with automatic cleanup
+ * Hook for copying text to clipboard with automatic cleanup
+ *
+ * The `contentId` parameter is optional and useful when you need to track which specific
+ * content was copied (e.g., copying multiple different items and showing individual feedback).
  *
  * @example
+ * Simple usage (just need boolean):
  * ```tsx
- * const { copy, copiedType } = useCopyToClipboard<'request' | 'response'>();
+ * const { copy, copied } = useCopyToClipboard();
  *
- * <button onClick={() => copy(data, 'request')}>
- *   {copiedType === 'request' ? 'Copied!' : 'Copy'}
+ * <button onClick={() => copy("some text")}>
+ *   {copied ? 'Copied!' : 'Copy'}
+ * </button>
+ * ```
+ *
+ * @example
+ * Advanced usage (track which item):
+ * ```tsx
+ * const { copy, copiedId } = useCopyToClipboard<'request' | 'response'>();
+ *
+ * <button onClick={() => copy(requestData, 'request')}>
+ *   {copiedId === 'request' ? 'Copied!' : 'Copy Request'}
+ * </button>
+ * <button onClick={() => copy(responseData, 'response')}>
+ *   {copiedId === 'response' ? 'Copied!' : 'Copy Response'}
  * </button>
  * ```
  */
@@ -43,15 +65,15 @@ export function useCopyToClipboard<T = string>(
   options: UseCopyToClipboardOptions = {},
 ): UseCopyToClipboardReturn<T> {
   const { resetDelay = 2000 } = options;
-  const [copiedType, setCopiedType] = useState<T | null>(null);
+  const [copiedId, setCopiedId] = useState<T | null>(null);
+  const [copied, setCopied] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const timeoutRef = useRef<number | undefined>(undefined);
   const mountedRef = useRef(true);
 
   const copy = useCallback(
-    async (data: unknown, type?: T) => {
+    async (text: string, contentId?: T) => {
       try {
-        const text = JSON.stringify(data, null, 2);
         await navigator.clipboard.writeText(text);
 
         // Clear any existing timeout
@@ -61,14 +83,16 @@ export function useCopyToClipboard<T = string>(
 
         // Set copied state (only if still mounted)
         if (mountedRef.current) {
-          setCopiedType(type ?? null);
+          setCopied(true);
+          setCopiedId(contentId ?? null);
           setError(null);
         }
 
         // Reset after delay
         timeoutRef.current = window.setTimeout(() => {
           if (mountedRef.current) {
-            setCopiedType(null);
+            setCopied(false);
+            setCopiedId(null);
           }
         }, resetDelay);
       } catch (err) {
@@ -93,5 +117,5 @@ export function useCopyToClipboard<T = string>(
     };
   }, []);
 
-  return { copy, copiedType, error };
+  return { copy, copied, copiedId, error };
 }

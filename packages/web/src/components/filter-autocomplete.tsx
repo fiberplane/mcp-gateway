@@ -224,7 +224,7 @@ export function FilterAutocomplete({
                   </div>
 
                   {/* Keyboard hint */}
-                  {suggestion.hint && (
+                  {suggestion.hint && selectedIndex === index && (
                     <kbd className="px-1.5 py-0.5 text-xs rounded bg-background border border-border shrink-0 ml-auto">
                       {suggestion.hint}
                     </kbd>

@@ -14,6 +14,7 @@ interface FilterBadgeProps {
   filter: Filter;
   onRemove: (filterId: string) => void;
   onEdit?: (filterId: string) => void;
+  isNew?: boolean;
 }
 
 // Field display names
@@ -100,7 +101,12 @@ function formatValue(filter: Filter): string {
   return formatSingleValue(filter.value, filter.field);
 }
 
-export function FilterBadge({ filter, onRemove, onEdit }: FilterBadgeProps) {
+export function FilterBadge({
+  filter,
+  onRemove,
+  onEdit,
+  isNew = false,
+}: FilterBadgeProps) {
   const fieldLabel = FIELD_LABELS[filter.field];
   const operatorLabel = OPERATOR_LABELS[filter.operator] || filter.operator;
   const value = formatValue(filter);
@@ -121,10 +127,25 @@ export function FilterBadge({ filter, onRemove, onEdit }: FilterBadgeProps) {
   const canEdit = onEdit && !isMultiValue;
   const editTooltip = isMultiValue
     ? "This filter has multiple values. Use the dropdown menu to edit."
-    : undefined;
+    : canEdit
+      ? `Edit filter (including operator: ${operatorLabel})`
+      : undefined;
+
+  // Remove animation class when animation completes
+  const handleAnimationEnd = (e: React.AnimationEvent) => {
+    if (e.animationName === "filter-slide-in") {
+      e.currentTarget.classList.remove("animate-filter-slide-in");
+    }
+  };
 
   return (
-    <div className="inline-flex items-center gap-2 h-8 px-2 border border-foreground rounded-md bg-card">
+    <div
+      className={cn(
+        "inline-flex items-center gap-2 h-8 px-2 border border-foreground rounded-md bg-card",
+        isNew && "animate-filter-slide-in",
+      )}
+      onAnimationEnd={handleAnimationEnd}
+    >
       {/* Clickable area for editing */}
       <button
         type="button"
@@ -147,8 +168,19 @@ export function FilterBadge({ filter, onRemove, onEdit }: FilterBadgeProps) {
           {fieldLabel}
         </span>
 
-        {/* Operator */}
-        <span className="text-sm text-muted-foreground">{operatorLabel}</span>
+        {/* Operator Badge */}
+        <span
+          className="text-xs italic text-foreground/70 underline decoration-dotted underline-offset-2"
+          title={
+            filter.operator === "is"
+              ? "Exact match - only shows logs where the value matches exactly"
+              : filter.operator === "contains"
+                ? "Contains - shows logs where the value contains the search term"
+                : undefined
+          }
+        >
+          {operatorLabel}
+        </span>
 
         {/* Value - styled differently based on filter type */}
         {filter.field === "method" && Array.isArray(filter.value) ? (

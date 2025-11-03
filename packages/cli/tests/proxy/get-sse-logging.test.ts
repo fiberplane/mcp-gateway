@@ -5,13 +5,13 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Gateway } from "@fiberplane/mcp-gateway-core";
+import type { McpServer } from "@fiberplane/mcp-gateway-types";
 import {
   InMemorySessionAdapter,
-  McpServer,
+  McpServer as McpServerLib,
   StreamableHttpTransport,
 } from "mcp-lite";
 import { createApp, saveRegistry } from "../helpers/test-app.js";
-import type { Registry } from "./helpers/test-app.js";
 
 // Test harness for MCP server
 interface TestServer {
@@ -24,7 +24,7 @@ interface TestServer {
 
 // Create test MCP server that supports SSE via GET with session tracking
 function createTestMcpServer(name: string, port: number): TestServer {
-  const mcp = new McpServer({
+  const mcp = new McpServerLib({
     name,
     version: "1.0.0",
   });
@@ -173,26 +173,24 @@ describe("GET /mcp SSE Logging and Capture Tests", () => {
     // Create test MCP server
     testServer = createTestMcpServer("streaming-server", 8501);
 
-    // Create test registry
-    const registry: Registry = {
-      servers: [
-        {
-          name: "streaming-server",
-          type: "http" as const,
-          url: testServer.url,
-          headers: {},
-          lastActivity: null,
-          exchangeCount: 0,
-        },
-      ],
-    };
+    // Create test servers
+    const servers: McpServer[] = [
+      {
+        name: "streaming-server",
+        type: "http" as const,
+        url: testServer.url,
+        headers: {},
+        lastActivity: null,
+        exchangeCount: 0,
+      },
+    ];
 
     // Save registry to storage
-    await saveRegistry(storageDir, registry.servers);
+    await saveRegistry(storageDir, servers);
 
     // Create and start gateway app
     const { app, gateway: gatewayInstance } = await createApp(
-      registry.servers,
+      servers,
       storageDir,
     );
     const server = Bun.serve({
@@ -208,9 +206,18 @@ describe("GET /mcp SSE Logging and Capture Tests", () => {
   });
 
   afterAll(async () => {
-    // Stop all servers
-    gateway?.stop();
-    await testServer?.stop();
+    // Stop all servers with error handling
+    try {
+      gateway?.stop();
+    } catch (err) {
+      console.warn("Failed to stop gateway:", err);
+    }
+
+    try {
+      await testServer?.stop();
+    } catch (err) {
+      console.warn("Failed to stop test server:", err);
+    }
 
     // Clean up temp directory
     try {

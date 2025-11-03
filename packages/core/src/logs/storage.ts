@@ -6,6 +6,7 @@ import type {
   LogQueryResult,
   ServerInfo,
   SessionInfo,
+  StringFilter,
 } from "@fiberplane/mcp-gateway-types";
 import {
   and,
@@ -122,6 +123,20 @@ export async function updateServerInfoForInitializeRequest(
 }
 
 /**
+ * Normalize string filter value to StringFilter format
+ * Provides backward compatibility for plain string inputs
+ */
+function normalizeStringFilter(
+  value: string | StringFilter | undefined,
+): StringFilter | undefined {
+  if (!value) return undefined;
+  if (typeof value === "string") {
+    return { operator: "is", value };
+  }
+  return value;
+}
+
+/**
  * Query logs with filtering and pagination
  */
 export async function queryLogs(
@@ -130,10 +145,10 @@ export async function queryLogs(
 ): Promise<LogQueryResult> {
   const {
     searchQueries,
-    serverName,
-    sessionId,
-    method,
-    clientName,
+    serverName: serverNameInput,
+    sessionId: sessionIdInput,
+    method: methodInput,
+    clientName: clientNameInput,
     clientVersion,
     clientIp,
     durationEq,
@@ -151,6 +166,20 @@ export async function queryLogs(
     limit = 100,
     order = "desc",
   } = options;
+
+  // Normalize string filters for backward compatibility
+  const serverName = normalizeStringFilter(
+    serverNameInput as string | StringFilter | undefined,
+  );
+  const sessionId = normalizeStringFilter(
+    sessionIdInput as string | StringFilter | undefined,
+  );
+  const method = normalizeStringFilter(
+    methodInput as string | StringFilter | undefined,
+  );
+  const clientName = normalizeStringFilter(
+    clientNameInput as string | StringFilter | undefined,
+  );
 
   // Build where conditions
   const conditions = [];
@@ -171,36 +200,53 @@ export async function queryLogs(
     }
   }
 
-  // String filters (support arrays for OR logic)
+  // Helper to build filter condition based on operator
+  const buildStringFilter = (
+    column:
+      | typeof logs.serverName
+      | typeof logs.sessionId
+      | typeof logs.method
+      | typeof logs.clientName,
+    filter: { operator: "is" | "contains"; value: string | string[] },
+  ) => {
+    const values = Array.isArray(filter.value)
+      ? filter.value.filter((v) => v)
+      : [filter.value];
+
+    // Return undefined if no valid values (will be filtered out by conditions.push)
+    if (values.length === 0) {
+      return undefined;
+    }
+
+    if (filter.operator === "contains") {
+      // Partial match (substring)
+      const conditions = values.map((v) => like(column, `%${v}%`));
+      return conditions.length === 1 ? conditions[0] : or(...conditions);
+    }
+    // Exact match
+    if (values.length === 1) {
+      const value = values[0];
+      return value ? eq(column, value) : undefined;
+    }
+    return inArray(column, values as [string, ...string[]]);
+  };
+
+  // String filters (support arrays for OR logic and operators)
   if (serverName) {
-    conditions.push(
-      Array.isArray(serverName)
-        ? inArray(logs.serverName, serverName)
-        : eq(logs.serverName, serverName),
-    );
+    const condition = buildStringFilter(logs.serverName, serverName);
+    if (condition) conditions.push(condition);
   }
   if (sessionId) {
-    conditions.push(
-      Array.isArray(sessionId)
-        ? inArray(logs.sessionId, sessionId)
-        : eq(logs.sessionId, sessionId),
-    );
+    const condition = buildStringFilter(logs.sessionId, sessionId);
+    if (condition) conditions.push(condition);
   }
   if (method) {
-    // Support arrays for multi-select with partial match (OR logic)
-    if (Array.isArray(method)) {
-      const methodConditions = method.map((m) => like(logs.method, `%${m}%`));
-      conditions.push(or(...methodConditions));
-    } else {
-      conditions.push(like(logs.method, `%${method}%`));
-    }
+    const condition = buildStringFilter(logs.method, method);
+    if (condition) conditions.push(condition);
   }
   if (clientName) {
-    conditions.push(
-      Array.isArray(clientName)
-        ? inArray(logs.clientName, clientName)
-        : eq(logs.clientName, clientName),
-    );
+    const condition = buildStringFilter(logs.clientName, clientName);
+    if (condition) conditions.push(condition);
   }
   if (clientVersion) {
     conditions.push(eq(logs.clientVersion, clientVersion));

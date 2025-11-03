@@ -47,7 +47,7 @@ describe("API /servers endpoint", () => {
         clearSessions: async () => {},
       };
 
-      const app = createApp(queries, mockLogger);
+      const app = createApp({ queries, logger: mockLogger });
 
       const response = await app.request("/servers");
       const data = (await response.json()) as ServersResponse;
@@ -85,7 +85,7 @@ describe("API /servers endpoint", () => {
         clearSessions: async () => {},
       };
 
-      const app = createApp(queries, mockLogger);
+      const app = createApp({ queries, logger: mockLogger });
 
       const response = await app.request("/servers");
       const data = (await response.json()) as ServersResponse;
@@ -117,7 +117,7 @@ describe("API /servers endpoint", () => {
         clearSessions: async () => {},
       };
 
-      const app = createApp(queries, mockLogger);
+      const app = createApp({ queries, logger: mockLogger });
 
       const response = await app.request("/servers");
       const data = (await response.json()) as ServersResponse;
@@ -149,7 +149,7 @@ describe("API /servers endpoint", () => {
         clearSessions: async () => {},
       };
 
-      const app = createApp(queries, mockLogger);
+      const app = createApp({ queries, logger: mockLogger });
 
       const response = await app.request("/servers");
       const data = (await response.json()) as ServersResponse;
@@ -189,7 +189,7 @@ describe("API /servers endpoint", () => {
         clearSessions: async () => {},
       };
 
-      const app = createApp(queries, mockLogger);
+      const app = createApp({ queries, logger: mockLogger });
 
       const response = await app.request("/servers");
       const data = (await response.json()) as ServersResponse;
@@ -230,7 +230,7 @@ describe("API /servers endpoint", () => {
         clearSessions: async () => {},
       };
 
-      const app = createApp(queries, mockLogger);
+      const app = createApp({ queries, logger: mockLogger });
 
       const response = await app.request("/servers");
       const data = (await response.json()) as ServersResponse;
@@ -260,7 +260,7 @@ describe("API /servers endpoint", () => {
         clearSessions: async () => {},
       };
 
-      const app = createApp(queries, mockLogger);
+      const app = createApp({ queries, logger: mockLogger });
 
       const response = await app.request("/servers");
 

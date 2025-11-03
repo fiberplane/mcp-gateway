@@ -4,13 +4,13 @@ import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { McpServer } from "@fiberplane/mcp-gateway-types";
 import {
   InMemorySessionAdapter,
-  McpServer,
+  McpServer as McpServerLib,
   StreamableHttpTransport,
 } from "mcp-lite";
 import { createApp, saveRegistry } from "../helpers/test-app.js";
-import type { Registry } from "./helpers/test-app.js";
 
 // Test harness for MCP server
 interface TestServer {
@@ -24,7 +24,7 @@ interface TestServer {
 function createTestMcpServer(name: string, port: number): TestServer {
   const sessionIds = new Set<string>();
 
-  const mcp = new McpServer({
+  const mcp = new McpServerLib({
     name,
     version: "1.0.0",
   });
@@ -147,40 +147,38 @@ describe("DELETE /mcp Session Termination Tests", () => {
       createTestMcpServer("delete-server2", 8202),
     ];
 
-    // Create test registry
-    const registry: Registry = {
-      servers: [
-        {
-          name: "delete-server1",
-          type: "http" as const,
-          url: testServers[0]?.url || "",
-          headers: {},
-          lastActivity: null,
-          exchangeCount: 0,
-        },
-        {
-          name: "delete-server2",
-          type: "http" as const,
-          url: testServers[1]?.url || "",
-          headers: {},
-          lastActivity: null,
-          exchangeCount: 0,
-        },
-      ],
-    };
+    // Create test servers
+    const servers: McpServer[] = [
+      {
+        name: "delete-server1",
+        type: "http" as const,
+        url: testServers[0]?.url || "",
+        headers: {},
+        lastActivity: null,
+        exchangeCount: 0,
+      },
+      {
+        name: "delete-server2",
+        type: "http" as const,
+        url: testServers[1]?.url || "",
+        headers: {},
+        lastActivity: null,
+        exchangeCount: 0,
+      },
+    ];
 
     // Save registry to storage
-    await saveRegistry(storageDir, registry.servers);
+    await saveRegistry(storageDir, servers);
 
     // Create and start gateway app
-    const { app } = await createApp(registry.servers, storageDir);
+    const { app } = await createApp(servers, storageDir);
     const server = Bun.serve({
-      port: 8200,
+      port: 8210,
       fetch: app.fetch,
     });
 
     gateway = {
-      port: 8200,
+      port: 8210,
       stop: () => server.stop(),
     };
 
@@ -197,10 +195,19 @@ describe("DELETE /mcp Session Termination Tests", () => {
   });
 
   afterAll(async () => {
-    // Stop all servers
-    gateway?.stop();
+    // Stop all servers with error handling
+    try {
+      gateway?.stop();
+    } catch (err) {
+      console.warn("Failed to stop gateway:", err);
+    }
+
     for (const server of testServers) {
-      await server.stop();
+      try {
+        await server.stop();
+      } catch (err) {
+        console.warn("Failed to stop test server:", err);
+      }
     }
 
     // Clean up temp directory

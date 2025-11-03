@@ -24,12 +24,6 @@ import type {
 import type { Hono } from "hono";
 
 /**
- * Registry type for test data organization
- * @deprecated Only for test use - production code uses McpServer[] directly
- */
-export type Registry = { servers: McpServer[] };
-
-/**
  * Create a fully configured gateway app for testing
  * This wires up all the dependencies that would normally be done in cli.ts
  */

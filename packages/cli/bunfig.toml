@@ -1,0 +1,5 @@
+# Bun configuration for CLI package tests
+
+[test]
+# Only run tests in the tests/ directory (excludes root sentinel test)
+paths = ["./tests/**/*.test.ts"]
