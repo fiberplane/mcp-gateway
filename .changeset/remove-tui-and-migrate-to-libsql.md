@@ -1,5 +1,5 @@
 ---
-"@fiberplane/mcp-gateway": major
+"@fiberplane/mcp-gateway": minor
 ---
 
 **Breaking Changes:**

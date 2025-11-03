@@ -16,6 +16,14 @@ if (entrypoints.length === 0) {
   process.exit(1);
 }
 
+// Auto-detect external dependencies from package.json
+// This ensures npm packages are resolved at runtime, not bundled
+const pkg = JSON.parse(await Bun.file("./package.json").text());
+const external = [
+  ...Object.keys(pkg.dependencies || {}),
+  ...Object.keys(pkg.optionalDependencies || {}),
+];
+
 // Build JavaScript with Bun
 await Bun.build({
   format: "esm",
@@ -24,12 +32,7 @@ await Bun.build({
   entrypoints,
   sourcemap: "inline",
   target: "node",
-  external: [
-    // Mark packages with native dependencies as external
-    "libsql",
-    "@libsql/*",
-    // Internal workspace packages will be bundled
-  ],
+  external, // Auto-generated from package.json
 });
 
 // Generate TypeScript declaration files for publishing
