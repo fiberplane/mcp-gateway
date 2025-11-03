@@ -15,10 +15,22 @@ let migrationPromise: Promise<void> | null = null;
  * Works in both development and production builds
  */
 function getMigrationsFolder(): string {
-  // In development: packages/core/src/logs/migrations.ts
-  // Migrations are in: packages/core/drizzle
   const currentFile = fileURLToPath(import.meta.url);
-  const packageRoot = join(dirname(currentFile), "..", "..");
+
+  // Development: packages/core/src/logs/migrations.ts
+  // Look for migrations in: packages/core/drizzle
+  const devMigrationsPath = join(dirname(currentFile), "..", "..", "drizzle");
+
+  // Check if we're in development mode (source files)
+  if (currentFile.includes("/src/")) {
+    return devMigrationsPath;
+  }
+
+  // Production (bundled): dist/cli.js or dist/index.js
+  // Migrations copied to: drizzle/ (at package root, sibling to dist/)
+  // Walk up from dist/ to package root
+  const distDir = dirname(currentFile);
+  const packageRoot = join(distDir, "..");
   return join(packageRoot, "drizzle");
 }
 

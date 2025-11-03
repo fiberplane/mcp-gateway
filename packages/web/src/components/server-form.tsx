@@ -165,7 +165,6 @@ export function ServerForm({
         />
       </div>
 
-
       {/* Headers */}
       <div>
         <div className="block text-sm font-medium text-foreground mb-2">

@@ -25,7 +25,9 @@ await Bun.build({
   sourcemap: "inline",
   target: "node",
   external: [
-    // Mark node built-ins and external npm packages as external
+    // Mark packages with native dependencies as external
+    "libsql",
+    "@libsql/*",
     // Internal workspace packages will be bundled
   ],
 });

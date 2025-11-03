@@ -20,6 +20,7 @@
   },
   "files": [
     "dist",
+    "drizzle",
     "public",
     "README.md",
     "CHANGELOG.md"
@@ -32,7 +33,7 @@
     "dev": "LOG_LEVEL=debug bun run --watch src/cli.ts",
     "dev:server": "LOG_LEVEL=debug bun run src/server --watch",
     "build": "bun run ../../scripts/build.ts && bun run postbuild",
-    "postbuild": "mkdir -p public && cp -r ../web/dist/* public/",
+    "postbuild": "mkdir -p public && cp -r ../web/dist/* public/ && cp -r ../core/drizzle .",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "lint": "biome ci .",
