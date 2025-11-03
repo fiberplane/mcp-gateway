@@ -5,8 +5,9 @@
  */
 
 import type { McpServerConfig } from "@fiberplane/mcp-gateway-types";
-import { X } from "lucide-react";
+import { Copy, X } from "lucide-react";
 import { useCallback, useId, useState } from "react";
+import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 
@@ -55,6 +56,7 @@ export function ServerForm({
   const [headerKey, setHeaderKey] = useState("");
   const [headerValue, setHeaderValue] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const { copy, copied } = useCopyToClipboard();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -163,6 +165,7 @@ export function ServerForm({
         />
       </div>
 
+
       {/* Headers */}
       <div>
         <div className="block text-sm font-medium text-foreground mb-2">
@@ -232,6 +235,61 @@ export function ServerForm({
           {error}
         </div>
       )}
+
+      {/* Gateway URL Preview */}
+      <div className="mt-6 space-y-3">
+        <div className="border p-2">
+          <div className="text-sm font-semibold text-foreground">
+            Gateway Proxy URL
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            Use this URL in your MCP clients instead of the server URL
+          </p>
+
+          {/* Prominent URL display */}
+          <div className="bg-accent/10 border-2 border-accent/20 rounded-lg p-4">
+            <div className="flex items-center gap-3">
+              <code className="text-sm font-mono text-foreground flex-1 break-all">
+                {window.location.origin}/s/
+                <span
+                  className={
+                    name.trim()
+                      ? "text-muted-foreground font-semibold"
+                      : "text-muted-foreground italic"
+                  }
+                >
+                  {name.trim() || "server-name"}
+                </span>
+                /mcp
+              </code>
+              {name.trim() && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    copy(`${window.location.origin}/s/${name.trim()}/mcp`)
+                  }
+                  className="shrink-0"
+                >
+                  {copied ? "Copied!" : <Copy className="w-4 h-4" />}
+                </Button>
+              )}
+            </div>
+          </div>
+          {/* Show routing relationship when both name and URL are present */}
+          {name.trim() && url.trim() && (
+            <div className="mt-3 pt-3 border-t border-accent/20">
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-muted-foreground">Routes to:</span>
+                <code className="text-muted-foreground font-mono">
+                  {url.trim()}
+                </code>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Actions */}
       <div className="flex gap-3 justify-between pt-2">

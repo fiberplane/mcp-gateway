@@ -7,14 +7,22 @@
 import type { McpServerConfig } from "@fiberplane/mcp-gateway-types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Settings } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useServerConfigs } from "../hooks/use-server-configs";
 import { api } from "../lib/api";
 import { ServerEditModal } from "./server-edit-modal";
 import { Button } from "./ui/button";
 import * as DropdownMenu from "./ui/dropdown-menu";
 
-export function ServerManagementDropdown() {
+interface ServerManagementDropdownProps {
+  triggerAddServer?: boolean;
+  onAddServerHandled?: () => void;
+}
+
+export function ServerManagementDropdown({
+  triggerAddServer,
+  onAddServerHandled,
+}: ServerManagementDropdownProps = {}) {
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"add" | "edit">("add");
@@ -100,6 +108,14 @@ export function ServerManagementDropdown() {
     },
     [deleteServerMutation],
   );
+
+  // Handle external trigger to open add server modal
+  useEffect(() => {
+    if (triggerAddServer && !modalOpen) {
+      handleAddClick();
+      onAddServerHandled?.();
+    }
+  }, [triggerAddServer, modalOpen, handleAddClick, onAddServerHandled]);
 
   const servers = serversData?.servers ?? [];
 

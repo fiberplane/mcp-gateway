@@ -1,6 +1,6 @@
 import type { ServerStatus } from "@fiberplane/mcp-gateway-types";
 import { useQuery } from "@tanstack/react-query";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, Plus } from "lucide-react";
 import { useEffect, useMemo, useRef } from "react";
 import { useServerConfig } from "../hooks/use-server-configs";
 import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
@@ -13,6 +13,7 @@ interface ServerTabsProps {
   value?: string;
   onChange: (value: string | undefined) => void;
   panelId: string;
+  onAddServer?: () => void;
 }
 
 function getStatusVariant(
@@ -145,7 +146,12 @@ function ServerTab({
   );
 }
 
-export function ServerTabs({ value, onChange, panelId }: ServerTabsProps) {
+export function ServerTabs({
+  value,
+  onChange,
+  panelId,
+  onAddServer,
+}: ServerTabsProps) {
   const { data, isLoading, error } = useQuery({
     queryKey: ["servers"],
     queryFn: () => api.getServers(),
@@ -257,30 +263,6 @@ export function ServerTabs({ value, onChange, panelId }: ServerTabsProps) {
     );
   }
 
-  // Empty state: no servers configured
-  if (data.servers.length === 0) {
-    return (
-      <div className="p-6 bg-card rounded-lg border border-border">
-        <div className="text-center">
-          <p className="text-muted-foreground mb-4">
-            <em>No servers configured yet</em>
-          </p>
-          <div className="max-w-md mx-auto p-4 border border-border rounded-md bg-muted/30">
-            <p className="text-sm text-foreground mb-3">
-              Add an MCP server to start capturing traffic through the gateway
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Once configured, connect your MCP clients using:
-            </p>
-            <code className="text-xs text-accent block mt-2">
-              {window.location.origin}/s/{"{serverName}"}/mcp
-            </code>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div
       ref={tabListRef}
@@ -319,6 +301,17 @@ export function ServerTabs({ value, onChange, panelId }: ServerTabsProps) {
           />
         );
       })}
+      {onAddServer && data.servers.length === 0 && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onAddServer}
+          className="h-8"
+        >
+          <Plus className="w-4 h-4 mr-1" />
+          Add Server
+        </Button>
+      )}
     </div>
   );
 }

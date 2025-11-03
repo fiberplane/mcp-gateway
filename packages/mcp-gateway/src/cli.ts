@@ -524,8 +524,23 @@ export async function runCli(): Promise<void> {
     console.log(`✓ MCP Gateway server started at http://localhost:${port}`);
     // biome-ignore lint/suspicious/noConsole: actually want to print to console
     console.log(`  Web UI: http://localhost:${port}/ui`);
-    // biome-ignore lint/suspicious/noConsole: actually want to print to console
-    console.log(`  API: http://localhost:${port}/api`);
+
+    // Show configured MCP servers and their gateway endpoints
+    const registeredServers = await gateway.storage.getRegisteredServers();
+    if (registeredServers.length === 0) {
+      // biome-ignore lint/suspicious/noConsole: actually want to print to console
+      console.log(`\n  No servers configured yet - add servers via Web UI`);
+    } else {
+      // biome-ignore lint/suspicious/noConsole: actually want to print to console
+      console.log(`\n  Configured MCP servers:`);
+      for (const server of registeredServers) {
+        // biome-ignore lint/suspicious/noConsole: actually want to print to console
+        console.log(
+          `    ${server.name}: http://localhost:${port}/s/${server.name}/mcp`,
+        );
+      }
+    }
+
     logger.info("MCP Gateway server started", { port });
 
     // Keep process alive and handle graceful shutdown signals
