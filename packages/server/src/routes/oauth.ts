@@ -2,7 +2,7 @@ import type { McpServer } from "@fiberplane/mcp-gateway-types";
 import { serverParamSchema } from "@fiberplane/mcp-gateway-types";
 import { sValidator } from "@hono/standard-validator";
 import { Hono } from "hono";
-import { proxy } from "hono/proxy";
+import { cors } from "hono/cors";
 
 /**
  * Creates Hono app for proxying OAuth 2.0 and OpenID Connect discovery endpoints.
@@ -19,17 +19,28 @@ export async function createOAuthRoutes(
 ): Promise<Hono> {
   const app = new Hono();
 
+  // Enable CORS for all OAuth discovery endpoints
+  app.use(
+    "/*",
+    cors({
+      origin: "*",
+      allowMethods: ["GET", "POST", "OPTIONS"],
+      allowHeaders: ["Content-Type", "Authorization"],
+    }),
+  );
+
   // Helper to extract base URL from MCP server URL
   // E.g., "https://api.example.com/mcp" -> "https://api.example.com"
+  // E.g., "https://mcp.linear.app/sse" -> "https://mcp.linear.app"
   function getBaseUrl(mcpUrl: string): string {
     try {
       const url = new URL(mcpUrl);
-      // Remove the /mcp path if present
-      const pathWithoutMcp = url.pathname.replace(/\/mcp\/?$/, "");
-      return `${url.protocol}//${url.host}${pathWithoutMcp}`;
+      // Remove the MCP endpoint path (/mcp or /sse)
+      const pathWithoutEndpoint = url.pathname.replace(/\/(mcp|sse)\/?$/, "");
+      return `${url.protocol}//${url.host}${pathWithoutEndpoint}`;
     } catch {
       // If URL parsing fails, return as-is
-      return mcpUrl.replace(/\/mcp\/?$/, "");
+      return mcpUrl.replace(/\/(mcp|sse)\/?$/, "");
     }
   }
 
@@ -58,6 +69,44 @@ export async function createOAuthRoutes(
     return headers;
   }
 
+  // Helper to proxy request and rewrite CORS headers
+  async function proxyWithCors(
+    targetUrl: string,
+    options: RequestInit,
+  ): Promise<Response> {
+    const response = await fetch(targetUrl, options);
+
+    // Read body as text to avoid stream reuse issues with Transfer-Encoding
+    const responseText = await response.text();
+
+    // Create new response with cleaned headers
+    const newHeaders = new Headers(response.headers);
+
+    // Remove encoding/transfer headers since we're creating a fresh response
+    newHeaders.delete("Content-Encoding");
+    newHeaders.delete("Content-Length");
+    newHeaders.delete("Transfer-Encoding");
+
+    const newResponse = new Response(responseText, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: newHeaders,
+    });
+
+    // Override CORS headers to allow requests from any origin
+    newResponse.headers.set("Access-Control-Allow-Origin", "*");
+    newResponse.headers.set(
+      "Access-Control-Allow-Methods",
+      "GET, POST, OPTIONS",
+    );
+    newResponse.headers.set(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization",
+    );
+
+    return newResponse;
+  }
+
   // Pattern 1: /.well-known/oauth-protected-resource/{servers|s}/:server/mcp
   // Using Hono's named parameter regex to match both /servers/:server and /s/:server
   app.get(
@@ -74,7 +123,8 @@ export async function createOAuthRoutes(
       const baseUrl = getBaseUrl(server.url);
       const targetUrl = `${baseUrl}/.well-known/oauth-protected-resource`;
 
-      return proxy(targetUrl, {
+      return proxyWithCors(targetUrl, {
+        method: "GET",
         headers: buildMinimalProxyHeaders(c.req.raw),
       });
     },
@@ -95,7 +145,15 @@ export async function createOAuthRoutes(
       const baseUrl = getBaseUrl(server.url);
       const targetUrl = `${baseUrl}/.well-known/oauth-authorization-server`;
 
-      return proxy(targetUrl, {
+      console.log("[OAuth Debug]", {
+        serverName,
+        serverUrl: server.url,
+        baseUrl,
+        targetUrl,
+      });
+
+      return proxyWithCors(targetUrl, {
+        method: "GET",
         headers: buildMinimalProxyHeaders(c.req.raw),
       });
     },
@@ -116,7 +174,8 @@ export async function createOAuthRoutes(
       const baseUrl = getBaseUrl(server.url);
       const targetUrl = `${baseUrl}/.well-known/openid-configuration`;
 
-      return proxy(targetUrl, {
+      return proxyWithCors(targetUrl, {
+        method: "GET",
         headers: buildMinimalProxyHeaders(c.req.raw),
       });
     },
@@ -138,52 +197,14 @@ export async function createOAuthRoutes(
       const baseUrl = getBaseUrl(server.url);
       const targetUrl = `${baseUrl}/.well-known/openid-configuration`;
 
-      return proxy(targetUrl, {
+      return proxyWithCors(targetUrl, {
+        method: "GET",
         headers: buildMinimalProxyHeaders(c.req.raw),
       });
     },
   );
 
-  // Pattern 5: Root .well-known endpoints (without server in path)
-  // These might be used for OAuth discovery before a specific server is selected
-  // For now, return 404 or could proxy to a default server if configured
-  app.get("/.well-known/oauth-protected-resource", (c) => {
-    return c.json(
-      {
-        error: "server_not_specified",
-        message:
-          "Please specify a server: /.well-known/oauth-protected-resource/servers/:server/mcp or /s/:server/mcp",
-      },
-      400,
-    );
-  });
-
-  app.get("/.well-known/oauth-authorization-server", (c) => {
-    return c.json(
-      {
-        error: "server_not_specified",
-        message:
-          "Please specify a server: /.well-known/oauth-authorization-server/servers/:server/mcp or /s/:server/mcp",
-      },
-      400,
-    );
-  });
-
-  // Pattern 6: OAuth Dynamic Client Registration
-  // POST /register - this might need to be server-specific
-  // For now, return helpful error
-  app.post("/register", (c) => {
-    return c.json(
-      {
-        error: "server_not_specified",
-        message:
-          "OAuth client registration requires a specific server. Use: /servers/:server/mcp/register or /s/:server/mcp/register",
-      },
-      400,
-    );
-  });
-
-  // Pattern 7: /{servers|s}/:server/mcp/register - Dynamic Client Registration
+  // Pattern 5: /{servers|s}/:server/mcp/register - Dynamic Client Registration
   app.post(
     "/:prefix{servers|s}/:server/mcp/register",
     sValidator("param", serverParamSchema),
@@ -201,7 +222,7 @@ export async function createOAuthRoutes(
       // Get request body for POST
       const body = await c.req.text();
 
-      return proxy(targetUrl, {
+      return proxyWithCors(targetUrl, {
         method: "POST",
         headers: buildMinimalProxyHeaders(c.req.raw),
         body,
