@@ -9,6 +9,13 @@ This is a Bun workspace monorepo containing the MCP Gateway project. The reposit
 ```
 /Users/jaccoflenter/dev/fiberplane/mcp-gateway/
 ├── packages/
+│   ├── mcp-gateway/             # @fiberplane/mcp-gateway (main package)
+│   │   ├── src/                 # CLI orchestration
+│   │   │   └── cli.ts           # CLI entry point
+│   │   ├── bin/                 # Development CLI executable
+│   │   ├── tests/               # Integration tests
+│   │   ├── package.json         # CLI package configuration
+│   │   └── tsconfig.json
 │   ├── types/                   # @fiberplane/mcp-gateway-types
 │   │   ├── src/                 # Type definitions and Zod schemas
 │   │   ├── package.json         # Types package configuration
@@ -24,14 +31,6 @@ This is a Bun workspace monorepo containing the MCP Gateway project. The reposit
 │   │   │   └── health.ts        # Health checks
 │   │   ├── package.json         # Core package configuration
 │   │   └── tsconfig.json
-│   ├── api/                     # @fiberplane/mcp-gateway-api
-│   │   ├── src/                 # REST API for querying logs
-│   │   │   ├── routes/          # API route handlers
-│   │   │   ├── app.ts           # API app factory
-│   │   │   └── index.ts         # Public exports
-│   │   ├── package.json         # API package configuration
-│   │   ├── tsconfig.json
-│   │   └── README.md            # API documentation
 │   ├── server/                  # @fiberplane/mcp-gateway-server
 │   │   ├── src/                 # HTTP server with proxy
 │   │   │   ├── routes/          # Proxy and OAuth routes
@@ -50,13 +49,14 @@ This is a Bun workspace monorepo containing the MCP Gateway project. The reposit
 │   │   ├── package.json         # Web package configuration
 │   │   ├── tsconfig.json
 │   │   └── vite.config.ts       # Vite configuration
-│   ├── mcp-gateway/             # @fiberplane/mcp-gateway (main package)
-│   │   ├── src/                 # CLI orchestration
-│   │   │   └── cli.ts           # CLI entry point
-│   │   ├── bin/                 # Development CLI executable
-│   │   ├── tests/               # Integration tests
-│   │   ├── package.json         # CLI package configuration
-│   │   └── tsconfig.json
+│   └── api/                     # @fiberplane/mcp-gateway-api
+│       ├── src/                 # REST API for UI
+│       │   ├── routes/          # API route handlers
+│       │   ├── app.ts           # API app factory
+│       │   └── index.ts         # Public exports
+│       ├── package.json         # API package configuration
+│       ├── tsconfig.json
+│       └── README.md            # API documentation
 ├── test-mcp-server/             # Test MCP server for validation
 │   ├── *.ts                     # Test server configurations
 │   └── package.json             # Test server dependencies
@@ -546,7 +546,6 @@ mcp-gateway
 ## Future Enhancements
 
 The monorepo structure enables:
-- Standalone server deployment (without CLI)
 - Additional export formats (CSV, Excel, etc.)
 - Real-time WebSocket updates (instead of polling)
 

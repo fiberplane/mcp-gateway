@@ -183,8 +183,6 @@ This pattern allows:
 - **Testability**: Dependencies can be mocked in tests
 - **Flexibility**: Different implementations for different environments
 
-These handlers are used by the CLI to update the TUI in real-time.
-
 ## Dependencies
 
 - `@fiberplane/mcp-gateway-core` - Core business logic (registry, capture, queries)
@@ -224,7 +222,7 @@ types → core → api → server → cli
 
 - [@fiberplane/mcp-gateway-api](../api) - Query API for log analysis
 - [@fiberplane/mcp-gateway-core](../core) - Core business logic
-- [@fiberplane/mcp-gateway-cli](../cli) - CLI with TUI
+- [@fiberplane/mcp-gateway](../mcp-gateway) - CLI orchestrator
 - [@fiberplane/mcp-gateway-web](../web) - Web UI
 
 ## License
