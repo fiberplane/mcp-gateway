@@ -269,15 +269,18 @@ packages/web/
 
 ### Overview
 
-The design system uses **semantic CSS variables** with fallback values, following the pattern: `var(--category/name, fallback)`.
+The design system uses **Tailwind v4's `@theme` directive** with semantic CSS variables using the `--color-*` naming convention.
 
 **Figma Design:** [MCP Gateway Playground](https://www.figma.com/design/sVRANvfGiWr6CJhpXCI02W/MCP-gateway---playground)
 
 ### Token Strategy
 
-- **Extracted from Figma** - Semantic tokens like `--bg/primary`, `--spacing/md`
-- **HSL format** - Easier theming and opacity manipulation
+- **Tailwind v4 native** - Uses `@theme` block in CSS (not JavaScript config)
+- **Hex color format** - Direct color values for simplicity
+- **Semantic naming** - `--color-primary`, `--color-badge-info`, etc.
 - **Intent-based badges** - `info`, `success`, `warning`, `error` (not raw colors)
+- **Method categories** - Distinct colors for different MCP method types
+- **Status indicators** - Dedicated colors for online/offline/error states
 
 ### Fonts
 
@@ -286,149 +289,165 @@ The design system uses **semantic CSS variables** with fallback values, followin
 
 ### Quick Reference: Tailwind Class Names
 
-**Common Pattern:** Tailwind uses `bg-{color}`, `text-{color}`, `border-{color}` prefixes
+**Common Pattern:** Tailwind v4 auto-generates utility classes from `--color-*` variables
 
 | CSS Variable | Tailwind Classes | Usage |
 |--------------|------------------|-------|
-| `--primary` | `bg-primary` `text-primary` | Primary backgrounds/text |
-| `--primary-foreground` | `text-primary-foreground` | Text on primary bg |
-| `--card` | `bg-card` | Card backgrounds |
-| `--muted` | `bg-muted` `text-muted` | Muted backgrounds/text |
-| `--muted-foreground` | `text-muted-foreground` | Muted text color |
-| `--badge-info` | `bg-badge-info` | Info badge (purple) |
-| `--badge-success` | `bg-badge-success` | Success badge (green) |
-| `--badge-warning` | `bg-badge-warning` | Warning badge (yellow) |
-| `--badge-error` | `bg-badge-error` | Error badge (red) |
-| `--border` | `border-border` | Border color |
+| `--color-primary` | `bg-primary` `text-primary` | Primary backgrounds/text |
+| `--color-primary-foreground` | `text-primary-foreground` | Text on primary bg |
+| `--color-background` | `bg-background` | Page background (light gray) |
+| `--color-card` | `bg-card` | Card backgrounds (white) |
+| `--color-muted` | `bg-muted` `text-muted` | Muted backgrounds/text |
+| `--color-muted-foreground` | `text-muted-foreground` | Muted text color |
+| `--color-badge-info` | `bg-badge-info` | Info badge (purple) |
+| `--color-badge-success` | `bg-badge-success` | Success badge (green) |
+| `--color-badge-warning` | `bg-badge-warning` | Warning badge (yellow) |
+| `--color-badge-error` | `bg-badge-error` | Error badge (red) |
+| `--color-method-tool` | `bg-method-tool` | Tool method pills (yellow) |
+| `--color-method-resource` | `bg-method-resource` | Resource method pills (peach) |
+| `--color-status-success` | `bg-status-success` `text-status-success` | Success status (green) |
+| `--color-border` | `border-border` | Border color |
 
 **Example:**
 ```tsx
 ✅ Correct:  <button className="bg-primary text-primary-foreground">
+✅ Correct:  <span className="bg-method-tool">tools/call</span>
 ❌ Wrong:    <button className="bg-bg-primary text-fg-on-primary">
 ```
 
 ### Color Tokens
 
+All tokens defined in `packages/web/src/index.css` using Tailwind v4's `@theme` directive.
+
 #### Background Colors
 
-| Figma Token | Fallback Value | Usage | Semantic Name |
-|-------------|----------------|-------|---------------|
-| `--bg/primary` | `#272624` | Primary button, selected tabs | `bg-primary` |
-| N/A | `#dddbff` | Purple method badges (tools/call) | `bg-badge-purple` |
-| N/A | `#fef3c7` | Yellow method badges (notifications) | `bg-badge-yellow` |
-| N/A | `#fee2e2` | Red method badges (errors) | `bg-badge-red` |
-| N/A | `#dcfce7` | Green method badges (initialize) | `bg-badge-green` |
-| N/A | `#ffffff` | Card/container backgrounds | `bg-card` |
-| N/A | `#f9fafb` | Table row hover | `bg-muted` |
+| CSS Variable | Hex Value | Usage | Tailwind Class |
+|-------------|-----------|-------|----------------|
+| `--color-background` | `#f5f5f5` | Page background | `bg-background` |
+| `--color-card` | `#ffffff` | Card/container backgrounds | `bg-card` |
+| `--color-muted` | `#f9fafb` | Table row hover, muted areas | `bg-muted` |
+| `--color-primary` | `#272624` | Primary button, selected tabs | `bg-primary` |
+
+#### Badge Colors (Intent-based)
+
+| CSS Variable | Hex Value | Usage | Tailwind Class |
+|-------------|-----------|-------|----------------|
+| `--color-badge-info` | `#dddbff` | Info badges (purple) | `bg-badge-info` |
+| `--color-badge-success` | `#dcfce7` | Success badges (green) | `bg-badge-success` |
+| `--color-badge-warning` | `#fef3c7` | Warning badges (yellow) | `bg-badge-warning` |
+| `--color-badge-error` | `#fee2e2` | Error badges (red) | `bg-badge-error` |
+
+#### Method Category Colors
+
+Used for ColorPill components in filters and log displays:
+
+| CSS Variable | Hex Value | Usage | Tailwind Class |
+|-------------|-----------|-------|----------------|
+| `--color-method-init` | `#dddbff` | Initialize, ping methods | `bg-method-init` |
+| `--color-method-resource` | `#ffe6e0` | Resource methods (resources/*) | `bg-method-resource` |
+| `--color-method-tool` | `#f7dd91` | Tool methods (tools/*) | `bg-method-tool` |
+| `--color-method-prompt` | `#d1eaac` | Prompt methods (prompts/*) | `bg-method-prompt` |
+| `--color-method-notification` | `#f8d2e8` | Notification methods | `bg-method-notification` |
+| `--color-method-default` | `#e5e7eb` | Unknown/other methods | `bg-method-default` |
+
+#### Status Indicator Colors
+
+Used for online/offline/error status badges and dots:
+
+| CSS Variable | Hex Value | Usage | Tailwind Class |
+|-------------|-----------|-------|----------------|
+| `--color-status-success` | `#22c55e` | Online status (green) | `bg-status-success` |
+| `--color-status-warning` | `#f59e0b` | Warning status (amber) | `bg-status-warning` |
+| `--color-status-error` | `#ef4444` | Error status (red) | `bg-status-error` |
+| `--color-status-neutral` | `#9ca3af` | Offline/not found (gray) | `bg-status-neutral` |
 
 #### Foreground Colors
 
-| Figma Token | Fallback Value | Usage | Semantic Name |
-|-------------|----------------|-------|---------------|
-| `--fg/on-primary` | `#ffffff` | Text on dark backgrounds | `fg-on-primary` |
-| N/A | `#000000` | Body text, table text | `fg-primary` |
-| N/A | `#6b7280` | Muted text, timestamps | `fg-muted` |
-| N/A | `#111827` | Headers, emphasized text | `fg-emphasis` |
+| CSS Variable | Hex Value | Usage | Tailwind Class |
+|-------------|-----------|-------|----------------|
+| `--color-foreground` | `#000000` | Body text, table text | `text-foreground` |
+| `--color-primary-foreground` | `#ffffff` | Text on dark backgrounds | `text-primary-foreground` |
+| `--color-muted-foreground` | `#6b7280` | Muted text, timestamps | `text-muted-foreground` |
+
+#### Border Colors
+
+| CSS Variable | Hex Value | Usage | Tailwind Class |
+|-------------|-----------|-------|----------------|
+| `--color-border` | `#e5e7eb` | Table borders, dividers | `border-border` |
+| `--color-input` | `#e5e7eb` | Input borders | `border-input` |
+| `--color-ring` | `#1e293b` | Focus rings | `ring-ring` |
 
 ### Tailwind Configuration
 
+**Tailwind v4** uses a minimal JavaScript configuration file. Theme tokens are defined in CSS using the `@theme` directive.
+
 ```typescript
-import type { Config } from 'tailwindcss'
+// packages/web/tailwind.config.ts
+import type { Config } from "tailwindcss";
 
+// Tailwind v4 - theme configuration is now in CSS using @theme
+// This config file is minimal and primarily for content paths
 export default {
-  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
-  theme: {
-    extend: {
-      colors: {
-        // Background colors
-        primary: 'hsl(var(--primary))',
-        card: 'hsl(var(--card))',
-        muted: 'hsl(var(--muted))',
-
-        // Badge colors (intent-based)
-        'badge-info': 'hsl(var(--badge-info))',
-        'badge-success': 'hsl(var(--badge-success))',
-        'badge-warning': 'hsl(var(--badge-warning))',
-        'badge-error': 'hsl(var(--badge-error))',
-
-        // Foreground colors
-        foreground: 'hsl(var(--foreground))',
-        'muted-foreground': 'hsl(var(--muted-foreground))',
-
-        // Border colors
-        border: 'hsl(var(--border))',
-      },
-      fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        mono: ['Roboto Mono', 'Consolas', 'monospace'],
-      },
-      fontSize: {
-        'xs': '12px',
-        'sm': '14px',
-        'base': '16px',
-        '2xl': '24px',
-      },
-      spacing: {
-        '0.5': '2px',
-        '1': '4px',
-        '1.5': '6px',
-        '2': '8px',
-        '3': '12px',
-        '4': '16px',
-        '6': '24px',
-        '8': '32px',
-      },
-      borderRadius: {
-        'sm': '4px',
-        'DEFAULT': '6px',
-        'md': '6px',
-        'lg': '8px',
-      },
-    },
-  },
-  plugins: [],
-} satisfies Config
+  darkMode: "class",
+  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+} satisfies Config;
 ```
 
-### CSS Variables Definition
+### CSS Theme Definition
+
+**Location:** `packages/web/src/index.css`
+
+Tailwind v4 uses the `@theme` directive to define design tokens directly in CSS:
 
 ```css
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-@layer base {
-  :root {
-    /* Background colors (HSL format for better manipulation) */
-    --background: 0 0% 100%;        /* #ffffff - page background */
-    --card: 0 0% 100%;              /* #ffffff - card background */
-    --muted: 210 20% 98%;           /* #f9fafb - muted background */
-    --primary: 30 4% 15%;           /* #272624 - primary background */
+@theme {
+  /* Background colors */
+  --color-background: #f5f5f5;  /* Light gray page background - matches Figma design */
+  --color-card: #ffffff;
+  --color-muted: #f9fafb;
+  --color-primary: #272624;
 
-    /* Badge colors (intent-based) */
-    --badge-info: 245 100% 93%;     /* #dddbff - purple */
-    --badge-success: 138 76% 93%;   /* #dcfce7 - green */
-    --badge-warning: 48 96% 89%;    /* #fef3c7 - yellow */
-    --badge-error: 0 93% 94%;       /* #fee2e2 - red */
+  /* Badge colors (intent-based) */
+  --color-badge-info: #dddbff;     /* purple - for tools/* */
+  --color-badge-success: #dcfce7;  /* green - for initialize */
+  --color-badge-warning: #fef3c7;  /* yellow - for resources/*, notifications/* */
+  --color-badge-error: #fee2e2;    /* red - for errors */
 
-    /* Foreground colors */
-    --foreground: 0 0% 0%;          /* #000000 - primary text */
-    --primary-foreground: 0 0% 100%; /* #ffffff - text on primary */
-    --muted-foreground: 220 9% 46%; /* #6b7280 - muted text */
+  /* Method category colors (for ColorPill components in filters/logs) */
+  --color-method-init: #dddbff;      /* purple - initialization & lifecycle */
+  --color-method-resource: #ffe6e0;  /* peach - resource methods */
+  --color-method-tool: #f7dd91;      /* yellow - tool methods */
+  --color-method-prompt: #d1eaac;    /* lime - prompt methods */
+  --color-method-notification: #f8d2e8; /* pink - notification methods */
+  --color-method-default: #e5e7eb;   /* gray - unknown/other methods */
 
-    /* Border colors */
-    --border: 214 32% 91%;          /* #e5e7eb */
-  }
+  /* Foreground colors */
+  --color-foreground: #000000;
+  --color-primary-foreground: #ffffff;
+  --color-muted-foreground: #6b7280;
 
-  /* Dark mode (future) */
-  .dark {
-    --background: 222 47% 11%;
-    --card: 222 47% 11%;
-    --primary: 0 0% 100%;
-    --foreground: 0 0% 100%;
-    --primary-foreground: 0 0% 0%;
-    /* ... more dark mode tokens */
-  }
+  /* Border colors */
+  --color-border: #e5e7eb;
+  --color-input: #e5e7eb;
+  --color-ring: #1e293b;
+
+  /* Status indicator colors (for badges, dots, etc.) */
+  --color-status-success: #22c55e;   /* green - for online status */
+  --color-status-warning: #f59e0b;   /* amber - for warnings */
+  --color-status-error: #ef4444;     /* red - for errors */
+  --color-status-neutral: #9ca3af;   /* gray - for offline/not-found */
+
+  /* Font families */
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "Roboto Mono", Consolas, monospace;
+
+  /* Border radius */
+  --radius: 0.5rem;
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
 }
 
 @layer base {
@@ -436,20 +455,37 @@ export default {
     @apply border-border;
   }
 
+  html,
+  body {
+    @apply h-full;
+  }
+
   body {
     @apply bg-background text-foreground font-sans;
+  }
+
+  #root {
+    @apply h-full;
   }
 }
 ```
 
-### Why HSL Format?
+**Key Benefits of Tailwind v4's `@theme`:**
+- ✅ **Native CSS** - No JavaScript config needed for theme
+- ✅ **Simple syntax** - Direct hex values instead of HSL tuples
+- ✅ **Auto-generated utilities** - Tailwind creates `bg-*`, `text-*`, `border-*` classes automatically
+- ✅ **Better DX** - Theme tokens visible in CSS file alongside styles
 
-Using HSL (Hue, Saturation, Lightness) instead of hex colors:
+### Why Hex Format?
 
-✅ **Easier to manipulate** - Change opacity: `hsl(var(--primary) / 0.5)`
-✅ **Better for theming** - Adjust lightness for dark mode
-✅ **Math-friendly** - Can calculate complementary colors
-✅ **Tailwind compatible** - Works seamlessly with Tailwind utilities
+The project uses direct hex color values for simplicity and readability:
+
+✅ **Designer-friendly** - Matches Figma exports exactly
+✅ **Simpler syntax** - No need to convert colors to HSL tuples
+✅ **Direct values** - What you see is what you get
+✅ **Tailwind v4 compatible** - Auto-generates utilities from hex values
+
+For opacity manipulation, Tailwind provides utilities like `bg-primary/50` (50% opacity).
 
 ### Method Badge Color Mapping
 
@@ -535,17 +571,19 @@ const { data, isLoading } = useQuery({
 
 ```tsx
 // Button with design tokens
-<button className="bg-bg-primary text-fg-on-primary px-3 py-2 rounded-md text-sm hover:opacity-90">
+<button className="bg-primary text-primary-foreground px-3 py-2 rounded-md text-sm hover:opacity-90">
   Export
 </button>
 
-// Method badge with utility
-<span className={cn(
-  'px-1.5 py-1 rounded-md text-sm font-mono',
-  getMethodBadgeColor(log.method)
-)}>
-  {log.method}
+// Method badge with Tailwind v4 auto-generated utilities
+<span className="bg-method-tool text-foreground px-1.5 py-1 rounded-md text-sm font-mono">
+  tools/call
 </span>
+
+// Status indicator with opacity
+<div className="bg-status-success/20 border border-status-success rounded-full">
+  <div className="w-2 h-2 bg-status-success rounded-full" />
+</div>
 ```
 
 ### Hot Reload
@@ -593,11 +631,19 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 </button>
 ```
 
-**Method Badge:**
+**Method Badge (using method category colors):**
 ```tsx
-<span className="bg-badge-info text-foreground px-1.5 py-1 rounded-md text-sm font-mono">
+<span className="bg-method-tool text-foreground px-1.5 py-1 rounded-md text-sm font-mono">
   tools/call
 </span>
+```
+
+**Status Indicator:**
+```tsx
+<div className="flex items-center gap-2">
+  <div className="w-2 h-2 rounded-full bg-status-success" />
+  <span className="text-sm text-status-success">Online</span>
+</div>
 ```
 
 **Table Row:**
