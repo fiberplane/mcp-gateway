@@ -48,6 +48,7 @@ export function ServerForm({
 }: ServerFormProps) {
   const nameId = useId();
   const urlId = useId();
+  const proxyUrlHeadingId = useId();
   const [name, setName] = useState(initialData?.name ?? "");
   const [url, setUrl] = useState(initialData?.url ?? "");
   const [headers, setHeaders] = useState<Record<string, string>>(
@@ -236,11 +237,14 @@ export function ServerForm({
       )}
 
       {/* Gateway URL Preview */}
-      <div className="mt-6 space-y-3">
+      <section className="mt-6 space-y-3" aria-labelledby={proxyUrlHeadingId}>
         <div className="border p-2">
-          <div className="text-sm font-semibold text-foreground">
+          <h3
+            id={proxyUrlHeadingId}
+            className="text-sm font-semibold text-foreground"
+          >
             Gateway Proxy URL
-          </div>
+          </h3>
           <p className="text-xs text-muted-foreground mt-1">
             Use this URL in your MCP clients instead of the server URL
           </p>
@@ -288,7 +292,7 @@ export function ServerForm({
             </div>
           )}
         </div>
-      </div>
+      </section>
 
       {/* Actions */}
       <div className="flex gap-3 justify-between pt-2">
