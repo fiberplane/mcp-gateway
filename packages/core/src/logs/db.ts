@@ -25,7 +25,9 @@ const dbCache = new Map<string, LibSQLDatabase<typeof schema>>();
  * @param storageDir - Path to storage directory (e.g., ~/.mcp-gateway/capture)
  * @returns Drizzle database instance
  */
-export function getDb(storageDir: string): LibSQLDatabase<typeof schema> {
+export async function getDb(
+  storageDir: string,
+): Promise<LibSQLDatabase<typeof schema>> {
   // Return cached connection if exists
   const cached = dbCache.get(storageDir);
   if (cached) {
@@ -33,19 +35,23 @@ export function getDb(storageDir: string): LibSQLDatabase<typeof schema> {
   }
 
   // Create new connection
-  const dbPath = `file:${join(storageDir, "logs.db")}`;
+  // Support in-memory database for tests
+  const dbPath =
+    storageDir === ":memory:"
+      ? "file::memory:"
+      : `file:${join(storageDir, "logs.db")}`;
   const client = createClient({ url: dbPath });
 
   // Configure SQLite for performance and concurrency via PRAGMA statements
   // Enable WAL mode for better concurrency (multiple readers, single writer)
   // WAL (Write-Ahead Logging) allows concurrent reads while writes are happening
-  client.execute("PRAGMA journal_mode = WAL;");
+  await client.execute("PRAGMA journal_mode = WAL;");
 
   // Set busy timeout to 5 seconds to wait for locks instead of failing immediately
-  client.execute("PRAGMA busy_timeout = 5000;");
+  await client.execute("PRAGMA busy_timeout = 5000;");
 
   // Use NORMAL synchronous mode for better performance (WAL provides safety)
-  client.execute("PRAGMA synchronous = NORMAL;");
+  await client.execute("PRAGMA synchronous = NORMAL;");
 
   // Create Drizzle instance with proper libsql adapter
   const db = drizzle(client, { schema });

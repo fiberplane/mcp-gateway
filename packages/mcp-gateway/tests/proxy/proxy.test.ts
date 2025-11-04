@@ -124,8 +124,15 @@ describe("Proxy Integration Tests", () => {
   };
 
   beforeAll(async () => {
-    // Use in-memory SQLite database for tests (faster and automatic cleanup)
-    storageDir = ":memory:";
+    // Use temporary directory for tests (reliable with libsql)
+    // Note: In-memory databases (":memory:") don't work reliably with libsql
+    // because each connection creates a separate database
+    storageDir = `/tmp/mcp-gateway-test-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    // Create temporary directory for database
+    await import("node:fs/promises").then((fs) =>
+      fs.mkdir(storageDir, { recursive: true }),
+    );
 
     // Create test MCP servers
     testServers = [
@@ -182,6 +189,13 @@ describe("Proxy Integration Tests", () => {
   });
 
   afterAll(async () => {
+    // Close gateway to ensure clean shutdown
+    try {
+      await gateway?.instance?.close();
+    } catch (err) {
+      console.warn("Failed to close gateway:", err);
+    }
+
     // Stop all servers with error handling
     try {
       gateway?.stop();
@@ -197,7 +211,14 @@ describe("Proxy Integration Tests", () => {
       }
     }
 
-    // In-memory database is automatically cleaned up when connection closes
+    // Clean up temporary directory
+    try {
+      await import("node:fs/promises").then((fs) =>
+        fs.rm(storageDir, { recursive: true, force: true }),
+      );
+    } catch (err) {
+      console.warn("Failed to clean up test directory:", err);
+    }
   });
 
   describe("Proxy Routing", () => {

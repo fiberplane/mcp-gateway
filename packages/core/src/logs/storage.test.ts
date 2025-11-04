@@ -46,7 +46,7 @@ describe("Storage Functions", () => {
 
     // Create temporary directory for each test
     storageDir = await mkdtemp(join(tmpdir(), "mcp-gateway-test-"));
-    const db = getDb(storageDir);
+    const db = await getDb(storageDir);
     await ensureMigrations(db);
   });
 
@@ -60,7 +60,7 @@ describe("Storage Functions", () => {
 
   describe("insertLog", () => {
     test("should insert a valid log record", async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
       const record = createTestRecord();
 
       await insertLog(db, record);
@@ -71,7 +71,7 @@ describe("Storage Functions", () => {
     });
 
     test("should insert multiple log records", async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
 
       for (let i = 0; i < 5; i++) {
         const record = createTestRecord({
@@ -86,7 +86,7 @@ describe("Storage Functions", () => {
     });
 
     test("should handle null jsonrpc id", async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
       const record = createTestRecord({ id: null });
 
       await insertLog(db, record);
@@ -99,7 +99,7 @@ describe("Storage Functions", () => {
 
   describe("queryLogs", () => {
     beforeEach(async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
 
       // Insert test data
       const records = [
@@ -141,7 +141,7 @@ describe("Storage Functions", () => {
     });
 
     test("should query all logs with no filters", async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
       const result = await queryLogs(db);
 
       expect(result.data).toHaveLength(3);
@@ -150,7 +150,7 @@ describe("Storage Functions", () => {
     });
 
     test("should filter by server name", async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
       const result = await queryLogs(db, {
         serverName: { operator: "is", value: "server-a" },
       });
@@ -162,7 +162,7 @@ describe("Storage Functions", () => {
     });
 
     test("should filter by session id", async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
       const result = await queryLogs(db, {
         sessionId: { operator: "is", value: "session-2" },
       });
@@ -172,7 +172,7 @@ describe("Storage Functions", () => {
     });
 
     test("should filter by method with 'contains' operator (partial match)", async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
       const result = await queryLogs(db, {
         method: { operator: "contains", value: "tools" },
       });
@@ -182,7 +182,7 @@ describe("Storage Functions", () => {
     });
 
     test("should filter by method with 'is' operator (exact match)", async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
       const result = await queryLogs(db, {
         method: { operator: "is", value: "tools/list" },
       });
@@ -192,7 +192,7 @@ describe("Storage Functions", () => {
     });
 
     test("should filter by client name with 'contains' operator", async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
 
       // Add test record with client metadata
       await insertLog(
@@ -221,7 +221,7 @@ describe("Storage Functions", () => {
     });
 
     test("should filter by client name with 'is' operator (exact match)", async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
 
       // Add test records
       await insertLog(
@@ -260,7 +260,7 @@ describe("Storage Functions", () => {
     });
 
     test("should filter by session with 'contains' operator (partial match)", async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
 
       // Add test record with UUID session
       await insertLog(
@@ -287,7 +287,7 @@ describe("Storage Functions", () => {
     });
 
     test("should filter by server with 'contains' operator (partial match)", async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
       const result = await queryLogs(db, {
         serverName: { operator: "contains", value: "server" },
       });
@@ -299,7 +299,7 @@ describe("Storage Functions", () => {
     });
 
     test("should filter by server with 'is' operator (exact match)", async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
       const result = await queryLogs(db, {
         serverName: { operator: "is", value: "server-a" },
       });
@@ -311,7 +311,7 @@ describe("Storage Functions", () => {
     });
 
     test("should filter by multiple server names (OR logic)", async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
       const result = await queryLogs(db, {
         serverName: { operator: "is", value: ["server-a", "server-b"] },
       });
@@ -325,7 +325,7 @@ describe("Storage Functions", () => {
     });
 
     test("should filter by multiple session IDs (OR logic)", async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
       const result = await queryLogs(db, {
         sessionId: { operator: "is", value: ["session-1", "session-2"] },
       });
@@ -339,7 +339,7 @@ describe("Storage Functions", () => {
     });
 
     test("should filter by single server name from array", async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
       const result = await queryLogs(db, {
         serverName: { operator: "is", value: ["server-a"] },
       });
@@ -351,7 +351,7 @@ describe("Storage Functions", () => {
     });
 
     test("should filter by multiple client names (OR logic)", async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
 
       // First, add records with client metadata
       await insertLog(
@@ -410,21 +410,21 @@ describe("Storage Functions", () => {
     });
 
     test("should filter by time range (after)", async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
       const result = await queryLogs(db, { after: "2024-01-01T10:30:00Z" });
 
       expect(result.data).toHaveLength(2);
     });
 
     test("should filter by time range (before)", async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
       const result = await queryLogs(db, { before: "2024-01-01T11:30:00Z" });
 
       expect(result.data).toHaveLength(2);
     });
 
     test("should filter by time range (after and before)", async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
       const result = await queryLogs(db, {
         after: "2024-01-01T10:30:00Z",
         before: "2024-01-01T11:30:00Z",
@@ -435,7 +435,7 @@ describe("Storage Functions", () => {
     });
 
     test("should respect limit", async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
       const result = await queryLogs(db, { limit: 2 });
 
       expect(result.data).toHaveLength(2);
@@ -443,7 +443,7 @@ describe("Storage Functions", () => {
     });
 
     test("should order descending by default", async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
       const result = await queryLogs(db);
 
       expect(result.data[0].timestamp).toBe("2024-01-01T12:00:00Z");
@@ -451,7 +451,7 @@ describe("Storage Functions", () => {
     });
 
     test("should order ascending when specified", async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
       const result = await queryLogs(db, { order: "asc" });
 
       expect(result.data[0].timestamp).toBe("2024-01-01T10:00:00Z");
@@ -459,7 +459,7 @@ describe("Storage Functions", () => {
     });
 
     test("should calculate pagination metadata", async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
       const result = await queryLogs(db, { limit: 2 });
 
       expect(result.pagination.count).toBe(2);
@@ -472,7 +472,7 @@ describe("Storage Functions", () => {
 
   describe("getServers", () => {
     beforeEach(async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
 
       // Insert test data
       const records = [
@@ -516,14 +516,14 @@ describe("Storage Functions", () => {
     });
 
     test("should aggregate by server name", async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
       const result = await getServers(db);
 
       expect(result).toHaveLength(2);
     });
 
     test("should return distinct servers from logs", async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
       const result = await getServers(db);
 
       expect(result).toHaveLength(2);
@@ -532,7 +532,7 @@ describe("Storage Functions", () => {
     });
 
     test("should default statuses to not-found when registry data is unavailable", async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
       const result = await getServers(db);
 
       for (const server of result) {
@@ -541,7 +541,7 @@ describe("Storage Functions", () => {
     });
 
     test("should derive statuses using registry membership and health data", async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
       const registryServers = ["server-a", "server-c"];
 
       // Insert health records into database
@@ -575,7 +575,7 @@ describe("Storage Functions", () => {
 
   describe("getSessions", () => {
     beforeEach(async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
 
       // Insert test data
       const records = [
@@ -614,14 +614,14 @@ describe("Storage Functions", () => {
     });
 
     test("should aggregate all sessions", async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
       const result = await getSessions(db);
 
       expect(result).toHaveLength(2);
     });
 
     test("should filter sessions by server name", async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
       const result = await getSessions(db, "server-a");
 
       expect(result).toHaveLength(1);
@@ -630,7 +630,7 @@ describe("Storage Functions", () => {
     });
 
     test("should track session time ranges", async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
       const result = await getSessions(db);
 
       const session1 = result.find((s) => s.sessionId === "session-1");
@@ -640,7 +640,7 @@ describe("Storage Functions", () => {
     });
 
     test("should order sessions by start time descending", async () => {
-      const db = getDb(storageDir);
+      const db = await getDb(storageDir);
       const result = await getSessions(db);
 
       expect(result[0].sessionId).toBe("session-2");

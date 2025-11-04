@@ -57,7 +57,7 @@ export async function ensureMigrations(
   migrationPromise = (async () => {
     try {
       const migrationsFolder = getMigrationsFolder();
-      migrate(db, { migrationsFolder });
+      await migrate(db, { migrationsFolder });
     } catch (err) {
       // Reset promise to allow retry
       migrationPromise = null;

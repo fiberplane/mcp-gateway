@@ -28,7 +28,7 @@ export async function queryLogs(
   storageDir: string,
   options: LogQueryOptions = {},
 ): Promise<LogQueryResult> {
-  const db = getDb(storageDir);
+  const db = await getDb(storageDir);
   await ensureMigrations(db);
   return queryLogsInternal(db, options);
 }
@@ -46,7 +46,7 @@ export async function getServers(
   storageDir: string,
   registryServers?: string[],
 ): Promise<ServerInfo[]> {
-  const db = getDb(storageDir);
+  const db = await getDb(storageDir);
   await ensureMigrations(db);
   return getServersInternal(db, registryServers);
 }
@@ -64,7 +64,7 @@ export async function getSessions(
   storageDir: string,
   serverName?: string,
 ): Promise<SessionInfo[]> {
-  const db = getDb(storageDir);
+  const db = await getDb(storageDir);
   await ensureMigrations(db);
   return getSessionsInternal(db, serverName);
 }

@@ -182,8 +182,8 @@ test("CLI shows version when --version flag is used", async () => {
   expect(proc.exitCode).toBe(0);
 });
 
-// Headless mode tests (non-TTY environment)
-test("Headless mode: CLI runs without TUI when stdin is not a TTY", async () => {
+// Server mode tests (non-TTY environment)
+test("Server mode: CLI runs in server mode when stdin is not a TTY", async () => {
   const proc = Bun.spawn(
     ["bun", "run", "./src/cli.ts", "--storage-dir", tempDir, "--port", "8100"],
     {
@@ -230,7 +230,7 @@ test("Headless mode: CLI runs without TUI when stdin is not a TTY", async () => 
 });
 
 test(
-  "Headless mode: CLI server responds to SIGTERM gracefully",
+  "Server mode: CLI server responds to SIGTERM gracefully",
   { timeout: 15000 },
   async () => {
     // Use random high port to avoid conflicts

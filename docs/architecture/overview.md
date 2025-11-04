@@ -130,7 +130,7 @@ MCP Gateway is designed as a **multi-layered system** that provides centralized 
 
 #### Storage Backends
 - **SQLite Backend**
-  - Location: `packages/core/src/capture/backends/sqlite-backend.ts`
+  - Location: `packages/core/src/capture/backends/local-backend.ts`
   - Stores: All captured logs and metrics
   - Queries: Log search, aggregations, metrics
 
