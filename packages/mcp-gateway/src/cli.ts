@@ -2,7 +2,7 @@
  * MCP Gateway CLI - Headless HTTP server for proxying and observing MCP traffic
  */
 
-import { readFile } from "node:fs/promises";
+import { access, constants, readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
@@ -434,14 +434,26 @@ export async function runCli(): Promise<void> {
     app.route("/api", apiApp);
 
     // Serve Web UI for management
-    // Serve static files under /ui prefix
-    app.use(
-      "/ui/*",
-      serveStatic({
-        root: publicDir,
-        rewriteRequestPath: (path) => path.replace(/^\/ui/, ""),
-      }),
-    );
+    // Check if public directory exists before mounting static file middleware
+    let hasWebUI = false;
+    try {
+      await access(publicDir, constants.F_OK);
+      hasWebUI = true;
+    } catch {
+      // Public directory doesn't exist - web UI not built yet
+      hasWebUI = false;
+    }
+
+    // Only serve static files if web UI is built
+    if (hasWebUI) {
+      app.use(
+        "/ui/*",
+        serveStatic({
+          root: publicDir,
+          rewriteRequestPath: (path) => path.replace(/^\/ui/, ""),
+        }),
+      );
+    }
 
     // Serve index.html for /ui root
     app.get("/ui", async (c) => {
