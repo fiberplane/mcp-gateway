@@ -442,6 +442,11 @@ export async function runCli(): Promise<void> {
     } catch {
       // Public directory doesn't exist - web UI not built yet
       hasWebUI = false;
+      logger.error("Web UI not available", { publicDir });
+      // biome-ignore lint/suspicious/noConsole: actually want to print to console
+      console.error(
+        "\nWeb UI not available. Assuming you are running the CLI from source: you should run `bun run build` in the root of the monorepo.\n",
+      );
     }
 
     // Only serve static files if web UI is built
@@ -462,7 +467,10 @@ export async function runCli(): Promise<void> {
         const html = await readFile(indexPath, "utf-8");
         return c.html(html);
       } catch {
-        return c.text("Web UI not available", 404);
+        return c.text(
+          "Web UI not available. Assuming you are running the CLI from source: you should run `bun run build` in the root of the monorepo. ",
+          404,
+        );
       }
     });
 
