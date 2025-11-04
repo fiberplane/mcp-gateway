@@ -1,7 +1,7 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import type { LibSQLDatabase } from "drizzle-orm/libsql";
+import { migrate } from "drizzle-orm/libsql/migrator";
 import type * as schema from "./schema.js";
 
 /**
@@ -46,7 +46,7 @@ function getMigrationsFolder(): string {
  * @param db - Drizzle database instance
  */
 export async function ensureMigrations(
-  db: BetterSQLite3Database<typeof schema>,
+  db: LibSQLDatabase<typeof schema>,
 ): Promise<void> {
   // If migrations are already running or complete, wait/return
   if (migrationPromise) {

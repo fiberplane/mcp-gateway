@@ -22,7 +22,7 @@ import {
   or,
   sql,
 } from "drizzle-orm";
-import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
+import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { logger } from "../logger.js";
 import type * as schema from "./schema.js";
 import {
@@ -39,7 +39,7 @@ import {
  * Insert a new log entry into the database
  */
 export async function insertLog(
-  db: BetterSQLite3Database<typeof schema>,
+  db: LibSQLDatabase<typeof schema>,
   record: CaptureRecord,
 ): Promise<void> {
   const newLog: NewLog = {
@@ -98,7 +98,7 @@ export async function insertLog(
  * which was captured before the response containing serverInfo was received.
  */
 export async function updateServerInfoForInitializeRequest(
-  db: BetterSQLite3Database<typeof schema>,
+  db: LibSQLDatabase<typeof schema>,
   serverName: string,
   sessionId: string,
   requestId: string | number,
@@ -140,7 +140,7 @@ function normalizeStringFilter(
  * Query logs with filtering and pagination
  */
 export async function queryLogs(
-  db: BetterSQLite3Database<typeof schema>,
+  db: LibSQLDatabase<typeof schema>,
   options: LogQueryOptions = {},
 ): Promise<LogQueryResult> {
   const {
@@ -352,7 +352,7 @@ export async function queryLogs(
  * @returns Server information with status (online/offline/not-found)
  */
 export async function getServers(
-  db: BetterSQLite3Database<typeof schema>,
+  db: LibSQLDatabase<typeof schema>,
   registryServers?: string[],
 ): Promise<ServerInfo[]> {
   // Get servers that have logs in the database, with health data
@@ -435,7 +435,7 @@ export async function getServers(
  * Get session aggregations
  */
 export async function getSessions(
-  db: BetterSQLite3Database<typeof schema>,
+  db: LibSQLDatabase<typeof schema>,
   serverName?: string,
 ): Promise<SessionInfo[]> {
   let query = db
@@ -462,7 +462,7 @@ export async function getSessions(
  * Get client aggregations
  */
 export async function getClients(
-  db: BetterSQLite3Database<typeof schema>,
+  db: LibSQLDatabase<typeof schema>,
 ): Promise<ClientAggregation[]> {
   const result = await db
     .selectDistinct({
@@ -482,7 +482,7 @@ export async function getClients(
  * Returns all unique methods, optionally filtered by server.
  */
 export async function getMethods(
-  db: BetterSQLite3Database<typeof schema>,
+  db: LibSQLDatabase<typeof schema>,
   serverName?: string,
 ): Promise<Array<{ method: string }>> {
   let query = db.selectDistinct({ method: logs.method }).from(logs);
@@ -503,7 +503,7 @@ export async function getMethods(
  * from the logs table rather than stored in the registry.
  */
 export async function getServerMetrics(
-  db: BetterSQLite3Database<typeof schema>,
+  db: LibSQLDatabase<typeof schema>,
   serverName: string,
 ): Promise<{ lastActivity: string | null; exchangeCount: number }> {
   const result = await db
@@ -528,7 +528,7 @@ export async function getServerMetrics(
  * allowing queries to access live health status.
  */
 export async function upsertServerHealth(
-  db: BetterSQLite3Database<typeof schema>,
+  db: LibSQLDatabase<typeof schema>,
   data: {
     serverName: string;
     health: HealthStatus;
@@ -562,7 +562,7 @@ export async function upsertServerHealth(
  * Returns null if health data doesn't exist in the database.
  */
 export async function getServerHealth(
-  db: BetterSQLite3Database<typeof schema>,
+  db: LibSQLDatabase<typeof schema>,
   serverName: string,
 ): Promise<{
   health: HealthStatus;
@@ -596,7 +596,7 @@ export async function getServerHealth(
  * Proposed signature:
  * ```typescript
  * export async function pruneServerLogs(
- *   db: BetterSQLite3Database<typeof schema>,
+ *   db: LibSQLDatabase<typeof schema>,
  *   serverName: string
  * ): Promise<number>
  * ```
@@ -626,9 +626,9 @@ export async function getServerHealth(
  */
 export async function upsertSessionMetadata(
   db:
-    | BetterSQLite3Database<typeof schema>
+    | LibSQLDatabase<typeof schema>
     | Parameters<
-        Parameters<BetterSQLite3Database<typeof schema>["transaction"]>[0]
+        Parameters<LibSQLDatabase<typeof schema>["transaction"]>[0]
       >[0],
   data: {
     sessionId: string;
@@ -676,7 +676,7 @@ export async function upsertSessionMetadata(
  * Returns null if session metadata doesn't exist in the database.
  */
 export async function getSessionMetadata(
-  db: BetterSQLite3Database<typeof schema>,
+  db: LibSQLDatabase<typeof schema>,
   sessionId: string,
 ): Promise<{
   client?: { name: string; version: string; title?: string };
