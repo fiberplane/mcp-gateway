@@ -117,12 +117,20 @@ mcp-gateway --port 8080
 # Custom storage directory
 mcp-gateway --storage-dir /custom/path
 
+# Enable debug logging
+DEBUG=* mcp-gateway
+
 # Show help
 mcp-gateway --help
 
 # Show version
 mcp-gateway --version
 ```
+
+**Environment Variables:**
+- `MCP_GATEWAY_PORT` - Server port (default: 3333)
+- `MCP_GATEWAY_STORAGE` - Storage directory (default: ~/.mcp-gateway)
+- `DEBUG` - Debug logging (`*` for all, `@fiberplane/*` for gateway only)
 
 ## Configuration
 
@@ -319,52 +327,37 @@ MCP Client → http://localhost:3333/s/weather/mcp → Gateway → MCP Server
 
 ## Troubleshooting
 
-### Port Already in Use
-
+**Port already in use:**
 ```bash
-# Use a different port
 mcp-gateway --port 8080
 ```
 
-### Cannot Connect to Server
-
+**Cannot connect to server:**
 1. Verify server is running: `curl http://localhost:3000/mcp`
-2. Check server URL in configuration
-3. View logs in Web UI Activity Log
-4. Check gateway logs: `~/.mcp-gateway/logs/`
+2. Check server URL in web UI
+3. View captured traffic in Activity Log
 
-### Web UI Shows 404
+**Web UI shows 404:**
+- Use `http://localhost:3333/ui` (not root `/`)
 
-Ensure you're accessing the correct URL:
-```
-http://localhost:3333/ui
-```
-
-Not `http://localhost:3333` (root returns JSON)
-
-### Clear All Data
-
+**Clear all data:**
 ```bash
-# Remove all configuration and logs
-rm -rf ~/.mcp-gateway/
-
-# Restart gateway
-mcp-gateway
+rm -rf ~/.mcp-gateway/ && mcp-gateway
 ```
+
+See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for complete guide.
 
 ## Development
 
 This is a Bun workspace monorepo. To contribute:
 
 ```bash
-# Clone repository
+# Clone and install
 git clone https://github.com/fiberplane/mcp-gateway.git
 cd mcp-gateway
-
-# Install dependencies
 bun install
 
-# Run in development mode
+# Dev mode (starts gateway with hot reload)
 bun run dev
 
 # Run tests
@@ -372,9 +365,12 @@ bun run test
 
 # Build all packages
 bun run build
+
+# Web UI dev server (with hot reload)
+bun run --filter @fiberplane/mcp-gateway-web dev
 ```
 
-See [CLAUDE.md](../../CLAUDE.md) for detailed development guidelines.
+See [CLAUDE.md](CLAUDE.md) for complete development guide.
 
 ## License
 
