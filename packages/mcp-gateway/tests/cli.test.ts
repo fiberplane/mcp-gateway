@@ -184,8 +184,18 @@ test("CLI shows version when --version flag is used", async () => {
 
 // Server mode tests (non-TTY environment)
 test("Server mode: CLI runs in server mode when stdin is not a TTY", async () => {
+  // Use random high port to avoid conflicts
+  const randomPort = 9000 + Math.floor(Math.random() * 1000);
   const proc = Bun.spawn(
-    ["bun", "run", "./src/cli.ts", "--storage-dir", tempDir, "--port", "8100"],
+    [
+      "bun",
+      "run",
+      "./src/cli.ts",
+      "--storage-dir",
+      tempDir,
+      "--port",
+      String(randomPort),
+    ],
     {
       stdin: "pipe",
       stdout: "pipe",
@@ -223,7 +233,7 @@ test("Server mode: CLI runs in server mode when stdin is not a TTY", async () =>
   });
 
   expect(output).toContain(
-    "MCP Gateway server started at http://localhost:8100",
+    `MCP Gateway server started at http://localhost:${randomPort}`,
   );
 
   await proc.exited;

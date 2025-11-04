@@ -156,13 +156,15 @@ describe("Proxy Integration Tests", () => {
 
     // Create and start gateway app
     const { app } = await createApp(servers, storageDir);
+    // Use random high port to avoid conflicts
+    const randomPort = 9000 + Math.floor(Math.random() * 1000);
     const server = Bun.serve({
-      port: 8000,
+      port: randomPort,
       fetch: app.fetch,
     });
 
     gateway = {
-      port: 8000,
+      port: randomPort,
       stop: () => server.stop(),
     };
 
@@ -205,7 +207,7 @@ describe("Proxy Integration Tests", () => {
   describe("Authentication Handling", () => {
     it("should forward 401 responses with auth headers", async () => {
       // Create a mock server that returns 401 for unauthorized requests
-      const authServerPort = 8203;
+      const authServerPort = 9000 + Math.floor(Math.random() * 1000);
       const authServer = Bun.serve({
         port: authServerPort,
         fetch(request) {
@@ -262,15 +264,16 @@ describe("Proxy Integration Tests", () => {
 
         // Create gateway with auth server
         const { app } = await createApp(authServers, storageDir);
+        const authGatewayPort = 9000 + Math.floor(Math.random() * 1000);
         const authGateway = Bun.serve({
-          port: 8204,
+          port: authGatewayPort,
           fetch: app.fetch,
         });
 
         try {
           // Test 1: Unauthorized request should return 401 with all headers
           const unauthorizedResponse = await fetch(
-            `http://localhost:8204/servers/auth-server/mcp`,
+            `http://localhost:${authGatewayPort}/servers/auth-server/mcp`,
             {
               method: "POST",
               headers: {
@@ -309,7 +312,7 @@ describe("Proxy Integration Tests", () => {
 
           // Test 2: Authorized request should succeed
           const authorizedResponse = await fetch(
-            `http://localhost:8204/servers/auth-server/mcp`,
+            `http://localhost:${authGatewayPort}/servers/auth-server/mcp`,
             {
               method: "POST",
               headers: {
@@ -340,7 +343,7 @@ describe("Proxy Integration Tests", () => {
 
     it("should forward 401 responses via short alias route", async () => {
       // Create a mock server that returns 401
-      const authServerPort = 8205;
+      const authServerPort = 9000 + Math.floor(Math.random() * 1000);
       const authServer = Bun.serve({
         port: authServerPort,
         fetch(_request) {
@@ -374,15 +377,16 @@ describe("Proxy Integration Tests", () => {
         await saveRegistry(storageDir, authServers);
 
         const { app } = await createApp(authServers, storageDir);
+        const authGatewayPort = 9000 + Math.floor(Math.random() * 1000);
         const authGateway = Bun.serve({
-          port: 8206,
+          port: authGatewayPort,
           fetch: app.fetch,
         });
 
         try {
           // Test via short alias /s/:server/mcp
           const response = await fetch(
-            `http://localhost:8206/s/auth-server-2/mcp`,
+            `http://localhost:${authGatewayPort}/s/auth-server-2/mcp`,
             {
               method: "POST",
               headers: {

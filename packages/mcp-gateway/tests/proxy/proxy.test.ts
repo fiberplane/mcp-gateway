@@ -165,13 +165,15 @@ describe("Proxy Integration Tests", () => {
       servers,
       storageDir,
     );
+    // Use random high port to avoid conflicts
+    const randomPort = 9000 + Math.floor(Math.random() * 1000);
     const server = Bun.serve({
-      port: 8100, // Changed from 8000 to avoid conflicts with auth-401s.test.ts
+      port: randomPort,
       fetch: app.fetch,
     });
 
     gateway = {
-      port: 8100,
+      port: randomPort,
       stop: () => server.stop(),
       instance: gatewayInstance,
     };
