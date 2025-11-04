@@ -441,7 +441,6 @@ export async function runCli(): Promise<void> {
       hasWebUI = true;
     } catch {
       // Public directory doesn't exist - web UI not built yet
-      hasWebUI = false;
       logger.error("Web UI not available", { publicDir });
       // biome-ignore lint/suspicious/noConsole: actually want to print to console
       console.error(

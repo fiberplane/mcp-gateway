@@ -166,6 +166,8 @@ export class LocalStorageBackend implements StorageBackend {
    */
   static async create(storageDir: string): Promise<LocalStorageBackend> {
     // Support in-memory database for tests
+    // libsql requires "file::memory:" syntax (not ":memory:")
+    // See: https://github.com/tursodatabase/libsql-client-ts
     const dbPath =
       storageDir === ":memory:"
         ? "file::memory:"

@@ -43,7 +43,8 @@ async function cleanDependencies(): Promise<void> {
   // Minimal required dependencies for the wrapper package
   // These are the direct dependencies needed by the CLI wrapper itself
   const requiredDeps: Record<string, string> = {
-    "@hono/node-server": cliPkg.dependencies?.["@hono/node-server"] || "^1.19.4",
+    "@hono/node-server":
+      cliPkg.dependencies?.["@hono/node-server"] || "^1.19.4",
     hono: cliPkg.dependencies?.hono || "^4.9.8",
   };
 
@@ -74,7 +75,9 @@ async function cleanDependencies(): Promise<void> {
   await proc.exited;
 
   console.log("✅ Dependencies cleaned successfully!");
-  console.log("\nℹ️  Run 'bun run ../../scripts/merge-dependencies.ts' to add back internal package dependencies");
+  console.log(
+    "\nℹ️  Run 'bun run ../../scripts/merge-dependencies.ts' to add back internal package dependencies",
+  );
 }
 
 // Run
