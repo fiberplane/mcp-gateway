@@ -9,9 +9,7 @@
       "@fiberplane/mcp-gateway-api": ["./packages/api/src/index.ts"],
       "@fiberplane/mcp-gateway-api/*": ["./packages/api/src/*"],
       "@fiberplane/mcp-gateway-server": ["./packages/server/src/index.ts"],
-      "@fiberplane/mcp-gateway-server/*": ["./packages/server/src/*"],
-      "@fiberplane/mcp-gateway-cli": ["./packages/mcp-gateway/src/index.ts"],
-      "@fiberplane/mcp-gateway-cli/*": ["./packages/mcp-gateway/src/*"]
+      "@fiberplane/mcp-gateway-server/*": ["./packages/server/src/*"]
     }
   }
 }

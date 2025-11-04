@@ -435,6 +435,60 @@ bun run changeset:check
 
 This ensures your changesets are correctly formatted and won't cause CI failures.
 
+### Publishing Lifecycle & Dependency Management
+
+The `@fiberplane/mcp-gateway` package uses npm lifecycle hooks to manage dependencies during publishing:
+
+#### How It Works
+
+**Development state:**
+- package.json contains only minimal direct dependencies (`@hono/node-server`, `hono`)
+- Internal packages are `devDependencies` with `workspace:*` protocol
+
+**Publishing flow:**
+
+1. **`prepublishOnly` hook** (runs before `npm pack` or `npm publish`):
+   ```bash
+   bun run ../../scripts/merge-dependencies.ts  # Merge internal deps into dependencies
+   bun run build                                  # Build package
+   ```
+   - Collects all dependencies from internal packages (types, core, api, server)
+   - Merges them into mcp-gateway's `dependencies` section
+   - Adds `optionalDependencies` (e.g., `@libsql/*` platform packages)
+   - Updates lockfile
+
+2. **`postpublish` hook** (runs after `npm publish` or `npm pack`):
+   ```bash
+   bun run ../../scripts/clean-dependencies.ts   # Clean back to minimal state
+   ```
+   - Removes merged dependencies
+   - Resets to minimal direct dependencies only
+   - Removes `optionalDependencies`
+   - Updates lockfile
+
+#### Manual Scripts
+
+```bash
+# Clean dependencies manually
+cd packages/mcp-gateway
+bun run clean-deps
+
+# Merge dependencies manually
+bun run ../../scripts/merge-dependencies.ts
+```
+
+#### Why This Approach?
+
+- **Clean development**: package.json stays minimal during development
+- **Complete published package**: All transitive dependencies listed explicitly
+- **No manual maintenance**: Dependencies auto-merge from internal packages
+- **Automatic cleanup**: Restores clean state after publish
+
+#### Scripts Location
+
+- `scripts/merge-dependencies.ts` - Collects deps from internal packages
+- `scripts/clean-dependencies.ts` - Resets to minimal state
+
 ## Troubleshooting
 
 ### Common Issues

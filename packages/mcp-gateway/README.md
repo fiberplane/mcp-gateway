@@ -370,7 +370,9 @@ bun run build
 bun run --filter @fiberplane/mcp-gateway-web dev
 ```
 
-See [CLAUDE.md](CLAUDE.md) for complete development guide.
+**For contributors:**
+- See [AGENTS.md](AGENTS.md) for complete development guide
+- Release process documented in AGENTS.md (changesets, npm lifecycle hooks, dependency management)
 
 ## License
 

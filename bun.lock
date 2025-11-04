@@ -45,11 +45,16 @@
       "name": "@fiberplane/mcp-gateway",
       "version": "0.4.2",
       "bin": {
-        "mcp-gateway": "dist/cli.js",
+        "mcp-gateway": "bin/mcp-gateway.js",
       },
       "dependencies": {
         "@hono/node-server": "^1.19.4",
+        "@hono/standard-validator": "^0.1.5",
+        "@libsql/client": "^0.15.15",
+        "drizzle-orm": "^0.44.6",
         "hono": "^4.9.8",
+        "mcp-lite": "^0.8.1",
+        "zod": "^4.1.11",
       },
       "devDependencies": {
         "@biomejs/biome": "^2.2.4",

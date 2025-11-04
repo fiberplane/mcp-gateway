@@ -2,7 +2,7 @@
 
 Quick reference for developing in the MCP Gateway monorepo.
 
-**For complete information, see [CLAUDE.md](../../CLAUDE.md)** - the single source of truth for all development instructions.
+**For complete information, see [AGENTS.md](../../AGENTS.md)** - the single source of truth for all development instructions.
 
 ## Quick Start
 
@@ -30,13 +30,12 @@ packages/
 ├── api/            # @fiberplane/mcp-gateway-api (REST API)
 ├── server/         # @fiberplane/mcp-gateway-server (MCP protocol)
 ├── web/            # @fiberplane/mcp-gateway-web (React UI)
-├── mcp-gateway/    # @fiberplane/mcp-gateway-cli (CLI source, private)
-└── cli/            # @fiberplane/mcp-gateway (public wrapper)
+└── mcp-gateway/    # @fiberplane/mcp-gateway (main package)
 ```
 
 **Dependency flow:**
 ```
-types → core → api → cli
+types → core → api → mcp-gateway
              → server ↗
              → web ↗
 ```
@@ -71,7 +70,7 @@ bun run check-circular
 bun run --filter @fiberplane/mcp-gateway-core build
 
 # Test specific package
-bun run --filter @fiberplane/mcp-gateway-cli test
+bun run --filter @fiberplane/mcp-gateway test
 
 # Dev mode for web UI (Vite with HMR)
 bun run --filter @fiberplane/mcp-gateway-web dev
@@ -144,7 +143,7 @@ bun run changeset:check  # Only @fiberplane/mcp-gateway should be versioned
 
 ## Additional Resources
 
-- **[CLAUDE.md](../../CLAUDE.md)** - Complete development guide ⭐
+- **[AGENTS.md](../../AGENTS.md)** - Complete development guide ⭐
 - [README.md](../../README.md) - User documentation
 - [Web UI Development](./web-ui-development.md) - UI/design tokens
 - [Architecture Overview](../architecture/overview.md) - System design

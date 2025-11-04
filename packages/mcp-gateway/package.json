@@ -19,6 +19,7 @@
     "url": "git+https://github.com/fiberplane/mcp-gateway.git"
   },
   "files": [
+    "bin",
     "dist",
     "drizzle",
     "public",
@@ -26,7 +27,7 @@
     "CHANGELOG.md"
   ],
   "bin": {
-    "mcp-gateway": "dist/cli.js"
+    "mcp-gateway": "bin/mcp-gateway.js"
   },
   "sideEffects": false,
   "scripts": {
@@ -39,7 +40,9 @@
     "lint": "biome ci .",
     "format": "biome check --write .",
     "validate-deps": "bun run ../../scripts/validate-mcp-gateway-deps.ts",
-    "prepublishOnly": "bun run ../../scripts/merge-dependencies.ts && bun run build"
+    "clean-deps": "bun run ../../scripts/clean-dependencies.ts",
+    "prepublishOnly": "bun run ../../scripts/merge-dependencies.ts && bun run build",
+    "postpublish": "bun run ../../scripts/clean-dependencies.ts"
   },
   "exports": {
     ".": "./src/index.ts"
