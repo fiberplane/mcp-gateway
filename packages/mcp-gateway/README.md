@@ -371,7 +371,7 @@ bun run --filter @fiberplane/mcp-gateway-web dev
 ```
 
 **For contributors:**
-- See [AGENTS.md](AGENTS.md) for complete development guide
+- See [AGENTS.md](https://github.com/fiberplane/mcp-gateway/blob/main/AGENTS.md) for complete development guide
 - Release process documented in AGENTS.md (changesets, npm lifecycle hooks, dependency management)
 
 ## License
@@ -383,4 +383,4 @@ MIT
 - **GitHub**: https://github.com/fiberplane/mcp-gateway
 - **npm**: https://www.npmjs.com/package/@fiberplane/mcp-gateway
 - **Issues**: https://github.com/fiberplane/mcp-gateway/issues
-- **Changelog**: [CHANGELOG.md](./CHANGELOG.md)
+- **Changelog**: [CHANGELOG.md](https://github.com/fiberplane/mcp-gateway/blob/main/packages/mcp-gateway/CHANGELOG.md)
