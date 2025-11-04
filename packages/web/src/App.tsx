@@ -21,7 +21,6 @@ import { FiberplaneLogo } from "./components/fiberplane-logo";
 import { FilterBar } from "./components/filter-bar";
 import { LogTable } from "./components/log-table";
 import { Pagination } from "./components/pagination";
-import { ServerManagementDropdown } from "./components/server-management-dropdown";
 import { ServerTabs } from "./components/server-tabs";
 import { SettingsDropdown } from "./components/settings-dropdown";
 import { StreamingBadge } from "./components/streaming-badge";
@@ -63,7 +62,7 @@ function App() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isClearing, setIsClearing] = useState(false);
   const [clearError, setClearError] = useState<string | null>(null);
-  const [triggerAddServer, setTriggerAddServer] = useState(false);
+  const [_triggerAddServer, setTriggerAddServer] = useState(false);
 
   // Fetch servers to check if any exist for empty state
   const { data: serversData } = useQuery({
@@ -231,7 +230,7 @@ function App() {
     setTriggerAddServer(true);
   });
 
-  const handleAddServerHandled = useHandler(() => {
+  const _handleAddServerHandled = useHandler(() => {
     setTriggerAddServer(false);
   });
 
@@ -290,10 +289,6 @@ function App() {
               MCP server logs
             </h1>
             <div className="flex gap-2">
-              <ServerManagementDropdown
-                triggerAddServer={triggerAddServer}
-                onAddServerHandled={handleAddServerHandled}
-              />
               <SettingsDropdown
                 onClearSessions={handleClearSessions}
                 isClearing={isClearing}

@@ -9,9 +9,10 @@ export function cn(...inputs: ClassValue[]) {
 /**
  * Generate a unique key for a log entry
  *
- * Creates a composite key from timestamp, sessionId, and id to ensure uniqueness
- * even when logs have the same timestamp.
+ * Creates a composite key from timestamp, sessionId, id, and direction to ensure uniqueness.
+ * Direction is included to handle SSE events where multiple events can have identical
+ * timestamp, sessionId, and id (often null for stateless events).
  */
 export function getLogKey(log: ApiLogEntry): string {
-  return `${log.timestamp}-${log.metadata.sessionId}-${log.id}`;
+  return `${log.timestamp}-${log.metadata.sessionId}-${log.id}-${log.direction}`;
 }
