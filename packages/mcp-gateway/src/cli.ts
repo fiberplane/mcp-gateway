@@ -24,6 +24,18 @@ import { Hono } from "hono";
 import { getVersion } from "./utils/version.js";
 
 /**
+ * Maximum number of logs to fetch for session summary
+ */
+const MAX_SESSION_LOGS = 10000;
+
+/**
+ * Get health icon for display
+ */
+function getHealthIcon(health: string): string {
+  return health === "up" ? "✓" : health === "down" ? "✗" : "?";
+}
+
+/**
  * Find the public directory containing web UI assets.
  * Located at packages/mcp-gateway/public/ (built from packages/web/dist/)
  */
@@ -500,7 +512,7 @@ export async function runCli(): Promise<void> {
 
         // Only log if this is a state change (not the initial check or same state)
         if (previousHealth !== undefined && previousHealth !== health) {
-          const icon = health === "up" ? "✓" : health === "down" ? "✗" : "?";
+          const icon = getHealthIcon(health);
           // biome-ignore lint/suspicious/noConsole: actually want to print to console
           console.log(`${icon} server "${name}" is now ${health}`);
         }
@@ -594,8 +606,7 @@ export async function runCli(): Promise<void> {
         const gatewayUrl = `http://localhost:${port}/s/${server.name}/mcp`;
         const upstreamUrl = server.url;
         const healthStatus = server.health || "unknown";
-        const healthIcon =
-          healthStatus === "up" ? "✓" : healthStatus === "down" ? "✗" : "?";
+        const healthIcon = getHealthIcon(healthStatus);
 
         // Pad columns for alignment
         const name = server.name.padEnd(maxNameLen);
@@ -619,7 +630,7 @@ export async function runCli(): Promise<void> {
         // Show traffic summary for this session only (after sessionStartTime)
         const result = await gateway.storage.query({
           after: sessionStartTime,
-          limit: 10000, // Large enough to capture all session traffic
+          limit: MAX_SESSION_LOGS,
         });
 
         const totalRequests = result.data.length;
@@ -635,13 +646,10 @@ export async function runCli(): Promise<void> {
 
           // biome-ignore lint/suspicious/noConsole: actually want to print to console
           console.log("Log summary:");
-          const servers = await gateway.storage.getRegisteredServers();
-          for (const server of servers) {
-            const count = sessionTraffic.get(server.name) || 0;
-            if (count > 0) {
-              // biome-ignore lint/suspicious/noConsole: actually want to print to console
-              console.log(`* ${server.name}: ${count} log events`);
-            }
+          // Iterate over sessionTraffic to show all servers that handled traffic, even if removed
+          for (const [serverName, count] of sessionTraffic.entries()) {
+            // biome-ignore lint/suspicious/noConsole: actually want to print to console
+            console.log(`* ${serverName}: ${count} log events`);
           }
           // biome-ignore lint/suspicious/noConsole: actually want to print to console
           console.log("");
