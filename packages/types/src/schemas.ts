@@ -110,6 +110,7 @@ export function sanitizeForFilename(str: string): string {
 // Route parameter validation
 export const serverParamSchema = z.object({
   server: z.string().min(1),
+  prefix: z.string().optional(), // "servers" or "s" from URL path
 });
 
 // Header validation for MCP session

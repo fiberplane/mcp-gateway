@@ -755,11 +755,13 @@ export async function createProxyRoutes(options: {
             responseHeaders.delete(header);
           }
 
-          // Set cookie with server name for OAuth discovery
+          // Add cookie with server name for OAuth discovery
           // This allows root .well-known endpoints to infer the server context
-          responseHeaders.set(
+          // Use append() to preserve any existing Set-Cookie headers from upstream (e.g., CSRF tokens)
+          // Scoped to /.well-known to minimize conflict potential with upstream cookies
+          responseHeaders.append(
             "Set-Cookie",
-            `mcp-server=${encodeURIComponent(server.name)}; Path=/; HttpOnly; SameSite=Lax`,
+            `mcp-gateway-server=${encodeURIComponent(server.name)}; Path=/.well-known; HttpOnly; SameSite=Lax`,
           );
 
           // Log the 401 response for visibility

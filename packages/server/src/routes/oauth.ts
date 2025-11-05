@@ -325,7 +325,7 @@ export async function createOAuthRoutes(
       {} as Record<string, string>,
     );
 
-    return cookies["mcp-server"] || null;
+    return cookies["mcp-gateway-server"] || null;
   }
 
   const rootWellKnownError = {
