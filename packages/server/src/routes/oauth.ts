@@ -1,8 +1,14 @@
 import type { McpServer } from "@fiberplane/mcp-gateway-types";
 import { serverParamSchema } from "@fiberplane/mcp-gateway-types";
 import { sValidator } from "@hono/standard-validator";
+import type { Context } from "hono";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import {
+  getGatewayBaseUrl,
+  type ProtectedResourceMetadata,
+  rewriteProtectedResourceMetadata,
+} from "./oauth-rewriting";
 
 /**
  * Creates Hono app for proxying OAuth 2.0 and OpenID Connect discovery endpoints.
@@ -19,15 +25,30 @@ export async function createOAuthRoutes(
 ): Promise<Hono> {
   const app = new Hono();
 
+  // CORS configuration for OAuth discovery endpoints
+  const OAUTH_CORS_CONFIG = {
+    origin: "*" as const,
+    allowMethods: ["GET", "POST", "OPTIONS"],
+    allowHeaders: [
+      "Content-Type",
+      "Authorization",
+      "MCP-Protocol-Version",
+      "mcp-protocol-version",
+    ],
+  };
+
+  // Helper to add CORS headers to response
+  function addCorsHeaders(response: Response): void {
+    response.headers.set("Access-Control-Allow-Origin", "*");
+    response.headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    response.headers.set(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization, MCP-Protocol-Version, mcp-protocol-version",
+    );
+  }
+
   // Enable CORS for all OAuth discovery endpoints
-  app.use(
-    "/*",
-    cors({
-      origin: "*",
-      allowMethods: ["GET", "POST", "OPTIONS"],
-      allowHeaders: ["Content-Type", "Authorization"],
-    }),
-  );
+  app.use("/*", cors(OAUTH_CORS_CONFIG));
 
   // Helper to extract base URL from MCP server URL
   // E.g., "https://api.example.com/mcp" -> "https://api.example.com"
@@ -93,27 +114,81 @@ export async function createOAuthRoutes(
       headers: newHeaders,
     });
 
-    // Override CORS headers to allow requests from any origin
-    newResponse.headers.set("Access-Control-Allow-Origin", "*");
-    newResponse.headers.set(
-      "Access-Control-Allow-Methods",
-      "GET, POST, OPTIONS",
-    );
-    newResponse.headers.set(
-      "Access-Control-Allow-Headers",
-      "Content-Type, Authorization",
-    );
+    // Add CORS headers
+    addCorsHeaders(newResponse);
 
     return newResponse;
   }
 
+  // Helper to proxy protected resource metadata and rewrite resource field
+  async function proxyProtectedResourceWithRewriting(
+    c: Context,
+    targetUrl: string,
+    serverName: string,
+    pathPrefix: string,
+  ): Promise<Response> {
+    const response = await fetch(targetUrl, {
+      method: "GET",
+      headers: buildMinimalProxyHeaders(c.req.raw),
+    });
+
+    const responseText = await response.text();
+
+    // If not 200, return as-is (error responses)
+    if (response.status !== 200) {
+      return proxyWithCors(targetUrl, {
+        method: "GET",
+        headers: buildMinimalProxyHeaders(c.req.raw),
+      });
+    }
+
+    try {
+      const metadata = JSON.parse(responseText) as ProtectedResourceMetadata;
+
+      // Get gateway base URL from request
+      const gatewayBase = getGatewayBaseUrl(c.req.header("Host"));
+
+      // Rewrite only the resource field
+      const rewritten = rewriteProtectedResourceMetadata(
+        metadata,
+        serverName,
+        gatewayBase,
+        pathPrefix,
+      );
+
+      // Return rewritten metadata with CORS
+      const newHeaders = new Headers(response.headers);
+      newHeaders.delete("Content-Encoding");
+      newHeaders.delete("Content-Length");
+      newHeaders.delete("Transfer-Encoding");
+      newHeaders.set("Content-Type", "application/json");
+
+      const newResponse = new Response(JSON.stringify(rewritten), {
+        status: 200,
+        headers: newHeaders,
+      });
+
+      // Add CORS headers
+      addCorsHeaders(newResponse);
+
+      return newResponse;
+    } catch (_error) {
+      // If parsing fails, return original response
+      return proxyWithCors(targetUrl, {
+        method: "GET",
+        headers: buildMinimalProxyHeaders(c.req.raw),
+      });
+    }
+  }
+
   // Pattern 1: /.well-known/oauth-protected-resource/{servers|s}/:server/mcp
   // Using Hono's named parameter regex to match both /servers/:server and /s/:server
+  // Rewrites resource field to point to gateway for MCP Inspector validation
   app.get(
     "/.well-known/oauth-protected-resource/:prefix{servers|s}/:server/mcp",
     sValidator("param", serverParamSchema),
     async (c) => {
-      const { server: serverName } = c.req.valid("param");
+      const { server: serverName, prefix } = c.req.valid("param");
       const server = await getServer(serverName);
 
       if (!server) {
@@ -123,14 +198,17 @@ export async function createOAuthRoutes(
       const baseUrl = getBaseUrl(server.url);
       const targetUrl = `${baseUrl}/.well-known/oauth-protected-resource`;
 
-      return proxyWithCors(targetUrl, {
-        method: "GET",
-        headers: buildMinimalProxyHeaders(c.req.raw),
-      });
+      return proxyProtectedResourceWithRewriting(
+        c,
+        targetUrl,
+        serverName,
+        prefix || "s",
+      );
     },
   );
 
   // Pattern 2: /.well-known/oauth-authorization-server/{servers|s}/:server/mcp
+  // This is the main OAuth discovery endpoint - proxy without rewriting for now
   app.get(
     "/.well-known/oauth-authorization-server/:prefix{servers|s}/:server/mcp",
     sValidator("param", serverParamSchema),
@@ -145,13 +223,7 @@ export async function createOAuthRoutes(
       const baseUrl = getBaseUrl(server.url);
       const targetUrl = `${baseUrl}/.well-known/oauth-authorization-server`;
 
-      console.log("[OAuth Debug]", {
-        serverName,
-        serverUrl: server.url,
-        baseUrl,
-        targetUrl,
-      });
-
+      // Proxy without rewriting URLs for now
       return proxyWithCors(targetUrl, {
         method: "GET",
         headers: buildMinimalProxyHeaders(c.req.raw),
@@ -229,6 +301,102 @@ export async function createOAuthRoutes(
       });
     },
   );
+
+  // Root .well-known endpoints - fallback when no server specified
+  // Try to infer server from cookie (set during 401 response in proxy.ts)
+  // If no cookie, return helpful error message
+
+  // Helper to get server name from cookie
+  function getServerFromCookie(c: Context): string | null {
+    const cookieHeader = c.req.header("Cookie");
+    if (!cookieHeader) {
+      return null;
+    }
+
+    // Parse cookies manually
+    const cookies = cookieHeader.split(";").reduce(
+      (acc, cookie) => {
+        const [key, value] = cookie.trim().split("=");
+        if (key && value) {
+          acc[key] = decodeURIComponent(value);
+        }
+        return acc;
+      },
+      {} as Record<string, string>,
+    );
+
+    return cookies["mcp-server"] || null;
+  }
+
+  const rootWellKnownError = {
+    error: "server_not_specified",
+    error_description:
+      "OAuth discovery requires a server context. Either include server in path or connect to a server first to set context.",
+    preferred_paths: [
+      "/.well-known/oauth-authorization-server/s/{server}/mcp",
+      "/.well-known/oauth-protected-resource/s/{server}/mcp",
+      "/.well-known/openid-configuration/s/{server}/mcp",
+    ],
+  };
+
+  app.get("/.well-known/oauth-protected-resource", async (c) => {
+    const serverName = getServerFromCookie(c);
+    if (!serverName) {
+      return c.json(rootWellKnownError, 400);
+    }
+
+    const server = await getServer(serverName);
+    if (!server) {
+      return c.json({ ...rootWellKnownError, error: "server_not_found" }, 404);
+    }
+
+    const baseUrl = getBaseUrl(server.url);
+    const targetUrl = `${baseUrl}/.well-known/oauth-protected-resource`;
+
+    // Use short alias "s" for root endpoint (default)
+    return proxyProtectedResourceWithRewriting(c, targetUrl, serverName, "s");
+  });
+
+  app.get("/.well-known/oauth-authorization-server", async (c) => {
+    const serverName = getServerFromCookie(c);
+    if (!serverName) {
+      return c.json(rootWellKnownError, 400);
+    }
+
+    const server = await getServer(serverName);
+    if (!server) {
+      return c.json({ ...rootWellKnownError, error: "server_not_found" }, 404);
+    }
+
+    const baseUrl = getBaseUrl(server.url);
+    const targetUrl = `${baseUrl}/.well-known/oauth-authorization-server`;
+
+    // Proxy without rewriting URLs for now
+    return proxyWithCors(targetUrl, {
+      method: "GET",
+      headers: buildMinimalProxyHeaders(c.req.raw),
+    });
+  });
+
+  app.get("/.well-known/openid-configuration", async (c) => {
+    const serverName = getServerFromCookie(c);
+    if (!serverName) {
+      return c.json(rootWellKnownError, 400);
+    }
+
+    const server = await getServer(serverName);
+    if (!server) {
+      return c.json({ ...rootWellKnownError, error: "server_not_found" }, 404);
+    }
+
+    const baseUrl = getBaseUrl(server.url);
+    const targetUrl = `${baseUrl}/.well-known/openid-configuration`;
+
+    return proxyWithCors(targetUrl, {
+      method: "GET",
+      headers: buildMinimalProxyHeaders(c.req.raw),
+    });
+  });
 
   return app;
 }
