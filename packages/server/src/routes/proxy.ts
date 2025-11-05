@@ -759,9 +759,14 @@ export async function createProxyRoutes(options: {
           // This allows root .well-known endpoints to infer the server context
           // Use append() to preserve any existing Set-Cookie headers from upstream (e.g., CSRF tokens)
           // Scoped to /.well-known to minimize conflict potential with upstream cookies
+          // Server name validation: only alphanumeric, underscore, hyphen (safe for cookies)
+          const cookieSafeName = /^[a-zA-Z0-9_-]+$/.test(server.name)
+            ? server.name
+            : encodeURIComponent(server.name);
+
           responseHeaders.append(
             "Set-Cookie",
-            `mcp-gateway-server=${encodeURIComponent(server.name)}; Path=/.well-known; HttpOnly; SameSite=Lax`,
+            `mcp-gateway-server=${cookieSafeName}; Path=/.well-known; HttpOnly; SameSite=Lax`,
           );
 
           // Log the 401 response for visibility

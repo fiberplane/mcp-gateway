@@ -172,8 +172,19 @@ export async function createOAuthRoutes(
       addCorsHeaders(newResponse);
 
       return newResponse;
-    } catch (_error) {
-      // If parsing fails, return original response
+    } catch (error) {
+      // Log warning if parsing fails (upstream might return non-JSON)
+      const logger = await import("@fiberplane/mcp-gateway-core").then(
+        (m) => m.logger,
+      );
+      logger.warn("Failed to parse protected resource metadata", {
+        targetUrl,
+        serverName,
+        error: error instanceof Error ? error.message : String(error),
+        responsePreview: responseText.substring(0, 200),
+      });
+
+      // Return original response as fallback
       return proxyWithCors(targetUrl, {
         method: "GET",
         headers: buildMinimalProxyHeaders(c.req.raw),
@@ -313,12 +324,26 @@ export async function createOAuthRoutes(
       return null;
     }
 
-    // Parse cookies manually
+    // Parse cookies with proper handling of values containing "="
     const cookies = cookieHeader.split(";").reduce(
       (acc, cookie) => {
-        const [key, value] = cookie.trim().split("=");
-        if (key && value) {
-          acc[key] = decodeURIComponent(value);
+        const trimmed = cookie.trim();
+        const equalIndex = trimmed.indexOf("=");
+
+        if (equalIndex === -1) {
+          return acc; // Malformed cookie, skip
+        }
+
+        const key = trimmed.slice(0, equalIndex);
+        const value = trimmed.slice(equalIndex + 1);
+
+        if (key) {
+          try {
+            acc[key] = decodeURIComponent(value);
+          } catch {
+            // Skip malformed URI component
+            acc[key] = value;
+          }
         }
         return acc;
       },
