@@ -38,12 +38,19 @@ export async function createOAuthRoutes(
   };
 
   // Helper to add CORS headers to response
+  // Derives values from OAUTH_CORS_CONFIG to maintain single source of truth
   function addCorsHeaders(response: Response): void {
-    response.headers.set("Access-Control-Allow-Origin", "*");
-    response.headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    response.headers.set(
+      "Access-Control-Allow-Origin",
+      OAUTH_CORS_CONFIG.origin,
+    );
+    response.headers.set(
+      "Access-Control-Allow-Methods",
+      OAUTH_CORS_CONFIG.allowMethods.join(", "),
+    );
     response.headers.set(
       "Access-Control-Allow-Headers",
-      "Content-Type, Authorization, MCP-Protocol-Version, mcp-protocol-version",
+      OAUTH_CORS_CONFIG.allowHeaders.join(", "),
     );
   }
 
@@ -134,12 +141,21 @@ export async function createOAuthRoutes(
 
     const responseText = await response.text();
 
-    // If not 200, return as-is (error responses)
+    // If not 200, return as-is (error responses) with CORS headers
     if (response.status !== 200) {
-      return proxyWithCors(targetUrl, {
-        method: "GET",
-        headers: buildMinimalProxyHeaders(c.req.raw),
+      const newHeaders = new Headers(response.headers);
+      newHeaders.delete("Content-Encoding");
+      newHeaders.delete("Content-Length");
+      newHeaders.delete("Transfer-Encoding");
+
+      const newResponse = new Response(responseText, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: newHeaders,
       });
+
+      addCorsHeaders(newResponse);
+      return newResponse;
     }
 
     try {
