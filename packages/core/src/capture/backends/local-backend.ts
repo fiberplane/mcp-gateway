@@ -1,4 +1,3 @@
-import { Database } from "bun:sqlite";
 import { constants } from "node:fs";
 import { access, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -15,8 +14,9 @@ import type {
   StorageBackend,
   StorageWriteResult,
 } from "@fiberplane/mcp-gateway-types";
+import { createClient } from "@libsql/client";
 import { eq } from "drizzle-orm";
-import { type BunSQLiteDatabase, drizzle } from "drizzle-orm/bun-sqlite";
+import { drizzle, type LibSQLDatabase } from "drizzle-orm/libsql";
 import { logger } from "../../logger";
 import { ensureMigrations } from "../../logs/migrations.js";
 import * as schema from "../../logs/schema.js";
@@ -60,8 +60,8 @@ import { isValidUrl } from "../../utils/url";
 export class LocalStorageBackend implements StorageBackend {
   readonly name = "local";
   private storageDir: string;
-  private db: BunSQLiteDatabase<typeof schema>;
-  private sqlite: Database;
+  private db: LibSQLDatabase<typeof schema>;
+  private client: ReturnType<typeof createClient>;
   private inMemoryRegistry: McpServer[] = []; // For :memory: databases
 
   /**
@@ -69,12 +69,12 @@ export class LocalStorageBackend implements StorageBackend {
    */
   private constructor(
     storageDir: string,
-    db: BunSQLiteDatabase<typeof schema>,
-    sqlite: Database,
+    db: LibSQLDatabase<typeof schema>,
+    client: ReturnType<typeof createClient>,
   ) {
     this.storageDir = storageDir;
     this.db = db;
-    this.sqlite = sqlite;
+    this.client = client;
   }
 
   /**
@@ -166,20 +166,24 @@ export class LocalStorageBackend implements StorageBackend {
    */
   static async create(storageDir: string): Promise<LocalStorageBackend> {
     // Support in-memory database for tests
+    // libsql requires "file::memory:" syntax (not ":memory:")
+    // See: https://github.com/tursodatabase/libsql-client-ts
     const dbPath =
-      storageDir === ":memory:" ? ":memory:" : join(storageDir, "logs.db");
+      storageDir === ":memory:"
+        ? "file::memory:"
+        : `file:${join(storageDir, "logs.db")}`;
 
     try {
-      // Create database connection
-      const sqlite = new Database(dbPath, { create: true });
+      // Create database connection using @libsql/client
+      const client = createClient({ url: dbPath });
 
-      // Configure SQLite for performance and concurrency
-      sqlite.exec("PRAGMA journal_mode = WAL;");
-      sqlite.exec("PRAGMA busy_timeout = 5000;");
-      sqlite.exec("PRAGMA synchronous = NORMAL;");
+      // Configure SQLite for performance and concurrency via PRAGMA statements
+      await client.execute("PRAGMA journal_mode = WAL;");
+      await client.execute("PRAGMA busy_timeout = 5000;");
+      await client.execute("PRAGMA synchronous = NORMAL;");
 
-      // Create Drizzle instance
-      const db = drizzle(sqlite, { schema });
+      // Create Drizzle instance with proper libsql adapter
+      const db = drizzle(client, { schema });
 
       // Ensure migrations are applied before returning
       await ensureMigrations(db);
@@ -189,7 +193,7 @@ export class LocalStorageBackend implements StorageBackend {
         dbPath,
       });
 
-      return new LocalStorageBackend(storageDir, db, sqlite);
+      return new LocalStorageBackend(storageDir, db, client);
     } catch (error) {
       logger.error("Failed to initialize LocalStorageBackend", {
         storageDir,
@@ -292,15 +296,16 @@ export class LocalStorageBackend implements StorageBackend {
 
   async clearAll(): Promise<void> {
     try {
-      // Wrap all deletions in a transaction to ensure atomicity
-      this.sqlite.transaction(() => {
-        this.sqlite.run("DELETE FROM logs");
-        this.sqlite.run("DELETE FROM session_metadata");
-        this.sqlite.run("DELETE FROM sqlite_sequence WHERE name='logs'");
-        this.sqlite.run(
-          "DELETE FROM sqlite_sequence WHERE name='session_metadata'",
-        );
-      })();
+      // Execute deletions in a transaction to ensure atomicity
+      await this.client.batch([
+        { sql: "DELETE FROM logs", args: [] },
+        { sql: "DELETE FROM session_metadata", args: [] },
+        { sql: "DELETE FROM sqlite_sequence WHERE name='logs'", args: [] },
+        {
+          sql: "DELETE FROM sqlite_sequence WHERE name='session_metadata'",
+          args: [],
+        },
+      ]);
       logger.info("Local storage logs cleared");
     } catch (error) {
       logger.error("Local storage clearAll failed", {
@@ -535,7 +540,7 @@ export class LocalStorageBackend implements StorageBackend {
 
   async close(): Promise<void> {
     try {
-      this.sqlite.close();
+      this.client.close();
       logger.debug("Local storage backend closed", {
         storageDir: this.storageDir,
       });

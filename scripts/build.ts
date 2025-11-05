@@ -16,6 +16,14 @@ if (entrypoints.length === 0) {
   process.exit(1);
 }
 
+// Auto-detect external dependencies from package.json
+// This ensures npm packages are resolved at runtime, not bundled
+const pkg = JSON.parse(await Bun.file("./package.json").text());
+const external = [
+  ...Object.keys(pkg.dependencies || {}),
+  ...Object.keys(pkg.optionalDependencies || {}),
+];
+
 // Build JavaScript with Bun
 await Bun.build({
   format: "esm",
@@ -24,19 +32,7 @@ await Bun.build({
   entrypoints,
   sourcemap: "inline",
   target: "node",
-  external: [
-    // Mark @opentui packages as external (they have native modules)
-    "@opentui/*",
-    // Mark React and related packages as external (must be singleton)
-    "react",
-    "react-dom",
-    "react-reconciler",
-    "zustand",
-    // Mark workspace packages as external
-    "@fiberplane/mcp-gateway-types",
-    "@fiberplane/mcp-gateway-core",
-    "@fiberplane/mcp-gateway-server",
-  ],
+  external, // Auto-generated from package.json
 });
 
 // Generate TypeScript declaration files for publishing

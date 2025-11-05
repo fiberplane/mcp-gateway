@@ -22,14 +22,14 @@ MCP Gateway is designed to operate as a **local development and debugging tool**
 #### Testing
 - Standalone test environments
 - Controlled access
-- See [Testing](./docs/development/testing.md) for guidelines
+- Use separate credentials for testing
 
 #### Production
 Not recommended without significant security hardening:
 - Requires network isolation
 - Should run in container with restricted permissions
 - Consider reverse proxy with authentication
-- See [Production Deployment](./docs/deployment/production.md) for guidance
+- See production hardening recommendations below
 
 ## Data Privacy
 
@@ -64,7 +64,7 @@ MCP Gateway captures and stores:
 ~/.mcp-gateway/
 ├── mcp.json              # Server registry
 ├── logs.db              # SQLite database with captured traffic
-└── {server-name}/       # Per-server capture files (if enabled)
+└── logs.db-*            # Database journal files
 ```
 
 Default permissions: `700` (user read/write/execute only)
@@ -125,7 +125,8 @@ MCP servers may require OAuth authentication:
 Gateway Server
 ├── Web UI: http://localhost:3333/ui
 ├── REST API: http://localhost:3333/api
-├── MCP Server: http://localhost:3333/mcp
+├── Gateway MCP Server: http://localhost:3333/gateway/mcp
+├── Proxy Endpoints: http://localhost:3333/s/{server-name}/mcp
 └── Outbound: Connects to configured MCP servers
 ```
 
@@ -159,8 +160,6 @@ For production deployments:
    - Use bearer tokens or OAuth
    - Protect API endpoints
 
-See [Production Deployment](./docs/deployment/production.md) for detailed guidance.
-
 ## Server Communication
 
 ### Outbound Connections
@@ -192,10 +191,9 @@ Gateway connects to configured MCP servers:
 
 ```bash
 ~/.mcp-gateway/
-drwx------  .       # 700: User only
-drwx------  {server}/
--rw-------  mcp.json
--rw-------  logs.db
+drwx------  .          # 700: User only
+-rw-------  mcp.json   # 600: User read/write
+-rw-------  logs.db    # 600: User read/write
 ```
 
 ### Hardening
@@ -352,9 +350,7 @@ For security questions or concerns:
 
 ---
 
-**Last Updated**: October 2025
-
 **Related Documentation**:
-- [Deployment Guide](./docs/deployment/production.md)
-- [Development Guide](./docs/development/setup.md)
-- [Contributing](./CONTRIBUTING.md)
+- [README](./README.md) - User guide
+- [AGENTS.md](./AGENTS.md) - Development guide
+- [TROUBLESHOOTING](./docs/TROUBLESHOOTING.md) - Common issues

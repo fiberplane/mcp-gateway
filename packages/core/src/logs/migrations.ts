@@ -1,7 +1,7 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
-import { migrate } from "drizzle-orm/bun-sqlite/migrator";
+import type { LibSQLDatabase } from "drizzle-orm/libsql";
+import { migrate } from "drizzle-orm/libsql/migrator";
 import type * as schema from "./schema.js";
 
 /**
@@ -15,35 +15,22 @@ let migrationPromise: Promise<void> | null = null;
  * Works in both development and production builds
  */
 function getMigrationsFolder(): string {
-  // Detect if we're running as a compiled binary
-  // In compiled binaries, Bun.main starts with "/$bunfs/root/" (virtual bundled filesystem)
-  const isCompiledBinary = Bun.main.startsWith("/$bunfs/root/");
+  const currentFile = fileURLToPath(import.meta.url);
 
-  if (isCompiledBinary) {
-    // In compiled binary: migrations are in drizzle/ folder next to executable
-    const binaryDrizzleDir = join(process.execPath, "..", "drizzle");
-    const journalPath = join(binaryDrizzleDir, "meta", "_journal.json");
+  // Development: packages/core/src/logs/migrations.ts
+  // Look for migrations in: packages/core/drizzle
+  const devMigrationsPath = join(dirname(currentFile), "..", "..", "drizzle");
 
-    try {
-      const journalFile = Bun.file(journalPath);
-      if (journalFile.size > 0) {
-        return binaryDrizzleDir;
-      }
-    } catch {
-      throw new Error(
-        `Migrations folder not found in binary distribution at: ${binaryDrizzleDir}`,
-      );
-    }
-
-    throw new Error(
-      `Invalid migrations folder in binary distribution at: ${binaryDrizzleDir}`,
-    );
+  // Check if we're in development mode (source files)
+  if (currentFile.includes("/src/")) {
+    return devMigrationsPath;
   }
 
-  // In development: packages/core/src/logs/migrations.ts
-  // Migrations are in: packages/core/drizzle
-  const currentFile = fileURLToPath(import.meta.url);
-  const packageRoot = join(dirname(currentFile), "..", "..");
+  // Production (bundled): dist/cli.js or dist/index.js
+  // Migrations copied to: drizzle/ (at package root, sibling to dist/)
+  // Walk up from dist/ to package root
+  const distDir = dirname(currentFile);
+  const packageRoot = join(distDir, "..");
   return join(packageRoot, "drizzle");
 }
 
@@ -59,7 +46,7 @@ function getMigrationsFolder(): string {
  * @param db - Drizzle database instance
  */
 export async function ensureMigrations(
-  db: BunSQLiteDatabase<typeof schema>,
+  db: LibSQLDatabase<typeof schema>,
 ): Promise<void> {
   // If migrations are already running or complete, wait/return
   if (migrationPromise) {
@@ -70,7 +57,7 @@ export async function ensureMigrations(
   migrationPromise = (async () => {
     try {
       const migrationsFolder = getMigrationsFolder();
-      migrate(db, { migrationsFolder });
+      await migrate(db, { migrationsFolder });
     } catch (err) {
       // Reset promise to allow retry
       migrationPromise = null;

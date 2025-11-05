@@ -17,11 +17,13 @@ import * as DropdownMenu from "./ui/dropdown-menu";
 interface SettingsDropdownProps {
   onClearSessions: () => void;
   isClearing?: boolean;
+  onAddServerClick?: () => void;
 }
 
 export function SettingsDropdown({
   onClearSessions,
   isClearing = false,
+  onAddServerClick,
 }: SettingsDropdownProps) {
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
@@ -73,10 +75,14 @@ export function SettingsDropdown({
   });
 
   const handleAddClick = useCallback(() => {
-    setModalMode("add");
-    setSelectedServer(undefined);
-    setModalOpen(true);
-  }, []);
+    if (onAddServerClick) {
+      onAddServerClick();
+    } else {
+      setModalMode("add");
+      setSelectedServer(undefined);
+      setModalOpen(true);
+    }
+  }, [onAddServerClick]);
 
   const handleEditClick = useCallback((server: McpServerConfig) => {
     setModalMode("edit");

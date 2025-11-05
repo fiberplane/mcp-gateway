@@ -41,5 +41,8 @@ jobs:
       - name: Lint
         run: bun run lint
 
+      - name: Validate CLI dependencies
+        run: bun run --filter @fiberplane/mcp-gateway validate-deps
+
       - name: Build packages
         run: bun run build

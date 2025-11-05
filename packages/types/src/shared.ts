@@ -5,7 +5,7 @@ import type { JsonRpcRequest, JsonRpcResponse } from "./schemas";
 export type Context = {
   storageDir: string;
   port: number;
-  // Gateway instance for TUI initialization
+  // Gateway instance reference
   gateway?: Gateway;
   onExit?: () => void | Promise<void>;
 };

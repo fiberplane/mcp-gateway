@@ -62,7 +62,7 @@ function App() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isClearing, setIsClearing] = useState(false);
   const [clearError, setClearError] = useState<string | null>(null);
-  const [copiedServer, setCopiedServer] = useState<string | null>(null);
+  const [_triggerAddServer, setTriggerAddServer] = useState(false);
 
   // Fetch servers to check if any exist for empty state
   const { data: serversData } = useQuery({
@@ -226,6 +226,10 @@ function App() {
     setIsStreaming(enabled);
   });
 
+  const handleAddServer = useHandler(() => {
+    setTriggerAddServer(true);
+  });
+
   const handleClearSessions = useHandler(async (): Promise<void> => {
     // Ask for confirmation
     const confirmed = window.confirm(
@@ -280,10 +284,12 @@ function App() {
             <h1 className="text-2xl font-semibold text-foreground">
               MCP server logs
             </h1>
-            <SettingsDropdown
-              onClearSessions={handleClearSessions}
-              isClearing={isClearing}
-            />
+            <div className="flex gap-2">
+              <SettingsDropdown
+                onClearSessions={handleClearSessions}
+                isClearing={isClearing}
+              />
+            </div>
           </div>
 
           <div className="mb-6">
@@ -291,6 +297,7 @@ function App() {
               value={serverName}
               onChange={handleServerChange}
               panelId={logsPanelId}
+              onAddServer={handleAddServer}
             />
           </div>
 
@@ -369,122 +376,20 @@ function App() {
                         </>
                       ) : serversData?.servers &&
                         serversData.servers.length > 0 ? (
-                        <div className="max-w-2xl mx-auto">
-                          <p className="text-lg mb-6">
-                            <em>Waiting for activity...</em>
+                        <>
+                          <p className="text-lg mb-2">No logs captured yet</p>
+                          <p className="text-sm">
+                            Connect your MCP client to start capturing traffic
                           </p>
-                          <div className="p-6 border border-border rounded-md bg-card text-left space-y-6">
-                            <div>
-                              <p className="text-sm text-foreground font-medium mb-3">
-                                Configure your MCP client to use the gateway:
-                              </p>
-                              {serversData.servers.length === 1 ? (
-                                <div className="space-y-3">
-                                  <div>
-                                    <p className="text-xs text-muted-foreground mb-1">
-                                      Configured server:
-                                    </p>
-                                    <p className="text-sm text-accent font-mono">
-                                      {serversData.servers[0]?.name}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs text-muted-foreground mb-1">
-                                      Gateway URL:
-                                    </p>
-                                    <div className="flex items-center gap-2">
-                                      <code className="text-xs text-accent bg-muted px-2 py-1 rounded flex-1">
-                                        {window.location.origin}/s/
-                                        {serversData.servers[0]?.name}
-                                        /mcp
-                                      </code>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          const serverName =
-                                            serversData.servers[0]?.name;
-                                          if (serverName) {
-                                            navigator.clipboard.writeText(
-                                              `${window.location.origin}/s/${serverName}/mcp`,
-                                            );
-                                            setCopiedServer(serverName);
-                                            setTimeout(
-                                              () => setCopiedServer(null),
-                                              2000,
-                                            );
-                                          }
-                                        }}
-                                        className="px-3 py-1 text-xs border border-border rounded hover:bg-muted transition-colors"
-                                      >
-                                        {copiedServer ===
-                                        serversData.servers[0]?.name
-                                          ? "Copied!"
-                                          : "Copy"}
-                                      </button>
-                                    </div>
-                                  </div>
-                                  <div className="pt-2">
-                                    <p className="text-xs text-muted-foreground mb-2">
-                                      To add to Claude Code:
-                                    </p>
-                                    <code className="text-xs text-accent bg-muted px-2 py-1 rounded block">
-                                      claude mcp add -s project -t http{" "}
-                                      {serversData.servers[0]?.name}{" "}
-                                      {window.location.origin}/s/
-                                      {serversData.servers[0]?.name}
-                                      /mcp
-                                    </code>
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className="space-y-3">
-                                  <p className="text-sm text-foreground">
-                                    {serversData.servers.length} servers
-                                    configured
-                                  </p>
-                                  <div className="space-y-2">
-                                    {serversData.servers.map((server) => (
-                                      <div
-                                        key={server.name}
-                                        className="flex items-center justify-between p-2 bg-muted/30 rounded"
-                                      >
-                                        <div className="flex-1 min-w-0">
-                                          <p className="text-xs text-muted-foreground">
-                                            {server.name}
-                                          </p>
-                                          <code className="text-xs text-accent block truncate">
-                                            {window.location.origin}/s/
-                                            {server.name}/mcp
-                                          </code>
-                                        </div>
-                                        <button
-                                          type="button"
-                                          onClick={() => {
-                                            navigator.clipboard.writeText(
-                                              `${window.location.origin}/s/${server.name}/mcp`,
-                                            );
-                                            setCopiedServer(server.name);
-                                            setTimeout(
-                                              () => setCopiedServer(null),
-                                              2000,
-                                            );
-                                          }}
-                                          className="ml-3 px-3 py-1 text-xs border border-border rounded hover:bg-muted transition-colors whitespace-nowrap"
-                                        >
-                                          {copiedServer === server.name
-                                            ? "Copied!"
-                                            : "Copy"}
-                                        </button>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
+                        </>
                       ) : (
-                        <p>No logs captured yet</p>
+                        <>
+                          <p className="text-lg mb-2">No servers configured</p>
+                          <p className="text-sm">
+                            Click "Add Server" above to configure your first MCP
+                            server
+                          </p>
+                        </>
                       )}
                     </div>
                   ) : (

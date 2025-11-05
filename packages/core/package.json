@@ -38,6 +38,7 @@
   },
   "dependencies": {
     "@fiberplane/mcp-gateway-types": "workspace:*",
+    "@libsql/client": "^0.15.15",
     "drizzle-orm": "^0.44.6",
     "hono": "^4.9.8",
     "mcp-lite": "^0.8.1",

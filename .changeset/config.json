@@ -2,25 +2,11 @@
   "$schema": "https://unpkg.com/@changesets/config@3.0.3/schema.json",
   "changelog": "@changesets/cli/changelog",
   "commit": false,
-  "fixed": [
-    [
-      "@fiberplane/mcp-gateway",
-      "@fiberplane/mcp-gateway-darwin-arm64",
-      "@fiberplane/mcp-gateway-linux-x64"
-    ]
-  ],
+  "fixed": [],
   "linked": [],
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": [
-    "test-mcp-server",
-    "@fiberplane/mcp-gateway-types",
-    "@fiberplane/mcp-gateway-core",
-    "@fiberplane/mcp-gateway-server",
-    "@fiberplane/mcp-gateway-cli",
-    "@fiberplane/mcp-gateway-api",
-    "@fiberplane/mcp-gateway-web"
-  ],
+  "ignore": ["test-mcp-server"],
   "packages": ["packages/*"]
 }

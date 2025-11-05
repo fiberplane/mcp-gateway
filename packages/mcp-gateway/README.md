@@ -6,13 +6,21 @@ MCP Gateway provides a centralized platform for discovering, routing, and loggin
 
 ## Features
 
-- **Server Management** - Add, remove, and monitor MCP servers from a single dashboard
+### Core Capabilities
+- **Dual-Mode Operation** - Acts as both an MCP proxy server AND an MCP server itself
+- **Server Management** - Add, remove, and monitor MCP servers from web UI, API, or via MCP tools
 - **Traffic Capture** - Automatic logging of all MCP requests, responses, and errors
 - **Health Monitoring** - Real-time health checks and status tracking for all servers
-- **Web Dashboard** - Intuitive web UI for browsing logs and managing servers
-- **Terminal UI** - Full-featured TUI for command-line power users
-- **REST API** - Query logs programmatically for integration with other tools
+- **Programmatic Control** - Manage gateway via REST API, web UI, or MCP protocol
+
+### User Interfaces
+- **Web Dashboard** - Intuitive React UI for browsing logs and managing servers
+- **Gateway MCP Server** - Control gateway itself using MCP tools (add/remove servers, query traffic)
+- **REST API** - Programmatic access to logs and server management (powers web UI)
+
+### Analytics
 - **Metrics & Analytics** - Track server activity, response times, and error patterns
+- **Traffic Analysis** - Search captured traffic by server, session, method, or content
 
 ## Quick Start
 
@@ -33,449 +41,346 @@ yarn global add @fiberplane/mcp-gateway
 mcp-gateway
 ```
 
-This launches both:
-- **Web UI** - http://localhost:3333/ui
-- **TUI** - Terminal interface in the same terminal
-- **API** - REST API on http://localhost:3333/api
+This launches:
+- **Web UI** - http://localhost:3333/ui (visual dashboard)
+- **Gateway MCP Server** - http://localhost:3333/gateway/mcp (control gateway via MCP)
+- **Proxy Endpoints** - http://localhost:3333/s/{server-name}/mcp (access registered servers)
 
 ### Add Your First Server
 
-1. Open the Web UI or TUI
-2. Press `A` (TUI) or click "Add Server" (Web)
+You can add servers via the web UI:
+
+1. Open http://localhost:3333/ui
+2. Click "Add Server"
 3. Enter server name and URL
-4. Gateway will perform a health check
-5. Start making MCP requests - traffic will be captured automatically
+4. Gateway performs health check automatically
+
+
+Once added, all MCP traffic through the gateway is captured automatically.
 
 ## Architecture Overview
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    MCP Gateway                              │
-│                                                             │
-│  ┌──────────────┐  ┌─────────────┐  ┌──────────────────┐  │
-│  │  Web UI      │  │  Terminal   │  │   REST API       │  │
-│  │  (React)     │  │   UI        │  │   (/api)         │  │
-│  └──────┬───────┘  └──────┬──────┘  └────────┬─────────┘  │
-│         │                 │                  │             │
-│         └─────────────────┼──────────────────┘             │
-│                           │                                 │
-│         ┌─────────────────▼──────────────────┐             │
-│         │     Storage & Log Management       │             │
-│         │  (SQLite + mcp.json registry)      │             │
-│         └─────────────────┬──────────────────┘             │
-│                           │                                 │
-│         ┌─────────────────▼──────────────────┐             │
-│         │    MCP Server Router & Proxy       │             │
-│         │  (Routes requests to servers)      │             │
-│         └─────────────────┬──────────────────┘             │
-│                           │                                 │
-└───────────────────────────┼────────────────────────────────┘
-                            │
-                ┌───────────┼───────────┐
-                │           │           │
-         ┌──────▼───┐ ┌────▼────┐ ┌───▼──────┐
-         │  MCP     │ │   MCP   │ │   MCP    │
-         │ Server 1 │ │ Server 2│ │ Server N │
-         └──────────┘ └─────────┘ └──────────┘
-```
-
-## Project Structure
-
-This is a **Bun workspace monorepo** with the following packages:
-
-- **`@fiberplane/mcp-gateway-types`** - Type definitions and schemas
-- **`@fiberplane/mcp-gateway-core`** - Core business logic (capture, storage, registry)
-- **`@fiberplane/mcp-gateway-api`** - REST API for querying logs
-- **`@fiberplane/mcp-gateway-server`** - MCP protocol HTTP server
-- **`@fiberplane/mcp-gateway-web`** - React-based web UI
-- **`@fiberplane/mcp-gateway-cli`** - CLI source code (this package)
-- **`@fiberplane/mcp-gateway`** - Public wrapper package for binary distribution
-
-## CLI Package Overview
-
-This package (`@fiberplane/mcp-gateway-cli`) contains the CLI source code and orchestrates the server, API, and TUI components.
-
-> **Note**: This is the private source package. The public wrapper package is `@fiberplane/mcp-gateway` which handles platform-specific binary distribution.
-
-This package contains:
-- **CLI Entry Point** (`src/cli.ts`) - Command-line interface and argument parsing
-- **TUI** (`src/tui/`) - Terminal user interface using OpenTUI
-- **Binary Entry** (`src/binary-entry.ts`) - Compiled binary entry point
-- **Orchestration** - Coordinates server, API, and storage packages
-
-The CLI provides both a terminal UI for interactive server management and serves a web UI for browsing captured logs.
-
-## Prerequisites
-
-- **Bun** 1.0+ - Primary runtime and package manager
-- **Node.js** 18+ - For compatibility checks
-- Familiarity with Bun workspace commands
-
-## Quick Start
-
-### Option 1: Simple Development (Pre-built Web UI)
-
-If you only need to work on the CLI/TUI and don't need web UI hot reload:
-
-```bash
-# 1. Build web UI first (one-time or when web changes)
-bun run --filter @fiberplane/mcp-gateway-web build
-
-# 2. Run CLI in dev mode
-bun run --filter @fiberplane/mcp-gateway-cli dev
-```
-
-This serves the pre-built web UI at `http://localhost:3333/ui`.
-
-### Option 2: Full Development (Vite HMR)
-
-If you need web UI hot reload during development:
-
-```bash
-# Terminal 1: Run CLI
-bun run --filter @fiberplane/mcp-gateway-cli dev
-
-# Terminal 2: Run web UI dev server
-bun run --filter @fiberplane/mcp-gateway-web dev
-```
-
-- CLI runs on port 3333 (API + TUI)
-- Vite dev server on port 5173 (Web UI with HMR)
-- Access web UI at `http://localhost:5173`
-- API calls proxied to `http://localhost:3333/api`
-
-## File Structure
+The gateway operates in **dual mode**: it's both a proxy for MCP servers AND an MCP server itself.
 
 ```
-packages/mcp-gateway/
-├── src/
-│   ├── cli.ts              # CLI entry point and arg parsing
-│   ├── binary-entry.ts     # Compiled binary entry point
-│   ├── tui/                # Terminal UI components
-│   │   ├── activity-log.ts
-│   │   ├── command-menu.ts
-│   │   ├── help-view.ts
-│   │   ├── server-management.ts
-│   │   └── ...
-│   └── events.ts           # TUI event system
-├── bin/                    # Development executable symlink
-├── dist/                   # Built files (gitignored)
-├── public/                 # Web UI static files (copied from web package)
-├── tests/                  # Integration tests
-├── package.json
-└── tsconfig.json
+┌───────────────────────────────────────────────────────────────┐
+│                       MCP Gateway                             │
+│                                                               │
+│  ┌─────────────┐  ┌──────────────┐  ┌───────────────────────┐ │
+│  │  Web UI     │  │ Gateway MCP  │  │   MCP Proxy Router    │ │
+│  │  (React)    │  │   Server     │  │  (/s/{name}/mcp)      │ │
+│  │  (/ui)      │  │ (/gateway/   │  │                       │ │
+│  │             │  │     mcp)     │  │  - Traffic capture    │ │
+│  └──────┬──────┘  │              │  │  - Request routing    │ │
+│         │         │  Tools:      │  └───────────┬───────────┘ │
+│         │         │  • add_server│              │             │
+│         │         │  • remove_   │              │             │
+│         │         │    server    │              │             │
+│         │         │  • list_     │              │             │
+│         │         │    servers   │              │             │
+│         │         │  • search_   │              │             │
+│         │         │    records   │              │             │
+│         └─────────┴──────┬───────┴──────────────┘             │
+│                          │                                    │
+│         ┌────────────────▼──────────────────┐                 │
+│         │     REST API (/api)               │                 │
+│         │   (Powers Web UI)                 │                 │
+│         └────────────────┬──────────────────┘                 │
+│                          │                                    │
+│         ┌────────────────▼──────────────────┐                 │
+│         │  Storage & Log Management         │                 │
+│         │  (SQLite + mcp.json registry)     │                 │
+│         └────────────────┬──────────────────┘                 │
+│                          │                                    │
+└──────────────────────────┼────────────────────────────────────┘
+                           │
+               ┌───────────┼───────────┐
+               │           │           │
+        ┌──────▼───┐ ┌────▼────┐ ┌───▼──────┐
+        │  MCP     │ │   MCP   │ │   MCP    │
+        │ Server 1 │ │ Server 2│ │ Server N │
+        └──────────┘ └─────────┘ └──────────┘
 ```
 
-## CLI Features
+**Key Endpoints:**
+- `/ui` - Web dashboard for visual management
+- `/gateway/mcp` - Gateway's own MCP server (manage gateway via MCP protocol)
+- `/s/{server-name}/mcp` - Proxy to registered MCP servers (traffic capture enabled)
+- `/api/*` - REST API (used by web UI, available for programmatic access)
 
-### Command Options
+## CLI Options
 
 ```bash
 # Start with custom port
-bun run dev -- --port 8080
+mcp-gateway --port 8080
 
 # Custom storage directory
-bun run dev -- --storage-dir /custom/path
+mcp-gateway --storage-dir /custom/path
 
-# Run in headless mode without TUI
-bun run dev -- --no-tui
+# Enable debug logging
+DEBUG=* mcp-gateway
 
 # Show help
-bun run dev -- --help
+mcp-gateway --help
 
 # Show version
-bun run dev -- --version
+mcp-gateway --version
 ```
 
-The `--no-tui` flag is useful when:
-- Running in Docker containers with TTY allocated but headless mode desired
-- Running as a systemd service
-- Testing or CI/CD environments
-- Running multiple instances where you want to manage via API/Web UI only
+**Environment Variables:**
+- `MCP_GATEWAY_PORT` - Server port (default: 3333)
+- `MCP_GATEWAY_STORAGE` - Storage directory (default: ~/.mcp-gateway)
+- `DEBUG` - Debug logging (`*` for all, `@fiberplane/*` for gateway only)
 
-### TUI Keyboard Shortcuts
+## Configuration
 
-- `/` - Open command menu
-- `q` - Quit application
-- `ESC` - Go back / Close modal
-- `v` - View Activity Log
-- `m` - Manage Servers
-- `a` - Add New Server
-- `c` - Clear Activity Logs
-- `h` - Help & Setup Guide
+MCP Gateway stores configuration and logs in `~/.mcp-gateway/`:
 
-## Web UI Integration
+```bash
+~/.mcp-gateway/
+├── mcp.json           # Server registry configuration
+├── logs.db            # SQLite database with captured traffic
+└── logs.db-*          # Database files
+```
 
-The CLI serves the web UI at `/ui` endpoint. There are two ways to handle this in development:
+### Server Configuration
 
-### How the postbuild Script Works
-
-The `postbuild` script in `package.json`:
+Servers are managed through the Web UI or by editing `~/.mcp-gateway/mcp.json`:
 
 ```json
-"postbuild": "bun run --filter @fiberplane/mcp-gateway-web build && cp -r ../web/public ./public"
+{
+  "servers": [
+    {
+      "name": "my-server",
+      "url": "http://localhost:3000/mcp",
+      "enabled": true
+    }
+  ]
+}
 ```
 
-This:
-1. Builds the web UI package (`@fiberplane/mcp-gateway-web`)
-2. Copies the output from `packages/web/public/` to `packages/cli/public/`
-3. The CLI then serves these files at `/ui`
+## Gateway MCP Server
 
-### Development Workflows
+The gateway exposes its own MCP server with tools for programmatic control. This lets you manage the gateway using any MCP client (like Claude Desktop, Continue, etc.).
 
-**Pre-built Mode** (Option 1):
-- Run web build once
-- Web UI files copied to `packages/cli/public/`
-- CLI serves static files at `http://localhost:3333/ui`
-- No hot reload for web changes
+### Endpoint
 
-**Dev Server Mode** (Option 2):
-- Run Vite dev server separately
-- Access at `http://localhost:5173`
-- Vite proxies `/api` calls to CLI on port 3333
-- Full hot module replacement
-
-## Building
-
-### Build CLI Package
-
-```bash
-# From monorepo root
-bun run build
-
-# Or explicitly
-bun run --filter @fiberplane/mcp-gateway-cli build
+```
+http://localhost:3333/gateway/mcp
 ```
 
-This:
-1. Compiles TypeScript to JavaScript
-2. Runs `postbuild` script (builds web UI, copies files)
-3. Outputs to `dist/` directory
+### Available Tools
 
-### Build Platform Binaries
+#### `add_server`
+Add a new MCP server to the gateway registry.
 
-```bash
-# Build for current platform only
-bun run build:binaries
+**Parameters:**
+- `name` (string) - Unique server identifier (alphanumeric, hyphens, underscores)
+- `url` (string) - Full HTTP/HTTPS URL to the MCP server
+- `headers` (object, optional) - Custom HTTP headers for authentication
 
-# Build for all platforms (requires GitHub Actions)
-bun run build:binaries --all
+**Example:**
+```json
+{
+  "name": "weather-api",
+  "url": "http://localhost:3001/mcp",
+  "headers": {
+    "Authorization": "Bearer token123"
+  }
+}
 ```
 
-This creates platform-specific binaries:
-- `@fiberplane/mcp-gateway-darwin-arm64`
-- `@fiberplane/mcp-gateway-linux-x64`
+#### `remove_server`
+Remove a server from the gateway registry.
 
-### Build Everything
+**Parameters:**
+- `name` (string) - Name of the server to remove
 
-```bash
-# Build all packages in dependency order
-bun run build
+#### `list_servers`
+List all registered servers with optional filtering.
 
-# Build binaries
-bun run build:binaries
+**Parameters:**
+- `filter` (enum, optional) - "all", "active", or "inactive" (default: "all")
+- `format` (enum, optional) - "concise" or "detailed" (default: "concise")
+
+#### `search_records`
+Search and analyze captured MCP traffic.
+
+**Parameters:**
+- `serverName` (string, optional) - Filter by server name
+- `sessionId` (string, optional) - Filter by session ID
+- `method` (string, optional) - Filter by JSON-RPC method (partial match)
+- `limit` (number, optional) - Max records to return (default: 100, max: 1000)
+- `order` (enum, optional) - "asc" or "desc" (default: "desc")
+
+### Using with MCP Clients
+
+Any MCP client that supports HTTP transport can connect to the gateway's MCP server:
+
+```typescript
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { HttpTransport } from "@modelcontextprotocol/sdk/transport/http.js";
+
+const client = new Client({
+  name: "my-client",
+  version: "1.0.0"
+});
+
+await client.connect(
+  new HttpTransport("http://localhost:3333/gateway/mcp")
+);
+
+// List all servers
+const result = await client.request({
+  method: "tools/call",
+  params: {
+    name: "list_servers",
+    arguments: { filter: "all", format: "detailed" }
+  }
+});
 ```
 
-## Testing
+## Web UI
 
-### Run Tests
+Access the web dashboard at `http://localhost:3333/ui` after starting the gateway.
 
-```bash
-# All tests (from root - runs each workspace's tests with proper config)
-bun run test
+Features:
+- **Activity Log** - View all captured MCP traffic with filtering
+- **Server Management** - Add, edit, remove, and monitor servers
+- **Health Status** - Real-time health checks for all servers
+- **Export Logs** - Export captured traffic as JSON
+- **Search & Filter** - Find specific requests by server, method, or content
 
-# Specific package tests
-bun run --filter @fiberplane/mcp-gateway-cli test
-bun run --filter @fiberplane/mcp-gateway-web test
-bun run --filter @fiberplane/mcp-gateway-core test
+## REST API
 
-# Or run tests from within a package directory
-cd packages/web && bun test
+The gateway includes a REST API primarily used by the web UI. It's available for programmatic access if needed.
+
+### Base URL
+
+```
+http://localhost:3333/api
 ```
 
-> **Note:** Use `bun run test` (not `bun test`) from the root to ensure each workspace uses its own test configuration. This is important for the web package which requires happy-dom for React component tests.
+### Common Endpoints
 
-### Test MCP Server
+- `GET /api/logs` - Query captured traffic (supports filtering by server, session)
+- `GET /api/servers` - List registered servers
+- `POST /api/servers` - Add new server
+- `GET /api/health` - Health check
 
-Use the test MCP server to validate proxy functionality:
+**Note:** For programmatic control, consider using the gateway's MCP server instead (see "Gateway MCP Server" section above). The REST API is primarily designed for web UI integration.
 
-```bash
-# Terminal 1: Run test MCP server
-bun run --filter test-mcp-server dev
+## Using the Gateway as a Proxy
 
-# Terminal 2: Run CLI
-bun run dev
+The gateway proxies MCP requests to registered servers through the `/s/{serverName}/mcp` endpoint pattern. This enables traffic capture and centralized management.
+
+### Proxy Endpoint Pattern
+
+```
+http://localhost:3333/s/{serverName}/mcp
 ```
 
-Then add the test server in the TUI:
-- Name: `test-server`
-- URL: `http://localhost:3000/mcp`
-
-## Common Tasks
-
-### Adding Dependencies
-
-```bash
-cd packages/mcp-gateway
-bun add <package-name>
+**Example:** For a server named "weather-api":
+```
+http://localhost:3333/s/weather-api/mcp
 ```
 
-### Type Checking
+### Connecting MCP Clients Through the Proxy
 
-```bash
-# All packages
-bun run typecheck
+To connect any MCP client (that supports HTTP transport) to an MCP server **through the gateway** (enabling traffic capture):
 
-# CLI only
-bun run --filter @fiberplane/mcp-gateway-cli typecheck
+**Example with custom MCP client:**
+
+```typescript
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { HttpTransport } from "@modelcontextprotocol/sdk/transport/http.js";
+
+const client = new Client({ name: "my-app", version: "1.0.0" });
+
+// Connect to the MCP server THROUGH the gateway proxy
+await client.connect(
+  new HttpTransport("http://localhost:3333/s/weather-api/mcp")
+);
 ```
 
-### Linting & Formatting
+All requests will:
+1. Route through the gateway
+2. Be captured and logged to SQLite
+3. Be proxied to the actual server at its configured URL
+4. Return responses to your client
 
-```bash
-# From monorepo root
-bun run lint
-bun run format
+You can then view all captured traffic in the web UI at http://localhost:3333/ui
+
+**Note:** Claude Desktop does not support HTTP-based MCP servers, so it cannot connect through the gateway's proxy endpoints. The gateway is primarily useful for custom MCP clients or applications that support HTTP transport.
+
+### Direct vs Proxied Connections
+
+```
+Direct Connection (no capture):
+MCP Client → http://localhost:3001/mcp → MCP Server
+
+Proxied Connection (with capture):
+MCP Client → http://localhost:3333/s/weather/mcp → Gateway → MCP Server
+                                                   ↓
+                                            SQLite Storage
 ```
 
 ## Troubleshooting
 
-### Issue: `public/` Folder Missing
-
-**Symptom:** Web UI shows 404 at `http://localhost:3333/ui`
-
-**Solution:**
+**Port already in use:**
 ```bash
-# Build web UI
-bun run --filter @fiberplane/mcp-gateway-web build
-
-# Copy to CLI package
-cp -r packages/web/public packages/cli/public
-
-# Or run postbuild script
-cd packages/cli
-bun run postbuild
+mcp-gateway --port 8080
 ```
 
-### Issue: Port 3333 Already in Use
+**Cannot connect to server:**
+1. Verify server is running: `curl http://localhost:3000/mcp`
+2. Check server URL in web UI
+3. View captured traffic in Activity Log
 
-**Symptom:** Error: "EADDRINUSE: address already in use :::3333"
+**Web UI shows 404:**
+- Use `http://localhost:3333/ui` (not root `/`)
 
-**Solution:**
+**Clear all data:**
 ```bash
-# Find process using port 3333
-lsof -i :3333
-
-# Kill the process
-kill -9 <PID>
-
-# Or use a different port
-bun run dev -- --port 8080
+rm -rf ~/.mcp-gateway/ && mcp-gateway
 ```
 
-### Issue: TUI Display Issues
+See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for complete guide.
 
-**Symptom:** Garbled text, overlapping elements
+## Development
 
-**Solution:**
-- Ensure terminal supports ANSI escape codes
-- Try resizing terminal window
-- Check terminal emulator compatibility (iTerm2, Alacritty recommended)
-
-### Issue: Web UI Shows Stale Data
-
-**Symptom:** Web UI doesn't reflect recent changes
-
-**Solution:**
-```bash
-# Hard refresh in browser (Cmd+Shift+R or Ctrl+Shift+R)
-
-# Or rebuild web UI
-bun run --filter @fiberplane/mcp-gateway-web build
-cp -r packages/web/public packages/cli/public
-```
-
-### Issue: Cannot Connect to MCP Servers
-
-**Symptom:** "Failed to connect to server" errors in TUI
-
-**Solution:**
-1. Check server URL is correct
-2. Verify server is running (`curl <server-url>`)
-3. Check server logs for errors
-4. Ensure no CORS issues (HTTP MCP servers)
-
-## Package Dependencies
-
-### Direct Dependencies
-
-- `@fiberplane/mcp-gateway-api` - REST API for querying logs
-- `@fiberplane/mcp-gateway-core` - Core business logic
-- `@fiberplane/mcp-gateway-server` - HTTP server with proxy
-- `@fiberplane/mcp-gateway-types` - Type definitions
-- `@fiberplane/mcp-gateway-web` - Web UI (dev dependency, bundled in production)
-- `@hono/node-server` - Node.js adapter for Hono
-- `hono` - Web framework
-- `open-tui` - Terminal UI framework
-- `zod` - Schema validation
-
-### Dev Dependencies
-
-Managed at monorepo root level.
-
-## User Documentation
-
-If you're using MCP Gateway, see the user guides:
-
-- **[Getting Started](../../docs/user-guide/getting-started.md)** - Installation and first steps
-- **[Web UI Guide](../../docs/user-guide/web-ui-guide.md)** - Using the web dashboard
-- **[CLI Reference](../../docs/user-guide/cli-reference.md)** - Command-line usage
-- **[Troubleshooting](../../docs/user-guide/troubleshooting.md)** - Common issues
-- **[FAQ](../../docs/user-guide/faq.md)** - Frequently asked questions
-
-## Developer Documentation
-
-- [AGENTS.md](../../AGENTS.md) - Complete monorepo development guide
-- [packages/web/README.md](../web/README.md) - Web UI package documentation
-- [packages/api/README.md](../api/README.md) - API package documentation
-- [packages/server/README.md](../server/README.md) - Server package documentation
-
-## Development Workflow
-
-1. **Make changes** in `src/` directory
-2. **Run in dev mode** (choose Option 1 or 2 above)
-3. **Test changes** manually or with automated tests
-4. **Type check** with `bun run typecheck`
-5. **Lint** with `bun run lint`
-6. **Format** with `bun run format`
-7. **Commit** with conventional commit message
-8. **Create changeset** if this is a release-worthy change:
-   - Run `bun changeset` to create a changeset
-   - Run `bun run changeset:check` to validate before committing
-   - Only reference `@fiberplane/mcp-gateway` (other packages are ignored)
-   - See [AGENTS.md](../../AGENTS.md#release-process) for details
-
-## Debugging
-
-### Enable Debug Logging
+This is a Bun workspace monorepo. To contribute:
 
 ```bash
-# Set log level
-DEBUG=* bun run dev
+# Clone and install
+git clone https://github.com/fiberplane/mcp-gateway.git
+cd mcp-gateway
+bun install
 
-# Or in code
-logger.debug("Debug message", { context: "value" });
+# Dev mode (starts gateway with hot reload)
+bun run dev
+
+# Run tests
+bun run test
+
+# Build all packages
+bun run build
+
+# Web UI dev server (with hot reload)
+bun run --filter @fiberplane/mcp-gateway-web dev
 ```
 
-### Inspect Storage
+**For contributors:**
+- See [AGENTS.md](https://github.com/fiberplane/mcp-gateway/blob/main/AGENTS.md) for complete development guide
+- Release process documented in AGENTS.md (changesets, npm lifecycle hooks, dependency management)
 
-```bash
-# View registry
-cat ~/.mcp-gateway/mcp.json
+## License
 
-# View captures
-ls -la ~/.mcp-gateway/captures/
+MIT
 
-# View logs for specific server
-cat ~/.mcp-gateway/captures/my-server/*.jsonl
-```
+## Links
+
+- **GitHub**: https://github.com/fiberplane/mcp-gateway
+- **npm**: https://www.npmjs.com/package/@fiberplane/mcp-gateway
+- **Issues**: https://github.com/fiberplane/mcp-gateway/issues
+- **Changelog**: [CHANGELOG.md](https://github.com/fiberplane/mcp-gateway/blob/main/packages/mcp-gateway/CHANGELOG.md)

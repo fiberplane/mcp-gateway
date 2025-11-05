@@ -25,7 +25,8 @@ test configurations, causing failures in React tests.
   bun run test
 
   # Run specific package tests
-  bun run --filter @fiberplane/mcp-gateway-cli test
+  bun run --filter @fiberplane/mcp-gateway test
+  bun run --filter @fiberplane/mcp-gateway-api test
   bun run --filter @fiberplane/mcp-gateway-web test
   bun run --filter @fiberplane/mcp-gateway-core test
 

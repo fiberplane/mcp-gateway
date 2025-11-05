@@ -16,8 +16,6 @@ export * from "./health";
 // Infrastructure exports
 export * from "./logger";
 export { resetMigrationState } from "./logs/migrations";
-// Logs exports
-export * from "./logs/query";
 // MCP server exports
 export * from "./mcp/server";
 // Registry exports
