@@ -969,7 +969,8 @@ export async function createProxyRoutes(options: {
 
         // Compute methodDetail for database storage
         if (!response) {
-          logger.warn("Upstream server returned non JSON-RPC payload", {
+          // This is normal for notifications (e.g., notifications/initialized) which don't expect responses
+          logger.debug("Upstream server returned non JSON-RPC payload", {
             server: server.name,
             sessionId,
             status: httpStatus,
