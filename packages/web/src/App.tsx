@@ -230,10 +230,6 @@ function App() {
     setTriggerAddServer(true);
   });
 
-  const _handleAddServerHandled = useHandler(() => {
-    setTriggerAddServer(false);
-  });
-
   const handleClearSessions = useHandler(async (): Promise<void> => {
     // Ask for confirmation
     const confirmed = window.confirm(
