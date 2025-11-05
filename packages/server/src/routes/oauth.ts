@@ -57,18 +57,32 @@ export async function createOAuthRoutes(
   // Enable CORS for all OAuth discovery endpoints
   app.use("/*", cors(OAUTH_CORS_CONFIG));
 
-  // Helper to extract base URL from MCP server URL
-  // E.g., "https://api.example.com/mcp" -> "https://api.example.com"
+  // Helper to extract base URL from MCP server URL using path manipulation
+  // E.g., "https://api.example.com/v1/mcp" -> "https://api.example.com/v1"
   // E.g., "https://mcp.linear.app/sse" -> "https://mcp.linear.app"
   function getBaseUrl(mcpUrl: string): string {
     try {
       const url = new URL(mcpUrl);
-      // Remove the MCP endpoint path (/mcp or /sse)
-      const pathWithoutEndpoint = url.pathname.replace(/\/(mcp|sse)\/?$/, "");
-      return `${url.protocol}//${url.host}${pathWithoutEndpoint}`;
+
+      // Split path into segments, filter out empty strings
+      const segments = url.pathname.split("/").filter((s) => s.length > 0);
+
+      // Check if last segment is an MCP endpoint (mcp or sse)
+      if (segments.length > 0) {
+        const lastSegment = segments[segments.length - 1];
+        if (lastSegment === "mcp" || lastSegment === "sse") {
+          // Remove the endpoint segment (like path.dirname behavior)
+          segments.pop();
+        }
+      }
+
+      // Reconstruct path (ensure leading slash, no trailing slash)
+      const newPath = segments.length > 0 ? `/${segments.join("/")}` : "";
+
+      return `${url.protocol}//${url.host}${newPath}`;
     } catch {
-      // If URL parsing fails, return as-is
-      return mcpUrl.replace(/\/(mcp|sse)\/?$/, "");
+      // If URL parsing fails, return as-is (defensive fallback)
+      return mcpUrl;
     }
   }
 
