@@ -43,12 +43,16 @@ export async function createApp(options: {
   const app = new HonoApp();
 
   // Custom Hono logger middleware to log to our log files
+  // Strip ANSI color codes from messages to avoid unicode escape sequences in logs
   app.use(
     loggerMiddleware((message: string, ...rest: string[]) => {
+      // Remove ANSI escape codes (color codes like \u001b[33m)
+      // biome-ignore lint/suspicious/noControlCharactersInRegex: Need to match ANSI escape sequences
+      const cleanMessage = message.replace(/\x1b\[\d+m/g, "");
       if (rest.length > 0) {
-        appLogger.debug(message, { honoLoggerArgs: rest });
+        appLogger.debug(cleanMessage, { honoLoggerArgs: rest });
       } else {
-        appLogger.debug(message);
+        appLogger.debug(cleanMessage);
       }
     }),
   );
@@ -81,7 +85,7 @@ export async function createApp(options: {
     });
   });
 
-  // Mount OAuth discovery and registration routes
+  // Mount OAuth discovery routes
   // These need to be mounted BEFORE the proxy routes to handle .well-known paths
   const oauthRoutes = await createOAuthRoutes((name) =>
     gateway.storage.getServer(name),
