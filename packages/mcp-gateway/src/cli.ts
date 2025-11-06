@@ -24,6 +24,18 @@ import { Hono } from "hono";
 import { getVersion } from "./utils/version.js";
 
 /**
+ * Maximum number of logs to fetch for session summary
+ */
+const MAX_SESSION_LOGS = 10000;
+
+/**
+ * Get health icon for display
+ */
+function getHealthIcon(health: string): string {
+  return health === "up" ? "✓" : health === "down" ? "✗" : "?";
+}
+
+/**
  * Find the public directory containing web UI assets.
  * Located at packages/mcp-gateway/public/ (built from packages/web/dist/)
  */
@@ -117,6 +129,9 @@ export async function runCli(): Promise<void> {
 
     // Create Gateway instance with scoped storage and state
     const gateway = await createGateway({ storageDir });
+
+    // Track when this session started for shutdown traffic summary
+    const sessionStartTime = new Date().toISOString();
 
     // Wire Gateway methods into ProxyDependencies for server
     const proxyDependencies: ProxyDependencies = {
@@ -484,10 +499,28 @@ export async function runCli(): Promise<void> {
       }
     });
 
+    // Track previous health states to only show changes
+    const previousHealthStates = new Map<string, string>();
+
     // Start health checks BEFORE server starts to ensure accurate initial status
     // This runs the first health check synchronously before any Web UI requests can be made
     // Health check interval: 5 seconds (5000ms)
-    await gateway.health.start(5000);
+    await gateway.health.start(5000, (updates) => {
+      // Show health status changes to the user (only when state actually changes)
+      for (const { name, health } of updates) {
+        const previousHealth = previousHealthStates.get(name);
+
+        // Only log if this is a state change (not the initial check or same state)
+        if (previousHealth !== undefined && previousHealth !== health) {
+          const icon = getHealthIcon(health);
+          // biome-ignore lint/suspicious/noConsole: actually want to print to console
+          console.log(`${icon} server "${name}" is now ${health}`);
+        }
+
+        // Update tracked state
+        previousHealthStates.set(name, health);
+      }
+    });
 
     // Start server and wait for it to be listening or error
     const server = serve({
@@ -539,10 +572,13 @@ export async function runCli(): Promise<void> {
       process.exit(1);
     });
 
+    const version = getVersion();
     // biome-ignore lint/suspicious/noConsole: actually want to print to console
-    console.log(`✓ MCP Gateway server started at http://localhost:${port}`);
+    console.log(`mcp-gateway v${version}\n`);
     // biome-ignore lint/suspicious/noConsole: actually want to print to console
-    console.log(`  Web UI: http://localhost:${port}/ui`);
+    console.log(`MCP Gateway server started at http://localhost:${port}`);
+    // biome-ignore lint/suspicious/noConsole: actually want to print to console
+    console.log(`Web UI: http://localhost:${port}/ui`);
 
     // Show configured MCP servers and their gateway endpoints
     const registeredServers = await gateway.storage.getRegisteredServers();
@@ -551,19 +587,88 @@ export async function runCli(): Promise<void> {
       console.log(`\n  No servers configured yet - add servers via Web UI`);
     } else {
       // biome-ignore lint/suspicious/noConsole: actually want to print to console
-      console.log(`\n  Configured MCP servers:`);
+      console.log(`\nConfigured MCP servers:`);
+
+      // Calculate column widths for alignment
+      const maxNameLen = Math.max(
+        ...registeredServers.map((s) => s.name.length),
+      );
+      const maxGatewayLen = Math.max(
+        ...registeredServers.map(
+          (s) => `http://localhost:${port}/s/${s.name}/mcp`.length,
+        ),
+      );
+      const maxUpstreamLen = Math.max(
+        ...registeredServers.map((s) => s.url.length),
+      );
+
       for (const server of registeredServers) {
+        const gatewayUrl = `http://localhost:${port}/s/${server.name}/mcp`;
+        const upstreamUrl = server.url;
+        const healthStatus = server.health || "unknown";
+        const healthIcon = getHealthIcon(healthStatus);
+
+        // Pad columns for alignment
+        const name = server.name.padEnd(maxNameLen);
+        const gateway = gatewayUrl.padEnd(maxGatewayLen);
+        const upstream = upstreamUrl.padEnd(maxUpstreamLen);
+
         // biome-ignore lint/suspicious/noConsole: actually want to print to console
         console.log(
-          `    ${server.name}: http://localhost:${port}/s/${server.name}/mcp`,
+          `  ${name}  ${gateway}  →  ${upstream}  [${healthIcon} ${healthStatus}]`,
         );
       }
+      // biome-ignore lint/suspicious/noConsole: print a new line
+      console.log("");
     }
 
     logger.info("MCP Gateway server started", { port });
 
     // Keep process alive and handle graceful shutdown signals
     const shutdown = async () => {
+      try {
+        // Show traffic summary for this session only (after sessionStartTime)
+        const result = await gateway.storage.query({
+          after: sessionStartTime,
+          limit: MAX_SESSION_LOGS,
+        });
+
+        const totalRequests = result.data.length;
+
+        if (totalRequests > 0) {
+          // Warn if results might be truncated
+          if (totalRequests === MAX_SESSION_LOGS) {
+            logger.warn?.(
+              `Session summary may be incomplete (reached limit of ${MAX_SESSION_LOGS} logs)`,
+            );
+          }
+
+          // Count requests per server
+          const sessionTraffic = new Map<string, number>();
+          for (const log of result.data) {
+            const serverName = log.metadata.serverName;
+            const count = sessionTraffic.get(serverName) || 0;
+            sessionTraffic.set(serverName, count + 1);
+          }
+
+          // biome-ignore lint/suspicious/noConsole: actually want to print to console
+          console.log("Log summary:");
+          // Iterate over sessionTraffic to show all servers that handled traffic, even if removed
+          for (const [serverName, count] of sessionTraffic.entries()) {
+            // biome-ignore lint/suspicious/noConsole: actually want to print to console
+            console.log(`* ${serverName}: ${count} log events`);
+          }
+          // biome-ignore lint/suspicious/noConsole: actually want to print to console
+          console.log("");
+        } else {
+          // biome-ignore lint/suspicious/noConsole: actually want to print to console
+          console.log("\nNo traffic captured during this session\n");
+        }
+      } catch (error) {
+        // Log error at debug level to aid troubleshooting, but don't block shutdown
+        logger.debug?.("Error during shutdown summary", { error });
+      }
+
       await gateway.close(); // Close Gateway connections (includes stopping health checks)
       await new Promise<void>((resolve) => {
         server.close(() => {
