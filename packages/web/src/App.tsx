@@ -72,7 +72,7 @@ function App() {
   const logsPanelId = useId();
   const queryClient = useQueryClient();
   const { confirm, ConfirmDialog } = useConfirm();
-  const [serverName, setServerName] = useState<string | undefined>();
+  const [serverName, setServerName] = useQueryState("server");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isClearing, setIsClearing] = useState(false);
   const [clearError, setClearError] = useState<string | null>(null);
@@ -195,7 +195,7 @@ function App() {
       api.getLogs({
         q:
           searchQueries && searchQueries.length > 0 ? searchQueries : undefined,
-        serverName,
+        serverName: serverName ?? undefined,
         ...apiParams,
         limit: 100,
         before: pageParam,
@@ -231,7 +231,7 @@ function App() {
   });
 
   const handleServerChange = useHandler((value: string | undefined) => {
-    setServerName(value);
+    setServerName(value ?? null);
     setSelectedIds(new Set()); // Reset selection
   });
 
@@ -354,7 +354,7 @@ function App() {
 
               <div className="mb-6">
                 <ServerTabs
-                  value={serverName}
+                  value={serverName ?? undefined}
                   onChange={handleServerChange}
                   panelId={logsPanelId}
                 />
