@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { TIMEOUTS } from "../lib/constants";
 
 interface UseCopyToClipboardOptions {
   /**
    * Duration in milliseconds to show the "copied" state
-   * @default 2000
+   * @default TIMEOUTS.COPY_FEEDBACK (2000)
    */
   resetDelay?: number;
 }
@@ -64,7 +65,7 @@ interface UseCopyToClipboardReturn<T> {
 export function useCopyToClipboard<T = string>(
   options: UseCopyToClipboardOptions = {},
 ): UseCopyToClipboardReturn<T> {
-  const { resetDelay = 2000 } = options;
+  const { resetDelay = TIMEOUTS.COPY_FEEDBACK } = options;
   const [copiedId, setCopiedId] = useState<T | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<Error | null>(null);
