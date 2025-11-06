@@ -75,16 +75,20 @@ function buildProxyHeaders(
     "Content-Type": "application/json",
     "MCP-Protocol-Version":
       c.req.raw.headers.get("MCP-Protocol-Version") || "2025-06-18",
-    "Mcp-Session-Id":
-      c.req.raw.headers.get("Mcp-Session-Id") ||
-      c.req.raw.headers.get("mcp-session-id") ||
-      "",
     ...Object.fromEntries(
       Object.entries(server.headers).filter(
         ([key]) => !AUTO_HEADERS.includes(key.toLowerCase()),
       ),
     ),
   };
+
+  // Only include Mcp-Session-Id if it's present (don't send empty string)
+  const sessionId =
+    c.req.raw.headers.get("Mcp-Session-Id") ||
+    c.req.raw.headers.get("mcp-session-id");
+  if (sessionId) {
+    proxyHeaders["Mcp-Session-Id"] = sessionId;
+  }
 
   const acceptHeader = c.req.raw.headers.get("Accept");
   if (acceptHeader) {
@@ -751,6 +755,20 @@ export async function createProxyRoutes(options: {
             responseHeaders.delete(header);
           }
 
+          // Add cookie with server name for OAuth discovery
+          // This allows root .well-known endpoints to infer the server context
+          // Use append() to preserve any existing Set-Cookie headers from upstream (e.g., CSRF tokens)
+          // Scoped to /.well-known to minimize conflict potential with upstream cookies
+          // Server name validation: only alphanumeric, underscore, hyphen (safe for cookies)
+          const cookieSafeName = /^[a-zA-Z0-9_-]+$/.test(server.name)
+            ? server.name
+            : encodeURIComponent(server.name);
+
+          responseHeaders.append(
+            "Set-Cookie",
+            `mcp-gateway-server=${cookieSafeName}; Path=/.well-known; HttpOnly; SameSite=Lax`,
+          );
+
           // Log the 401 response for visibility
           logResponse({
             server,
@@ -974,6 +992,10 @@ export async function createProxyRoutes(options: {
             sessionId,
             status: httpStatus,
             bodyType: typeof responseBody,
+            responseBody:
+              typeof responseBody === "string"
+                ? responseBody.substring(0, 500)
+                : responseBody,
           });
 
           await handleSessionTransition(
