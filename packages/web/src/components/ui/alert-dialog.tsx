@@ -13,7 +13,7 @@ const AlertDialogOverlay = forwardRef<
   <AlertDialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-foreground/50 data-[state=open]:animate-fade-in",
+      "fixed inset-0 z-55 bg-foreground/50 data-[state=open]:animate-fade-in",
       className,
     )}
     {...props}
@@ -30,7 +30,7 @@ const AlertDialogContent = forwardRef<
     <AlertDialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%]",
+        "fixed left-[50%] top-[50%] z-55 translate-x-[-50%] translate-y-[-50%]",
         "w-full max-w-lg rounded-lg border border-border bg-card p-6",
         "shadow-lg data-[state=open]:animate-scale-in",
         "focus:outline-none",
