@@ -13,3 +13,7 @@ Fix OAuth discovery and preserve upstream cookies on 401 responses
 - Improve cookie parsing to handle edge cases
 - Add server name validation for cookie safety
 - Log JSON parse errors in OAuth discovery for better debugging
+- Avoid duplicate fetch when JSON parsing fails in protected resource proxy
+- Fix server cookie not reaching client by appending to proxied responses
+- Set server cookie on all server-specific well-known paths for consistency
+- Synthesize oauth-protected-resource from oauth-authorization-server when 404

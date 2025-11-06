@@ -115,6 +115,7 @@ export async function createOAuthRoutes(
   async function proxyWithCors(
     targetUrl: string,
     options: RequestInit,
+    cookieHeaderValue?: string,
   ): Promise<Response> {
     const response = await fetch(targetUrl, options);
 
@@ -128,6 +129,11 @@ export async function createOAuthRoutes(
     newHeaders.delete("Content-Encoding");
     newHeaders.delete("Content-Length");
     newHeaders.delete("Transfer-Encoding");
+
+    // Append cookie if provided (must use append to preserve existing Set-Cookie headers)
+    if (cookieHeaderValue) {
+      newHeaders.append("Set-Cookie", cookieHeaderValue);
+    }
 
     const newResponse = new Response(responseText, {
       status: response.status,
@@ -147,6 +153,7 @@ export async function createOAuthRoutes(
     targetUrl: string,
     serverName: string,
     pathPrefix: string,
+    cookieHeaderValue?: string,
   ): Promise<Response> {
     const response = await fetch(targetUrl, {
       method: "GET",
@@ -155,12 +162,109 @@ export async function createOAuthRoutes(
 
     const responseText = await response.text();
 
-    // If not 200, return as-is (error responses) with CORS headers
+    // If 404, try synthesizing from oauth-authorization-server
+    if (response.status === 404) {
+      const logger = await import("@fiberplane/mcp-gateway-core").then(
+        (m) => m.logger,
+      );
+      logger.debug(
+        "oauth-protected-resource not found, attempting synthesis from oauth-authorization-server",
+        { targetUrl, serverName },
+      );
+
+      // Extract base URL and try oauth-authorization-server endpoint
+      const baseUrl = targetUrl.replace(
+        "/.well-known/oauth-protected-resource",
+        "",
+      );
+      const authServerUrl = `${baseUrl}/.well-known/oauth-authorization-server`;
+
+      try {
+        const authServerResponse = await fetch(authServerUrl, {
+          method: "GET",
+          headers: buildMinimalProxyHeaders(c.req.raw),
+        });
+
+        if (authServerResponse.status === 200) {
+          const authServerText = await authServerResponse.text();
+          const authServerMetadata = JSON.parse(authServerText) as {
+            issuer?: string;
+            [key: string]: unknown;
+          };
+
+          // Synthesize oauth-protected-resource from authorization server metadata
+          const gatewayBase = getGatewayBaseUrl(c.req.header("Host"));
+          const synthesized: ProtectedResourceMetadata = {
+            resource: `${gatewayBase}/${pathPrefix}/${serverName}/mcp`,
+            authorization_servers: authServerMetadata.issuer
+              ? [authServerMetadata.issuer]
+              : undefined,
+          };
+
+          logger.info(
+            "Successfully synthesized oauth-protected-resource from oauth-authorization-server",
+            { serverName, synthesized },
+          );
+
+          const newHeaders = new Headers();
+          newHeaders.set("Content-Type", "application/json");
+
+          // Append cookie if provided
+          if (cookieHeaderValue) {
+            newHeaders.append("Set-Cookie", cookieHeaderValue);
+          }
+
+          const newResponse = new Response(JSON.stringify(synthesized), {
+            status: 200,
+            headers: newHeaders,
+          });
+
+          addCorsHeaders(newResponse);
+          return newResponse;
+        }
+      } catch (synthError) {
+        logger.warn("Failed to synthesize oauth-protected-resource", {
+          serverName,
+          authServerUrl,
+          error:
+            synthError instanceof Error
+              ? synthError.message
+              : String(synthError),
+        });
+      }
+
+      // Synthesis failed, return original 404
+      const newHeaders = new Headers(response.headers);
+      newHeaders.delete("Content-Encoding");
+      newHeaders.delete("Content-Length");
+      newHeaders.delete("Transfer-Encoding");
+
+      // Append cookie if provided
+      if (cookieHeaderValue) {
+        newHeaders.append("Set-Cookie", cookieHeaderValue);
+      }
+
+      const newResponse = new Response(responseText, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: newHeaders,
+      });
+
+      addCorsHeaders(newResponse);
+      return newResponse;
+    }
+
+    // If not 200 (and not 404), return as-is (error responses) with CORS headers
     if (response.status !== 200) {
       const newHeaders = new Headers(response.headers);
       newHeaders.delete("Content-Encoding");
       newHeaders.delete("Content-Length");
       newHeaders.delete("Transfer-Encoding");
+
+      // Append cookie if provided
+      if (cookieHeaderValue) {
+        newHeaders.append("Set-Cookie", cookieHeaderValue);
+      }
 
       const newResponse = new Response(responseText, {
         status: response.status,
@@ -193,6 +297,11 @@ export async function createOAuthRoutes(
       newHeaders.delete("Transfer-Encoding");
       newHeaders.set("Content-Type", "application/json");
 
+      // Append cookie if provided
+      if (cookieHeaderValue) {
+        newHeaders.append("Set-Cookie", cookieHeaderValue);
+      }
+
       const newResponse = new Response(JSON.stringify(rewritten), {
         status: 200,
         headers: newHeaders,
@@ -214,11 +323,25 @@ export async function createOAuthRoutes(
         responsePreview: responseText.substring(0, 200),
       });
 
-      // Return original response as fallback
-      return proxyWithCors(targetUrl, {
-        method: "GET",
-        headers: buildMinimalProxyHeaders(c.req.raw),
+      // Return already-fetched response as fallback (no duplicate fetch)
+      const newHeaders = new Headers(response.headers);
+      newHeaders.delete("Content-Encoding");
+      newHeaders.delete("Content-Length");
+      newHeaders.delete("Transfer-Encoding");
+
+      // Append cookie if provided
+      if (cookieHeaderValue) {
+        newHeaders.append("Set-Cookie", cookieHeaderValue);
+      }
+
+      const newResponse = new Response(responseText, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: newHeaders,
       });
+
+      addCorsHeaders(newResponse);
+      return newResponse;
     }
   }
 
@@ -239,11 +362,15 @@ export async function createOAuthRoutes(
       const baseUrl = getBaseUrl(server.url);
       const targetUrl = `${baseUrl}/.well-known/oauth-protected-resource`;
 
+      // Build cookie to track server context for root .well-known paths
+      const cookie = buildServerCookie(serverName);
+
       return proxyProtectedResourceWithRewriting(
         c,
         targetUrl,
         serverName,
         prefix || "s",
+        cookie,
       );
     },
   );
@@ -264,11 +391,18 @@ export async function createOAuthRoutes(
       const baseUrl = getBaseUrl(server.url);
       const targetUrl = `${baseUrl}/.well-known/oauth-authorization-server`;
 
+      // Build cookie to track server context for root .well-known paths
+      const cookie = buildServerCookie(serverName);
+
       // Proxy without rewriting URLs for now
-      return proxyWithCors(targetUrl, {
-        method: "GET",
-        headers: buildMinimalProxyHeaders(c.req.raw),
-      });
+      return proxyWithCors(
+        targetUrl,
+        {
+          method: "GET",
+          headers: buildMinimalProxyHeaders(c.req.raw),
+        },
+        cookie,
+      );
     },
   );
 
@@ -287,10 +421,17 @@ export async function createOAuthRoutes(
       const baseUrl = getBaseUrl(server.url);
       const targetUrl = `${baseUrl}/.well-known/openid-configuration`;
 
-      return proxyWithCors(targetUrl, {
-        method: "GET",
-        headers: buildMinimalProxyHeaders(c.req.raw),
-      });
+      // Build cookie to track server context for root .well-known paths
+      const cookie = buildServerCookie(serverName);
+
+      return proxyWithCors(
+        targetUrl,
+        {
+          method: "GET",
+          headers: buildMinimalProxyHeaders(c.req.raw),
+        },
+        cookie,
+      );
     },
   );
 
@@ -310,10 +451,17 @@ export async function createOAuthRoutes(
       const baseUrl = getBaseUrl(server.url);
       const targetUrl = `${baseUrl}/.well-known/openid-configuration`;
 
-      return proxyWithCors(targetUrl, {
-        method: "GET",
-        headers: buildMinimalProxyHeaders(c.req.raw),
-      });
+      // Build cookie to track server context for root .well-known paths
+      const cookie = buildServerCookie(serverName);
+
+      return proxyWithCors(
+        targetUrl,
+        {
+          method: "GET",
+          headers: buildMinimalProxyHeaders(c.req.raw),
+        },
+        cookie,
+      );
     },
   );
 
@@ -335,17 +483,34 @@ export async function createOAuthRoutes(
       // Get request body for POST
       const body = await c.req.text();
 
-      return proxyWithCors(targetUrl, {
-        method: "POST",
-        headers: buildMinimalProxyHeaders(c.req.raw),
-        body,
-      });
+      // Build cookie to track server context for root .well-known paths
+      const cookie = buildServerCookie(serverName);
+
+      return proxyWithCors(
+        targetUrl,
+        {
+          method: "POST",
+          headers: buildMinimalProxyHeaders(c.req.raw),
+          body,
+        },
+        cookie,
+      );
     },
   );
 
   // Root .well-known endpoints - fallback when no server specified
   // Try to infer server from cookie (set during 401 response in proxy.ts)
   // If no cookie, return helpful error message
+
+  // Helper to generate server cookie value
+  function buildServerCookie(serverName: string): string {
+    // Server name validation: only alphanumeric, underscore, hyphen (safe for cookies)
+    const cookieSafeName = /^[a-zA-Z0-9_-]+$/.test(serverName)
+      ? serverName
+      : encodeURIComponent(serverName);
+
+    return `mcp-gateway-server=${cookieSafeName}; Path=/.well-known; HttpOnly; SameSite=Lax`;
+  }
 
   // Helper to get server name from cookie
   function getServerFromCookie(c: Context): string | null {
