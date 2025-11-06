@@ -7,6 +7,7 @@
 import type { McpServerConfig } from "@fiberplane/mcp-gateway-types";
 import { Copy, X } from "lucide-react";
 import { useCallback, useId, useState } from "react";
+import { cn } from "@/lib/utils";
 import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -265,19 +266,21 @@ export function ServerForm({
                 </span>
                 /mcp
               </code>
-              {name.trim() && (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() =>
-                    copy(`${window.location.origin}/s/${name.trim()}/mcp`)
-                  }
-                  className="shrink-0"
-                >
-                  {copied ? "Copied!" : <Copy className="w-4 h-4" />}
-                </Button>
-              )}
+              {/* {name.trim() && ( */}
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  copy(`${window.location.origin}/s/${name.trim()}/mcp`)
+                }
+                className={cn("shrink-0", !name.trim() && "invisible")}
+                aria-hidden={!name.trim()}
+                // className={cn("shrink-0", !name.trim() && "hidden")}
+              >
+                {copied ? "Copied!" : <Copy className="w-4 h-4" />}
+              </Button>
+              {/* )} */}
             </div>
           </div>
           {/* Show routing relationship when both name and URL are present */}

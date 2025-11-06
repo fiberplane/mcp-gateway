@@ -2,10 +2,13 @@ import type { ServerStatus } from "@fiberplane/mcp-gateway-types";
 import { useQuery } from "@tanstack/react-query";
 import { Check, Copy, Plus } from "lucide-react";
 import { useEffect, useMemo, useRef } from "react";
+import { useServerModal } from "../contexts/ServerModalContext";
 import { useServerConfig } from "../hooks/use-server-configs";
 import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
 import { api } from "../lib/api";
+import { POLLING_INTERVALS } from "../lib/constants";
 import { Button } from "./ui/button";
+import { ErrorAlert } from "./ui/error-alert";
 import { StatusDot } from "./ui/status-dot";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
@@ -13,7 +16,6 @@ interface ServerTabsProps {
   value?: string;
   onChange: (value: string | undefined) => void;
   panelId: string;
-  onAddServer?: () => void;
 }
 
 function getStatusVariant(
@@ -146,16 +148,12 @@ function ServerTab({
   );
 }
 
-export function ServerTabs({
-  value,
-  onChange,
-  panelId,
-  onAddServer,
-}: ServerTabsProps) {
+export function ServerTabs({ value, onChange, panelId }: ServerTabsProps) {
+  const { openAddServerModal } = useServerModal();
   const { data, isLoading, error } = useQuery({
     queryKey: ["servers"],
     queryFn: () => api.getServers(),
-    refetchInterval: 5000, // Refresh less often than logs
+    refetchInterval: POLLING_INTERVALS.SERVERS,
   });
 
   const tabListRef = useRef<HTMLDivElement>(null);
@@ -204,6 +202,7 @@ export function ServerTabs({
   }, [selectedServer]);
 
   // Handle keyboard navigation
+  // Using separate effect to ensure cleanup runs with correct tabList reference
   useEffect(() => {
     const tabList = tabListRef.current;
     if (!tabList) return;
@@ -246,14 +245,19 @@ export function ServerTabs({
     };
 
     tabList.addEventListener("keydown", handleKeyDown);
-    return () => tabList.removeEventListener("keydown", handleKeyDown);
+    // Cleanup uses the captured tabList reference - ensures proper removal
+    return () => {
+      tabList.removeEventListener("keydown", handleKeyDown);
+    };
   }, [selectedIndex, allTabValues, onChange]);
 
   if (error) {
     return (
-      <div className="text-sm text-destructive">
-        Failed to load servers. Please try refreshing the page.
-      </div>
+      <ErrorAlert
+        error={error as Error}
+        title="Failed to load servers"
+        retry={() => window.location.reload()}
+      />
     );
   }
 
@@ -301,11 +305,11 @@ export function ServerTabs({
           />
         );
       })}
-      {onAddServer && data.servers.length === 0 && (
+      {data.servers.length === 0 && (
         <Button
           variant="outline"
           size="sm"
-          onClick={onAddServer}
+          onClick={openAddServerModal}
           className="h-8"
         >
           <Plus className="w-4 h-4 mr-1" />
