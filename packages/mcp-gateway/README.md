@@ -44,7 +44,25 @@ mcp-gateway
 This launches:
 - **Web UI** - http://localhost:3333/ui (visual dashboard)
 - **Gateway MCP Server** - http://localhost:3333/gateway/mcp (control gateway via MCP)
-- **Proxy Endpoints** - http://localhost:3333/s/{server-name}/mcp (access registered servers)
+
+### Alternatively you can run the mcp-gateway from the repo
+
+This repository requires bun to be installed.
+
+```bash
+# 1. Clone repository
+git clone https://github.com/fiberplane/mcp-gateway.git
+cd mcp-gateway
+
+# 2. Install dependencies
+bun install
+
+# 3. Build packages (required for web UI)
+bun run build
+
+# 4. Start gateway in dev mode (with hot reload)
+bun run dev
+```
 
 ### Add Your First Server
 
@@ -55,8 +73,7 @@ You can add servers via the web UI:
 3. Enter server name and URL
 4. Gateway performs health check automatically
 
-
-Once added, all MCP traffic through the gateway is captured automatically.
+Once added, all MCP traffic through the gateway is captured automatically. Note: if you want to add more servers, you can manage servers by clicking the cogwheel icon in the top right corner of the page. 
 
 ## Architecture Overview
 
@@ -361,25 +378,7 @@ curl -fsSL https://bun.sh/install | bash
 
 ### Quick Start for Contributors
 
-```bash
-# 1. Clone repository
-git clone https://github.com/fiberplane/mcp-gateway.git
-cd mcp-gateway
-
-# 2. Install dependencies
-bun install
-
-# 3. Build packages (required for web UI)
-bun run build
-
-# 4. Start gateway in dev mode (with hot reload)
-bun run dev
-```
-
-Gateway runs at:
-- Web UI: http://localhost:3333/ui
-- Gateway MCP Server: http://localhost:3333/gateway/mcp
-- API: http://localhost:3333/api
+Follow the instructions under [Running mcp-gateway from the repo](#Running-mcp-gateway-from-the-repo)
 
 ### Local Testing Workflow
 
