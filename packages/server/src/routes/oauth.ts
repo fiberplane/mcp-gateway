@@ -193,7 +193,10 @@ export async function createOAuthRoutes(
           };
 
           // Synthesize oauth-protected-resource from authorization server metadata
-          const gatewayBase = getGatewayBaseUrl(c.req.header("Host"));
+          const gatewayBase = getGatewayBaseUrl(
+            c.req.url,
+            c.req.header("Host"),
+          );
           const synthesized: ProtectedResourceMetadata = {
             resource: `${gatewayBase}/${pathPrefix}/${serverName}/mcp`,
             authorization_servers: authServerMetadata.issuer
@@ -280,7 +283,7 @@ export async function createOAuthRoutes(
       const metadata = JSON.parse(responseText) as ProtectedResourceMetadata;
 
       // Get gateway base URL from request
-      const gatewayBase = getGatewayBaseUrl(c.req.header("Host"));
+      const gatewayBase = getGatewayBaseUrl(c.req.url, c.req.header("Host"));
 
       // Rewrite only the resource field
       const rewritten = rewriteProtectedResourceMetadata(

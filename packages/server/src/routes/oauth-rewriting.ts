@@ -7,9 +7,10 @@
 
 /**
  * Get gateway base URL from request context
- * Uses Host header by default, with optional config override
+ * Derives protocol from request URL, with optional config override
  */
 export function getGatewayBaseUrl(
+  requestUrl: string,
   requestHost: string | null | undefined,
   configUrl?: string,
 ): string {
@@ -17,12 +18,17 @@ export function getGatewayBaseUrl(
     return configUrl;
   }
 
+  // Derive protocol from request URL
+  let protocol = "http"; // Default to HTTP for safety
+  try {
+    const url = new URL(requestUrl);
+    protocol = url.protocol.replace(":", "");
+  } catch {
+    // If URL parsing fails, fallback to HTTP
+  }
+
   // Use Host header (works for localhost and tunnels)
   const host = requestHost || "localhost:3333";
-
-  // For localhost, always use http (OAuth clients often run on http://localhost)
-  // For other hosts, assume https (production deployments)
-  const protocol = host.includes("localhost") ? "http" : "https";
 
   return `${protocol}://${host}`;
 }
