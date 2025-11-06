@@ -151,8 +151,8 @@ function ServerTab({
 export function ServerTabs({ value, onChange, panelId }: ServerTabsProps) {
   const { openAddServerModal } = useServerModal();
   const { data, isLoading, error } = useQuery({
-    queryKey: ["servers"],
-    queryFn: () => api.getServers(),
+    queryKey: ["server-configs"],
+    queryFn: () => api.getServerConfigs(),
     refetchInterval: POLLING_INTERVALS.SERVERS,
   });
 
@@ -294,6 +294,14 @@ export function ServerTabs({ value, onChange, panelId }: ServerTabsProps) {
       </button>
       {data.servers.map((server) => {
         const isSelected = selectedServer === server.name;
+        // Map health status from McpServer to ServerStatus
+        // Treat undefined/unknown as "not-found" (neutral state before first health check)
+        const status: ServerStatus =
+          server.health === "up"
+            ? "online"
+            : server.health === "down"
+              ? "offline"
+              : "not-found";
         return (
           <ServerTab
             key={server.name}
@@ -301,7 +309,7 @@ export function ServerTabs({ value, onChange, panelId }: ServerTabsProps) {
             panelId={panelId}
             onChange={onChange}
             name={server.name}
-            status={server.status}
+            status={status}
           />
         );
       })}

@@ -25,6 +25,7 @@ import { FilterBar } from "./components/filter-bar";
 import { LogTable } from "./components/log-table";
 import { Pagination } from "./components/pagination";
 import { ServerModalManager } from "./components/ServerModalManager";
+import { ServerHealthBanner } from "./components/server-health-banner";
 import { ServerTabs } from "./components/server-tabs";
 import { SettingsDropdown } from "./components/settings-dropdown";
 import { StreamingBadge } from "./components/streaming-badge";
@@ -37,6 +38,8 @@ import {
   TooltipTrigger,
 } from "./components/ui/tooltip";
 import { useConfirm } from "./hooks/use-confirm";
+import { useHealthCheck } from "./hooks/use-health-check";
+import { useServerConfig } from "./hooks/use-server-configs";
 import { api } from "./lib/api";
 import { POLLING_INTERVALS, TIMEOUTS } from "./lib/constants";
 import {
@@ -77,12 +80,15 @@ function App() {
   const [isClearing, setIsClearing] = useState(false);
   const [clearError, setClearError] = useState<string | null>(null);
 
-  // Fetch servers to check if any exist for empty state
-  const { data: serversData } = useQuery({
-    queryKey: ["servers"],
-    queryFn: () => api.getServers(),
+  // Fetch server configs for health status in empty state
+  const { data: serverConfigsData } = useQuery({
+    queryKey: ["server-configs"],
+    queryFn: () => api.getServerConfigs(),
     refetchInterval: POLLING_INTERVALS.SERVERS,
   });
+
+  // Health check mutation
+  const { mutate: checkHealth, isPending: isCheckingHealth } = useHealthCheck();
 
   // Filter state from URL via nuqs
   const [searchQueries] = useQueryState("search", parseAsSearchArray);
@@ -101,6 +107,9 @@ function App() {
     () => filterParamsToFilters(filterParams),
     [filterParams],
   );
+
+  // Get server config for health status (when viewing a specific server)
+  const activeServerConfig = useServerConfig(serverName || "");
 
   // Streaming: ON = auto-refresh with new logs, OFF = manual load more
   const [isStreaming, setIsStreaming] = useState(true);
@@ -435,22 +444,50 @@ function App() {
                       />
                     </ErrorBoundary>
 
+                    {/* Server Health Banner - shown when viewing a single offline server */}
+                    {serverName && activeServerConfig && (
+                      <ServerHealthBanner
+                        server={activeServerConfig}
+                        onRetry={() => checkHealth(serverName)}
+                        isRetrying={isCheckingHealth}
+                      />
+                    )}
+
                     {/* Log Table - wrapped for horizontal scroll */}
                     <div className="overflow-x-auto -mx-4 px-4">
                       {deferredLogs.length === 0 ? (
                         <div>
                           {filters.length > 0 || searchQueries?.length ? (
-                            // Keep existing filtered empty state
+                            // Filtered empty state (when user has active filters or search)
                             <div className="p-10 text-center text-muted-foreground">
                               <p className="mb-2">No logs match your filters</p>
                               <p className="text-sm">
                                 Try adjusting your filters or search terms
                               </p>
                             </div>
-                          ) : serversData?.servers &&
-                            serversData.servers.length > 0 ? (
-                            // New "no logs" empty state
-                            <EmptyStateNoLogs servers={serversData.servers} />
+                          ) : serverName && activeServerConfig ? (
+                            // When viewing a specific server with no logs
+                            activeServerConfig.health === "down" ? (
+                              // Offline server: just show simple message (banner above has details)
+                              <div className="p-10 text-center text-muted-foreground">
+                                <p className="mb-2">No logs captured yet</p>
+                                <p className="text-sm">
+                                  Logs will appear here once the server is back
+                                  online and starts receiving requests
+                                </p>
+                              </div>
+                            ) : (
+                              // Online or unknown health: show instructions
+                              <EmptyStateNoLogs
+                                servers={[activeServerConfig]}
+                              />
+                            )
+                          ) : serverConfigsData?.servers &&
+                            serverConfigsData.servers.length > 0 ? (
+                            // New "no logs" empty state (shows all servers)
+                            <EmptyStateNoLogs
+                              servers={serverConfigsData.servers}
+                            />
                           ) : (
                             // New "no servers" empty state
                             <EmptyStateNoServers />

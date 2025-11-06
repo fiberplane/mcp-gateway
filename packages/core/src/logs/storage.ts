@@ -534,6 +534,12 @@ export async function upsertServerHealth(
     health: HealthStatus;
     lastCheck: string;
     url: string;
+    lastCheckTime?: number;
+    lastHealthyTime?: number;
+    lastErrorTime?: number;
+    errorMessage?: string;
+    errorCode?: string;
+    responseTimeMs?: number;
   },
 ): Promise<void> {
   const health: NewServerHealth = {
@@ -541,6 +547,12 @@ export async function upsertServerHealth(
     health: data.health,
     lastCheck: data.lastCheck,
     url: data.url,
+    lastCheckTime: data.lastCheckTime ?? null,
+    lastHealthyTime: data.lastHealthyTime ?? null,
+    lastErrorTime: data.lastErrorTime ?? null,
+    errorMessage: data.errorMessage ?? null,
+    errorCode: data.errorCode ?? null,
+    responseTimeMs: data.responseTimeMs ?? null,
   };
 
   await db
@@ -552,6 +564,12 @@ export async function upsertServerHealth(
         health: health.health,
         lastCheck: health.lastCheck,
         url: health.url,
+        lastCheckTime: health.lastCheckTime,
+        lastHealthyTime: health.lastHealthyTime,
+        lastErrorTime: health.lastErrorTime,
+        errorMessage: health.errorMessage,
+        errorCode: health.errorCode,
+        responseTimeMs: health.responseTimeMs,
       },
     });
 }

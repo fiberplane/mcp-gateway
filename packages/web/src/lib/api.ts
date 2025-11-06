@@ -254,6 +254,31 @@ class APIClient {
 
     return response.json();
   }
+
+  /**
+   * Manually trigger a health check for a server
+   *
+   * @param name Server name (normalized to lowercase)
+   * @returns Updated server with health check results
+   */
+  async checkServerHealth(name: string): Promise<{ server: McpServer }> {
+    const response = await fetch(
+      `${this.baseURL}/servers/${encodeURIComponent(name)}/health-check`,
+      {
+        method: "POST",
+      },
+    );
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(
+        error.message ||
+          `Failed to check server health: ${response.statusText}`,
+      );
+    }
+
+    return response.json();
+  }
 }
 
 /**

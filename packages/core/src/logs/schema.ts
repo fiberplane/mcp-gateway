@@ -116,6 +116,13 @@ export const serverHealth = sqliteTable("server_health", {
   health: text("health", { enum: healthStatusValues }).notNull(),
   lastCheck: text("last_check").notNull(),
   url: text("url").notNull(),
+  // Extended health check details
+  lastCheckTime: integer("last_check_time"), // Timestamp in ms
+  lastHealthyTime: integer("last_healthy_time"), // Timestamp in ms
+  lastErrorTime: integer("last_error_time"), // Timestamp in ms
+  errorMessage: text("error_message"),
+  errorCode: text("error_code"),
+  responseTimeMs: integer("response_time_ms"),
 });
 
 export type ServerHealth = typeof serverHealth.$inferSelect;

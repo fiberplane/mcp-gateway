@@ -160,7 +160,6 @@ export function FilterAutocomplete({
       {/* Suggestions section */}
       {suggestions.length > 0 && (
         <>
-          {/* biome-ignore lint/correctness/useUniqueElementIds: Singleton component, static ID is acceptable for ARIA */}
           <div
             id="filter-autocomplete-listbox"
             role="listbox"

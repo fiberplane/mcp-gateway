@@ -400,6 +400,12 @@ export class LocalStorageBackend implements StorageBackend {
             ...metrics,
             health: healthData?.health,
             lastHealthCheck: healthData?.lastCheck,
+            lastCheckTime: healthData?.lastCheckTime ?? undefined,
+            lastHealthyTime: healthData?.lastHealthyTime ?? undefined,
+            lastErrorTime: healthData?.lastErrorTime ?? undefined,
+            errorMessage: healthData?.errorMessage ?? undefined,
+            errorCode: healthData?.errorCode ?? undefined,
+            responseTimeMs: healthData?.responseTimeMs ?? undefined,
           };
         }),
       );
@@ -520,6 +526,12 @@ export class LocalStorageBackend implements StorageBackend {
     health: HealthStatus,
     lastCheck: string,
     url: string,
+    lastCheckTime?: number,
+    lastHealthyTime?: number,
+    lastErrorTime?: number,
+    errorMessage?: string,
+    errorCode?: string,
+    responseTimeMs?: number,
   ): Promise<void> {
     try {
       await upsertServerHealth(this.db, {
@@ -527,6 +539,12 @@ export class LocalStorageBackend implements StorageBackend {
         health,
         lastCheck,
         url,
+        lastCheckTime,
+        lastHealthyTime,
+        lastErrorTime,
+        errorMessage,
+        errorCode,
+        responseTimeMs,
       });
       logger.debug("Server health updated", { serverName, health });
     } catch (error) {

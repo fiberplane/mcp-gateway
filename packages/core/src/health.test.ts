@@ -402,4 +402,182 @@ describe("Health Check System", () => {
       { timeout: 10000 },
     );
   });
+
+  describe("extended health check details", () => {
+    test("should include error code ECONNREFUSED for unreachable server", async () => {
+      const gateway = await createGateway({ storageDir });
+
+      await gateway.storage.addServer({
+        name: "unreachable-server",
+        url: unreachableUrl,
+        type: "http",
+        headers: {},
+      });
+
+      await gateway.health.check();
+
+      const servers = await gateway.storage.getRegisteredServers();
+      expect(servers[0]?.health).toBe("down");
+      expect(servers[0]?.errorCode).toBe("ECONNREFUSED");
+      expect(servers[0]?.errorMessage).toBeDefined();
+      expect(servers[0]?.lastCheckTime).toBeTypeOf("number");
+      expect(servers[0]?.lastErrorTime).toBeTypeOf("number");
+
+      await gateway.close();
+    });
+
+    test("should include response time for healthy server", async () => {
+      if (!healthyServer) {
+        throw new Error("Test server not initialized");
+      }
+
+      const gateway = await createGateway({ storageDir });
+
+      await gateway.storage.addServer({
+        name: "healthy-server",
+        url: healthyServer.url,
+        type: "http",
+        headers: {},
+      });
+
+      await gateway.health.check();
+
+      const servers = await gateway.storage.getRegisteredServers();
+      expect(servers[0]?.health).toBe("up");
+      expect(servers[0]?.responseTimeMs).toBeTypeOf("number");
+      expect(servers[0]?.responseTimeMs).toBeGreaterThanOrEqual(0);
+      expect(servers[0]?.lastCheckTime).toBeTypeOf("number");
+      expect(servers[0]?.lastHealthyTime).toBeTypeOf("number");
+
+      await gateway.close();
+    });
+
+    test("should include HTTP_ERROR code for 500 responses", async () => {
+      const errorServer = Bun.serve({
+        port: 0,
+        fetch: () => new Response("Server Error", { status: 500 }),
+      });
+
+      const gateway = await createGateway({ storageDir });
+
+      await gateway.storage.addServer({
+        name: "error-server",
+        url: `http://localhost:${errorServer.port}`,
+        type: "http",
+        headers: {},
+      });
+
+      await gateway.health.check();
+
+      const servers = await gateway.storage.getRegisteredServers();
+      expect(servers[0]?.health).toBe("down");
+      expect(servers[0]?.errorCode).toBe("HTTP_ERROR");
+      expect(servers[0]?.errorMessage).toMatch(/HTTP 500/);
+
+      errorServer.stop();
+      await gateway.close();
+    });
+
+    test(
+      "should include TIMEOUT code for slow servers",
+      async () => {
+        const slowServer = Bun.serve({
+          port: 0,
+          fetch: async () => {
+            await new Promise((resolve) => setTimeout(resolve, 10000));
+            return new Response("OK");
+          },
+        });
+
+        const gateway = await createGateway({ storageDir });
+
+        await gateway.storage.addServer({
+          name: "slow-server",
+          url: `http://localhost:${slowServer.port}`,
+          type: "http",
+          headers: {},
+        });
+
+        await gateway.health.check();
+
+        const servers = await gateway.storage.getRegisteredServers();
+        expect(servers[0]?.health).toBe("down");
+        expect(servers[0]?.errorCode).toBe("TIMEOUT");
+        expect(servers[0]?.lastErrorTime).toBeTypeOf("number");
+
+        slowServer.stop();
+        await gateway.close();
+      },
+      { timeout: 10000 },
+    );
+
+    test("should update lastHealthyTime only for successful checks", async () => {
+      if (!healthyServer) {
+        throw new Error("Test server not initialized");
+      }
+
+      const gateway = await createGateway({ storageDir });
+
+      await gateway.storage.addServer({
+        name: "test-server",
+        url: healthyServer.url,
+        type: "http",
+        headers: {},
+      });
+
+      // First check - healthy
+      await gateway.health.check();
+      let servers = await gateway.storage.getRegisteredServers();
+      const firstHealthyTime = servers[0]?.lastHealthyTime;
+      expect(firstHealthyTime).toBeTypeOf("number");
+
+      // Update to unreachable
+      await gateway.storage.updateServer("test-server", {
+        url: unreachableUrl,
+      });
+
+      // Second check - unhealthy
+      await gateway.health.check();
+      servers = await gateway.storage.getRegisteredServers();
+      expect(servers[0]?.health).toBe("down");
+      expect(servers[0]?.lastHealthyTime).toBe(firstHealthyTime); // Should not update
+      expect(servers[0]?.lastErrorTime).toBeTypeOf("number");
+
+      await gateway.close();
+    });
+
+    test("should track timestamps correctly across multiple checks", async () => {
+      if (!healthyServer) {
+        throw new Error("Test server not initialized");
+      }
+
+      const gateway = await createGateway({ storageDir });
+
+      await gateway.storage.addServer({
+        name: "test-server",
+        url: healthyServer.url,
+        type: "http",
+        headers: {},
+      });
+
+      // First check
+      await gateway.health.check();
+      let servers = await gateway.storage.getRegisteredServers();
+      const firstCheckTime = servers[0]?.lastCheckTime;
+
+      // Wait a bit
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Second check
+      await gateway.health.check();
+      servers = await gateway.storage.getRegisteredServers();
+      const secondCheckTime = servers[0]?.lastCheckTime;
+
+      expect(firstCheckTime).toBeTypeOf("number");
+      expect(secondCheckTime).toBeTypeOf("number");
+      expect(secondCheckTime).toBeGreaterThan(firstCheckTime as number);
+
+      await gateway.close();
+    });
+  });
 });
