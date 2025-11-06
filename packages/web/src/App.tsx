@@ -13,6 +13,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { Github, MessageCircle } from "lucide-react";
 import { useQueryState, useQueryStates } from "nuqs";
 import { useDeferredValue, useId, useMemo, useState } from "react";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -27,8 +28,14 @@ import { ServerModalManager } from "./components/ServerModalManager";
 import { ServerTabs } from "./components/server-tabs";
 import { SettingsDropdown } from "./components/settings-dropdown";
 import { StreamingBadge } from "./components/streaming-badge";
+import { Button } from "./components/ui/button";
 import { ErrorAlert } from "./components/ui/error-alert";
-import { TooltipProvider } from "./components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "./components/ui/tooltip";
 import { useConfirm } from "./hooks/use-confirm";
 import { api } from "./lib/api";
 import { POLLING_INTERVALS, TIMEOUTS } from "./lib/constants";
@@ -296,6 +303,38 @@ function App() {
                   <span className="text-base font-medium text-foreground">
                     Fiberplane
                   </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" asChild>
+                        <a
+                          href="https://github.com/fiberplane/mcp-gateway"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label="View on GitHub"
+                        >
+                          <Github />
+                        </a>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>View on GitHub</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" asChild>
+                        <a
+                          href="https://discord.com/invite/cqdY6SpfVR"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label="Join Discord"
+                        >
+                          <MessageCircle />
+                        </a>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Join Discord</TooltipContent>
+                  </Tooltip>
                 </div>
               </div>
             </header>
