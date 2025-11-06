@@ -80,7 +80,8 @@ The gateway operates in **dual mode**: it's both a proxy for MCP servers AND an 
 │         │         │    servers   │              │             │
 │         │         │  • search_   │              │             │
 │         │         │    records   │              │             │
-│         └─────────┴──────┬───────┴──────────────┘             │
+│         │         └──────┬───────┘              │             │
+│         └────────────────┼──────────────────────┘             │
 │                          │                                    │
 │         ┌────────────────▼──────────────────┐                 │
 │         │     REST API (/api)               │                 │
@@ -96,10 +97,10 @@ The gateway operates in **dual mode**: it's both a proxy for MCP servers AND an 
                            │
                ┌───────────┼───────────┐
                │           │           │
-        ┌──────▼───┐ ┌────▼────┐ ┌───▼──────┐
-        │  MCP     │ │   MCP   │ │   MCP    │
-        │ Server 1 │ │ Server 2│ │ Server N │
-        └──────────┘ └─────────┘ └──────────┘
+        ┌──────▼───┐  ┌────▼────┐  ┌───▼──────┐
+        │  MCP     │  │   MCP   │  │   MCP    │
+        │ Server 1 │  │ Server 2│  │ Server N │
+        └──────────┘  └─────────┘  └──────────┘
 ```
 
 **Key Endpoints:**
@@ -349,25 +350,84 @@ See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for complete guide.
 
 ## Development
 
-This is a Bun workspace monorepo. To contribute:
+This is a Bun workspace monorepo. To contribute or run locally:
+
+### Prerequisites
+
+Install [Bun](https://bun.sh):
+```bash
+curl -fsSL https://bun.sh/install | bash
+```
+
+### Quick Start for Contributors
 
 ```bash
-# Clone and install
+# 1. Clone repository
 git clone https://github.com/fiberplane/mcp-gateway.git
 cd mcp-gateway
+
+# 2. Install dependencies
 bun install
 
-# Dev mode (starts gateway with hot reload)
+# 3. Build packages (required for web UI)
+bun run build
+
+# 4. Start gateway in dev mode (with hot reload)
+bun run dev
+```
+
+Gateway runs at:
+- Web UI: http://localhost:3333/ui
+- Gateway MCP Server: http://localhost:3333/gateway/mcp
+- API: http://localhost:3333/api
+
+### Local Testing Workflow
+
+```bash
+# Terminal 1: Start test MCP server (for testing proxy functionality)
+bun run --filter test-mcp-server dev
+
+# Terminal 2: Start gateway
 bun run dev
 
+# Terminal 3: Add test server via API
+curl -X POST http://localhost:3333/api/servers \
+  -H "Content-Type: application/json" \
+  -d '{"name": "test-server", "url": "http://localhost:3001/mcp"}'
+
+# View logs in web UI: http://localhost:3333/ui
+```
+
+### Development Commands
+
+```bash
 # Run tests
 bun run test
+
+# Type checking
+bun run typecheck
+
+# Lint and format
+bun run lint
+bun run format
 
 # Build all packages
 bun run build
 
 # Web UI dev server (with hot reload)
 bun run --filter @fiberplane/mcp-gateway-web dev
+
+# Check circular dependencies
+bun run check-circular
+```
+
+### Package-Specific Development
+
+```bash
+# Work on specific packages
+bun run --filter @fiberplane/mcp-gateway-core test
+bun run --filter @fiberplane/mcp-gateway-api build
+bun run --filter @fiberplane/mcp-gateway-server dev
 ```
 
 **For contributors:**

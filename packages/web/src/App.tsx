@@ -13,6 +13,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { Github, MessageCircle } from "lucide-react";
 import { useQueryState, useQueryStates } from "nuqs";
 import { useDeferredValue, useId, useMemo, useState } from "react";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -27,8 +28,14 @@ import { ServerModalManager } from "./components/ServerModalManager";
 import { ServerTabs } from "./components/server-tabs";
 import { SettingsDropdown } from "./components/settings-dropdown";
 import { StreamingBadge } from "./components/streaming-badge";
+import { Button } from "./components/ui/button";
 import { ErrorAlert } from "./components/ui/error-alert";
-import { TooltipProvider } from "./components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "./components/ui/tooltip";
 import { useConfirm } from "./hooks/use-confirm";
 import { api } from "./lib/api";
 import { POLLING_INTERVALS, TIMEOUTS } from "./lib/constants";
@@ -65,7 +72,7 @@ function App() {
   const logsPanelId = useId();
   const queryClient = useQueryClient();
   const { confirm, ConfirmDialog } = useConfirm();
-  const [serverName, setServerName] = useState<string | undefined>();
+  const [serverName, setServerName] = useQueryState("server");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isClearing, setIsClearing] = useState(false);
   const [clearError, setClearError] = useState<string | null>(null);
@@ -188,7 +195,7 @@ function App() {
       api.getLogs({
         q:
           searchQueries && searchQueries.length > 0 ? searchQueries : undefined,
-        serverName,
+        serverName: serverName ?? undefined,
         ...apiParams,
         limit: 100,
         before: pageParam,
@@ -224,7 +231,7 @@ function App() {
   });
 
   const handleServerChange = useHandler((value: string | undefined) => {
-    setServerName(value);
+    setServerName(value ?? null);
     setSelectedIds(new Set()); // Reset selection
   });
 
@@ -297,6 +304,38 @@ function App() {
                     Fiberplane
                   </span>
                 </div>
+                <div className="flex items-center gap-2">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" asChild>
+                        <a
+                          href="https://github.com/fiberplane/mcp-gateway"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label="View on GitHub"
+                        >
+                          <Github />
+                        </a>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>View on GitHub</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" asChild>
+                        <a
+                          href="https://discord.com/invite/cqdY6SpfVR"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label="Join Discord"
+                        >
+                          <MessageCircle />
+                        </a>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Join Discord</TooltipContent>
+                  </Tooltip>
+                </div>
               </div>
             </header>
 
@@ -315,7 +354,7 @@ function App() {
 
               <div className="mb-6">
                 <ServerTabs
-                  value={serverName}
+                  value={serverName ?? undefined}
                   onChange={handleServerChange}
                   panelId={logsPanelId}
                 />
