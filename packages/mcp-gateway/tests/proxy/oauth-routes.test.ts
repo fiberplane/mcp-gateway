@@ -148,7 +148,11 @@ describe("OAuth Routes Integration Tests", () => {
     expect(response.status).toBe(200);
     // biome-ignore lint/suspicious/noExplicitAny: test
     const data: any = await response.json();
-    expect(data.resource).toBe("https://api.example.com");
+    // Resource field should be rewritten to point to gateway
+    expect(data.resource).toBe(
+      `http://localhost:${gateway.port}/servers/figma/mcp`,
+    );
+    // Other fields should remain unchanged
     expect(data.authorization_servers).toContain("https://auth.example.com");
   });
 
@@ -225,17 +229,15 @@ describe("OAuth Routes Integration Tests", () => {
     expect(data.error).toBe("server_not_specified");
   });
 
-  test("should return 400 for /register without server", async () => {
+  test("should return 404 for /register without server", async () => {
     const response = await fetch(`http://localhost:${gateway.port}/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({}),
     });
 
-    expect(response.status).toBe(400);
-    // biome-ignore lint/suspicious/noExplicitAny: test
-    const data: any = await response.json();
-    expect(data.error).toBe("server_not_specified");
+    // /register endpoint only exists under server paths, not at root
+    expect(response.status).toBe(404);
   });
 
   test("should return 404 for unknown server", async () => {
@@ -256,7 +258,9 @@ describe("OAuth Routes Integration Tests", () => {
     expect(response.status).toBe(200);
     // biome-ignore lint/suspicious/noExplicitAny: test
     const data: any = await response.json();
-    expect(data.resource).toBe("https://api.example.com");
+    // Resource field should be rewritten to point to gateway
+    expect(data.resource).toBe(`http://localhost:${gateway.port}/s/figma/mcp`);
+    // Other fields should remain unchanged
     expect(data.authorization_servers).toContain("https://auth.example.com");
   });
 
