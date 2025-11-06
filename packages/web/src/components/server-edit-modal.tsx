@@ -7,6 +7,7 @@
 import type { McpServerConfig } from "@fiberplane/mcp-gateway-types";
 import { X } from "lucide-react";
 import { useEffect, useId, useRef } from "react";
+import { useConfirm } from "../hooks/use-confirm";
 import { useFocusTrap } from "../hooks/use-focus-trap";
 import { ServerForm } from "./server-form";
 import { Button } from "./ui/button";
@@ -46,6 +47,7 @@ export function ServerEditModal({
   onDelete,
   isSubmitting = false,
 }: ServerEditModalProps) {
+  const { confirm, ConfirmDialog } = useConfirm();
   // Store the element that had focus before modal opened
   const previousFocusRef = useRef<HTMLElement | null>(null);
   // Focus trap for modal content
@@ -80,9 +82,13 @@ export function ServerEditModal({
   const handleDelete = async () => {
     if (!initialData || !onDelete) return;
 
-    const confirmed = window.confirm(
-      `Are you sure you want to delete server "${initialData.name}"?\n\nNote: Associated logs will be preserved for historical analysis.\n\nThis action cannot be undone.`,
-    );
+    const confirmed = await confirm({
+      title: "Delete Server",
+      description: `Are you sure you want to delete server "${initialData.name}"?\n\nNote: Associated logs will be preserved for historical analysis.\n\nThis action cannot be undone.`,
+      confirmText: "Delete Server",
+      cancelText: "Cancel",
+      variant: "destructive",
+    });
 
     if (!confirmed) return;
 
@@ -94,7 +100,7 @@ export function ServerEditModal({
       {/* Modal overlay - click outside to close */}
       {/* biome-ignore lint/a11y/noStaticElementInteractions: Modal overlay with click-outside-to-close is standard UX pattern */}
       <div
-        className="fixed inset-0 bg-foreground/50 z-50 animate-fade-in"
+        className="fixed inset-0 bg-foreground/50 z-50 animate-fade-in flex items-center justify-center p-4"
         onClick={(e) => {
           if (e.target === e.currentTarget && !isSubmitting) {
             onClose();
@@ -106,51 +112,49 @@ export function ServerEditModal({
           }
         }}
       >
-        {/* Center container for modal */}
-        <div className="flex items-center justify-center min-h-screen p-4">
-          {/* Modal content */}
-          <div
-            ref={modalRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={headingId}
-            className="bg-card rounded-lg border border-border max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-scale-in"
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-border">
-              <h2
-                id={headingId}
-                className="text-xl font-semibold text-foreground"
-              >
-                {mode === "add"
-                  ? "Add Server"
-                  : `Edit Server: ${initialData?.name}`}
-              </h2>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onClose}
-                disabled={isSubmitting}
-                aria-label="Close modal"
-              >
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
+        {/* Modal content */}
+        <div
+          ref={modalRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={headingId}
+          className="bg-card rounded-lg border border-border max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-scale-in"
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b border-border">
+            <h2
+              id={headingId}
+              className="text-xl font-semibold text-foreground"
+            >
+              {mode === "add"
+                ? "Add Server"
+                : `Edit Server: ${initialData?.name}`}
+            </h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              disabled={isSubmitting}
+              aria-label="Close modal"
+            >
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
 
-            {/* Form */}
-            <div className="p-6">
-              <ServerForm
-                mode={mode}
-                initialData={initialData}
-                onSubmit={onSubmit}
-                onCancel={onClose}
-                onDelete={onDelete ? handleDelete : undefined}
-                isSubmitting={isSubmitting}
-              />
-            </div>
+          {/* Form */}
+          <div className="p-6">
+            <ServerForm
+              mode={mode}
+              initialData={initialData}
+              onSubmit={onSubmit}
+              onCancel={onClose}
+              onDelete={onDelete ? handleDelete : undefined}
+              isSubmitting={isSubmitting}
+            />
           </div>
         </div>
       </div>
+      {ConfirmDialog}
     </>
   );
 }
