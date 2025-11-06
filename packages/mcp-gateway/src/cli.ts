@@ -636,6 +636,13 @@ export async function runCli(): Promise<void> {
         const totalRequests = result.data.length;
 
         if (totalRequests > 0) {
+          // Warn if results might be truncated
+          if (totalRequests === MAX_SESSION_LOGS) {
+            logger.warn?.(
+              `Session summary may be incomplete (reached limit of ${MAX_SESSION_LOGS} logs)`,
+            );
+          }
+
           // Count requests per server
           const sessionTraffic = new Map<string, number>();
           for (const log of result.data) {
@@ -657,8 +664,9 @@ export async function runCli(): Promise<void> {
           // biome-ignore lint/suspicious/noConsole: actually want to print to console
           console.log("\nNo traffic captured during this session\n");
         }
-      } catch (_error) {
-        // Silently fail - don't block shutdown
+      } catch (error) {
+        // Log error at debug level to aid troubleshooting, but don't block shutdown
+        logger.debug?.("Error during shutdown summary", { error });
       }
 
       await gateway.close(); // Close Gateway connections (includes stopping health checks)
