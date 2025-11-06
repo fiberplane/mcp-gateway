@@ -413,5 +413,115 @@ describe("Proxy Integration Tests", () => {
         authServer.stop();
       }
     });
+
+    it("should preserve both upstream and gateway cookies on 401", async () => {
+      // Create a mock server that returns 401 with OAuth state cookies
+      const authServerPort = 9000 + Math.floor(Math.random() * 1000);
+      const authServer = Bun.serve({
+        port: authServerPort,
+        fetch(_request) {
+          // Simulate OAuth provider setting CSRF/state cookies
+          const headers = new Headers({
+            "Content-Type": "application/json",
+            "WWW-Authenticate": 'Bearer realm="oauth-test"',
+          });
+
+          // Add multiple Set-Cookie headers (common in OAuth flows)
+          headers.append(
+            "Set-Cookie",
+            "oauth_state=abc123; Path=/; HttpOnly; SameSite=Lax",
+          );
+          headers.append(
+            "Set-Cookie",
+            "csrf_token=xyz789; Path=/; HttpOnly; Secure; SameSite=Strict",
+          );
+
+          return new Response(
+            JSON.stringify({
+              error: "Authentication required",
+              auth_url: "https://oauth.example.com/authorize",
+            }),
+            {
+              status: 401,
+              headers,
+            },
+          );
+        },
+      });
+
+      try {
+        const authServers: McpServer[] = [
+          {
+            name: "oauth-server",
+            type: "http" as const,
+            url: `http://localhost:${authServerPort}/mcp`,
+            headers: {},
+            lastActivity: null,
+            exchangeCount: 0,
+          },
+        ];
+
+        await saveRegistry(storageDir, authServers);
+
+        const { app } = await createApp(authServers, storageDir);
+        const authGatewayPort = 9000 + Math.floor(Math.random() * 1000);
+        const authGateway = Bun.serve({
+          port: authGatewayPort,
+          fetch: app.fetch,
+        });
+
+        try {
+          const response = await fetch(
+            `http://localhost:${authGatewayPort}/s/oauth-server/mcp`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "MCP-Protocol-Version": "2025-06-18",
+              },
+              body: JSON.stringify({
+                jsonrpc: "2.0",
+                id: 1,
+                method: "test",
+                params: {},
+              }),
+            },
+          );
+
+          expect(response.status).toBe(401);
+
+          // Get all Set-Cookie headers
+          const cookies = response.headers.getSetCookie();
+
+          // Should have 3 cookies: 2 from upstream + 1 from gateway
+          expect(cookies.length).toBe(3);
+
+          // Verify upstream OAuth cookies are preserved
+          expect(cookies.some((c) => c.includes("oauth_state=abc123"))).toBe(
+            true,
+          );
+          expect(cookies.some((c) => c.includes("csrf_token=xyz789"))).toBe(
+            true,
+          );
+
+          // Verify gateway cookie is present
+          expect(
+            cookies.some((c) => c.includes("mcp-gateway-server=oauth-server")),
+          ).toBe(true);
+
+          // Verify gateway cookie has correct attributes
+          const gatewayCookie = cookies.find((c) =>
+            c.includes("mcp-gateway-server="),
+          );
+          expect(gatewayCookie).toContain("Path=/.well-known");
+          expect(gatewayCookie).toContain("HttpOnly");
+          expect(gatewayCookie).toContain("SameSite=Lax");
+        } finally {
+          authGateway.stop();
+        }
+      } finally {
+        authServer.stop();
+      }
+    });
   });
 });
