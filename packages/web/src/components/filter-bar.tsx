@@ -290,12 +290,12 @@ export function FilterBar({ actions }: FilterBarProps) {
   };
 
   const handleClearAll = () => {
-    // Clear both filters and search terms
+    // Clear filters and search terms, but preserve server selection (displayed in tabs)
     setFilterParams({
       client: null,
       method: null,
       session: null,
-      server: null,
+      server: filterParams.server, // Preserve server filter
       duration: null,
       tokens: null,
     });
