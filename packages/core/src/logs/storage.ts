@@ -348,12 +348,12 @@ export async function queryLogs(
  * Get server aggregations with status
  *
  * @param db - Database instance
- * @param registryServers - Optional list of registered server names
- * @returns Server information with status (online/offline/not-found)
+ * @param registryServers - Optional list of registered servers with configs
+ * @returns Server information with status (online/offline/not-found) and URLs
  */
 export async function getServers(
   db: LibSQLDatabase<typeof schema>,
-  registryServers?: string[],
+  registryServers?: Array<{ name: string; url: string }>,
 ): Promise<ServerInfo[]> {
   // Get servers that have logs in the database, with health data
   const logsResult = await db
@@ -365,13 +365,16 @@ export async function getServers(
     .leftJoin(serverHealth, eq(logs.serverName, serverHealth.serverName))
     .orderBy(sql`LOWER(${logs.serverName}) COLLATE NOCASE`);
 
-  // Create a map of registry servers (normalized name -> original name)
+  // Create maps of registry servers (normalized name -> original name and URL)
   // This preserves the registry's casing as the source of truth
-  const registryMap = new Map<string, string>();
+  const registryNameMap = new Map<string, string>();
+  const registryUrlMap = new Map<string, string>();
   const registryProvided = Array.isArray(registryServers);
   if (registryProvided) {
-    for (const serverName of registryServers || []) {
-      registryMap.set(serverName.toLowerCase(), serverName);
+    for (const server of registryServers || []) {
+      const normalized = server.name.toLowerCase();
+      registryNameMap.set(normalized, server.name);
+      registryUrlMap.set(normalized, server.url);
     }
   }
 
@@ -381,7 +384,8 @@ export async function getServers(
   // Add servers from logs with their counts
   for (const server of logsResult) {
     const normalizedName = server.name.toLowerCase();
-    const registryName = registryMap.get(normalizedName);
+    const registryName = registryNameMap.get(normalizedName);
+    const registryUrl = registryUrlMap.get(normalizedName);
 
     // Determine status based on registry membership and health
     let status: "online" | "offline" | "not-found";
@@ -403,21 +407,23 @@ export async function getServers(
     serverMap.set(normalizedName, {
       name: registryName || server.name,
       status,
+      url: registryUrl || "", // Empty string for servers not in registry
     });
   }
 
   // Add servers from registry that don't have logs yet
   if (registryProvided) {
-    for (const serverName of registryServers || []) {
-      const normalizedName = serverName.toLowerCase();
+    for (const server of registryServers || []) {
+      const normalizedName = server.name.toLowerCase();
       if (!serverMap.has(normalizedName)) {
         // New server in registry with no logs yet - check health from database
-        const healthData = await getServerHealth(db, serverName);
+        const healthData = await getServerHealth(db, server.name);
         const status = healthData?.health === "down" ? "offline" : "online";
 
         serverMap.set(normalizedName, {
-          name: serverName,
+          name: server.name,
           status,
+          url: server.url,
         });
       }
     }

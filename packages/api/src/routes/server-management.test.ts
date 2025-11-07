@@ -1,21 +1,18 @@
 import { describe, expect, test } from "bun:test";
-import type {
-  Logger,
-  McpServer,
-  McpServerConfig,
-} from "@fiberplane/mcp-gateway-types";
+import { ServerNotFoundError } from "@fiberplane/mcp-gateway-core";
+import type { Logger, McpServer } from "@fiberplane/mcp-gateway-types";
 import { Hono } from "hono";
 import {
-  type ServerManagementFunctions,
   createServerManagementRoutes,
+  type ServerManagementFunctions,
 } from "./server-management.js";
 
 // Mock logger for testing
-const mockLogger: Logger = {
-  debug: () => {},
-  info: () => {},
-  warn: () => {},
-  error: () => {},
+const _mockLogger: Logger = {
+  debug: (_message: string, _context?: Record<string, unknown>) => {},
+  info: (_message: string, _context?: Record<string, unknown>) => {},
+  warn: (_message: string, _context?: Record<string, unknown>) => {},
+  error: (_message: string, _context?: Record<string, unknown>) => {},
 };
 
 describe("Server Management API", () => {
@@ -31,6 +28,8 @@ describe("Server Management API", () => {
         lastCheckTime: Date.now(),
         lastHealthyTime: Date.now(),
         responseTimeMs: 123,
+        lastActivity: null,
+        exchangeCount: 0,
       };
 
       const serverManagement: ServerManagementFunctions = {
@@ -45,7 +44,7 @@ describe("Server Management API", () => {
       };
 
       const app = new Hono();
-      const routes = createServerManagementRoutes(serverManagement, mockLogger);
+      const routes = createServerManagementRoutes(serverManagement);
       app.route("/", routes);
 
       const response = await app.request("/servers/test-server/health-check", {
@@ -65,11 +64,13 @@ describe("Server Management API", () => {
         addServer: async () => {},
         updateServer: async () => {},
         removeServer: async () => {},
-        checkServerHealth: async () => undefined,
+        checkServerHealth: async (name) => {
+          throw new ServerNotFoundError(name);
+        },
       };
 
       const app = new Hono();
-      const routes = createServerManagementRoutes(serverManagement, mockLogger);
+      const routes = createServerManagementRoutes(serverManagement);
       app.route("/", routes);
 
       const response = await app.request(
@@ -81,7 +82,10 @@ describe("Server Management API", () => {
 
       expect(response.status).toBe(404);
 
-      const data = (await response.json()) as { error: string; message: string };
+      const data = (await response.json()) as {
+        error: string;
+        message: string;
+      };
       expect(data.error).toBe("Server not found");
       expect(data.message).toContain("non-existent-server");
     });
@@ -98,7 +102,7 @@ describe("Server Management API", () => {
       };
 
       const app = new Hono();
-      const routes = createServerManagementRoutes(serverManagement, mockLogger);
+      const routes = createServerManagementRoutes(serverManagement);
       app.route("/", routes);
 
       const response = await app.request("/servers/test-server/health-check", {
@@ -107,7 +111,10 @@ describe("Server Management API", () => {
 
       expect(response.status).toBe(500);
 
-      const data = (await response.json()) as { error: string; message: string };
+      const data = (await response.json()) as {
+        error: string;
+        message: string;
+      };
       expect(data.error).toBe("Health check failed");
       expect(data.message).toBe("Health check failed");
     });
@@ -124,6 +131,8 @@ describe("Server Management API", () => {
         lastErrorTime: Date.now(),
         errorCode: "ECONNREFUSED",
         errorMessage: "Connection refused",
+        lastActivity: null,
+        exchangeCount: 0,
       };
 
       const serverManagement: ServerManagementFunctions = {
@@ -135,7 +144,7 @@ describe("Server Management API", () => {
       };
 
       const app = new Hono();
-      const routes = createServerManagementRoutes(serverManagement, mockLogger);
+      const routes = createServerManagementRoutes(serverManagement);
       app.route("/", routes);
 
       const response = await app.request(
@@ -159,11 +168,13 @@ describe("Server Management API", () => {
         addServer: async () => {},
         updateServer: async () => {},
         removeServer: async () => {},
-        checkServerHealth: async () => undefined,
+        checkServerHealth: async (name) => {
+          throw new ServerNotFoundError(name);
+        },
       };
 
       const app = new Hono();
-      const routes = createServerManagementRoutes(serverManagement, mockLogger);
+      const routes = createServerManagementRoutes(serverManagement);
       app.route("/", routes);
 
       // Empty server name should fail validation

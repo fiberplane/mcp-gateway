@@ -537,6 +537,7 @@ describe("Storage Functions", () => {
       expect(serverC).toEqual({
         name: "server-c",
         status: "online",
+        url: "http://localhost:3002/mcp",
       });
     });
   });

@@ -145,6 +145,7 @@ export type ServerStatus = "online" | "offline" | "not-found";
 export interface ServerInfo {
   name: string;
   status: ServerStatus;
+  url: string;
 }
 
 /**

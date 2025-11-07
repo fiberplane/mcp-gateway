@@ -39,6 +39,7 @@ describe("API /servers endpoint", () => {
           {
             name: "test-server",
             status: "online",
+            url: "http://localhost:3001/mcp",
           },
         ],
         getSessions: async () => [],
@@ -58,6 +59,7 @@ describe("API /servers endpoint", () => {
       expect(data.servers[0]).toEqual({
         name: "test-server",
         status: "online",
+        url: "http://localhost:3001/mcp",
       });
     });
 
@@ -77,6 +79,7 @@ describe("API /servers endpoint", () => {
           {
             name: "healthy-server",
             status: "online",
+            url: "http://localhost:3001/mcp",
           },
         ],
         getSessions: async () => [],
@@ -109,6 +112,7 @@ describe("API /servers endpoint", () => {
           {
             name: "unhealthy-server",
             status: "offline",
+            url: "http://localhost:3001/mcp",
           },
         ],
         getSessions: async () => [],
@@ -141,6 +145,7 @@ describe("API /servers endpoint", () => {
           {
             name: "unknown-server",
             status: "not-found",
+            url: "",
           },
         ],
         getSessions: async () => [],
@@ -173,14 +178,17 @@ describe("API /servers endpoint", () => {
           {
             name: "server-online",
             status: "online",
+            url: "http://localhost:3001/mcp",
           },
           {
             name: "server-offline",
             status: "offline",
+            url: "http://localhost:3002/mcp",
           },
           {
             name: "server-not-found",
             status: "not-found",
+            url: "",
           },
         ],
         getSessions: async () => [],

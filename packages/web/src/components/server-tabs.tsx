@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Check, Copy, Plus } from "lucide-react";
 import { useEffect, useMemo, useRef } from "react";
 import { useServerModal } from "../contexts/ServerModalContext";
-import { useServerConfig } from "../hooks/use-server-configs";
 import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
 import { api } from "../lib/api";
 import { POLLING_INTERVALS } from "../lib/constants";
@@ -51,6 +50,7 @@ type ServerTabProps = {
   title?: string;
   name: string;
   status: ServerStatus;
+  url: string;
 };
 
 function ServerTab({
@@ -60,12 +60,12 @@ function ServerTab({
   title,
   name,
   status,
+  url,
 }: ServerTabProps) {
-  const serverConfig = useServerConfig(name);
   const { copy, copied } = useCopyToClipboard();
 
-  // Use server config URL as title if available, otherwise use provided title
-  const originalUrl = title ?? serverConfig?.url;
+  // Use URL from server info as title if no explicit title provided
+  const originalUrl = title ?? url;
   const gatewayUrl = `${window.location.origin}/s/${name}/mcp`;
 
   const handleCopyTooltip = (e: React.MouseEvent) => {
@@ -151,8 +151,8 @@ function ServerTab({
 export function ServerTabs({ value, onChange, panelId }: ServerTabsProps) {
   const { openAddServerModal } = useServerModal();
   const { data, isLoading, error } = useQuery({
-    queryKey: ["server-configs"],
-    queryFn: () => api.getServerConfigs(),
+    queryKey: ["servers"],
+    queryFn: () => api.getServers(),
     refetchInterval: POLLING_INTERVALS.SERVERS,
   });
 
@@ -294,14 +294,6 @@ export function ServerTabs({ value, onChange, panelId }: ServerTabsProps) {
       </button>
       {data.servers.map((server) => {
         const isSelected = selectedServer === server.name;
-        // Map health status from McpServer to ServerStatus
-        // Treat undefined/unknown as "not-found" (neutral state before first health check)
-        const status: ServerStatus =
-          server.health === "up"
-            ? "online"
-            : server.health === "down"
-              ? "offline"
-              : "not-found";
         return (
           <ServerTab
             key={server.name}
@@ -309,7 +301,8 @@ export function ServerTabs({ value, onChange, panelId }: ServerTabsProps) {
             panelId={panelId}
             onChange={onChange}
             name={server.name}
-            status={status}
+            status={server.status}
+            url={server.url}
           />
         );
       })}

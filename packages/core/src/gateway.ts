@@ -24,6 +24,7 @@ import {
 } from "./capture/index.js";
 import { checkServerHealth } from "./health.js";
 import { logger } from "./logger.js";
+import { ServerNotFoundError } from "./registry/errors.js";
 import { getMethodDetail } from "./utils/method-detail.js";
 
 // In-memory storage for client info by session (scoped to Gateway instance)
@@ -216,6 +217,7 @@ class HealthCheckManager {
 
   /**
    * Check health of a single server by name
+   * @throws {ServerNotFoundError} When server doesn't exist
    */
   async checkOne(
     serverName: string,
@@ -224,7 +226,7 @@ class HealthCheckManager {
     const server = servers.find((s) => s.name === serverName);
 
     if (!server) {
-      throw new Error(`Server '${serverName}' not found`);
+      throw new ServerNotFoundError(serverName);
     }
 
     const result = await checkServerHealth(server.url);
@@ -610,6 +612,9 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
       },
       check: async () => {
         return await healthCheckManager.check();
+      },
+      checkOne: async (serverName: string) => {
+        return await healthCheckManager.checkOne(serverName);
       },
     },
 

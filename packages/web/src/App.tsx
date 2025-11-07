@@ -80,13 +80,6 @@ function App() {
   const [isClearing, setIsClearing] = useState(false);
   const [clearError, setClearError] = useState<string | null>(null);
 
-  // Fetch server configs for health status in empty state
-  const { data: serverConfigsData } = useQuery({
-    queryKey: ["server-configs"],
-    queryFn: () => api.getServerConfigs(),
-    refetchInterval: POLLING_INTERVALS.SERVERS,
-  });
-
   // Health check mutation
   const { mutate: checkHealth, isPending: isCheckingHealth } = useHealthCheck();
 
@@ -234,6 +227,17 @@ function App() {
 
   // Defer table updates to keep checkboxes responsive
   const deferredLogs = useDeferredValue(allLogs);
+
+  // Fetch server configs ONLY for empty state (when no logs exist)
+  // This query contains sensitive data (headers) so we minimize exposure
+  const hasLogs = allLogs.length > 0;
+  const { data: serverConfigsData } = useQuery({
+    queryKey: ["server-configs"],
+    queryFn: () => api.getServerConfigs(),
+    // Only fetch when showing empty state (no logs captured yet)
+    enabled: !hasLogs,
+    refetchInterval: !hasLogs ? POLLING_INTERVALS.SERVERS : false,
+  });
 
   const handleLoadMore = useHandler(() => {
     fetchNextPage();

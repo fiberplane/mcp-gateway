@@ -50,8 +50,10 @@ export interface ServerManagementFunctions {
 
   /**
    * Manually trigger health check for a server
+   *
+   * @throws {ServerNotFoundError} When server doesn't exist
    */
-  checkServerHealth: (name: string) => Promise<McpServer | undefined>;
+  checkServerHealth: (name: string) => Promise<McpServer>;
 }
 
 /**
@@ -306,8 +308,10 @@ export function createServerManagementRoutes(
 
       try {
         const server = await functions.checkServerHealth(name);
-
-        if (!server) {
+        return c.json({ server });
+      } catch (error) {
+        // Server not found - return 404
+        if (error instanceof ServerNotFoundError) {
           return c.json(
             {
               error: "Server not found",
@@ -317,8 +321,7 @@ export function createServerManagementRoutes(
           );
         }
 
-        return c.json({ server });
-      } catch (error) {
+        // Other errors (network failures, etc.) - return 500
         return c.json(
           {
             error: "Health check failed",
