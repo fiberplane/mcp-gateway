@@ -360,6 +360,12 @@ export async function getServers(
     .selectDistinct({
       name: logs.serverName,
       health: serverHealth.health,
+      lastCheckTime: serverHealth.lastCheckTime,
+      lastHealthyTime: serverHealth.lastHealthyTime,
+      lastErrorTime: serverHealth.lastErrorTime,
+      errorMessage: serverHealth.errorMessage,
+      errorCode: serverHealth.errorCode,
+      responseTimeMs: serverHealth.responseTimeMs,
     })
     .from(logs)
     .leftJoin(serverHealth, eq(logs.serverName, serverHealth.serverName))
@@ -408,6 +414,14 @@ export async function getServers(
       name: registryName || server.name,
       status,
       url: registryUrl || "", // Empty string for servers not in registry
+      health:
+        server.health === "unknown" ? undefined : (server.health ?? undefined),
+      lastCheckTime: server.lastCheckTime ?? undefined,
+      lastHealthyTime: server.lastHealthyTime ?? undefined,
+      lastErrorTime: server.lastErrorTime ?? undefined,
+      errorMessage: server.errorMessage ?? undefined,
+      errorCode: server.errorCode ?? undefined,
+      responseTimeMs: server.responseTimeMs ?? undefined,
     });
   }
 
@@ -424,6 +438,14 @@ export async function getServers(
           name: server.name,
           status,
           url: server.url,
+          health:
+            healthData?.health === "unknown" ? undefined : healthData?.health,
+          lastCheckTime: healthData?.lastCheckTime,
+          lastHealthyTime: healthData?.lastHealthyTime,
+          lastErrorTime: healthData?.lastErrorTime,
+          errorMessage: healthData?.errorMessage,
+          errorCode: healthData?.errorCode,
+          responseTimeMs: healthData?.responseTimeMs,
         });
       }
     }
@@ -592,6 +614,12 @@ export async function getServerHealth(
   health: HealthStatus;
   lastCheck: string;
   url: string;
+  lastCheckTime?: number;
+  lastHealthyTime?: number;
+  lastErrorTime?: number;
+  errorMessage?: string;
+  errorCode?: string;
+  responseTimeMs?: number;
 } | null> {
   const result = await db
     .select()
@@ -608,6 +636,12 @@ export async function getServerHealth(
     health: row.health as HealthStatus,
     lastCheck: row.lastCheck,
     url: row.url,
+    lastCheckTime: row.lastCheckTime ?? undefined,
+    lastHealthyTime: row.lastHealthyTime ?? undefined,
+    lastErrorTime: row.lastErrorTime ?? undefined,
+    errorMessage: row.errorMessage ?? undefined,
+    errorCode: row.errorCode ?? undefined,
+    responseTimeMs: row.responseTimeMs ?? undefined,
   };
 }
 

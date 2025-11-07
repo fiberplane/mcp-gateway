@@ -249,7 +249,10 @@ export class LocalStorageBackend implements StorageBackend {
     try {
       // Load registry to get registered server names and URLs
       const servers = await this.loadRegistry();
-      const registryServers = servers.map((s) => ({ name: s.name, url: s.url }));
+      const registryServers = servers.map((s) => ({
+        name: s.name,
+        url: s.url,
+      }));
 
       // Health status and URLs are returned by getServers()
       return await getServers(this.db, registryServers);

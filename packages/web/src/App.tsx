@@ -228,12 +228,11 @@ function App() {
   // Defer table updates to keep checkboxes responsive
   const deferredLogs = useDeferredValue(allLogs);
 
-  // Fetch server configs ONLY for empty state (when no logs exist)
-  // This query contains sensitive data (headers) so we minimize exposure
+  // Fetch server list for empty state (when no logs exist)
   const hasLogs = allLogs.length > 0;
-  const { data: serverConfigsData } = useQuery({
-    queryKey: ["server-configs"],
-    queryFn: () => api.getServerConfigs(),
+  const { data: serversData } = useQuery({
+    queryKey: ["servers"],
+    queryFn: () => api.getServers(),
     // Only fetch when showing empty state (no logs captured yet)
     enabled: !hasLogs,
     refetchInterval: !hasLogs ? POLLING_INTERVALS.SERVERS : false,
@@ -486,12 +485,10 @@ function App() {
                                 servers={[activeServerConfig]}
                               />
                             )
-                          ) : serverConfigsData?.servers &&
-                            serverConfigsData.servers.length > 0 ? (
+                          ) : serversData?.servers &&
+                            serversData.servers.length > 0 ? (
                             // New "no logs" empty state (shows all servers)
-                            <EmptyStateNoLogs
-                              servers={serverConfigsData.servers}
-                            />
+                            <EmptyStateNoLogs servers={serversData.servers} />
                           ) : (
                             // New "no servers" empty state
                             <EmptyStateNoServers />

@@ -1,4 +1,4 @@
-import type { McpServer } from "@fiberplane/mcp-gateway-types";
+import type { ServerInfo } from "@fiberplane/mcp-gateway-types";
 import { AlertCircle, ChevronDown, ChevronUp, Copy } from "lucide-react";
 import { useState } from "react";
 import { useHealthCheck } from "../hooks/use-health-check";
@@ -42,7 +42,7 @@ function OfflineServerCard({
   onRetry,
   isRetrying,
 }: {
-  server: McpServer;
+  server: ServerInfo;
   onRetry: () => void;
   isRetrying: boolean;
 }) {
@@ -79,7 +79,7 @@ function OfflineServerCard({
   );
 }
 
-export function EmptyStateNoLogs({ servers }: { servers: McpServer[] }) {
+export function EmptyStateNoLogs({ servers }: { servers: ServerInfo[] }) {
   const { copy, copiedId } = useCopyToClipboard<string>();
   const { mutate: checkHealth, isPending: isCheckingHealth } = useHealthCheck();
   const [showAllOnline, setShowAllOnline] = useState(false);

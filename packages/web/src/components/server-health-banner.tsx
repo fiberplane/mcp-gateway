@@ -1,11 +1,11 @@
-import type { McpServer } from "@fiberplane/mcp-gateway-types";
+import type { ServerInfo } from "@fiberplane/mcp-gateway-types";
 import { RefreshCw, Server } from "lucide-react";
 import { useServerModal } from "../contexts/ServerModalContext";
 import { useTimeAgo } from "../hooks/use-time-ago";
 import { Button } from "./ui/button";
 
 interface ServerHealthBannerProps {
-  server: McpServer;
+  server: ServerInfo;
   onRetry: () => void;
   isRetrying: boolean;
 }
@@ -50,6 +50,18 @@ export function ServerHealthBanner({
     return null;
   }
 
+  // Handler to fetch full server config before opening modal
+  const handleManageServer = async () => {
+    // TODO: Fetch full server config with headers
+    // For now, create minimal config (type and headers will be fetched by modal)
+    openEditServerModal({
+      name: server.name,
+      url: server.url,
+      type: "http",
+      headers: {},
+    });
+  };
+
   return (
     <div className="max-w-3xl mx-auto mb-6">
       <div className="rounded-lg border border-border bg-card p-4">
@@ -62,38 +74,39 @@ export function ServerHealthBanner({
           </div>
 
           <div className="grid gap-4">
-            <div className="grid gap-1">
+            <div className="grid gap-1 ml-4">
               <p className="text-sm font-mono text-muted-foreground">
                 {formatErrorMessage(server.errorCode, server.errorMessage)}
               </p>
 
-              <p className="text-xs text-muted-foreground">
-                Last checked: {lastChecked || "never"}
-              </p>
-
-              {server.lastHealthyTime && (
+              <div className="grid grid-cols-2 gap-4">
                 <p className="text-xs text-muted-foreground">
-                  Last online: {lastOnline}
+                  Last checked: {lastChecked || "never"}
                 </p>
-              )}
+                {server.lastHealthyTime && (
+                  <p className="text-xs text-muted-foreground">
+                    Last online: {lastOnline}
+                  </p>
+                )}
+              </div>
             </div>
-            <div className="grid gap-2 grid-cols-[1fr_auto]">
+            <div className="grid gap-2 grid-cols-2">
               <Button
                 onClick={onRetry}
                 disabled={isRetrying}
-                variant="ghost"
+                variant="outline"
                 className="gap-2"
               >
                 <RefreshCw className="w-4 h-4" />
-                {isRetrying ? "Checking..." : "Health Check"}
+                {isRetrying ? "Checking..." : "Check Health"}
               </Button>
               <Button
-                onClick={() => openEditServerModal(server)}
-                variant="ghost"
+                onClick={handleManageServer}
+                variant="outline"
                 className="gap-2"
               >
                 <Server />
-                Manage
+                Edit
               </Button>
             </div>
           </div>
