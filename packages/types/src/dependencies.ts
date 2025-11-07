@@ -102,8 +102,11 @@ export interface ProxyDependencies {
     serverInfo: McpServerInfo,
   ) => Promise<void>;
 
-  /** Get a server by name */
-  getServer: (name: string) => Promise<McpServer | undefined>;
+  /**
+   * Get a server by name
+   * @throws {ServerNotFoundError} When server doesn't exist
+   */
+  getServer: (name: string) => Promise<McpServer>;
 }
 
 /**

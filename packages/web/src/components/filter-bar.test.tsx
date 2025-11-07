@@ -558,4 +558,109 @@ describe("FilterBarUI", () => {
       expect(liveRegion).toHaveTextContent("2 filters active");
     });
   });
+
+  describe("server filter preservation", () => {
+    /**
+     * Tests for server filter preservation when manipulating other filters
+     *
+     * The FilterBar container component uses URL params via nuqs.
+     * Server filter is managed separately in tabs, but shares the same URL state.
+     * These tests verify that filter operations preserve the server param.
+     *
+     * Note: These are unit tests that verify the callback behavior.
+     * The actual preservation logic is in FilterBar container's handlers:
+     * - handleAddFilter: newParams.server = filterParams.server
+     * - handleRemoveFilter: newParams.server = filterParams.server
+     * - handleRemoveFilterByField: newParams.server = filterParams.server
+     * - handleClearAll: server: filterParams.server
+     */
+
+    test("Clear all preserves server selection (callback invoked)", () => {
+      const filters = [
+        createFilter({ field: "tokens", operator: "gt", value: 150 }),
+      ];
+
+      render(
+        <FilterBarUI
+          filters={filters}
+          searchValue="error"
+          announcement=""
+          editingValue={undefined}
+          hasActiveItems={true}
+          searchQueryCount={1}
+          onAddFilter={onAddFilter}
+          onUpdateSearch={onUpdateSearch}
+          onRemoveFilter={onRemoveFilter}
+          onEditFilter={onEditFilter}
+          onCancelEdit={onCancelEdit}
+          onClearAll={onClearAll}
+          onRemoveFilterByField={onRemoveFilterByField}
+        />,
+      );
+
+      const clearButton = screen.getByText("Clear all");
+      fireEvent.click(clearButton);
+
+      // Verify onClearAll was called (actual preservation logic is in container)
+      expect(onClearAll).toHaveBeenCalledTimes(1);
+    });
+
+    test("Add filter invokes callback (preservation in container)", () => {
+      render(
+        <FilterBarUI
+          filters={[]}
+          searchValue=""
+          announcement=""
+          editingValue="tokens > 150"
+          hasActiveItems={false}
+          searchQueryCount={0}
+          onAddFilter={onAddFilter}
+          onUpdateSearch={onUpdateSearch}
+          onRemoveFilter={onRemoveFilter}
+          onEditFilter={onEditFilter}
+          onCancelEdit={onCancelEdit}
+          onClearAll={onClearAll}
+          onRemoveFilterByField={onRemoveFilterByField}
+        />,
+      );
+
+      const updateButton = screen.getByText("Update Filter");
+      fireEvent.click(updateButton);
+
+      // Verify onAddFilter was called (actual preservation logic is in container)
+      expect(onAddFilter).toHaveBeenCalledTimes(1);
+    });
+
+    test("Remove filter invokes callback (preservation in container)", () => {
+      const filter = createFilter({
+        field: "tokens",
+        operator: "gt",
+        value: 150,
+      });
+
+      render(
+        <FilterBarUI
+          filters={[filter]}
+          searchValue=""
+          announcement=""
+          editingValue={undefined}
+          hasActiveItems={true}
+          searchQueryCount={0}
+          onAddFilter={onAddFilter}
+          onUpdateSearch={onUpdateSearch}
+          onRemoveFilter={onRemoveFilter}
+          onEditFilter={onEditFilter}
+          onCancelEdit={onCancelEdit}
+          onClearAll={onClearAll}
+          onRemoveFilterByField={onRemoveFilterByField}
+        />,
+      );
+
+      const removeButton = screen.getByText("Remove");
+      fireEvent.click(removeButton);
+
+      // Verify onRemoveFilter was called with correct ID
+      expect(onRemoveFilter).toHaveBeenCalledWith(filter.id);
+    });
+  });
 });

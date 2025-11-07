@@ -423,7 +423,7 @@ export function CommandFilterInput({
         />
 
         {/* Hidden help text for screen readers */}
-        {/* biome-ignore lint/correctness/useUniqueElementIds: Singleton component, static ID is acceptable for ARIA */}
+        {/* Static ID is acceptable: Component is a singleton, only rendered once per page in FilterBar */}
         <span id="command-filter-help" className="sr-only">
           Type a filter like "tokens &gt; 150" or "duration &lt; 25". Use Tab
           for autocomplete, Enter to add, Escape to clear.

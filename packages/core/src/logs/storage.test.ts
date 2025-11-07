@@ -534,9 +534,10 @@ describe("Storage Functions", () => {
 
       expect(serverA?.status).toBe("offline");
       expect(serverB?.status).toBe("not-found");
-      expect(serverC).toEqual({
+      expect(serverC).toMatchObject({
         name: "server-c",
         status: "online",
+        url: "http://localhost:3002/mcp",
       });
     });
   });

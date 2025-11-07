@@ -16,6 +16,14 @@ export const POLLING_INTERVALS = {
 } as const;
 
 /**
+ * Query cache configuration in milliseconds
+ */
+export const QUERY_CONFIG = {
+  /** Time data is considered fresh (stale time) */
+  STALE_TIME: 4000,
+} as const;
+
+/**
  * UI timeout values in milliseconds
  */
 export const TIMEOUTS = {

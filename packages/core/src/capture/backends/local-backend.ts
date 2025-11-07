@@ -247,11 +247,14 @@ export class LocalStorageBackend implements StorageBackend {
 
   async getServers(): Promise<ServerInfo[]> {
     try {
-      // Load registry to get registered server names
+      // Load registry to get registered server names and URLs
       const servers = await this.loadRegistry();
-      const registryServers = servers.map((s) => s.name);
+      const registryServers = servers.map((s) => ({
+        name: s.name,
+        url: s.url,
+      }));
 
-      // Health status is now read from the database by getServers()
+      // Health status and URLs are returned by getServers()
       return await getServers(this.db, registryServers);
     } catch (error) {
       logger.error("Local storage getServers failed", {
@@ -400,6 +403,12 @@ export class LocalStorageBackend implements StorageBackend {
             ...metrics,
             health: healthData?.health,
             lastHealthCheck: healthData?.lastCheck,
+            lastCheckTime: healthData?.lastCheckTime ?? undefined,
+            lastHealthyTime: healthData?.lastHealthyTime ?? undefined,
+            lastErrorTime: healthData?.lastErrorTime ?? undefined,
+            errorMessage: healthData?.errorMessage ?? undefined,
+            errorCode: healthData?.errorCode ?? undefined,
+            responseTimeMs: healthData?.responseTimeMs ?? undefined,
           };
         }),
       );
@@ -413,10 +422,14 @@ export class LocalStorageBackend implements StorageBackend {
     }
   }
 
-  async getServer(name: string): Promise<McpServer | undefined> {
+  async getServer(name: string): Promise<McpServer> {
     try {
       const servers = await this.getRegisteredServers();
-      return servers.find((s) => s.name === name);
+      const server = servers.find((s) => s.name === name);
+      if (!server) {
+        throw new ServerNotFoundError(name);
+      }
+      return server;
     } catch (error) {
       logger.error("Local storage getServer failed", {
         error: error instanceof Error ? error.message : String(error),
@@ -520,6 +533,12 @@ export class LocalStorageBackend implements StorageBackend {
     health: HealthStatus,
     lastCheck: string,
     url: string,
+    lastCheckTime?: number,
+    lastHealthyTime?: number,
+    lastErrorTime?: number,
+    errorMessage?: string,
+    errorCode?: string,
+    responseTimeMs?: number,
   ): Promise<void> {
     try {
       await upsertServerHealth(this.db, {
@@ -527,6 +546,12 @@ export class LocalStorageBackend implements StorageBackend {
         health,
         lastCheck,
         url,
+        lastCheckTime,
+        lastHealthyTime,
+        lastErrorTime,
+        errorMessage,
+        errorCode,
+        responseTimeMs,
       });
       logger.debug("Server health updated", { serverName, health });
     } catch (error) {

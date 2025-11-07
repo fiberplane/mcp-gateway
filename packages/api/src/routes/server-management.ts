@@ -47,6 +47,13 @@ export interface ServerManagementFunctions {
    * Remove a server from the registry
    */
   removeServer: (name: string) => Promise<void>;
+
+  /**
+   * Manually trigger health check for a server
+   *
+   * @throws {ServerNotFoundError} When server doesn't exist
+   */
+  checkServerHealth: (name: string) => Promise<McpServer>;
 }
 
 /**
@@ -280,6 +287,44 @@ export function createServerManagementRoutes(
         return c.json(
           {
             error: "Failed to remove server",
+            message: error instanceof Error ? error.message : String(error),
+          },
+          500,
+        );
+      }
+    },
+  );
+
+  /**
+   * POST /servers/:name/health-check
+   *
+   * Manually trigger a health check for a specific server
+   */
+  app.post(
+    "/servers/:name/health-check",
+    sValidator("param", serverNameParamSchema),
+    async (c) => {
+      const { name } = c.req.valid("param");
+
+      try {
+        const server = await functions.checkServerHealth(name);
+        return c.json({ server });
+      } catch (error) {
+        // Server not found - return 404
+        if (error instanceof ServerNotFoundError) {
+          return c.json(
+            {
+              error: "Server not found",
+              message: `Server '${name}' does not exist`,
+            },
+            404,
+          );
+        }
+
+        // Other errors (network failures, etc.) - return 500
+        return c.json(
+          {
+            error: "Health check failed",
             message: error instanceof Error ? error.message : String(error),
           },
           500,

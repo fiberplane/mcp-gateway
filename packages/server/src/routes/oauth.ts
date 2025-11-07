@@ -1,3 +1,4 @@
+import { ServerNotFoundError } from "@fiberplane/mcp-gateway-core";
 import type { McpServer } from "@fiberplane/mcp-gateway-types";
 import { serverParamSchema } from "@fiberplane/mcp-gateway-types";
 import { sValidator } from "@hono/standard-validator";
@@ -21,7 +22,7 @@ import {
  * - /register (OAuth Dynamic Client Registration)
  */
 export async function createOAuthRoutes(
-  getServer: (name: string) => Promise<McpServer | undefined>,
+  getServer: (name: string) => Promise<McpServer>,
 ): Promise<Hono> {
   const app = new Hono();
 
@@ -356,10 +357,14 @@ export async function createOAuthRoutes(
     sValidator("param", serverParamSchema),
     async (c) => {
       const { server: serverName, prefix } = c.req.valid("param");
-      const server = await getServer(serverName);
-
-      if (!server) {
-        return c.notFound();
+      let server: McpServer;
+      try {
+        server = await getServer(serverName);
+      } catch (error) {
+        if (error instanceof ServerNotFoundError) {
+          return c.notFound();
+        }
+        throw error;
       }
 
       const baseUrl = getBaseUrl(server.url);
@@ -385,10 +390,14 @@ export async function createOAuthRoutes(
     sValidator("param", serverParamSchema),
     async (c) => {
       const { server: serverName } = c.req.valid("param");
-      const server = await getServer(serverName);
-
-      if (!server) {
-        return c.notFound();
+      let server: McpServer;
+      try {
+        server = await getServer(serverName);
+      } catch (error) {
+        if (error instanceof ServerNotFoundError) {
+          return c.notFound();
+        }
+        throw error;
       }
 
       const baseUrl = getBaseUrl(server.url);
@@ -415,10 +424,14 @@ export async function createOAuthRoutes(
     sValidator("param", serverParamSchema),
     async (c) => {
       const { server: serverName } = c.req.valid("param");
-      const server = await getServer(serverName);
-
-      if (!server) {
-        return c.notFound();
+      let server: McpServer;
+      try {
+        server = await getServer(serverName);
+      } catch (error) {
+        if (error instanceof ServerNotFoundError) {
+          return c.notFound();
+        }
+        throw error;
       }
 
       const baseUrl = getBaseUrl(server.url);
@@ -445,10 +458,14 @@ export async function createOAuthRoutes(
     sValidator("param", serverParamSchema),
     async (c) => {
       const { server: serverName } = c.req.valid("param");
-      const server = await getServer(serverName);
-
-      if (!server) {
-        return c.notFound();
+      let server: McpServer;
+      try {
+        server = await getServer(serverName);
+      } catch (error) {
+        if (error instanceof ServerNotFoundError) {
+          return c.notFound();
+        }
+        throw error;
       }
 
       const baseUrl = getBaseUrl(server.url);
@@ -474,10 +491,14 @@ export async function createOAuthRoutes(
     sValidator("param", serverParamSchema),
     async (c) => {
       const { server: serverName } = c.req.valid("param");
-      const server = await getServer(serverName);
-
-      if (!server) {
-        return c.notFound();
+      let server: McpServer;
+      try {
+        server = await getServer(serverName);
+      } catch (error) {
+        if (error instanceof ServerNotFoundError) {
+          return c.notFound();
+        }
+        throw error;
       }
 
       const baseUrl = getBaseUrl(server.url);
@@ -568,9 +589,17 @@ export async function createOAuthRoutes(
       return c.json(rootWellKnownError, 400);
     }
 
-    const server = await getServer(serverName);
-    if (!server) {
-      return c.json({ ...rootWellKnownError, error: "server_not_found" }, 404);
+    let server: McpServer;
+    try {
+      server = await getServer(serverName);
+    } catch (error) {
+      if (error instanceof ServerNotFoundError) {
+        return c.json(
+          { ...rootWellKnownError, error: "server_not_found" },
+          404,
+        );
+      }
+      throw error;
     }
 
     const baseUrl = getBaseUrl(server.url);
@@ -586,9 +615,17 @@ export async function createOAuthRoutes(
       return c.json(rootWellKnownError, 400);
     }
 
-    const server = await getServer(serverName);
-    if (!server) {
-      return c.json({ ...rootWellKnownError, error: "server_not_found" }, 404);
+    let server: McpServer;
+    try {
+      server = await getServer(serverName);
+    } catch (error) {
+      if (error instanceof ServerNotFoundError) {
+        return c.json(
+          { ...rootWellKnownError, error: "server_not_found" },
+          404,
+        );
+      }
+      throw error;
     }
 
     const baseUrl = getBaseUrl(server.url);
@@ -607,9 +644,17 @@ export async function createOAuthRoutes(
       return c.json(rootWellKnownError, 400);
     }
 
-    const server = await getServer(serverName);
-    if (!server) {
-      return c.json({ ...rootWellKnownError, error: "server_not_found" }, 404);
+    let server: McpServer;
+    try {
+      server = await getServer(serverName);
+    } catch (error) {
+      if (error instanceof ServerNotFoundError) {
+        return c.json(
+          { ...rootWellKnownError, error: "server_not_found" },
+          404,
+        );
+      }
+      throw error;
     }
 
     const baseUrl = getBaseUrl(server.url);

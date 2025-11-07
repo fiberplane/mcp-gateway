@@ -145,6 +145,21 @@ export type ServerStatus = "online" | "offline" | "not-found";
 export interface ServerInfo {
   name: string;
   status: ServerStatus;
+  url: string;
+  /** Current health status (from server_health table) */
+  health?: "up" | "down";
+  /** Timestamp of last health check in ms (from server_health table) */
+  lastCheckTime?: number;
+  /** Timestamp of last successful health check in ms (from server_health table) */
+  lastHealthyTime?: number;
+  /** Timestamp of last failed health check in ms (from server_health table) */
+  lastErrorTime?: number;
+  /** Error message from last failed health check (from server_health table) */
+  errorMessage?: string;
+  /** Error code from last failed health check (from server_health table) */
+  errorCode?: string;
+  /** Response time from last successful health check in ms (from server_health table) */
+  responseTimeMs?: number;
 }
 
 /**

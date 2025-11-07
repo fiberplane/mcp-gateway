@@ -22,7 +22,9 @@ import {
   createSSEJsonRpcCaptureRecord,
   resolveJsonRpcMethod,
 } from "./capture/index.js";
+import { checkServerHealth } from "./health.js";
 import { logger } from "./logger.js";
+import { ServerNotFoundError } from "./registry/errors.js";
 import { getMethodDetail } from "./utils/method-detail.js";
 
 // In-memory storage for client info by session (scoped to Gateway instance)
@@ -185,6 +187,12 @@ class HealthCheckManager {
     health: HealthStatus,
     lastCheck: string,
     url: string,
+    lastCheckTime?: number,
+    lastHealthyTime?: number,
+    lastErrorTime?: number,
+    errorMessage?: string,
+    errorCode?: string,
+    responseTimeMs?: number,
   ) => Promise<void>;
   private getServers: () => Promise<McpServer[]>;
 
@@ -194,6 +202,12 @@ class HealthCheckManager {
       health: HealthStatus,
       lastCheck: string,
       url: string,
+      lastCheckTime?: number,
+      lastHealthyTime?: number,
+      lastErrorTime?: number,
+      errorMessage?: string,
+      errorCode?: string,
+      responseTimeMs?: number,
     ) => Promise<void>,
     getServers: () => Promise<McpServer[]>,
   ) {
@@ -201,25 +215,55 @@ class HealthCheckManager {
     this.getServers = getServers;
   }
 
-  async checkServerHealth(url: string): Promise<HealthStatus> {
-    try {
-      // Try OPTIONS first (lightweight), fallback to HEAD
-      const response = await fetch(url, {
-        method: "OPTIONS",
-        signal: AbortSignal.timeout(5000), // 5s timeout
-      });
+  /**
+   * Check health of a single server by name
+   * @throws {ServerNotFoundError} When server doesn't exist
+   */
+  async checkOne(
+    serverName: string,
+  ): Promise<{ name: string; health: HealthStatus; lastHealthCheck: string }> {
+    const servers = await this.getServers();
+    const server = servers.find((s) => s.name === serverName);
 
-      // 2xx, 3xx, 4xx all mean server is responding
-      // Only 5xx or network errors mean "down"
-      if (response.status < 500) {
-        return "up";
-      }
-
-      return "down";
-    } catch (_error) {
-      // Network errors, timeouts, DNS failures = down
-      return "down";
+    if (!server) {
+      throw new ServerNotFoundError(serverName);
     }
+
+    const result = await checkServerHealth(server.url);
+    const lastHealthCheck = new Date().toISOString();
+    const health: HealthStatus = result.status === "online" ? "up" : "down";
+
+    // Update the server object (for backward compatibility)
+    server.health = health;
+    server.lastHealthCheck = lastHealthCheck;
+
+    // Persist health to database with extended details
+    try {
+      await this.persistHealth(
+        server.name,
+        health,
+        lastHealthCheck,
+        server.url,
+        result.timestamp,
+        result.status === "online" ? result.timestamp : server.lastHealthyTime,
+        result.status === "offline" ? result.timestamp : server.lastErrorTime,
+        result.errorMessage,
+        result.errorCode,
+        result.responseTimeMs,
+      );
+    } catch (error) {
+      logger.warn("Failed to persist health check to database", {
+        serverName: server.name,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      // Don't throw - health check persistence failures shouldn't break health checking
+    }
+
+    return {
+      name: server.name,
+      health,
+      lastHealthCheck,
+    };
   }
 
   async check(): Promise<
@@ -230,20 +274,31 @@ class HealthCheckManager {
 
     const updates = await Promise.all(
       servers.map(async (server) => {
-        const health = await this.checkServerHealth(server.url);
+        const result = await checkServerHealth(server.url);
         const lastHealthCheck = new Date().toISOString();
+        const health: HealthStatus = result.status === "online" ? "up" : "down";
 
         // Update the server object (for backward compatibility)
         server.health = health;
         server.lastHealthCheck = lastHealthCheck;
 
-        // Persist health to database
+        // Persist health to database with extended details
         try {
           await this.persistHealth(
             server.name,
             health,
             lastHealthCheck,
             server.url,
+            result.timestamp,
+            result.status === "online"
+              ? result.timestamp
+              : server.lastHealthyTime,
+            result.status === "offline"
+              ? result.timestamp
+              : server.lastErrorTime,
+            result.errorMessage,
+            result.errorCode,
+            result.responseTimeMs,
           );
         } catch (error) {
           logger.warn("Failed to persist health check to database", {
@@ -557,6 +612,9 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
       },
       check: async () => {
         return await healthCheckManager.check();
+      },
+      checkOne: async (serverName: string) => {
+        return await healthCheckManager.checkOne(serverName);
       },
     },
 

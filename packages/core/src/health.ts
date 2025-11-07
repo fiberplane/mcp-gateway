@@ -1,6 +1,11 @@
-import type { HealthStatus } from "@fiberplane/mcp-gateway-types";
+import type { HealthCheckResult } from "@fiberplane/mcp-gateway-types";
+import { extractErrorCode } from "./utils/error-detection.js";
 
-export async function checkServerHealth(url: string): Promise<HealthStatus> {
+export async function checkServerHealth(
+  url: string,
+): Promise<HealthCheckResult> {
+  const startTime = Date.now();
+
   try {
     // Try OPTIONS first (lightweight), fallback to HEAD
     const response = await fetch(url, {
@@ -8,15 +13,36 @@ export async function checkServerHealth(url: string): Promise<HealthStatus> {
       signal: AbortSignal.timeout(5000), // 5s timeout
     });
 
+    const responseTimeMs = Date.now() - startTime;
+    const timestamp = Date.now();
+
     // 2xx, 3xx, 4xx all mean server is responding
     // Only 5xx or network errors mean "down"
     if (response.status < 500) {
-      return "up";
+      return {
+        status: "online",
+        responseTimeMs,
+        timestamp,
+      };
     }
 
-    return "down";
-  } catch (_error) {
-    // Network errors, timeouts, DNS failures = down
-    return "down";
+    return {
+      status: "offline",
+      errorCode: "HTTP_ERROR",
+      errorMessage: `HTTP ${response.status}: ${response.statusText}`,
+      timestamp,
+    };
+  } catch (error) {
+    // Network errors, timeouts, DNS failures = offline
+    const timestamp = Date.now();
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorCode = extractErrorCode(error);
+
+    return {
+      status: "offline",
+      errorCode,
+      errorMessage,
+      timestamp,
+    };
   }
 }

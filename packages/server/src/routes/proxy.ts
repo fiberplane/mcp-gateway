@@ -5,6 +5,7 @@ import {
   logger,
   parseJsonRpcFromSSE,
   resolveJsonRpcMethod,
+  ServerNotFoundError,
 } from "@fiberplane/mcp-gateway-core";
 import type {
   ApiRequestLogEntry,
@@ -380,9 +381,14 @@ export async function createProxyRoutes(options: {
       const { server: serverName } = c.req.valid("param");
 
       // Find server in registry
-      const server = await deps.getServer(serverName);
-      if (!server) {
-        return c.notFound();
+      let server: McpServer;
+      try {
+        server = await deps.getServer(serverName);
+      } catch (error) {
+        if (error instanceof ServerNotFoundError) {
+          return c.notFound();
+        }
+        throw error;
       }
 
       // Extract session ID from headers
@@ -545,9 +551,14 @@ export async function createProxyRoutes(options: {
     sValidator("header", sessionHeaderSchema),
     async (c) => {
       const { server: serverName } = c.req.valid("param");
-      const server = await deps.getServer(serverName);
-      if (!server) {
-        return c.notFound();
+      let server: McpServer;
+      try {
+        server = await deps.getServer(serverName);
+      } catch (error) {
+        if (error instanceof ServerNotFoundError) {
+          return c.notFound();
+        }
+        throw error;
       }
 
       // We don't want to forward the Content-Type header, since this is a DELETE request
@@ -576,9 +587,14 @@ export async function createProxyRoutes(options: {
       const jsonRpcMessage = c.req.valid("json");
 
       // Find server in registry
-      const server = await deps.getServer(serverName);
-      if (!server) {
-        return c.notFound();
+      let server: McpServer;
+      try {
+        server = await deps.getServer(serverName);
+      } catch (error) {
+        if (error instanceof ServerNotFoundError) {
+          return c.notFound();
+        }
+        throw error;
       }
 
       // Extract session ID from headers

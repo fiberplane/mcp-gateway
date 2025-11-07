@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Check, Copy, Plus } from "lucide-react";
 import { useEffect, useMemo, useRef } from "react";
 import { useServerModal } from "../contexts/ServerModalContext";
-import { useServerConfig } from "../hooks/use-server-configs";
 import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
 import { api } from "../lib/api";
 import { POLLING_INTERVALS } from "../lib/constants";
@@ -20,12 +19,14 @@ interface ServerTabsProps {
 
 function getStatusVariant(
   status: ServerStatus,
-): "success" | "error" | "neutral" {
+  hasHistory?: boolean,
+): "success" | "error" | "warning" | "neutral" {
   switch (status) {
     case "online":
       return "success";
     case "offline":
-      return "error";
+      // Differentiate: warning if it used to work, error if never worked
+      return hasHistory ? "warning" : "error";
     case "not-found":
       return "neutral";
     default:
@@ -51,6 +52,8 @@ type ServerTabProps = {
   title?: string;
   name: string;
   status: ServerStatus;
+  url: string;
+  lastHealthyTime?: number;
 };
 
 function ServerTab({
@@ -60,12 +63,13 @@ function ServerTab({
   title,
   name,
   status,
+  url,
+  lastHealthyTime,
 }: ServerTabProps) {
-  const serverConfig = useServerConfig(name);
   const { copy, copied } = useCopyToClipboard();
 
-  // Use server config URL as title if available, otherwise use provided title
-  const originalUrl = title ?? serverConfig?.url;
+  // Use URL from server info as title if no explicit title provided
+  const originalUrl = title ?? url;
   const gatewayUrl = `${window.location.origin}/s/${name}/mcp`;
 
   const handleCopyTooltip = (e: React.MouseEvent) => {
@@ -91,16 +95,11 @@ function ServerTab({
         }
       `}
     >
-      <StatusDot variant={getStatusVariant(status)} aria-label={status} />
-      <span className={getTextColor(status, isSelected)}>
-        {name}
-        {status === "offline" && (
-          <span className="text-xs ml-1">(offline)</span>
-        )}
-        {status === "not-found" && (
-          <span className="text-xs ml-1">(not found)</span>
-        )}
-      </span>
+      <StatusDot
+        variant={getStatusVariant(status, !!lastHealthyTime)}
+        aria-label={status}
+      />
+      <span className={getTextColor(status, isSelected)}>{name}</span>
     </button>
   );
 
@@ -302,6 +301,8 @@ export function ServerTabs({ value, onChange, panelId }: ServerTabsProps) {
             onChange={onChange}
             name={server.name}
             status={server.status}
+            url={server.url}
+            lastHealthyTime={server.lastHealthyTime}
           />
         );
       })}

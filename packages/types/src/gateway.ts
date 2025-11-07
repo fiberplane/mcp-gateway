@@ -178,9 +178,10 @@ export interface Gateway {
      * Get a specific server by name
      *
      * @param name - Server name to lookup
-     * @returns Server if found, undefined otherwise
+     * @returns Server configuration with metrics
+     * @throws {ServerNotFoundError} When server doesn't exist
      */
-    getServer(name: string): Promise<McpServer | undefined>;
+    getServer(name: string): Promise<McpServer>;
 
     /**
      * Add a new server to the registry
@@ -294,6 +295,16 @@ export interface Gateway {
         lastHealthCheck: string;
       }>
     >;
+
+    /**
+     * Check health of a single server by name
+     * @throws {ServerNotFoundError} When server doesn't exist
+     */
+    checkOne(serverName: string): Promise<{
+      name: string;
+      health: HealthStatus;
+      lastHealthCheck: string;
+    }>;
   };
 
   /**

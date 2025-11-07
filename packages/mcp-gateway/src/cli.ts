@@ -444,6 +444,13 @@ export async function runCli(): Promise<void> {
         updateServer: (name, changes) =>
           gateway.storage.updateServer(name, changes),
         removeServer: (name) => gateway.storage.removeServer(name),
+        checkServerHealth: async (name) => {
+          // Trigger manual health check for specific server
+          // Throws ServerNotFoundError if server doesn't exist
+          await gateway.health.checkOne(name);
+          // Return updated server info (throws ServerNotFoundError if not found)
+          return await gateway.storage.getServer(name);
+        },
       },
     });
     app.route("/api", apiApp);

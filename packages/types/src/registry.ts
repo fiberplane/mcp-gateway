@@ -2,6 +2,22 @@
 export type HealthStatus = "up" | "down" | "unknown";
 
 /**
+ * Result from a health check operation
+ */
+export interface HealthCheckResult {
+  /** Status determined by health check */
+  status: "online" | "offline";
+  /** Response time in milliseconds (only for successful checks) */
+  responseTimeMs?: number;
+  /** Error code if check failed (ECONNREFUSED, ETIMEDOUT, ENOTFOUND, HTTP_ERROR, INVALID_RESPONSE, TIMEOUT) */
+  errorCode?: string;
+  /** Detailed error message if check failed */
+  errorMessage?: string;
+  /** Timestamp when check was performed */
+  timestamp: number;
+}
+
+/**
  * MCP Server configuration (persisted to mcp.json)
  *
  * Contains only the static configuration needed to connect to a server.
@@ -24,7 +40,7 @@ export interface McpServerConfig {
  * **Field categories:**
  * - **Persisted (saved to mcp.json):** name, url, type, headers
  * - **Computed (derived from SQLite logs):** lastActivity, exchangeCount
- * - **Persisted (saved to SQLite server_health table):** health, lastHealthCheck
+ * - **Persisted (saved to SQLite server_health table):** health, lastHealthCheck, lastCheckTime, lastHealthyTime, lastErrorTime, errorMessage, errorCode, responseTimeMs
  *
  * Extends McpServerConfig with computed metrics and runtime state.
  */
@@ -37,4 +53,16 @@ export interface McpServer extends McpServerConfig {
   health?: HealthStatus;
   /** Last health check timestamp (persisted in server_health table) */
   lastHealthCheck?: string;
+  /** Timestamp of last health check in ms (persisted in server_health table) */
+  lastCheckTime?: number;
+  /** Timestamp of last successful health check in ms (persisted in server_health table) */
+  lastHealthyTime?: number;
+  /** Timestamp of last failed health check in ms (persisted in server_health table) */
+  lastErrorTime?: number;
+  /** Error message from last failed health check (persisted in server_health table) */
+  errorMessage?: string;
+  /** Error code from last failed health check (persisted in server_health table) */
+  errorCode?: string;
+  /** Response time from last successful health check in ms (persisted in server_health table) */
+  responseTimeMs?: number;
 }

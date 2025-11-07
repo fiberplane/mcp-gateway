@@ -134,9 +134,10 @@ export interface StorageBackend {
    * Get a specific registered server by name
    *
    * @param name - Server name to lookup
-   * @returns Server if found, undefined otherwise
+   * @returns Server configuration with metrics
+   * @throws {ServerNotFoundError} When server doesn't exist
    */
-  getServer(name: string): Promise<McpServer | undefined>;
+  getServer(name: string): Promise<McpServer>;
 
   /**
    * Add a new server to the registry
@@ -186,12 +187,24 @@ export interface StorageBackend {
    * @param health - Health status ("up" | "down" | "unknown")
    * @param lastCheck - ISO timestamp of the health check
    * @param url - Server URL
+   * @param lastCheckTime - Timestamp in ms of last check
+   * @param lastHealthyTime - Timestamp in ms of last successful check
+   * @param lastErrorTime - Timestamp in ms of last failed check
+   * @param errorMessage - Error message from last failed check
+   * @param errorCode - Error code from last failed check
+   * @param responseTimeMs - Response time from last successful check
    */
   upsertServerHealth(
     serverName: string,
     health: HealthStatus,
     lastCheck: string,
     url: string,
+    lastCheckTime?: number,
+    lastHealthyTime?: number,
+    lastErrorTime?: number,
+    errorMessage?: string,
+    errorCode?: string,
+    responseTimeMs?: number,
   ): Promise<void>;
 
   /**
