@@ -9,6 +9,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { api } from "./api";
+import { POLLING_INTERVALS, QUERY_CONFIG } from "./constants";
 
 interface UseAvailableMethodsOptions {
   /** Optional server filter to scope the results */
@@ -34,8 +35,8 @@ export function useAvailableMethods(options: UseAvailableMethodsOptions = {}) {
   return useQuery({
     queryKey: ["methods", serverName],
     queryFn: async () => await api.getMethods(serverName),
-    refetchInterval: enabled ? 5000 : false, // Only refresh when enabled
-    staleTime: 4000, // Consider data stale after 4 seconds
+    refetchInterval: enabled ? POLLING_INTERVALS.SERVERS : false, // Only refresh when enabled
+    staleTime: QUERY_CONFIG.STALE_TIME,
     enabled, // Control whether query runs
   });
 }
@@ -62,8 +63,8 @@ export function useAvailableClients(options: UseAvailableClientsOptions = {}) {
   return useQuery({
     queryKey: ["clients"],
     queryFn: async () => await api.getClients(),
-    refetchInterval: enabled ? 5000 : false, // Only refresh when enabled
-    staleTime: 4000,
+    refetchInterval: enabled ? POLLING_INTERVALS.SERVERS : false, // Only refresh when enabled
+    staleTime: QUERY_CONFIG.STALE_TIME,
     enabled, // Control whether query runs
   });
 }
@@ -94,8 +95,8 @@ export function useAvailableSessions(
   return useQuery({
     queryKey: ["sessions", serverName],
     queryFn: async () => await api.getSessions(serverName),
-    refetchInterval: enabled ? 5000 : false, // Only refresh when enabled
-    staleTime: 4000,
+    refetchInterval: enabled ? POLLING_INTERVALS.SESSIONS : false, // Only refresh when enabled
+    staleTime: QUERY_CONFIG.STALE_TIME,
     enabled, // Control whether query runs
   });
 }
@@ -122,8 +123,8 @@ export function useAvailableServers(options: UseAvailableServersOptions = {}) {
   return useQuery({
     queryKey: ["servers"],
     queryFn: async () => await api.getServers(),
-    refetchInterval: enabled ? 5000 : false, // Only refresh when enabled
-    staleTime: 4000,
+    refetchInterval: enabled ? POLLING_INTERVALS.SERVERS : false, // Only refresh when enabled
+    staleTime: QUERY_CONFIG.STALE_TIME,
     enabled, // Control whether query runs
   });
 }

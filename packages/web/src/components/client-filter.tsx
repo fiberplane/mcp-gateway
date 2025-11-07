@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
+import { POLLING_INTERVALS } from "../lib/constants";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 
 interface ClientFilterProps {
@@ -11,7 +12,7 @@ export function ClientFilter({ value, onChange }: ClientFilterProps) {
   const { data, isLoading } = useQuery({
     queryKey: ["clients"],
     queryFn: () => api.getClients(),
-    refetchInterval: 5000, // Refresh less often than logs
+    refetchInterval: POLLING_INTERVALS.SERVERS,
   });
 
   if (isLoading || !data) {

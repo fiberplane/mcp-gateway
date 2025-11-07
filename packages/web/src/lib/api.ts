@@ -270,11 +270,16 @@ class APIClient {
     );
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(
-        error.message ||
-          `Failed to check server health: ${response.statusText}`,
-      );
+      const error = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        message?: string;
+      };
+      // Extract error message: prioritize error.message, then error.error, then status text
+      const errorMessage =
+        (typeof error.message === "string" && error.message) ||
+        (typeof error.error === "string" && error.error) ||
+        response.statusText;
+      throw new Error(`Failed to check server health: ${errorMessage}`);
     }
 
     return response.json();

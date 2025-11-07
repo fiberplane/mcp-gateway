@@ -214,16 +214,20 @@ export function FilterBar({ actions }: FilterBarProps) {
   const handleRemoveFilter = (filterId: string) => {
     const updatedFilters = removeFilter(filters, filterId);
     const newParams = filtersToFilterParams(updatedFilters);
-    // Preserve server selection (managed separately via tabs)
-    newParams.server = filterParams.server;
+    // Preserve tab-selected server (no operator), but allow filter-bar server filters (with operators)
+    if (filterParams.server && !filterParams.server.includes(":")) {
+      newParams.server = filterParams.server;
+    }
     setFilterParams(newParams);
   };
 
   const handleAddFilter = (filter: ReturnType<typeof createFilter>) => {
     const updatedFilters = addOrReplaceFilter(filters, filter);
     const newParams = filtersToFilterParams(updatedFilters);
-    // Preserve server selection (managed separately via tabs)
-    newParams.server = filterParams.server;
+    // Preserve tab-selected server (no operator), but allow filter-bar server filters (with operators)
+    if (filterParams.server && !filterParams.server.includes(":")) {
+      newParams.server = filterParams.server;
+    }
     setFilterParams(newParams);
     // Clear editing state
     setEditingValue(undefined);
@@ -236,8 +240,10 @@ export function FilterBar({ actions }: FilterBarProps) {
   const handleRemoveFilterByField = (field: string) => {
     const updatedFilters = filters.filter((f) => f.field !== field);
     const newParams = filtersToFilterParams(updatedFilters);
-    // Preserve server selection (managed separately via tabs)
-    newParams.server = filterParams.server;
+    // Preserve tab-selected server (no operator), but allow filter-bar server filters (with operators)
+    if (filterParams.server && !filterParams.server.includes(":")) {
+      newParams.server = filterParams.server;
+    }
     setFilterParams(newParams);
   };
 
@@ -288,6 +294,10 @@ export function FilterBar({ actions }: FilterBarProps) {
     if (editingFilter) {
       const updatedFilters = addOrReplaceFilter(filters, editingFilter);
       const newParams = filtersToFilterParams(updatedFilters);
+      // Preserve tab-selected server (no operator), but allow filter-bar server filters (with operators)
+      if (filterParams.server && !filterParams.server.includes(":")) {
+        newParams.server = filterParams.server;
+      }
       setFilterParams(newParams);
     }
     // Clear editing state
@@ -296,12 +306,16 @@ export function FilterBar({ actions }: FilterBarProps) {
   };
 
   const handleClearAll = () => {
-    // Clear filters and search terms, but preserve server selection (displayed in tabs)
+    // Clear filters and search terms, but preserve tab-selected server (no operator)
+    const preservedServer =
+      filterParams.server && !filterParams.server.includes(":")
+        ? filterParams.server
+        : null;
     setFilterParams({
       client: null,
       method: null,
       session: null,
-      server: filterParams.server, // Preserve server filter
+      server: preservedServer, // Preserve only tab-selected server, not filter-bar server filters
       duration: null,
       tokens: null,
     });
