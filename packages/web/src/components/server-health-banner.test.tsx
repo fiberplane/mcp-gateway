@@ -84,7 +84,7 @@ describe("ServerHealthBanner", () => {
     );
 
     expect(
-      screen.getByText('Server "test-server" is offline'),
+      screen.getByText('Server "test-server" has never responded'),
     ).toBeInTheDocument();
   });
 
@@ -169,11 +169,11 @@ describe("ServerHealthBanner", () => {
       />,
     );
 
-    expect(screen.getByText(/Last online:/)).toBeInTheDocument();
+    expect(screen.getByText(/Was online:/)).toBeInTheDocument();
     expect(screen.getByText(/2m ago/)).toBeInTheDocument();
   });
 
-  test("does not display last online time when not available", () => {
+  test("does not display was online time when not available", () => {
     const server = createOfflineServer({
       lastHealthyTime: undefined,
     });
@@ -186,7 +186,7 @@ describe("ServerHealthBanner", () => {
       />,
     );
 
-    expect(screen.queryByText(/Last online:/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Was online:/)).not.toBeInTheDocument();
   });
 
   test("calls onRetry when health check button is clicked", () => {

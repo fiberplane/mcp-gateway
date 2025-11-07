@@ -6,6 +6,7 @@ import { useTimeAgo } from "../hooks/use-time-ago";
 import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
 import { formatErrorMessage } from "../lib/error-formatting";
 import { Button } from "./ui/button";
+import { StatusDot } from "./ui/status-dot";
 
 /**
  * Escape shell argument for safe CLI command generation
@@ -33,17 +34,24 @@ function OfflineServerCard({
 }) {
   const lastChecked = useTimeAgo(server.lastCheckTime);
 
+  // Determine if server never worked (configuration issue) vs used to work (transient failure)
+  const neverWorked = !server.lastHealthyTime;
+  const statusVariant = neverWorked ? "error" : "warning";
+
   return (
     <div className="bg-card border border-border rounded-lg p-4">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 rounded-full bg-status-error" />
+            <StatusDot
+              variant={statusVariant}
+              aria-label={neverWorked ? "Never worked" : "Previously worked"}
+            />
             <span className="text-sm font-semibold text-foreground">
               {server.name}
             </span>
           </div>
-          <p className="text-sm text-status-error mb-1">
+          <p className="text-sm text-muted-foreground mb-1">
             {formatErrorMessage(server.errorCode, server.errorMessage)}
           </p>
           <p className="text-xs text-muted-foreground">

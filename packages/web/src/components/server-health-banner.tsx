@@ -6,6 +6,7 @@ import { useTimeAgo } from "../hooks/use-time-ago";
 import { api } from "../lib/api";
 import { formatErrorMessage } from "../lib/error-formatting";
 import { Button } from "./ui/button";
+import { StatusDot } from "./ui/status-dot";
 
 interface ServerHealthBannerProps {
   server: ServerInfo;
@@ -33,6 +34,17 @@ export function ServerHealthBanner({
   if (server.health !== "down") {
     return null;
   }
+
+  // Determine if this server used to work (transient failure) or never worked (config issue)
+  const neverWorked = !server.lastHealthyTime;
+
+  // Choose semantic colors for StatusDot based on server history
+  const statusVariant = neverWorked ? "error" : "warning";
+
+  // Contextual header message
+  const headerMessage = neverWorked
+    ? `Server "${server.name}" has never responded`
+    : `Server "${server.name}" is offline`;
 
   // Handler to fetch full server config before opening modal
   const handleManageServer = async () => {
@@ -74,9 +86,14 @@ export function ServerHealthBanner({
       <div className="rounded-lg border border-border bg-card p-4">
         <div className="grid">
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-2 h-2 rounded-full bg-status-error" />
+            <StatusDot
+              variant={statusVariant}
+              aria-label={
+                neverWorked ? "Server never worked" : "Server used to work"
+              }
+            />
             <h3 className="text-sm font-semibold text-foreground">
-              Server "{server.name}" is offline
+              {headerMessage}
             </h3>
           </div>
 
@@ -92,7 +109,7 @@ export function ServerHealthBanner({
                 </p>
                 {server.lastHealthyTime && (
                   <p className="text-xs text-muted-foreground">
-                    Last online: {lastOnline}
+                    Was online: {lastOnline}
                   </p>
                 )}
               </div>
