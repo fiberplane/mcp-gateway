@@ -35,6 +35,12 @@ function formatTimeAgo(timestamp?: number): string {
 
   const now = Date.now();
   const diff = now - timestamp;
+
+  // Validate timestamp is not in the future (with 1s tolerance for clock skew)
+  if (diff < -1000) {
+    return "just now";
+  }
+
   const seconds = Math.floor(diff / 1000);
 
   if (seconds < 60) return `${seconds}s ago`;

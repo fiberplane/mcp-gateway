@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useHealthCheck } from "../hooks/use-health-check";
 import { useTimeAgo } from "../hooks/use-time-ago";
 import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
+import { formatErrorMessage } from "../lib/error-formatting";
 import { Button } from "./ui/button";
 
 /**
@@ -12,26 +13,6 @@ import { Button } from "./ui/button";
  */
 function escapeShellArg(arg: string): string {
   return `"${arg.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\$/g, "\\$").replace(/`/g, "\\`")}"`;
-}
-
-/**
- * Format error code to human-readable message
- */
-function formatErrorMessage(errorCode?: string, errorMessage?: string): string {
-  if (!errorCode) {
-    return errorMessage || "Unknown error";
-  }
-
-  const errorMap: Record<string, string> = {
-    ECONNREFUSED: "Connection refused",
-    ETIMEDOUT: "Connection timed out",
-    ENOTFOUND: "DNS lookup failed",
-    TIMEOUT: "Request timed out",
-    HTTP_ERROR: "Server error",
-    ECONNRESET: "Connection reset",
-  };
-
-  return errorMap[errorCode] || errorCode;
 }
 
 /**

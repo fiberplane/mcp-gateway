@@ -201,7 +201,7 @@ describe("ServerHealthBanner", () => {
       />,
     );
 
-    const retryButton = screen.getByRole("button", { name: /Health Check/i });
+    const retryButton = screen.getByRole("button", { name: /Check Health/i });
     fireEvent.click(retryButton);
 
     expect(onRetry).toHaveBeenCalledTimes(1);
@@ -236,7 +236,7 @@ describe("ServerHealthBanner", () => {
     expect(screen.getByText("Checking...")).toBeInTheDocument();
   });
 
-  test("shows 'Health Check' text when not retrying", () => {
+  test("shows 'Check Health' text when not retrying", () => {
     const server = createOfflineServer();
 
     render(
@@ -247,10 +247,10 @@ describe("ServerHealthBanner", () => {
       />,
     );
 
-    expect(screen.getByText("Health Check")).toBeInTheDocument();
+    expect(screen.getByText("Check Health")).toBeInTheDocument();
   });
 
-  test("renders manage button", () => {
+  test("renders edit button", () => {
     const server = createOfflineServer();
 
     render(
@@ -261,7 +261,7 @@ describe("ServerHealthBanner", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: /Manage/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Edit/i })).toBeInTheDocument();
   });
 
   test("handles unknown error code gracefully", () => {

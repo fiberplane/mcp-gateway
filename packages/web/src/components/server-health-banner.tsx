@@ -1,33 +1,16 @@
 import type { ServerInfo } from "@fiberplane/mcp-gateway-types";
 import { RefreshCw, Server } from "lucide-react";
+import { useState } from "react";
 import { useServerModal } from "../contexts/ServerModalContext";
 import { useTimeAgo } from "../hooks/use-time-ago";
+import { api } from "../lib/api";
+import { formatErrorMessage } from "../lib/error-formatting";
 import { Button } from "./ui/button";
 
 interface ServerHealthBannerProps {
   server: ServerInfo;
   onRetry: () => void;
   isRetrying: boolean;
-}
-
-/**
- * Format error code to human-readable message
- */
-function formatErrorMessage(errorCode?: string, errorMessage?: string): string {
-  if (!errorCode) {
-    return errorMessage || "Unknown error";
-  }
-
-  const errorMap: Record<string, string> = {
-    ECONNREFUSED: "Connection refused",
-    ETIMEDOUT: "Connection timed out",
-    ENOTFOUND: "DNS lookup failed",
-    TIMEOUT: "Request timed out",
-    HTTP_ERROR: "Server error",
-    ECONNRESET: "Connection reset",
-  };
-
-  return errorMap[errorCode] || errorCode;
 }
 
 /**
@@ -44,6 +27,7 @@ export function ServerHealthBanner({
   const lastChecked = useTimeAgo(server.lastCheckTime);
   const lastOnline = useTimeAgo(server.lastHealthyTime);
   const { openEditServerModal } = useServerModal();
+  const [isLoadingConfig, setIsLoadingConfig] = useState(false);
 
   // Only show banner if server is offline
   if (server.health !== "down") {
@@ -52,14 +36,37 @@ export function ServerHealthBanner({
 
   // Handler to fetch full server config before opening modal
   const handleManageServer = async () => {
-    // TODO: Fetch full server config with headers
-    // For now, create minimal config (type and headers will be fetched by modal)
-    openEditServerModal({
-      name: server.name,
-      url: server.url,
-      type: "http",
-      headers: {},
-    });
+    try {
+      setIsLoadingConfig(true);
+      // Fetch full server configs to get headers
+      const { servers } = await api.getServerConfigs();
+      const fullConfig = servers.find((s) => s.name === server.name);
+
+      if (fullConfig) {
+        // Open modal with complete config including headers
+        openEditServerModal(fullConfig);
+      } else {
+        // Fallback: server not found in configs (shouldn't happen)
+        // Use minimal config - user can still edit but won't have existing headers
+        openEditServerModal({
+          name: server.name,
+          url: server.url,
+          type: "http",
+          headers: {},
+        });
+      }
+    } catch (_error) {
+      // Fallback: show modal with minimal config
+      // User can still edit but won't have existing headers
+      openEditServerModal({
+        name: server.name,
+        url: server.url,
+        type: "http",
+        headers: {},
+      });
+    } finally {
+      setIsLoadingConfig(false);
+    }
   };
 
   return (
@@ -102,11 +109,12 @@ export function ServerHealthBanner({
               </Button>
               <Button
                 onClick={handleManageServer}
+                disabled={isLoadingConfig}
                 variant="outline"
                 className="gap-2"
               >
                 <Server />
-                Edit
+                {isLoadingConfig ? "Loading..." : "Edit"}
               </Button>
             </div>
           </div>
