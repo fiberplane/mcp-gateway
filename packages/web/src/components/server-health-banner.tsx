@@ -82,7 +82,7 @@ export function ServerHealthBanner({
   };
 
   return (
-    <div className="max-w-3xl mx-auto mb-6">
+    <div className="max-w-sm mx-auto mb-6">
       <div className="rounded-lg border border-border bg-card p-4">
         <div className="grid">
           <div className="flex items-center gap-2 mb-3">
@@ -113,6 +113,12 @@ export function ServerHealthBanner({
                   </p>
                 )}
               </div>
+            </div>
+            <div className="text-xs text-muted-foreground ml-4">
+              <p>
+                Health checks verify the server is reachable by sending an
+                OPTIONS request to its configured URL.
+              </p>
             </div>
             <div className="grid gap-2 grid-cols-2">
               <Button
