@@ -16,7 +16,11 @@ function escapeShellArg(arg: string): string {
 }
 
 /**
- * Server card component for offline servers (uses hooks)
+ * Offline Server Card
+ *
+ * Displays an individual offline server with error details and retry button.
+ * Used within EmptyStateNoLogs to show servers that failed health checks.
+ * Includes hooks for time formatting and health check mutations.
  */
 function OfflineServerCard({
   server,
