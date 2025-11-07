@@ -43,7 +43,7 @@
     },
     "packages/mcp-gateway": {
       "name": "@fiberplane/mcp-gateway",
-      "version": "0.5.0",
+      "version": "0.5.1",
       "bin": {
         "mcp-gateway": "bin/mcp-gateway.js",
       },
