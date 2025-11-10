@@ -4,6 +4,8 @@
 
 MCP Gateway provides a centralized platform for discovering, routing, and logging all MCP protocol traffic. Use it to manage multiple MCP servers, capture detailed interaction logs, and troubleshoot integration issues with Claude and other AI clients.
 
+![Screenshot](https://github.com/fiberplane/mcp-gateway/raw/main/packages/mcp-gateway/assets/mcp-gateway.jpg)
+
 ## Features
 
 ### Core Capabilities
