@@ -1,9 +1,9 @@
+import { logger } from "@fiberplane/mcp-gateway-core";
 import type { Gateway } from "@fiberplane/mcp-gateway-types";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { McpServer, RpcError, StreamableHttpTransport } from "mcp-lite";
 import { z } from "zod";
-import { logger } from "../logger";
 import { createCaptureTools } from "./tools/capture-tools";
 import { createServerTools } from "./tools/server-tools";
 

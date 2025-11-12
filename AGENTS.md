@@ -25,12 +25,19 @@ This is a Bun workspace monorepo containing the MCP Gateway project. The reposit
 │   │   │   ├── registry/        # Registry operations
 │   │   │   ├── capture/         # MCP traffic capture
 │   │   │   ├── logs/            # Log storage and queries
-│   │   │   ├── mcp/             # MCP server & tools
 │   │   │   ├── utils/           # Shared utilities
 │   │   │   ├── logger.ts        # Logging infrastructure
 │   │   │   └── health.ts        # Health checks
 │   │   ├── package.json         # Core package configuration
 │   │   └── tsconfig.json
+│   ├── management-mcp/          # @fiberplane/mcp-gateway-management-mcp
+│   │   ├── src/                 # Gateway management MCP API
+│   │   │   ├── tools/           # MCP tools (server & capture)
+│   │   │   ├── app.ts           # MCP server creation
+│   │   │   └── index.ts         # Public exports
+│   │   ├── package.json         # Management MCP package configuration
+│   │   ├── tsconfig.json
+│   │   └── README.md            # Management MCP documentation
 │   ├── server/                  # @fiberplane/mcp-gateway-server
 │   │   ├── src/                 # HTTP server with proxy
 │   │   │   ├── routes/          # Proxy and OAuth routes
@@ -72,7 +79,7 @@ This is a Bun workspace monorepo containing the MCP Gateway project. The reposit
 ### Development Commands
 - `bun install` - Install all workspace dependencies
 - `bun run dev` - Start development mode (filters to CLI package)
-- `bun run build` - Build all packages in dependency order (types → core → api → server → web → cli)
+- `bun run build` - Build all packages in dependency order (types → core → api → management-mcp → server → web → cli)
 - `bun run clean` - Clean all dist folders
 - `bun run test` - Run all tests across workspace (runs each workspace's tests with proper config)
 - `bun run typecheck` - Type check all packages
@@ -85,6 +92,7 @@ This is a Bun workspace monorepo containing the MCP Gateway project. The reposit
 - `bun run --filter @fiberplane/mcp-gateway-types build` - Build types package
 - `bun run --filter @fiberplane/mcp-gateway-core build` - Build core package
 - `bun run --filter @fiberplane/mcp-gateway-api build` - Build API package
+- `bun run --filter @fiberplane/mcp-gateway-management-mcp build` - Build management MCP package
 - `bun run --filter @fiberplane/mcp-gateway-server build` - Build server package
 - `bun run --filter @fiberplane/mcp-gateway-web build` - Build web UI
 - `bun run --filter @fiberplane/mcp-gateway-web dev` - Dev mode for web UI (Vite dev server)
@@ -104,24 +112,27 @@ This is a Bun workspace monorepo containing the MCP Gateway project. The reposit
 - This is a **Bun workspace** - always use `bun` commands, not npm/yarn
 - Several packages with clear boundaries:
   - `@fiberplane/mcp-gateway-types` - Pure types and Zod schemas (no runtime deps)
-  - `@fiberplane/mcp-gateway-core` - Business logic (registry, capture, logs, health, logger, MCP server)
+  - `@fiberplane/mcp-gateway-core` - Business logic (registry, capture, logs, health, logger)
   - `@fiberplane/mcp-gateway-api` - REST API for querying logs (uses dependency injection)
-  - `@fiberplane/mcp-gateway-server` - MCP protocol HTTP server (proxy, OAuth, gateway MCP server)
+  - `@fiberplane/mcp-gateway-management-mcp` - MCP protocol API for gateway management
+  - `@fiberplane/mcp-gateway-server` - MCP protocol HTTP server (proxy, OAuth)
   - `@fiberplane/mcp-gateway-web` - React-based web UI for browsing logs (relies on the REST API)
-  - `@fiberplane/mcp-gateway` - Main CLI package that orchestrates server + API + web UI
+  - `@fiberplane/mcp-gateway` - Main CLI package that orchestrates server + API + management MCP + web UI
 - Use `--filter` flags for package-specific operations
 - Test MCP server is a separate workspace for testing proxy functionality
 
 ### 2. Package Dependencies
 ```
-types (no deps) → core (types) → api (core types only, DI) → cli (orchestrates all)
-                                ↘ server (core, MCP protocol) ↗
-                                ↘ web (api client) ↗
+types (no deps) → core (types) → api (core types only, DI) ────────┐
+                                ↘ management-mcp (core, MCP tools) ─┤→ cli (orchestrates all)
+                                ↘ server (core, proxy) ─────────────┤
+                                ↘ web (api client) ─────────────────┘
 ```
 - **No circular dependencies** - enforced by `madge` in CI
 - **API uses dependency injection** - query functions passed at runtime
-- **Server focuses on MCP protocol** - proxy, OAuth, gateway MCP server only
-- **CLI orchestrates everything** - mounts server, API, and web UI
+- **Management MCP is auth-agnostic** - wrapped with auth middleware at orchestration level
+- **Server focuses on proxy infrastructure** - proxy, OAuth, health checks only
+- **CLI orchestrates everything** - mounts server, API, management MCP, and web UI
 - During development, packages use `workspace:*` protocol
 - During publishing, `workspace:*` is replaced with actual version ranges
 - All packages are published to npm independently
@@ -131,7 +142,7 @@ types (no deps) → core (types) → api (core types only, DI) → cli (orchestr
 - Each package has its own build configuration
 - TypeScript declaration files generated only for library packages (not CLI or web)
 - Web package uses Vite for building React app
-- Build order matters: types → core → api → server/web → cli
+- Build order matters: types → core → api → management-mcp → server/web → cli
 
 ### 4. TypeScript Configuration
 - **Development mode**: Uses source `.ts` files directly (no build required for typechecking)

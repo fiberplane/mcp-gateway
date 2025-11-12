@@ -9,13 +9,12 @@ import { parseArgs } from "node:util";
 import { createApp as createApiApp } from "@fiberplane/mcp-gateway-api";
 import {
   createGateway,
-  createMcpApp,
   createRequestCaptureRecord,
   createResponseCaptureRecord,
   getStorageRoot,
   logger,
 } from "@fiberplane/mcp-gateway-core";
-
+import { createMcpApp } from "@fiberplane/mcp-gateway-management-mcp";
 import { createApp as createServerApp } from "@fiberplane/mcp-gateway-server";
 import type { ProxyDependencies } from "@fiberplane/mcp-gateway-types";
 import { serve } from "@hono/node-server";
@@ -249,10 +248,9 @@ export async function runCli(): Promise<void> {
       getServer: (name) => gateway.storage.getServer(name),
     };
 
-    // Create MCP protocol server (proxy, OAuth, gateway MCP server)
+    // Create MCP protocol server (proxy, OAuth)
     const { app: serverApp } = await createServerApp({
       storageDir,
-      createMcpApp,
       appLogger: logger,
       proxyDependencies,
       gateway,
@@ -454,6 +452,12 @@ export async function runCli(): Promise<void> {
       },
     });
     app.route("/api", apiApp);
+
+    // Mount gateway management MCP server
+    const managementMcpApp = createMcpApp(gateway);
+    app.route("/gateway", managementMcpApp);
+    // Short alias for gateway management MCP server
+    app.route("/g", managementMcpApp);
 
     // Serve Web UI for management
     // Check if public directory exists before mounting static file middleware
