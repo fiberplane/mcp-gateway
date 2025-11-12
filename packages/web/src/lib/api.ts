@@ -16,6 +16,38 @@ import type {
  */
 class APIClient {
   private baseURL = "/api";
+  private authToken: string | null = null;
+
+  /**
+   * Set authentication token
+   */
+  setToken(token: string): void {
+    this.authToken = token;
+  }
+
+  /**
+   * Get current authentication token (for display purposes)
+   */
+  getToken(): string {
+    return this.authToken || "";
+  }
+
+  /**
+   * Create fetch options with authentication header
+   */
+  private createAuthHeaders(options: RequestInit = {}): RequestInit {
+    if (!this.authToken) {
+      throw new Error("Authentication token not set. Call setToken() first.");
+    }
+
+    return {
+      ...options,
+      headers: {
+        ...options.headers,
+        Authorization: `Bearer ${this.authToken}`,
+      },
+    };
+  }
 
   /**
    * Get logs with optional filters
@@ -76,7 +108,8 @@ class APIClient {
       }
     }
 
-    const response = await fetch(url.toString());
+    const options = this.createAuthHeaders();
+    const response = await fetch(url.toString(), options);
     if (!response.ok) {
       throw new Error(`Failed to fetch logs: ${response.statusText}`);
     }
@@ -87,7 +120,8 @@ class APIClient {
    * Get list of servers with aggregations
    */
   async getServers(): Promise<{ servers: ServerInfo[] }> {
-    const response = await fetch(`${this.baseURL}/servers`);
+    const options = await this.createAuthHeaders();
+    const response = await fetch(`${this.baseURL}/servers`, options);
     if (!response.ok) {
       throw new Error(`Failed to fetch servers: ${response.statusText}`);
     }
@@ -103,7 +137,8 @@ class APIClient {
       url.searchParams.append("server", serverName);
     }
 
-    const response = await fetch(url.toString());
+    const options = this.createAuthHeaders();
+    const response = await fetch(url.toString(), options);
     if (!response.ok) {
       throw new Error(`Failed to fetch sessions: ${response.statusText}`);
     }
@@ -114,7 +149,8 @@ class APIClient {
    * Get list of clients with aggregations
    */
   async getClients(): Promise<{ clients: ClientAggregation[] }> {
-    const response = await fetch(`${this.baseURL}/clients`);
+    const options = await this.createAuthHeaders();
+    const response = await fetch(`${this.baseURL}/clients`, options);
     if (!response.ok) {
       throw new Error(`Failed to fetch clients: ${response.statusText}`);
     }
@@ -132,7 +168,8 @@ class APIClient {
       url.searchParams.append("server", serverName);
     }
 
-    const response = await fetch(url.toString());
+    const options = this.createAuthHeaders();
+    const response = await fetch(url.toString(), options);
     if (!response.ok) {
       throw new Error(`Failed to fetch methods: ${response.statusText}`);
     }
@@ -143,9 +180,10 @@ class APIClient {
    * Clear all session data (client info and server info)
    */
   async clearSessions(): Promise<{ success: boolean }> {
-    const response = await fetch(`${this.baseURL}/logs/clear`, {
+    const options = this.createAuthHeaders({
       method: "POST",
     });
+    const response = await fetch(`${this.baseURL}/logs/clear`, options);
     if (!response.ok) {
       throw new Error(`Failed to clear sessions: ${response.statusText}`);
     }
@@ -159,7 +197,8 @@ class APIClient {
    * This is different from getServers() which returns aggregated stats.
    */
   async getServerConfigs(): Promise<{ servers: McpServer[] }> {
-    const response = await fetch(`${this.baseURL}/servers/config`);
+    const options = await this.createAuthHeaders();
+    const response = await fetch(`${this.baseURL}/servers/config`, options);
     if (!response.ok) {
       throw new Error(
         `Failed to fetch server configurations: ${response.statusText}`,
@@ -177,13 +216,15 @@ class APIClient {
   async addServer(
     config: McpServerConfig,
   ): Promise<{ success: boolean; server: McpServerConfig }> {
-    const response = await fetch(`${this.baseURL}/servers/config`, {
+    const options = this.createAuthHeaders({
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(config),
     });
+
+    const response = await fetch(`${this.baseURL}/servers/config`, options);
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
@@ -206,15 +247,17 @@ class APIClient {
     name: string,
     changes: Partial<Omit<McpServerConfig, "name" | "type">>,
   ): Promise<{ success: boolean; message: string }> {
+    const options = this.createAuthHeaders({
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(changes),
+    });
+
     const response = await fetch(
       `${this.baseURL}/servers/config/${encodeURIComponent(name)}`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(changes),
-      },
+      options,
     );
 
     if (!response.ok) {
@@ -238,11 +281,13 @@ class APIClient {
   async deleteServer(
     name: string,
   ): Promise<{ success: boolean; message: string }> {
+    const options = this.createAuthHeaders({
+      method: "DELETE",
+    });
+
     const response = await fetch(
       `${this.baseURL}/servers/config/${encodeURIComponent(name)}`,
-      {
-        method: "DELETE",
-      },
+      options,
     );
 
     if (!response.ok) {
@@ -262,11 +307,13 @@ class APIClient {
    * @returns Updated server with health check results
    */
   async checkServerHealth(name: string): Promise<{ server: McpServer }> {
+    const options = this.createAuthHeaders({
+      method: "POST",
+    });
+
     const response = await fetch(
       `${this.baseURL}/servers/${encodeURIComponent(name)}/health-check`,
-      {
-        method: "POST",
-      },
+      options,
     );
 
     if (!response.ok) {

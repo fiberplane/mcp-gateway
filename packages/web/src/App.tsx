@@ -15,14 +15,23 @@ import {
 } from "@tanstack/react-query";
 import { Github, MessageCircle } from "lucide-react";
 import { useQueryState, useQueryStates } from "nuqs";
-import { useDeferredValue, useId, useMemo, useState } from "react";
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useId,
+  useMemo,
+  useState,
+} from "react";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { EmptyStateNoLogs } from "./components/empty-state-no-logs";
 import { EmptyStateNoServers } from "./components/empty-state-no-servers";
 import { ExportButton } from "./components/export-button";
 import { FiberplaneLogo } from "./components/fiberplane-logo";
 import { FilterBar } from "./components/filter-bar";
+import { InvalidTokenState } from "./components/invalid-token-state";
 import { LogTable } from "./components/log-table";
+import { NoTokenState } from "./components/no-token-state";
 import { Pagination } from "./components/pagination";
 import { ServerModalManager } from "./components/ServerModalManager";
 import { ServerHealthBanner } from "./components/server-health-banner";
@@ -79,6 +88,29 @@ function App() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isClearing, setIsClearing] = useState(false);
   const [clearError, setClearError] = useState<string | null>(null);
+  const [hasAuthError, setHasAuthError] = useState(false);
+
+  // Get auth token from URL query parameter
+  const [tokenFromUrl] = useQueryState("token");
+
+  // Set token in API client when available
+  useEffect(() => {
+    if (tokenFromUrl) {
+      api.setToken(tokenFromUrl);
+    }
+  }, [tokenFromUrl]);
+
+  // Helper to check if error is 401 Unauthorized
+  const isUnauthorizedError = useCallback((error: unknown): boolean => {
+    if (error instanceof Error) {
+      return (
+        error.message.includes("Unauthorized") ||
+        error.message.includes("401") ||
+        error.message.includes("Invalid token")
+      );
+    }
+    return false;
+  }, []);
 
   // Health check mutation
   const { mutate: checkHealth, isPending: isCheckingHealth } = useHealthCheck();
@@ -189,7 +221,7 @@ function App() {
     hasNextPage,
     isFetchingNextPage,
     isLoading,
-    error,
+    error: logsError,
   } = useInfiniteQuery({
     // Include URL state in queryKey so query automatically refetches when params change
     queryKey: ["logs", serverName, apiParams, searchQueries],
@@ -216,6 +248,7 @@ function App() {
     // Conditional polling - only when streaming is on
     refetchInterval: isStreaming ? POLLING_INTERVALS.LOGS : false,
     refetchIntervalInBackground: false, // Only poll when tab is active
+    enabled: !!tokenFromUrl && !hasAuthError, // Only fetch logs when token is available and valid
   });
 
   // Flatten all pages into single array
@@ -230,13 +263,23 @@ function App() {
 
   // Fetch server list for empty state (when no logs exist)
   const hasLogs = allLogs.length > 0;
-  const { data: serversData } = useQuery({
+  const { data: serversData, error: serversError } = useQuery({
     queryKey: ["servers"],
     queryFn: () => api.getServers(),
-    // Only fetch when showing empty state (no logs captured yet)
-    enabled: !hasLogs,
+    // Only fetch when showing empty state (no logs captured yet) and token is available and valid
+    enabled: !!tokenFromUrl && !hasAuthError && !hasLogs,
     refetchInterval: !hasLogs ? POLLING_INTERVALS.SERVERS : false,
   });
+
+  // Monitor query errors for 401 Unauthorized
+  useEffect(() => {
+    if (logsError && isUnauthorizedError(logsError)) {
+      setHasAuthError(true);
+    }
+    if (serversError && isUnauthorizedError(serversError)) {
+      setHasAuthError(true);
+    }
+  }, [logsError, serversError, isUnauthorizedError]);
 
   const handleLoadMore = useHandler(() => {
     fetchNextPage();
@@ -290,6 +333,16 @@ function App() {
       setIsClearing(false);
     }
   });
+
+  // Show no-token state if token is missing
+  if (!tokenFromUrl) {
+    return <NoTokenState />;
+  }
+
+  // Show invalid-token state if token is invalid/expired (401 error detected)
+  if (hasAuthError) {
+    return <InvalidTokenState />;
+  }
 
   return (
     <TooltipProvider delayDuration={TIMEOUTS.TOOLTIP_DELAY}>
@@ -381,10 +434,10 @@ function App() {
                 </div>
               )}
 
-              {error && (
+              {logsError && (
                 <div className="mb-5" role="alert" aria-live="polite">
                   <ErrorAlert
-                    error={error as Error}
+                    error={logsError as Error}
                     title="Failed to load logs"
                   />
                 </div>
