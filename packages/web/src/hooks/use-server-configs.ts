@@ -1,7 +1,7 @@
 import type { ServerInfo } from "@fiberplane/mcp-gateway-types";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { api } from "../lib/api";
+import { useApi } from "../contexts/ApiContext";
 import { POLLING_INTERVALS } from "../lib/constants";
 
 /**
@@ -10,6 +10,8 @@ import { POLLING_INTERVALS } from "../lib/constants";
  * Returns the query result with server list including health details.
  */
 export function useServers() {
+  const api = useApi();
+
   return useQuery({
     queryKey: ["servers"],
     queryFn: () => api.getServers(),
@@ -24,6 +26,8 @@ export function useServers() {
  * For display purposes, prefer useServers() which has health data but no sensitive headers.
  */
 export function useServerConfigs() {
+  const api = useApi();
+
   return useQuery({
     queryKey: ["server-configs"],
     queryFn: () => api.getServerConfigs(),

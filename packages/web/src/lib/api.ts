@@ -10,42 +10,108 @@ import type {
   ServerInfo,
   SessionInfo,
 } from "@fiberplane/mcp-gateway-types";
+import { ApiError, UnauthorizedError } from "./errors.js";
+
+/**
+ * Public API interface - only includes public methods
+ * This interface is what consumers of the API client should use
+ */
+export interface IApiClient {
+  getLogs(params: {
+    q?: string[];
+    serverName?: string | string[];
+    clientName?: string | string[];
+    sessionId?: string | string[];
+    method?: string | string[];
+    durationEq?: number | number[];
+    durationGt?: number;
+    durationLt?: number;
+    durationGte?: number;
+    durationLte?: number;
+    tokensEq?: number | number[];
+    tokensGt?: number;
+    tokensLt?: number;
+    tokensGte?: number;
+    tokensLte?: number;
+    after?: string;
+    before?: string;
+    limit?: number;
+    order?: "asc" | "desc";
+  }): Promise<{
+    data: ApiLogEntry[];
+    pagination: LogQueryResult["pagination"];
+  }>;
+
+  getServers(): Promise<{ servers: ServerInfo[] }>;
+
+  getSessions(serverName?: string): Promise<{ sessions: SessionInfo[] }>;
+
+  getClients(): Promise<{ clients: ClientAggregation[] }>;
+
+  getMethods(
+    serverName?: string,
+  ): Promise<{ methods: Array<{ method: string }> }>;
+
+  clearSessions(): Promise<{ success: boolean }>;
+
+  getServerConfigs(): Promise<{ servers: McpServer[] }>;
+
+  addServer(
+    config: McpServerConfig,
+  ): Promise<{ success: boolean; server: McpServerConfig }>;
+
+  updateServer(
+    name: string,
+    changes: Partial<Omit<McpServerConfig, "name" | "type">>,
+  ): Promise<{ success: boolean; message: string }>;
+
+  deleteServer(name: string): Promise<{ success: boolean; message: string }>;
+
+  checkServerHealth(name: string): Promise<{ server: McpServer }>;
+}
 
 /**
  * API Client for MCP Gateway logs
  */
-class APIClient {
+class APIClient implements IApiClient {
   private baseURL = "/api";
-  private authToken: string | null = null;
 
   /**
-   * Set authentication token
+   * Create API client with token provider
+   * @param getToken Function that returns the current auth token
    */
-  setToken(token: string): void {
-    this.authToken = token;
-  }
+  constructor(private getToken: () => string | null) {}
 
   /**
-   * Get current authentication token (for display purposes)
+   * Handle HTTP response and throw typed errors
    */
-  getToken(): string {
-    return this.authToken || "";
+  private async handleResponse<T>(response: Response): Promise<T> {
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new UnauthorizedError();
+      }
+      const errorText = await response.text().catch(() => response.statusText);
+      throw new ApiError(errorText, response.status);
+    }
+    return response.json();
   }
 
   /**
    * Create fetch options with authentication header
    */
   private createAuthHeaders(options: RequestInit = {}): RequestInit {
-    if (!this.authToken) {
-      throw new Error("Authentication token not set. Call setToken() first.");
+    const token = this.getToken();
+    if (!token) {
+      throw new UnauthorizedError("Authentication token not set");
     }
+
+    // Use Headers API for type-safe header merging
+    const headers = new Headers(options.headers);
+    headers.set("Authorization", `Bearer ${token}`);
 
     return {
       ...options,
-      headers: {
-        ...options.headers,
-        Authorization: `Bearer ${this.authToken}`,
-      },
+      headers,
     };
   }
 
@@ -110,22 +176,19 @@ class APIClient {
 
     const options = this.createAuthHeaders();
     const response = await fetch(url.toString(), options);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch logs: ${response.statusText}`);
-    }
-    return response.json();
+    return this.handleResponse<{
+      data: ApiLogEntry[];
+      pagination: LogQueryResult["pagination"];
+    }>(response);
   }
 
   /**
    * Get list of servers with aggregations
    */
   async getServers(): Promise<{ servers: ServerInfo[] }> {
-    const options = await this.createAuthHeaders();
+    const options = this.createAuthHeaders();
     const response = await fetch(`${this.baseURL}/servers`, options);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch servers: ${response.statusText}`);
-    }
-    return response.json();
+    return this.handleResponse<{ servers: ServerInfo[] }>(response);
   }
 
   /**
@@ -139,22 +202,16 @@ class APIClient {
 
     const options = this.createAuthHeaders();
     const response = await fetch(url.toString(), options);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch sessions: ${response.statusText}`);
-    }
-    return response.json();
+    return this.handleResponse<{ sessions: SessionInfo[] }>(response);
   }
 
   /**
    * Get list of clients with aggregations
    */
   async getClients(): Promise<{ clients: ClientAggregation[] }> {
-    const options = await this.createAuthHeaders();
+    const options = this.createAuthHeaders();
     const response = await fetch(`${this.baseURL}/clients`, options);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch clients: ${response.statusText}`);
-    }
-    return response.json();
+    return this.handleResponse<{ clients: ClientAggregation[] }>(response);
   }
 
   /**
@@ -170,10 +227,9 @@ class APIClient {
 
     const options = this.createAuthHeaders();
     const response = await fetch(url.toString(), options);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch methods: ${response.statusText}`);
-    }
-    return response.json();
+    return this.handleResponse<{ methods: Array<{ method: string }> }>(
+      response,
+    );
   }
 
   /**
@@ -184,10 +240,7 @@ class APIClient {
       method: "POST",
     });
     const response = await fetch(`${this.baseURL}/logs/clear`, options);
-    if (!response.ok) {
-      throw new Error(`Failed to clear sessions: ${response.statusText}`);
-    }
-    return response.json();
+    return this.handleResponse<{ success: boolean }>(response);
   }
 
   /**
@@ -197,14 +250,9 @@ class APIClient {
    * This is different from getServers() which returns aggregated stats.
    */
   async getServerConfigs(): Promise<{ servers: McpServer[] }> {
-    const options = await this.createAuthHeaders();
+    const options = this.createAuthHeaders();
     const response = await fetch(`${this.baseURL}/servers/config`, options);
-    if (!response.ok) {
-      throw new Error(
-        `Failed to fetch server configurations: ${response.statusText}`,
-      );
-    }
-    return response.json();
+    return this.handleResponse<{ servers: McpServer[] }>(response);
   }
 
   /**
@@ -218,22 +266,16 @@ class APIClient {
   ): Promise<{ success: boolean; server: McpServerConfig }> {
     const options = this.createAuthHeaders({
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify(config),
     });
 
+    // Manually set Content-Type since we're using Headers API
+    (options.headers as Headers).set("Content-Type", "application/json");
+
     const response = await fetch(`${this.baseURL}/servers/config`, options);
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(
-        error.message || `Failed to add server: ${response.statusText}`,
-      );
-    }
-
-    return response.json();
+    return this.handleResponse<{ success: boolean; server: McpServerConfig }>(
+      response,
+    );
   }
 
   /**
@@ -249,25 +291,17 @@ class APIClient {
   ): Promise<{ success: boolean; message: string }> {
     const options = this.createAuthHeaders({
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify(changes),
     });
+
+    // Manually set Content-Type since we're using Headers API
+    (options.headers as Headers).set("Content-Type", "application/json");
 
     const response = await fetch(
       `${this.baseURL}/servers/config/${encodeURIComponent(name)}`,
       options,
     );
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(
-        error.message || `Failed to update server: ${response.statusText}`,
-      );
-    }
-
-    return response.json();
+    return this.handleResponse<{ success: boolean; message: string }>(response);
   }
 
   /**
@@ -289,15 +323,7 @@ class APIClient {
       `${this.baseURL}/servers/config/${encodeURIComponent(name)}`,
       options,
     );
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(
-        error.message || `Failed to delete server: ${response.statusText}`,
-      );
-    }
-
-    return response.json();
+    return this.handleResponse<{ success: boolean; message: string }>(response);
   }
 
   /**
@@ -315,25 +341,14 @@ class APIClient {
       `${this.baseURL}/servers/${encodeURIComponent(name)}/health-check`,
       options,
     );
-
-    if (!response.ok) {
-      const error = (await response.json().catch(() => ({}))) as {
-        error?: string;
-        message?: string;
-      };
-      // Extract error message: prioritize error.message, then error.error, then status text
-      const errorMessage =
-        (typeof error.message === "string" && error.message) ||
-        (typeof error.error === "string" && error.error) ||
-        response.statusText;
-      throw new Error(`Failed to check server health: ${errorMessage}`);
-    }
-
-    return response.json();
+    return this.handleResponse<{ server: McpServer }>(response);
   }
 }
 
 /**
- * Singleton API client instance
+ * Create an API client instance
+ * @param getToken Function that returns the current auth token
  */
-export const api = new APIClient();
+export function createApiClient(getToken: () => string | null): IApiClient {
+  return new APIClient(getToken);
+}

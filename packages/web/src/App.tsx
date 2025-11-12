@@ -9,20 +9,14 @@ import {
   type OperatorPrefixedValue,
 } from "@fiberplane/mcp-gateway-types";
 import {
+  QueryClientProvider,
   useInfiniteQuery,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
 import { Github, MessageCircle } from "lucide-react";
 import { useQueryState, useQueryStates } from "nuqs";
-import {
-  useCallback,
-  useDeferredValue,
-  useEffect,
-  useId,
-  useMemo,
-  useState,
-} from "react";
+import { useDeferredValue, useId, useMemo, useState } from "react";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { EmptyStateNoLogs } from "./components/empty-state-no-logs";
 import { EmptyStateNoServers } from "./components/empty-state-no-servers";
@@ -46,23 +40,28 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "./components/ui/tooltip";
+import { ApiProvider, useApi } from "./contexts/ApiContext";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { useConfirm } from "./hooks/use-confirm";
 import { useHealthCheck } from "./hooks/use-health-check";
 import { useServerConfig } from "./hooks/use-server-configs";
-import { api } from "./lib/api";
+import { createApiClient } from "./lib/api";
 import { POLLING_INTERVALS, TIMEOUTS } from "./lib/constants";
 import {
   filterParamsToFilters,
   parseAsFilterParam,
   parseAsSearchArray,
 } from "./lib/filter-parsers";
+import { createQueryClient } from "./lib/query-client";
 import { useHandler } from "./lib/use-handler";
 import { getLogKey } from "./lib/utils";
 
 /**
- * API parameters for getLogs query
+ * API parameters for getLogs query (inferred from first call)
  */
-type GetLogsParams = Parameters<typeof api.getLogs>[0];
+type GetLogsParams = Parameters<
+  ReturnType<typeof createApiClient>["getLogs"]
+>[0];
 
 /**
  * Helper to format string filter value with operator prefix for API
@@ -80,7 +79,7 @@ function formatStringFilter(
   return brandOperatorValue(`${operator}:${value}`);
 }
 
-function App() {
+function AppContent() {
   const logsPanelId = useId();
   const queryClient = useQueryClient();
   const { confirm, ConfirmDialog } = useConfirm();
@@ -88,29 +87,10 @@ function App() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isClearing, setIsClearing] = useState(false);
   const [clearError, setClearError] = useState<string | null>(null);
-  const [hasAuthError, setHasAuthError] = useState(false);
 
-  // Get auth token from URL query parameter
-  const [tokenFromUrl] = useQueryState("token");
-
-  // Set token in API client when available
-  useEffect(() => {
-    if (tokenFromUrl) {
-      api.setToken(tokenFromUrl);
-    }
-  }, [tokenFromUrl]);
-
-  // Helper to check if error is 401 Unauthorized
-  const isUnauthorizedError = useCallback((error: unknown): boolean => {
-    if (error instanceof Error) {
-      return (
-        error.message.includes("Unauthorized") ||
-        error.message.includes("401") ||
-        error.message.includes("Invalid token")
-      );
-    }
-    return false;
-  }, []);
+  // Get auth state and API client from context (shared with App component)
+  const { token, hasAuthError } = useAuth();
+  const api = useApi();
 
   // Health check mutation
   const { mutate: checkHealth, isPending: isCheckingHealth } = useHealthCheck();
@@ -248,7 +228,7 @@ function App() {
     // Conditional polling - only when streaming is on
     refetchInterval: isStreaming ? POLLING_INTERVALS.LOGS : false,
     refetchIntervalInBackground: false, // Only poll when tab is active
-    enabled: !!tokenFromUrl && !hasAuthError, // Only fetch logs when token is available and valid
+    enabled: !!token && !hasAuthError, // Only fetch logs when token is available and valid
   });
 
   // Flatten all pages into single array
@@ -263,23 +243,15 @@ function App() {
 
   // Fetch server list for empty state (when no logs exist)
   const hasLogs = allLogs.length > 0;
-  const { data: serversData, error: serversError } = useQuery({
+  const { data: serversData } = useQuery({
     queryKey: ["servers"],
     queryFn: () => api.getServers(),
     // Only fetch when showing empty state (no logs captured yet) and token is available and valid
-    enabled: !!tokenFromUrl && !hasAuthError && !hasLogs,
+    enabled: !!token && !hasAuthError && !hasLogs,
     refetchInterval: !hasLogs ? POLLING_INTERVALS.SERVERS : false,
   });
 
-  // Monitor query errors for 401 Unauthorized
-  useEffect(() => {
-    if (logsError && isUnauthorizedError(logsError)) {
-      setHasAuthError(true);
-    }
-    if (serversError && isUnauthorizedError(serversError)) {
-      setHasAuthError(true);
-    }
-  }, [logsError, serversError, isUnauthorizedError]);
+  // Note: Error detection now handled globally by QueryClient in createQueryClient()
 
   const handleLoadMore = useHandler(() => {
     fetchNextPage();
@@ -333,11 +305,6 @@ function App() {
       setIsClearing(false);
     }
   });
-
-  // Show no-token state if token is missing
-  if (!tokenFromUrl) {
-    return <NoTokenState />;
-  }
 
   // Show invalid-token state if token is invalid/expired (401 error detected)
   if (hasAuthError) {
@@ -572,6 +539,53 @@ function App() {
       </ErrorBoundary>
       {ConfirmDialog}
     </TooltipProvider>
+  );
+}
+
+/**
+ * Inner app component that consumes auth context and provides API + QueryClient
+ *
+ * Must be wrapped in AuthProvider to access shared auth state.
+ */
+function AppWithProviders() {
+  // Get shared auth state from context
+  const { token, setHasAuthError } = useAuth();
+
+  // Create API client with token provider (recreated when token changes)
+  const api = useMemo(() => createApiClient(() => token), [token]);
+
+  // Create QueryClient with global error handler (recreated when setHasAuthError changes)
+  const queryClient = useMemo(
+    () => createQueryClient(() => setHasAuthError(true)),
+    [setHasAuthError],
+  );
+
+  // Show no-token state if token is missing
+  if (!token) {
+    return <NoTokenState />;
+  }
+
+  // Provide QueryClient and API to app content
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ApiProvider value={api}>
+        <AppContent />
+      </ApiProvider>
+    </QueryClientProvider>
+  );
+}
+
+/**
+ * App root component
+ *
+ * Provides shared authentication state to entire app tree.
+ * All components can access token and auth error state via useAuth().
+ */
+function App() {
+  return (
+    <AuthProvider>
+      <AppWithProviders />
+    </AuthProvider>
   );
 }
 

@@ -8,7 +8,7 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import { api } from "./api";
+import { useApi } from "../contexts/ApiContext";
 import { POLLING_INTERVALS, QUERY_CONFIG } from "./constants";
 
 interface UseAvailableMethodsOptions {
@@ -31,7 +31,9 @@ interface UseAvailableMethodsOptions {
  * data?.methods // [{ method: "tools/call" }, ...]
  */
 export function useAvailableMethods(options: UseAvailableMethodsOptions = {}) {
+  const api = useApi();
   const { serverName, enabled = true } = options;
+
   return useQuery({
     queryKey: ["methods", serverName],
     queryFn: async () => await api.getMethods(serverName),
@@ -59,7 +61,9 @@ interface UseAvailableClientsOptions {
  * data?.clients // [{ clientName: "claude-code", clientVersion: "1.0.0" }, ...]
  */
 export function useAvailableClients(options: UseAvailableClientsOptions = {}) {
+  const api = useApi();
   const { enabled = true } = options;
+
   return useQuery({
     queryKey: ["clients"],
     queryFn: async () => await api.getClients(),
@@ -91,7 +95,9 @@ interface UseAvailableSessionsOptions {
 export function useAvailableSessions(
   options: UseAvailableSessionsOptions = {},
 ) {
+  const api = useApi();
   const { serverName, enabled = true } = options;
+
   return useQuery({
     queryKey: ["sessions", serverName],
     queryFn: async () => await api.getSessions(serverName),
@@ -119,7 +125,9 @@ interface UseAvailableServersOptions {
  * data?.servers // [{ name: "my-server", status: "online" }, ...]
  */
 export function useAvailableServers(options: UseAvailableServersOptions = {}) {
+  const api = useApi();
   const { enabled = true } = options;
+
   return useQuery({
     queryKey: ["servers"],
     queryFn: async () => await api.getServers(),

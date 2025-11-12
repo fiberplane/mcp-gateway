@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { api } from "../lib/api";
+import { useApi } from "../contexts/ApiContext";
 import { POLLING_INTERVALS } from "../lib/constants";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 
@@ -9,6 +9,7 @@ interface ServerFilterProps {
 }
 
 export function ServerFilter({ value, onChange }: ServerFilterProps) {
+  const api = useApi();
   const { data, isLoading } = useQuery({
     queryKey: ["servers"],
     queryFn: () => api.getServers(),
