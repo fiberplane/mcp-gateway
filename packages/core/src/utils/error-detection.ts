@@ -1,3 +1,5 @@
+import { getErrorMessage } from "./error.js";
+
 /**
  * Extract error code from various error types
  *
@@ -25,7 +27,7 @@
  * @returns Error code string (e.g., "ECONNREFUSED", "TIMEOUT", "UNKNOWN")
  */
 export function extractErrorCode(error: unknown): string {
-  const errorMessage = error instanceof Error ? error.message : String(error);
+  const errorMessage = getErrorMessage(error);
   let errorCode = "UNKNOWN";
 
   // Layer 1: Bun-specific error.code property (e.g., "ConnectionRefused")

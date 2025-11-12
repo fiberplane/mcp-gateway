@@ -1,4 +1,7 @@
-import { ServerNotFoundError } from "@fiberplane/mcp-gateway-core";
+import {
+  getErrorMessage,
+  ServerNotFoundError,
+} from "@fiberplane/mcp-gateway-core";
 import type { McpServer } from "@fiberplane/mcp-gateway-types";
 import { serverParamSchema } from "@fiberplane/mcp-gateway-types";
 import { sValidator } from "@hono/standard-validator";
@@ -10,6 +13,16 @@ import {
   type ProtectedResourceMetadata,
   rewriteProtectedResourceMetadata,
 } from "./oauth-rewriting";
+
+/**
+ * Helper to check if OAuth is supported for a server
+ * OAuth only works with HTTP servers
+ */
+function isOAuthSupported(
+  server: McpServer,
+): server is Extract<McpServer, { type: "http" }> {
+  return server.type === "http";
+}
 
 /**
  * Creates Hono app for proxying OAuth 2.0 and OpenID Connect discovery endpoints.
@@ -323,7 +336,7 @@ export async function createOAuthRoutes(
       logger.warn("Failed to parse protected resource metadata", {
         targetUrl,
         serverName,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
         responsePreview: responseText.substring(0, 200),
       });
 
@@ -367,6 +380,11 @@ export async function createOAuthRoutes(
         throw error;
       }
 
+      // OAuth only supported for HTTP servers
+      if (!isOAuthSupported(server)) {
+        return c.json({ error: "OAuth not supported for stdio servers" }, 400);
+      }
+
       const baseUrl = getBaseUrl(server.url);
       const targetUrl = `${baseUrl}/.well-known/oauth-protected-resource`;
 
@@ -398,6 +416,11 @@ export async function createOAuthRoutes(
           return c.notFound();
         }
         throw error;
+      }
+
+      // OAuth only supported for HTTP servers
+      if (!isOAuthSupported(server)) {
+        return c.json({ error: "OAuth not supported for stdio servers" }, 400);
       }
 
       const baseUrl = getBaseUrl(server.url);
@@ -434,6 +457,11 @@ export async function createOAuthRoutes(
         throw error;
       }
 
+      // OAuth only supported for HTTP servers
+      if (!isOAuthSupported(server)) {
+        return c.json({ error: "OAuth not supported for stdio servers" }, 400);
+      }
+
       const baseUrl = getBaseUrl(server.url);
       const targetUrl = `${baseUrl}/.well-known/openid-configuration`;
 
@@ -468,6 +496,11 @@ export async function createOAuthRoutes(
         throw error;
       }
 
+      // OAuth only supported for HTTP servers
+      if (!isOAuthSupported(server)) {
+        return c.json({ error: "OAuth not supported for stdio servers" }, 400);
+      }
+
       const baseUrl = getBaseUrl(server.url);
       const targetUrl = `${baseUrl}/.well-known/openid-configuration`;
 
@@ -499,6 +532,11 @@ export async function createOAuthRoutes(
           return c.notFound();
         }
         throw error;
+      }
+
+      // OAuth only supported for HTTP servers
+      if (!isOAuthSupported(server)) {
+        return c.json({ error: "OAuth not supported for stdio servers" }, 400);
       }
 
       const baseUrl = getBaseUrl(server.url);
@@ -602,6 +640,11 @@ export async function createOAuthRoutes(
       throw error;
     }
 
+    // OAuth only supported for HTTP servers
+    if (!isOAuthSupported(server)) {
+      return c.json({ error: "OAuth not supported for stdio servers" }, 400);
+    }
+
     const baseUrl = getBaseUrl(server.url);
     const targetUrl = `${baseUrl}/.well-known/oauth-protected-resource`;
 
@@ -626,6 +669,11 @@ export async function createOAuthRoutes(
         );
       }
       throw error;
+    }
+
+    // OAuth only supported for HTTP servers
+    if (!isOAuthSupported(server)) {
+      return c.json({ error: "OAuth not supported for stdio servers" }, 400);
     }
 
     const baseUrl = getBaseUrl(server.url);
@@ -655,6 +703,11 @@ export async function createOAuthRoutes(
         );
       }
       throw error;
+    }
+
+    // OAuth only supported for HTTP servers
+    if (!isOAuthSupported(server)) {
+      return c.json({ error: "OAuth not supported for stdio servers" }, 400);
     }
 
     const baseUrl = getBaseUrl(server.url);

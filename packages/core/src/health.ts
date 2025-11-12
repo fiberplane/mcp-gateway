@@ -1,4 +1,5 @@
 import type { HealthCheckResult } from "@fiberplane/mcp-gateway-types";
+import { getErrorMessage } from "./utils/error.js";
 import { extractErrorCode } from "./utils/error-detection.js";
 
 export async function checkServerHealth(
@@ -35,7 +36,7 @@ export async function checkServerHealth(
   } catch (error) {
     // Network errors, timeouts, DNS failures = offline
     const timestamp = Date.now();
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = getErrorMessage(error);
     const errorCode = extractErrorCode(error);
 
     return {

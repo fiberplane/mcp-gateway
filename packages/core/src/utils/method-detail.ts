@@ -274,13 +274,18 @@ function getResponsePreview(log: ApiLogEntry): string {
       if (
         typeof result === "object" &&
         result !== null &&
-        "serverInfo" in result
+        "serverInfo" in result &&
+        typeof result.serverInfo === "object" &&
+        result.serverInfo !== null
       ) {
         const serverInfo = result.serverInfo as {
-          name: string;
-          version: string;
+          name?: string;
+          version?: string;
         };
-        return `→ ${serverInfo.name}@${serverInfo.version}`;
+        // Only show serverInfo if both name and version are present
+        if (serverInfo.name && serverInfo.version) {
+          return `→ ${serverInfo.name}@${serverInfo.version}`;
+        }
       }
       break;
     }

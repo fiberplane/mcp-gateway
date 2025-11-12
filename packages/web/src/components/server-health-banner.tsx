@@ -60,6 +60,21 @@ export function ServerHealthBanner({
       } else {
         // Fallback: server not found in configs (shouldn't happen)
         // Use minimal config - user can still edit but won't have existing headers
+        // Only open modal if we have a URL (HTTP server)
+        if (server.url) {
+          openEditServerModal({
+            name: server.name,
+            url: server.url,
+            type: "http",
+            headers: {},
+          });
+        }
+      }
+    } catch (_error) {
+      // Fallback: show modal with minimal config
+      // User can still edit but won't have existing headers
+      // Only open modal if we have a URL (HTTP server)
+      if (server.url) {
         openEditServerModal({
           name: server.name,
           url: server.url,
@@ -67,15 +82,6 @@ export function ServerHealthBanner({
           headers: {},
         });
       }
-    } catch (_error) {
-      // Fallback: show modal with minimal config
-      // User can still edit but won't have existing headers
-      openEditServerModal({
-        name: server.name,
-        url: server.url,
-        type: "http",
-        headers: {},
-      });
     } finally {
       setIsLoadingConfig(false);
     }

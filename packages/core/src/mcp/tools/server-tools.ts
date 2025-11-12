@@ -1,4 +1,7 @@
-import type { ServerToolsDependencies } from "@fiberplane/mcp-gateway-types";
+import type {
+  McpServer as GatewayMcpServer,
+  ServerToolsDependencies,
+} from "@fiberplane/mcp-gateway-types";
 import type { McpServer } from "mcp-lite";
 import { z } from "zod";
 
@@ -97,7 +100,7 @@ Common use cases:
 
 The tool will return success confirmation with the server's configuration details, or an error if the server name already exists or the URL is invalid.`,
     inputSchema: AddServerSchema,
-    handler: async (args) => {
+    handler: async (args: z.infer<typeof AddServerSchema>) => {
       try {
         // Add server via storage API (which handles duplicate checking and persistence)
         await deps.addServer({
@@ -152,7 +155,7 @@ Safety considerations:
 
 The tool will confirm successful removal or provide an error if the server doesn't exist. After removal, the server name becomes available for reuse with add_server.`,
     inputSchema: RemoveServerSchema,
-    handler: async (args) => {
+    handler: async (args: z.infer<typeof RemoveServerSchema>) => {
       try {
         // Remove server via storage API
         await deps.removeServer(args.name);
@@ -206,10 +209,10 @@ The response includes operational metrics like request counts, last activity tim
 
 For large deployments, use the 'concise' format first to get an overview, then query specific servers in 'detailed' mode for deeper analysis.`,
     inputSchema: ListServersSchema,
-    handler: async (args) => {
+    handler: async (args: z.infer<typeof ListServersSchema>) => {
       try {
         // Get all registered servers with metrics
-        const servers = await deps.getRegisteredServers();
+        const servers: GatewayMcpServer[] = await deps.getRegisteredServers();
 
         if (servers.length === 0) {
           return {
@@ -251,8 +254,12 @@ For large deployments, use the 'concise' format first to get an overview, then q
                   : "🟡 Inactive"
                 : "⚫ Never used";
 
+              const urlLine =
+                server.type === "http"
+                  ? `  URL: ${server.url}`
+                  : `  Type: stdio (${server.command})`;
               return `**${server.name}**
-  URL: ${server.url}
+${urlLine}
   Status: ${status}
   Requests: ${server.exchangeCount}`;
             })
@@ -285,19 +292,20 @@ ${serverList}
                 : "🟡 Inactive"
               : "⚫ Never used";
 
-            const headerCount = Object.keys(server.headers).length;
-            const headersList =
-              headerCount > 0
-                ? Object.keys(server.headers)
-                    .map(
-                      (key) =>
-                        `    ${key}: ${server.headers[key]?.substring(0, 20)}${(server.headers[key]?.length || 0) > 20 ? "..." : ""}`,
-                    )
-                    .join("\n")
-                : "    None configured";
-
-            return `**${server.name}**
-  URL: ${server.url}
+            const configSection =
+              server.type === "http"
+                ? (() => {
+                    const headerCount = Object.keys(server.headers).length;
+                    const headersList =
+                      headerCount > 0
+                        ? Object.keys(server.headers)
+                            .map(
+                              (key) =>
+                                `    ${key}: ${server.headers[key]?.substring(0, 20)}${(server.headers[key]?.length || 0) > 20 ? "..." : ""}`,
+                            )
+                            .join("\n")
+                        : "    None configured";
+                    return `  URL: ${server.url}
   Type: ${server.type}
   Status: ${status}
 
@@ -307,8 +315,21 @@ ${serverList}
   - Gateway Endpoint: /${server.name}/mcp
 
   **Configuration:**
-  - Headers (${headerCount}):
+  - Custom Headers (${headerCount}):
 ${headersList}`;
+                  })()
+                : `  Type: ${server.type}
+  Command: ${server.command}
+  Args: ${server.args.join(" ")}
+  Status: ${status}
+
+  **Statistics:**
+  - Total Requests: ${server.exchangeCount}
+  - Last Activity: ${lastActivity}
+  - Gateway Endpoint: /${server.name}/mcp`;
+
+            return `**${server.name}**
+${configSection}`;
           })
           .join(`\n\n${"─".repeat(50)}\n\n`);
 

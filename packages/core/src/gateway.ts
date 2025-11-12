@@ -25,6 +25,7 @@ import {
 import { checkServerHealth } from "./health.js";
 import { logger } from "./logger.js";
 import { ServerNotFoundError } from "./registry/errors.js";
+import { getErrorMessage } from "./utils/error.js";
 import { getMethodDetail } from "./utils/method-detail.js";
 
 // In-memory storage for client info by session (scoped to Gateway instance)
@@ -186,7 +187,7 @@ class HealthCheckManager {
     serverName: string,
     health: HealthStatus,
     lastCheck: string,
-    url: string,
+    url?: string,
     lastCheckTime?: number,
     lastHealthyTime?: number,
     lastErrorTime?: number,
@@ -201,7 +202,7 @@ class HealthCheckManager {
       serverName: string,
       health: HealthStatus,
       lastCheck: string,
-      url: string,
+      url?: string,
       lastCheckTime?: number,
       lastHealthyTime?: number,
       lastErrorTime?: number,
@@ -229,6 +230,19 @@ class HealthCheckManager {
       throw new ServerNotFoundError(serverName);
     }
 
+    // Health checks only apply to HTTP servers
+    if (server.type !== "http") {
+      logger.debug("Skipping health check for non-HTTP server", {
+        serverName: server.name,
+        type: server.type,
+      });
+      return {
+        name: server.name,
+        health: "unknown" as HealthStatus,
+        lastHealthCheck: new Date().toISOString(),
+      };
+    }
+
     const result = await checkServerHealth(server.url);
     const lastHealthCheck = new Date().toISOString();
     const health: HealthStatus = result.status === "online" ? "up" : "down";
@@ -254,7 +268,7 @@ class HealthCheckManager {
     } catch (error) {
       logger.warn("Failed to persist health check to database", {
         serverName: server.name,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
       // Don't throw - health check persistence failures shouldn't break health checking
     }
@@ -274,6 +288,59 @@ class HealthCheckManager {
 
     const updates = await Promise.all(
       servers.map(async (server) => {
+        // For stdio servers: derive health from process state
+        if (server.type === "stdio") {
+          const lastHealthCheck = new Date().toISOString();
+          const timestamp = Date.now();
+          let health: HealthStatus = "unknown";
+          let errorMessage: string | undefined;
+
+          if (server.processState) {
+            const { status, lastError } = server.processState;
+            // Map process state to health status:
+            // - "running" → "up" (online/green)
+            // - "crashed" → "down" (offline/red)
+            // - "stopped" → "unknown" (not-found/grey) - not yet started, normal for isolated mode
+            if (status === "running") {
+              health = "up";
+            } else if (status === "crashed") {
+              health = "down";
+              errorMessage = lastError?.message;
+            } else {
+              // status === "stopped" - not yet started (normal for isolated mode)
+              health = "unknown";
+            }
+          }
+
+          // Persist health to database, preserving historical timestamps
+          try {
+            await this.persistHealth(
+              server.name,
+              health,
+              lastHealthCheck,
+              undefined, // No URL for stdio servers
+              timestamp,
+              health === "up" ? timestamp : server.lastHealthyTime,
+              health === "down" ? timestamp : server.lastErrorTime,
+              errorMessage,
+              undefined, // No error code
+              undefined, // No response time
+            );
+          } catch (error) {
+            logger.warn("Failed to persist stdio health check to database", {
+              serverName: server.name,
+              error: getErrorMessage(error),
+            });
+          }
+
+          return {
+            name: server.name,
+            health,
+            lastHealthCheck,
+          };
+        }
+
+        // At this point, server must be HTTP type (we've handled stdio above)
         const result = await checkServerHealth(server.url);
         const lastHealthCheck = new Date().toISOString();
         const health: HealthStatus = result.status === "online" ? "up" : "down";
@@ -303,7 +370,7 @@ class HealthCheckManager {
         } catch (error) {
           logger.warn("Failed to persist health check to database", {
             serverName: server.name,
-            error: error instanceof Error ? error.message : String(error),
+            error: getErrorMessage(error),
           });
           // Don't throw - health check persistence failures shouldn't break health checking
         }
@@ -616,6 +683,21 @@ export async function createGateway(options: GatewayOptions): Promise<Gateway> {
       checkOne: async (serverName: string) => {
         return await healthCheckManager.checkOne(serverName);
       },
+    },
+
+    registry: {
+      initializeSharedStdioServers: async () => {
+        return await backend.initializeSharedStdioServers();
+      },
+    },
+
+    getStdioSessionManager: async (serverName: string) => {
+      const server = await backend.getServer(serverName);
+      if (server.type !== "stdio") {
+        throw new Error(`Server '${serverName}' is not a stdio server`);
+      }
+      // Get or create session manager for this server
+      return backend.getStdioSessionManager(serverName);
     },
 
     close: async () => {

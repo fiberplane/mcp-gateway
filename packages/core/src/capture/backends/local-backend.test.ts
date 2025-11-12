@@ -54,9 +54,13 @@ describe("LocalStorageBackend - Health Status Loading", () => {
 
       expect(servers).toHaveLength(1);
       expect(servers[0]?.name).toBe("test-server");
-      expect(servers[0]?.url).toBe("http://localhost:3001/mcp");
-      expect(servers[0]?.health).toBeUndefined();
-      expect(servers[0]?.lastHealthCheck).toBeUndefined();
+      const server = servers[0];
+      expect(server.type).toEqual("http");
+      if (server?.type === "http") {
+        expect(server.url).toBe("http://localhost:3001/mcp");
+        expect(server.health).toBeUndefined();
+        expect(server.lastHealthCheck).toBeUndefined();
+      }
     });
 
     test("should return server with health='up' when health check exists", async () => {
@@ -82,9 +86,13 @@ describe("LocalStorageBackend - Health Status Loading", () => {
       const servers = await backend.getRegisteredServers();
 
       expect(servers).toHaveLength(1);
-      expect(servers[0]?.name).toBe("test-server");
-      expect(servers[0]?.health).toBe("up");
-      expect(servers[0]?.lastHealthCheck).toBe(lastCheck);
+      const server = servers[0];
+      expect(server?.name).toBe("test-server");
+      expect(server?.type).toBe("http");
+      if (server?.type === "http") {
+        expect(server.health).toBe("up");
+        expect(server.lastHealthCheck).toBe(lastCheck);
+      }
     });
 
     test("should return server with health='down' when health check shows down", async () => {
@@ -110,9 +118,13 @@ describe("LocalStorageBackend - Health Status Loading", () => {
       const servers = await backend.getRegisteredServers();
 
       expect(servers).toHaveLength(1);
-      expect(servers[0]?.name).toBe("test-server");
-      expect(servers[0]?.health).toBe("down");
-      expect(servers[0]?.lastHealthCheck).toBe(lastCheck);
+      const server = servers[0];
+      expect(server?.name).toBe("test-server");
+      expect(server?.type).toBe("http");
+      if (server?.type === "http") {
+        expect(server.health).toBe("down");
+        expect(server.lastHealthCheck).toBe(lastCheck);
+      }
     });
 
     test("should return multiple servers with different health statuses", async () => {
@@ -160,9 +172,19 @@ describe("LocalStorageBackend - Health Status Loading", () => {
       const serverDown = servers.find((s) => s.name === "server-down");
       const serverUnknown = servers.find((s) => s.name === "server-unknown");
 
-      expect(serverUp?.health).toBe("up");
-      expect(serverDown?.health).toBe("down");
-      expect(serverUnknown?.health).toBeUndefined();
+      expect(serverUp?.type).toBe("http");
+      expect(serverDown?.type).toBe("http");
+      expect(serverUnknown?.type).toBe("http");
+
+      if (serverUp?.type === "http") {
+        expect(serverUp.health).toBe("up");
+      }
+      if (serverDown?.type === "http") {
+        expect(serverDown.health).toBe("down");
+      }
+      if (serverUnknown?.type === "http") {
+        expect(serverUnknown.health).toBeUndefined();
+      }
     });
 
     test("should include server metrics (lastActivity, exchangeCount) along with health", async () => {
@@ -186,9 +208,13 @@ describe("LocalStorageBackend - Health Status Loading", () => {
       const servers = await backend.getRegisteredServers();
 
       expect(servers).toHaveLength(1);
-      expect(servers[0]?.health).toBe("up");
-      expect(servers[0]?.lastActivity).toBeDefined();
-      expect(servers[0]?.exchangeCount).toBeDefined();
+      const server = servers[0];
+      expect(server?.type).toBe("http");
+      if (server?.type === "http") {
+        expect(server.health).toBe("up");
+      }
+      expect(server?.lastActivity).toBeDefined();
+      expect(server?.exchangeCount).toBeDefined();
     });
 
     test("should update health when upserted multiple times", async () => {
@@ -210,8 +236,12 @@ describe("LocalStorageBackend - Health Status Loading", () => {
       );
 
       let servers = await backend.getRegisteredServers();
-      expect(servers[0]?.health).toBe("up");
-      expect(servers[0]?.lastHealthCheck).toBe(firstCheck);
+      let server = servers[0];
+      expect(server?.type).toBe("http");
+      if (server?.type === "http") {
+        expect(server.health).toBe("up");
+        expect(server.lastHealthCheck).toBe(firstCheck);
+      }
 
       // Update health: down
       const secondCheck = new Date().toISOString();
@@ -223,8 +253,12 @@ describe("LocalStorageBackend - Health Status Loading", () => {
       );
 
       servers = await backend.getRegisteredServers();
-      expect(servers[0]?.health).toBe("down");
-      expect(servers[0]?.lastHealthCheck).toBe(secondCheck);
+      server = servers[0];
+      expect(server?.type).toBe("http");
+      if (server?.type === "http") {
+        expect(server.health).toBe("down");
+        expect(server.lastHealthCheck).toBe(secondCheck);
+      }
     });
   });
 
@@ -248,8 +282,11 @@ describe("LocalStorageBackend - Health Status Loading", () => {
       const servers = await backend.getRegisteredServers();
       const server = servers.find((s) => s.name === serverName);
 
-      expect(server?.health).toBe(health);
-      expect(server?.lastHealthCheck).toBe(lastCheck);
+      expect(server?.type).toBe("http");
+      if (server?.type === "http") {
+        expect(server.health).toBe(health);
+        expect(server.lastHealthCheck).toBe(lastCheck);
+      }
     });
 
     test("should handle health='down' status", async () => {
@@ -270,7 +307,10 @@ describe("LocalStorageBackend - Health Status Loading", () => {
       const servers = await backend.getRegisteredServers();
       const server = servers.find((s) => s.name === serverName);
 
-      expect(server?.health).toBe("down");
+      expect(server?.type).toBe("http");
+      if (server?.type === "http") {
+        expect(server.health).toBe("down");
+      }
     });
   });
 });

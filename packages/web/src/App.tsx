@@ -5,6 +5,7 @@ import {
   isMethodFilter,
   isServerFilter,
   isSessionFilter,
+  isStdioServer,
   isTokensFilter,
   type OperatorPrefixedValue,
 } from "@fiberplane/mcp-gateway-types";
@@ -28,6 +29,8 @@ import { ServerModalManager } from "./components/ServerModalManager";
 import { ServerHealthBanner } from "./components/server-health-banner";
 import { ServerTabs } from "./components/server-tabs";
 import { SettingsDropdown } from "./components/settings-dropdown";
+import { StderrLogsViewer } from "./components/stderr-logs-viewer";
+import { StdioProcessBanner } from "./components/stdio-process-banner";
 import { StreamingBadge } from "./components/streaming-badge";
 import { Button } from "./components/ui/button";
 import { ErrorAlert } from "./components/ui/error-alert";
@@ -39,7 +42,10 @@ import {
 } from "./components/ui/tooltip";
 import { useConfirm } from "./hooks/use-confirm";
 import { useHealthCheck } from "./hooks/use-health-check";
-import { useServerConfig } from "./hooks/use-server-configs";
+import {
+  useFullServerConfig,
+  useServerConfig,
+} from "./hooks/use-server-configs";
 import { api } from "./lib/api";
 import { POLLING_INTERVALS, TIMEOUTS } from "./lib/constants";
 import {
@@ -103,6 +109,9 @@ function App() {
 
   // Get server config for health status (when viewing a specific server)
   const activeServerConfig = useServerConfig(serverName || "");
+
+  // Get full server config for stdio servers (includes processState)
+  const fullServerConfig = useFullServerConfig(serverName || "");
 
   // Streaming: ON = auto-refresh with new logs, OFF = manual load more
   const [isStreaming, setIsStreaming] = useState(true);
@@ -244,7 +253,10 @@ function App() {
 
   const handleServerChange = useHandler((value: string | undefined) => {
     setServerName(value ?? null);
-    setSelectedIds(new Set()); // Reset selection
+    if (selectedIds.size > 0) {
+      // Reset selection if any are selected
+      setSelectedIds(new Set());
+    }
   });
 
   const handleStreamingToggle = useHandler((enabled: boolean) => {
@@ -277,8 +289,11 @@ function App() {
         queryClient.invalidateQueries({ queryKey: ["sessions"] }),
         queryClient.invalidateQueries({ queryKey: ["clients"] }),
       ]);
-      // Reset selection after successful clear
-      setSelectedIds(new Set());
+
+      if (selectedIds.size > 0) {
+        // Reset selection after successful clear
+        setSelectedIds(new Set());
+      }
     } catch (error) {
       // Set user-facing error message
       const errorMessage =
@@ -407,7 +422,6 @@ function App() {
                     role="tabpanel"
                     className="bg-card rounded-lg border border-border p-4 gap-6 grid"
                   >
-                    {/* Filter Bar - Phase 1-2 with two-row layout */}
                     <ErrorBoundary
                       fallback={(error) => (
                         <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive">
@@ -447,14 +461,34 @@ function App() {
                       />
                     </ErrorBoundary>
 
-                    {/* Server Health Banner - shown when viewing a single offline server */}
-                    {serverName && activeServerConfig && (
-                      <ServerHealthBanner
-                        server={activeServerConfig}
-                        onRetry={() => checkHealth(serverName)}
-                        isRetrying={isCheckingHealth}
-                      />
-                    )}
+                    {/* Server Health Banner - shown when viewing a single offline HTTP server */}
+                    {serverName &&
+                      activeServerConfig &&
+                      fullServerConfig &&
+                      !isStdioServer(fullServerConfig) && (
+                        <ServerHealthBanner
+                          server={activeServerConfig}
+                          onRetry={() => checkHealth(serverName)}
+                          isRetrying={isCheckingHealth}
+                        />
+                      )}
+
+                    {/* Stdio Process Banner - shown for stdio servers (process state, restart) */}
+                    {serverName &&
+                      fullServerConfig &&
+                      isStdioServer(fullServerConfig) && (
+                        <>
+                          <StdioProcessBanner
+                            server={fullServerConfig}
+                            onRefresh={() => {
+                              queryClient.invalidateQueries({
+                                queryKey: ["server-configs"],
+                              });
+                            }}
+                          />
+                          <StderrLogsViewer server={fullServerConfig} />
+                        </>
+                      )}
 
                     {/* Log Table - wrapped for horizontal scroll */}
                     <div className="overflow-x-auto -mx-4 px-4">

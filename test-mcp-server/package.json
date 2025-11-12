@@ -1,5 +1,6 @@
 {
   "name": "test-mcp-server",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "description": "Test MCP server for validating proxy functionality",
@@ -7,6 +8,7 @@
     "dev": "bun run minimal-server.ts",
     "start": "bun run minimal-server.ts",
     "start:comprehensive": "bun run everything.ts",
+    "start:isolation": "bun run isolation-test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

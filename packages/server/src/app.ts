@@ -75,7 +75,7 @@ export async function createApp(options: {
       registry: {
         servers: servers.map((s) => ({
           name: s.name,
-          url: s.url,
+          url: s.type === "http" ? s.url : undefined,
           type: s.type,
           lastActivity: s.lastActivity,
           exchangeCount: s.exchangeCount,

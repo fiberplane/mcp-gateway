@@ -1,6 +1,6 @@
-import type { ServerStatus } from "@fiberplane/mcp-gateway-types";
+import type { ServerInfo, ServerStatus } from "@fiberplane/mcp-gateway-types";
 import { useQuery } from "@tanstack/react-query";
-import { Check, Copy, Plus } from "lucide-react";
+import { Check, Copy, Plus, Workflow } from "lucide-react";
 import { useEffect, useMemo, useRef } from "react";
 import { useServerModal } from "../contexts/ServerModalContext";
 import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
@@ -49,10 +49,8 @@ type ServerTabProps = {
   isSelected: boolean;
   panelId: string;
   onChange: (name: string) => void;
-  title?: string;
-  name: string;
+  server: ServerInfo;
   status: ServerStatus;
-  url: string;
   lastHealthyTime?: number;
 };
 
@@ -60,22 +58,30 @@ function ServerTab({
   isSelected,
   panelId,
   onChange,
-  title,
-  name,
+  server,
   status,
-  url,
   lastHealthyTime,
 }: ServerTabProps) {
   const { copy, copied } = useCopyToClipboard();
 
-  // Use URL from server info as title if no explicit title provided
-  const originalUrl = title ?? url;
-  const gatewayUrl = `${window.location.origin}/s/${name}/mcp`;
+  // Stdio servers don't have a URL field
+  // But "not-found" servers (deleted from registry) also have no URL
+  // Only show stdio icon for servers that are in the registry
+  const isStdio = !server.url && status !== "not-found";
+  const name = server.name;
+
+  // For HTTP servers: use URL as tooltip content
+  const originalUrl = server.url;
+  const gatewayUrl = originalUrl
+    ? `${window.location.origin}/s/${name}/mcp`
+    : undefined;
 
   const handleCopyTooltip = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    copy(gatewayUrl);
+    if (gatewayUrl) {
+      copy(gatewayUrl);
+    }
   };
 
   const tabButton = (
@@ -100,11 +106,17 @@ function ServerTab({
         aria-label={status}
       />
       <span className={getTextColor(status, isSelected)}>{name}</span>
+      {isStdio && (
+        <Workflow
+          className={`w-3 h-3 ${isSelected ? "text-background" : "text-muted-foreground"}`}
+          aria-label="Stdio server"
+        />
+      )}
     </button>
   );
 
-  // Only show tooltip if there's an original URL (server config available)
-  if (!originalUrl) {
+  // Only show tooltip for HTTP servers (with URL and gatewayUrl)
+  if (!originalUrl || !gatewayUrl) {
     return tabButton;
   }
 
@@ -299,9 +311,8 @@ export function ServerTabs({ value, onChange, panelId }: ServerTabsProps) {
             isSelected={isSelected}
             panelId={panelId}
             onChange={onChange}
-            name={server.name}
+            server={server}
             status={server.status}
-            url={server.url}
             lastHealthyTime={server.lastHealthyTime}
           />
         );

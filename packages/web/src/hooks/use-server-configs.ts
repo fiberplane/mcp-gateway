@@ -32,13 +32,29 @@ export function useServerConfigs() {
 }
 
 /**
- * Hook to find a specific server by name
+ * Hook to find a specific server by name (from aggregated stats)
  *
  * @param name Server name to look up
  * @returns The server if found, undefined otherwise
  */
 export function useServerConfig(name: string) {
   const { data } = useServers();
+
+  return useMemo(() => {
+    return data?.servers.find((server) => server.name === name);
+  }, [data?.servers, name]);
+}
+
+/**
+ * Hook to find a specific full server config by name
+ *
+ * Use this when you need the full config including processState for stdio servers.
+ *
+ * @param name Server name to look up
+ * @returns The full server config if found, undefined otherwise
+ */
+export function useFullServerConfig(name: string) {
+  const { data } = useServerConfigs();
 
   return useMemo(() => {
     return data?.servers.find((server) => server.name === name);

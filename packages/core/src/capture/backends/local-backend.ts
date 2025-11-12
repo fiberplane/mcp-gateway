@@ -11,6 +11,7 @@ import type {
   McpServerConfig,
   ServerInfo,
   SessionInfo,
+  StdioProcessState,
   StorageBackend,
   StorageWriteResult,
 } from "@fiberplane/mcp-gateway-types";
@@ -37,6 +38,8 @@ import {
   ServerNotFoundError,
 } from "../../registry/errors";
 import { fromMcpJson, toMcpJson } from "../../registry/index";
+import { StdioSessionManager } from "../../subprocess/stdio-session-manager";
+import { getErrorMessage } from "../../utils/error.js";
 import { ensureStorageDir } from "../../utils/storage";
 import { isValidUrl } from "../../utils/url";
 
@@ -63,6 +66,7 @@ export class LocalStorageBackend implements StorageBackend {
   private db: LibSQLDatabase<typeof schema>;
   private client: ReturnType<typeof createClient>;
   private inMemoryRegistry: McpServer[] = []; // For :memory: databases
+  private stdioSessionManagers = new Map<string, StdioSessionManager>(); // Stdio session managers by server name
 
   /**
    * Private constructor - use LocalStorageBackend.create() instead
@@ -97,8 +101,7 @@ export class LocalStorageBackend implements StorageBackend {
     }
 
     try {
-      // Type assertion needed: Bun's readFile with "utf8" encoding returns string, not Buffer
-      const content = (await readFile(mcpPath, "utf8")) as unknown as string;
+      const content = await readFile(mcpPath, "utf8");
       const data = JSON.parse(content);
       const servers = fromMcpJson(data);
 
@@ -124,7 +127,7 @@ export class LocalStorageBackend implements StorageBackend {
       } else {
         logger.error("Failed to load mcp.json", {
           path: mcpPath,
-          error: error instanceof Error ? error.message : String(error),
+          error: getErrorMessage(error),
         });
       }
       return [];
@@ -220,7 +223,7 @@ export class LocalStorageBackend implements StorageBackend {
       };
     } catch (error) {
       logger.error("Local storage write failed", {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
         serverName: record.metadata.serverName,
       });
 
@@ -239,7 +242,7 @@ export class LocalStorageBackend implements StorageBackend {
       return await queryLogs(this.db, options);
     } catch (error) {
       logger.error("Local storage queryLogs failed", {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
       throw error;
     }
@@ -251,14 +254,14 @@ export class LocalStorageBackend implements StorageBackend {
       const servers = await this.loadRegistry();
       const registryServers = servers.map((s) => ({
         name: s.name,
-        url: s.url,
+        url: s.type === "http" ? s.url : undefined,
       }));
 
       // Health status and URLs are returned by getServers()
       return await getServers(this.db, registryServers);
     } catch (error) {
       logger.error("Local storage getServers failed", {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
       throw error;
     }
@@ -269,7 +272,7 @@ export class LocalStorageBackend implements StorageBackend {
       return await getSessions(this.db, serverName);
     } catch (error) {
       logger.error("Local storage getSessions failed", {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
       throw error;
     }
@@ -280,7 +283,7 @@ export class LocalStorageBackend implements StorageBackend {
       return await getClients(this.db);
     } catch (error) {
       logger.error("Local storage getClients failed", {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
       throw error;
     }
@@ -291,7 +294,7 @@ export class LocalStorageBackend implements StorageBackend {
       return await getMethods(this.db, serverName);
     } catch (error) {
       logger.error("Local storage getMethods failed", {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
       throw error;
     }
@@ -312,7 +315,7 @@ export class LocalStorageBackend implements StorageBackend {
       logger.info("Local storage logs cleared");
     } catch (error) {
       logger.error("Local storage clearAll failed", {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
       throw error;
     }
@@ -342,7 +345,7 @@ export class LocalStorageBackend implements StorageBackend {
       logger.error(
         "Local storage updateServerInfoForInitializeRequest failed",
         {
-          error: error instanceof Error ? error.message : String(error),
+          error: getErrorMessage(error),
           serverName,
           sessionId,
           requestId,
@@ -360,7 +363,7 @@ export class LocalStorageBackend implements StorageBackend {
       return await getSessionMetadata(this.db, sessionId);
     } catch (error) {
       logger.error("Local storage getSessionMetadata failed", {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
         sessionId,
       });
       throw error;
@@ -374,7 +377,7 @@ export class LocalStorageBackend implements StorageBackend {
       return await getServerMetrics(this.db, serverName);
     } catch (error) {
       logger.error("Local storage getServerMetrics failed", {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
         serverName,
       });
       throw error;
@@ -398,9 +401,21 @@ export class LocalStorageBackend implements StorageBackend {
             .limit(1);
 
           const healthData = healthResult[0];
+
+          // For stdio servers, merge live process state from session manager
+          let liveProcessState: StdioProcessState | undefined;
+          if (server.type === "stdio") {
+            const existingManager = this.stdioSessionManagers.get(server.name);
+            if (existingManager) {
+              liveProcessState = existingManager.getProcessState();
+            }
+          }
+
           return {
             ...server,
             ...metrics,
+            // Override processState with live state if available
+            ...(liveProcessState && { processState: liveProcessState }),
             health: healthData?.health,
             lastHealthCheck: healthData?.lastCheck,
             lastCheckTime: healthData?.lastCheckTime ?? undefined,
@@ -416,7 +431,7 @@ export class LocalStorageBackend implements StorageBackend {
       return serversWithData;
     } catch (error) {
       logger.error("Local storage getRegisteredServers failed", {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
       throw error;
     }
@@ -432,7 +447,7 @@ export class LocalStorageBackend implements StorageBackend {
       return server;
     } catch (error) {
       logger.error("Local storage getServer failed", {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
         serverName: name,
       });
       throw error;
@@ -449,18 +464,49 @@ export class LocalStorageBackend implements StorageBackend {
       }
 
       // Add new server with zero metrics (will be computed from logs)
-      servers.push({
-        ...server,
-        lastActivity: null,
-        exchangeCount: 0,
-      });
+      if (server.type === "http") {
+        servers.push({
+          ...server,
+          lastActivity: null,
+          exchangeCount: 0,
+        });
+      } else {
+        servers.push({
+          ...server,
+          lastActivity: null,
+          exchangeCount: 0,
+          processState: {
+            status: "stopped",
+            pid: null,
+            lastError: null,
+            stderrLogs: [],
+          },
+        });
+      }
 
       // Persist to file
       await this.saveRegistry(servers);
       logger.debug("Server added to registry", { name: server.name });
+
+      // Eagerly initialize if shared mode stdio server
+      if (server.type === "stdio" && server.sessionMode !== "isolated") {
+        const manager = await this.getStdioSessionManager(server.name);
+        try {
+          await manager.initialize();
+          logger.info("Initialized new shared stdio server", {
+            name: server.name,
+          });
+        } catch (error) {
+          logger.warn("Failed to initialize stdio server on add", {
+            name: server.name,
+            error: getErrorMessage(error),
+          });
+          // Don't throw - server was added to registry successfully
+        }
+      }
     } catch (error) {
       logger.error("Local storage addServer failed", {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
         serverName: server.name,
       });
       throw error;
@@ -477,6 +523,16 @@ export class LocalStorageBackend implements StorageBackend {
         throw new ServerNotFoundError(name);
       }
 
+      // Cleanup stdio session manager if exists
+      const manager = this.stdioSessionManagers.get(name);
+      if (manager) {
+        logger.info("Terminating stdio session manager for removed server", {
+          server: name,
+        });
+        await manager.terminate();
+        this.stdioSessionManagers.delete(name);
+      }
+
       // Remove server from registry
       servers.splice(index, 1);
 
@@ -485,11 +541,27 @@ export class LocalStorageBackend implements StorageBackend {
       logger.debug("Server removed from registry", { name });
     } catch (error) {
       logger.error("Local storage removeServer failed", {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
         serverName: name,
       });
       throw error;
     }
+  }
+
+  /**
+   * Check if config changes require stdio process restart
+   */
+  private requiresProcessRestart(
+    changes: Partial<Omit<McpServerConfig, "name">>,
+  ): boolean {
+    return !!(
+      "command" in changes ||
+      "args" in changes ||
+      "env" in changes ||
+      "cwd" in changes ||
+      "sessionMode" in changes ||
+      "timeout" in changes
+    );
   }
 
   async updateServer(
@@ -505,23 +577,99 @@ export class LocalStorageBackend implements StorageBackend {
         throw new ServerNotFoundError(name);
       }
 
-      // Update the server's mutable fields (url, headers)
-      if (changes.url !== undefined) {
-        if (!isValidUrl(changes.url)) {
-          throw new Error(`Invalid URL format: ${changes.url}`);
+      // Update the server's mutable fields based on type
+      // Create updated server (immutable)
+      let updatedServer: McpServer;
+
+      if (server.type === "http") {
+        const url =
+          "url" in changes ? (changes as { url?: string }).url : undefined;
+
+        if (url !== undefined && !isValidUrl(url)) {
+          throw new Error(`Invalid URL format: ${url}`);
         }
-        server.url = changes.url;
+
+        updatedServer = {
+          ...server,
+          ...(url !== undefined && { url }),
+          ...("headers" in changes && {
+            headers:
+              (changes as { headers?: Record<string, string> }).headers ??
+              server.headers,
+          }),
+        };
+      } else {
+        // Stdio server
+        updatedServer = {
+          ...server,
+          ...("command" in changes && {
+            command:
+              (changes as { command?: string }).command ?? server.command,
+          }),
+          ...("args" in changes && {
+            args: (changes as { args?: string[] }).args ?? server.args,
+          }),
+          ...("env" in changes && {
+            env: (changes as { env?: Record<string, string> }).env,
+          }),
+          ...("cwd" in changes && {
+            cwd: (changes as { cwd?: string }).cwd,
+          }),
+          ...("timeout" in changes && {
+            timeout: (changes as { timeout?: number }).timeout,
+          }),
+          ...("sessionMode" in changes && {
+            sessionMode: (changes as { sessionMode?: "shared" | "isolated" })
+              .sessionMode,
+          }),
+        };
       }
-      if (changes.headers !== undefined) {
-        server.headers = changes.headers;
-      }
+
+      // Replace server in array
+      const index = servers.findIndex((s) => s.name === name);
+      servers[index] = updatedServer;
 
       // Persist to file
       await this.saveRegistry(servers);
       logger.debug("Server updated in registry", { name, changes });
+
+      // Invalidate cached stdio manager if config requires restart
+      if (updatedServer.type === "stdio") {
+        const manager = this.stdioSessionManagers.get(name);
+        if (manager && this.requiresProcessRestart(changes)) {
+          const sessionCount = manager.getSessionCount();
+          logger.warn(
+            "Terminating stdio session manager due to config change",
+            {
+              server: name,
+              activeSessions: sessionCount,
+              changes: Object.keys(changes),
+            },
+          );
+          await manager.terminate();
+          this.stdioSessionManagers.delete(name);
+
+          // Eagerly re-initialize if shared mode
+          if (updatedServer.sessionMode !== "isolated") {
+            try {
+              const newManager = await this.getStdioSessionManager(name);
+              await newManager.initialize();
+              logger.info("Re-initialized stdio server after config change", {
+                name,
+              });
+            } catch (error) {
+              logger.warn("Failed to re-initialize stdio server after update", {
+                name,
+                error: getErrorMessage(error),
+              });
+              // Don't throw - config was updated successfully
+            }
+          }
+        }
+      }
     } catch (error) {
       logger.error("Local storage updateServer failed", {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
         serverName: name,
       });
       throw error;
@@ -532,7 +680,7 @@ export class LocalStorageBackend implements StorageBackend {
     serverName: string,
     health: HealthStatus,
     lastCheck: string,
-    url: string,
+    url?: string,
     lastCheckTime?: number,
     lastHealthyTime?: number,
     lastErrorTime?: number,
@@ -556,22 +704,126 @@ export class LocalStorageBackend implements StorageBackend {
       logger.debug("Server health updated", { serverName, health });
     } catch (error) {
       logger.error("Local storage upsertServerHealth failed", {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
         serverName,
       });
       throw error;
     }
   }
 
+  /**
+   * Get or create stdio session manager for a server
+   */
+  async getStdioSessionManager(
+    serverName: string,
+  ): Promise<StdioSessionManager> {
+    // Check if manager already exists
+    const existing = this.stdioSessionManagers.get(serverName);
+    if (existing) {
+      return existing;
+    }
+
+    // Get server config
+    const server = await this.getServer(serverName);
+    if (server.type !== "stdio") {
+      throw new Error(`Server '${serverName}' is not a stdio server`);
+    }
+
+    // Create new manager
+    const manager = new StdioSessionManager(server);
+    this.stdioSessionManagers.set(serverName, manager);
+    return manager;
+  }
+
+  /**
+   * Initialize all shared mode stdio servers eagerly
+   * Called on gateway startup and when servers are added/updated
+   *
+   * @returns Results with succeeded/failed server names and error details
+   */
+  async initializeSharedStdioServers(): Promise<{
+    total: number;
+    succeeded: string[];
+    failed: Array<{ name: string; error: string }>;
+  }> {
+    const servers = await this.loadRegistry();
+    const sharedStdioServers = servers.filter(
+      (s) => s.type === "stdio" && s.sessionMode !== "isolated",
+    );
+
+    if (sharedStdioServers.length === 0) {
+      return { total: 0, succeeded: [], failed: [] };
+    }
+
+    logger.info("Initializing shared stdio servers", {
+      count: sharedStdioServers.length,
+      servers: sharedStdioServers.map((s) => s.name),
+    });
+
+    const succeeded: string[] = [];
+    const failed: Array<{ name: string; error: string }> = [];
+
+    // Initialize in parallel for faster startup
+    const results = await Promise.allSettled(
+      sharedStdioServers.map(async (server) => {
+        const manager = await this.getStdioSessionManager(server.name);
+        await manager.initialize();
+        return server.name;
+      }),
+    );
+
+    // Collect results
+    results.forEach((result, i) => {
+      const server = sharedStdioServers[i];
+      if (!server) return; // Guard: results and servers arrays should match length
+      const serverName = server.name;
+
+      if (result.status === "fulfilled") {
+        succeeded.push(serverName);
+        logger.info("Initialized shared stdio server", { name: serverName });
+      } else {
+        const errorMessage =
+          result.reason instanceof Error
+            ? result.reason.message
+            : String(result.reason);
+        failed.push({ name: serverName, error: errorMessage });
+        logger.error("Failed to initialize stdio server", {
+          name: serverName,
+          error: errorMessage,
+        });
+      }
+    });
+
+    return {
+      total: sharedStdioServers.length,
+      succeeded,
+      failed,
+    };
+  }
+
   async close(): Promise<void> {
     try {
+      // Close all stdio session managers
+      for (const [serverName, manager] of this.stdioSessionManagers) {
+        try {
+          await manager.stop();
+          logger.debug("Stopped stdio session manager", { serverName });
+        } catch (error) {
+          logger.warn("Error stopping stdio session manager", {
+            serverName,
+            error: getErrorMessage(error),
+          });
+        }
+      }
+      this.stdioSessionManagers.clear();
+
       this.client.close();
       logger.debug("Local storage backend closed", {
         storageDir: this.storageDir,
       });
     } catch (error) {
       logger.warn("Error closing local storage connection", {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
     }
   }

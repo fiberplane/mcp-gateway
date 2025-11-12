@@ -167,17 +167,59 @@ MCP Gateway stores configuration and logs in `~/.mcp-gateway/`:
 
 Servers are managed through the Web UI or by editing `~/.mcp-gateway/mcp.json`:
 
+#### HTTP Servers
+
 ```json
 {
   "servers": [
     {
       "name": "my-server",
+      "type": "http",
       "url": "http://localhost:3000/mcp",
       "enabled": true
     }
   ]
 }
 ```
+
+#### Stdio Servers (Local Subprocesses)
+
+Gateway supports stdio-based MCP servers (local subprocesses) in addition to HTTP servers:
+
+```json
+{
+  "servers": [
+    {
+      "name": "memory-server",
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "env": { "DEBUG": "true" },
+      "cwd": "/path/to/project",
+      "timeout": 30000,
+      "sessionMode": "shared"
+    }
+  ]
+}
+```
+
+**Stdio Configuration:**
+- `command` - Executable to run (e.g., `node`, `python`, `npx`)
+- `args` - Command arguments (array of strings)
+- `env` - Environment variables (optional)
+- `cwd` - Working directory (optional)
+- `timeout` - Request timeout in ms (optional, default: 30000)
+- `sessionMode` - `"shared"` (default) or `"isolated"` (one process per session)
+
+**Stdio Server Lifecycle:**
+- Spawned when gateway starts
+- Long-lived (not per-request)
+- Crashes mark server offline
+- Restart via UI/API
+
+**Session Modes:**
+- **Shared** (default): One subprocess handles all sessions. Sessions share state but requests are properly correlated.
+- **Isolated**: Separate subprocess per `x-session-id` header. Full session isolation but higher resource usage.
 
 ## Gateway MCP Server
 

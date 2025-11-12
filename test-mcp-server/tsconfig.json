@@ -4,8 +4,9 @@
     "composite": true,
     "outDir": "dist",
     "rootDir": ".",
-    "noEmit": true
+    "noEmit": true,
+    "resolveJsonModule": true
   },
-  "include": ["*.ts", "src/**/*"],
+  "include": ["*.ts", "src/**/*", "package.json"],
   "exclude": ["node_modules"]
 }

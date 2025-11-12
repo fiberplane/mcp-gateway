@@ -1,6 +1,9 @@
-import type { HttpContext } from "./gateway.js";
 import type { LogQueryOptions, LogQueryResult, ServerInfo } from "./logs.js";
-import type { McpServer, McpServerConfig } from "./registry.js";
+import type {
+  McpServer,
+  McpServerConfig,
+  StdioProcessState,
+} from "./registry.js";
 import type {
   CaptureRecord,
   ClientInfo,
@@ -8,6 +11,56 @@ import type {
   JsonRpcResponse,
   McpServerInfo,
 } from "./schemas.js";
+
+/**
+ * HTTP context information for requests
+ *
+ * Contains metadata about the HTTP request context,
+ * extracted from headers and connection information.
+ */
+export interface HttpContext {
+  userAgent?: string;
+  clientIp?: string;
+}
+
+/**
+ * Interface for stdio session manager
+ *
+ * Manages subprocess lifecycle for stdio MCP servers.
+ * Supports both shared (one process for all sessions) and isolated
+ * (one process per session) modes.
+ */
+export interface StdioSessionManager {
+  /**
+   * Send a JSON-RPC request to the subprocess
+   * @param sessionId Optional session ID (required for isolated mode)
+   * @param request JSON-RPC request to send
+   */
+  send(
+    sessionId: string | undefined,
+    request: JsonRpcRequest,
+  ): Promise<JsonRpcResponse>;
+
+  /**
+   * Get current process state
+   */
+  getProcessState(): StdioProcessState;
+
+  /**
+   * Get number of active sessions (isolated mode only)
+   */
+  getSessionCount(): number;
+
+  /**
+   * Manually restart the subprocess (for recovery after crash)
+   */
+  restart(): Promise<void>;
+
+  /**
+   * Terminate the subprocess(es) and clean up
+   */
+  terminate(): Promise<void>;
+}
 
 /**
  * Dependency injection interface for proxy routes
@@ -107,6 +160,12 @@ export interface ProxyDependencies {
    * @throws {ServerNotFoundError} When server doesn't exist
    */
   getServer: (name: string) => Promise<McpServer>;
+
+  /**
+   * Get stdio session manager for a server
+   * @throws {Error} When server is not stdio type or not found
+   */
+  getStdioSessionManager?: (serverName: string) => Promise<StdioSessionManager>;
 }
 
 /**

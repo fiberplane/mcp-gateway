@@ -10,7 +10,13 @@ import {
   Copy,
   TriangleAlert,
 } from "lucide-react";
-import { Fragment, type ReactNode, useMemo, useState } from "react";
+import {
+  Fragment,
+  type ReactNode,
+  useDeferredValue,
+  useMemo,
+  useState,
+} from "react";
 import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
 import { getMethodColor } from "../lib/method-colors";
 import { getMethodDetail } from "../lib/method-detail";
@@ -289,10 +295,14 @@ export function LogTable({
   const [sortField, setSortField] = useState<SortField>("timestamp");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
+  // Defer expensive table updates to keep UI responsive
+  const deferredLogs = useDeferredValue(logs);
+
   // Filter visible columns based on log data
   const visibleColumns = useMemo(
-    () => COLUMNS.filter((col) => !col.isVisible || col.isVisible(logs)),
-    [logs],
+    () =>
+      COLUMNS.filter((col) => !col.isVisible || col.isVisible(deferredLogs)),
+    [deferredLogs],
   );
 
   const handleSort = useHandler((field: SortField) => {
@@ -307,7 +317,7 @@ export function LogTable({
   });
 
   const sortedLogs = useMemo(() => {
-    return [...logs].sort((a, b) => {
+    return [...deferredLogs].sort((a, b) => {
       let aValue: string | number;
       let bValue: string | number;
 
@@ -379,7 +389,7 @@ export function LogTable({
 
       return sortDirection === "asc" ? comparison : -comparison;
     });
-  }, [logs, sortField, sortDirection]);
+  }, [deferredLogs, sortField, sortDirection]);
 
   // Group logs by time interval and create rows with dividers
   const rowsWithDividers = useMemo(() => {
@@ -531,13 +541,34 @@ export function LogTable({
 
           return (
             <Fragment key={logKey}>
+              {/* biome-ignore lint/a11y/useSemanticElements: Table row with button behavior for expand/collapse */}
               <tr
-                className={`hover:bg-muted/50 transition-colors ${
-                  isExpanded ? "bg-blue-50/50" : ""
-                }`}
+                role="button"
+                tabIndex={0}
+                aria-expanded={isExpanded}
+                aria-label={`Log entry for ${log.method} at ${format(new Date(log.timestamp), "HH:mm:ss")}`}
+                className={cn(
+                  "hover:bg-muted/50 transition-colors cursor-pointer",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                  isExpanded && "bg-blue-50/50",
+                )}
+                onClick={() => handleRowClick(log)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    handleRowClick(log);
+                  }
+                }}
               >
-                {/* biome-ignore lint/a11y/useKeyWithClickEvents: Checkbox cell stops propagation */}
-                <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                <td
+                  className="p-3"
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.stopPropagation();
+                    }
+                  }}
+                >
                   <Checkbox
                     checked={selectedIds.has(logKey)}
                     onCheckedChange={(checked) =>
@@ -547,12 +578,7 @@ export function LogTable({
                   />
                 </td>
                 {visibleColumns.map((column) => (
-                  // biome-ignore lint/a11y/useKeyWithClickEvents: Table row click for expand/collapse, keyboard nav to be added
-                  <td
-                    key={column.id}
-                    className="p-2 cursor-pointer"
-                    onClick={() => handleRowClick(log)}
-                  >
+                  <td key={column.id} className="p-2">
                     <div className="flex items-center gap-2 min-w-0">
                       {column.cell(log)}
                     </div>

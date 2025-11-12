@@ -284,6 +284,40 @@ class APIClient {
 
     return response.json();
   }
+
+  /**
+   * Restart a stdio server process
+   *
+   * Only works for stdio servers in shared mode.
+   * Returns error if called on HTTP server or isolated mode stdio server.
+   *
+   * @param name Server name (normalized to lowercase)
+   * @returns Success confirmation
+   */
+  async restartStdioServer(
+    name: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const response = await fetch(
+      `${this.baseURL}/servers/${encodeURIComponent(name)}/restart`,
+      {
+        method: "POST",
+      },
+    );
+
+    if (!response.ok) {
+      const error = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        message?: string;
+      };
+      const errorMessage =
+        (typeof error.message === "string" && error.message) ||
+        (typeof error.error === "string" && error.error) ||
+        response.statusText;
+      throw new Error(`Failed to restart server: ${errorMessage}`);
+    }
+
+    return response.json();
+  }
 }
 
 /**

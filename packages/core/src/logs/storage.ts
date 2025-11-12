@@ -348,12 +348,12 @@ export async function queryLogs(
  * Get server aggregations with status
  *
  * @param db - Database instance
- * @param registryServers - Optional list of registered servers with configs
+ * @param registryServers - Optional list of registered servers with configs (URL only for HTTP servers)
  * @returns Server information with status (online/offline/not-found) and URLs
  */
 export async function getServers(
   db: LibSQLDatabase<typeof schema>,
-  registryServers?: Array<{ name: string; url: string }>,
+  registryServers?: Array<{ name: string; url?: string }>,
 ): Promise<ServerInfo[]> {
   // Get servers that have logs in the database, with health data
   const logsResult = await db
@@ -374,7 +374,7 @@ export async function getServers(
   // Create maps of registry servers (normalized name -> original name and URL)
   // This preserves the registry's casing as the source of truth
   const registryNameMap = new Map<string, string>();
-  const registryUrlMap = new Map<string, string>();
+  const registryUrlMap = new Map<string, string | undefined>();
   const registryProvided = Array.isArray(registryServers);
   if (registryProvided) {
     for (const server of registryServers || []) {
@@ -413,7 +413,7 @@ export async function getServers(
     serverMap.set(normalizedName, {
       name: registryName || server.name,
       status,
-      url: registryUrl || "", // Empty string for servers not in registry
+      url: registryUrl, // Undefined for stdio servers or servers not in registry
       health:
         server.health === "unknown" ? undefined : (server.health ?? undefined),
       lastCheckTime: server.lastCheckTime ?? undefined,
@@ -561,7 +561,7 @@ export async function upsertServerHealth(
     serverName: string;
     health: HealthStatus;
     lastCheck: string;
-    url: string;
+    url?: string;
     lastCheckTime?: number;
     lastHealthyTime?: number;
     lastErrorTime?: number;
@@ -574,7 +574,7 @@ export async function upsertServerHealth(
     serverName: data.serverName,
     health: data.health,
     lastCheck: data.lastCheck,
-    url: data.url,
+    url: data.url ?? null,
     lastCheckTime: data.lastCheckTime ?? null,
     lastHealthyTime: data.lastHealthyTime ?? null,
     lastErrorTime: data.lastErrorTime ?? null,
@@ -613,7 +613,7 @@ export async function getServerHealth(
 ): Promise<{
   health: HealthStatus;
   lastCheck: string;
-  url: string;
+  url?: string; // Optional - stdio servers don't have URLs
   lastCheckTime?: number;
   lastHealthyTime?: number;
   lastErrorTime?: number;
@@ -635,7 +635,7 @@ export async function getServerHealth(
   return {
     health: row.health as HealthStatus,
     lastCheck: row.lastCheck,
-    url: row.url,
+    url: row.url ?? undefined,
     lastCheckTime: row.lastCheckTime ?? undefined,
     lastHealthyTime: row.lastHealthyTime ?? undefined,
     lastErrorTime: row.lastErrorTime ?? undefined,

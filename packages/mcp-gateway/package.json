@@ -32,6 +32,7 @@
   "sideEffects": false,
   "scripts": {
     "dev": "LOG_LEVEL=debug bun run --watch src/cli.ts",
+    "dev:no-watch": "LOG_LEVEL=debug bun run src/cli.ts",
     "build": "bun run ../../scripts/build.ts && bun run postbuild",
     "postbuild": "mkdir -p public && cp -r ../web/dist/* public/ && cp -r ../core/drizzle .",
     "test": "bun test",

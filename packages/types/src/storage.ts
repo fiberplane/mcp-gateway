@@ -1,3 +1,4 @@
+import type { StdioSessionManager } from "./dependencies.js";
 import type {
   ClientAggregation,
   LogQueryOptions,
@@ -198,7 +199,7 @@ export interface StorageBackend {
     serverName: string,
     health: HealthStatus,
     lastCheck: string,
-    url: string,
+    url?: string,
     lastCheckTime?: number,
     lastHealthyTime?: number,
     lastErrorTime?: number,
@@ -206,6 +207,32 @@ export interface StorageBackend {
     errorCode?: string,
     responseTimeMs?: number,
   ): Promise<void>;
+
+  /**
+   * Initialize all shared mode stdio servers eagerly
+   *
+   * Called on gateway startup and when servers are added/updated.
+   * Only initializes servers where sessionMode !== "isolated".
+   *
+   * @returns Results with succeeded/failed server names and error details
+   */
+  initializeSharedStdioServers(): Promise<{
+    total: number;
+    succeeded: string[];
+    failed: Array<{ name: string; error: string }>;
+  }>;
+
+  /**
+   * Get or create stdio session manager for a server
+   *
+   * Returns a session manager that handles subprocess communication for
+   * stdio-based MCP servers. The manager is cached per server.
+   *
+   * @param serverName - Name of the stdio server
+   * @returns Session manager for the server
+   * @throws Error if server is not stdio type or doesn't exist
+   */
+  getStdioSessionManager(serverName: string): Promise<StdioSessionManager>;
 
   /**
    * Close/cleanup the storage backend
