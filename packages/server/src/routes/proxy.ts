@@ -954,17 +954,18 @@ export async function createProxyRoutes(options: {
             id: jsonRpcRequest.id ?? null,
           };
 
-          const errorDetails = errorResponse.error;
-
-          await deps.captureErrorResponse(
-            server.name,
-            effectiveSessionId,
-            jsonRpcRequest,
-            errorDetails,
-            500,
-            duration,
-            httpContext,
-          );
+          // errorResponse.error is guaranteed to exist since we just created it above
+          if (errorResponse.error) {
+            await deps.captureErrorResponse(
+              server.name,
+              effectiveSessionId,
+              jsonRpcRequest,
+              errorResponse.error,
+              500,
+              duration,
+              httpContext,
+            );
+          }
 
           // If we generated a session ID, return it in the error response header too
           if (generatedSessionId) {

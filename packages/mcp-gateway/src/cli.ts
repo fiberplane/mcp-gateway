@@ -696,9 +696,38 @@ export async function runCli(): Promise<void> {
           server.type === "http"
             ? server.url
             : `${server.command} ${server.args.join(" ")}`;
-        const healthStatus =
-          server.type === "http" ? server.health || "unknown" : "n/a";
-        const healthIcon = getHealthIcon(healthStatus);
+
+        // Determine health status display
+        let healthStatus: string;
+        let healthIcon: string;
+
+        if (server.type === "http") {
+          healthStatus = server.health || "unknown";
+          healthIcon = getHealthIcon(healthStatus);
+        } else {
+          // Stdio server
+          if (server.sessionMode === "isolated") {
+            healthStatus = "on-demand";
+            healthIcon = "○";
+          } else if (server.health) {
+            // Shared mode with health check result
+            healthStatus = server.health;
+            healthIcon = getHealthIcon(healthStatus);
+          } else if (server.processState.status === "running") {
+            // Shared mode, process running but no health check yet
+            healthStatus = "starting";
+            healthIcon = "⚙";
+          } else if (
+            server.processState.status === "stopped" ||
+            server.processState.status === "crashed"
+          ) {
+            healthStatus = "offline";
+            healthIcon = "○";
+          } else {
+            healthStatus = "unknown";
+            healthIcon = "?";
+          }
+        }
 
         // Pad columns for alignment
         const name = server.name.padEnd(maxNameLen);
