@@ -954,11 +954,7 @@ export async function createProxyRoutes(options: {
             id: jsonRpcRequest.id ?? null,
           };
 
-          // errorResponse.error is guaranteed to exist since we just created it
-          const errorDetails = errorResponse.error ?? {
-            code: JSON_RPC_ERRORS.SERVER_ERROR,
-            message: "Unknown error",
-          };
+          const errorDetails = errorResponse.error;
 
           await deps.captureErrorResponse(
             server.name,

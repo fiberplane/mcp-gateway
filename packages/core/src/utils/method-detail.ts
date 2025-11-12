@@ -275,8 +275,7 @@ function getResponsePreview(log: ApiLogEntry): string {
         typeof result === "object" &&
         result !== null &&
         "serverInfo" in result &&
-        typeof result.serverInfo === "object" &&
-        result.serverInfo !== null
+        typeof result.serverInfo === "object"
       ) {
         const serverInfo = result.serverInfo as {
           name?: string;

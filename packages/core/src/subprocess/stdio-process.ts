@@ -308,7 +308,7 @@ export class StdioProcess {
       "jsonrpc" in message &&
       message.jsonrpc === "2.0" &&
       "method" in message &&
-      (!("id" in message) || message.id === null) // ✅ Fixed to allow id: null
+      (!("id" in message) || message.id === null) // Per JSON-RPC 2.0 spec, notifications either lack an 'id' or have 'id: null'
     );
   }
 
