@@ -718,7 +718,6 @@ export async function runCli(): Promise<void> {
 
     // Keep process alive and handle graceful shutdown signals
     const shutdown = async () => {
-      // biome-ignore lint/suspicious/noConsole: actually want to print to console
       process.stderr.write("\nShutting down gracefully...\n");
 
       try {
@@ -746,28 +745,26 @@ export async function runCli(): Promise<void> {
             sessionTraffic.set(serverName, count + 1);
           }
 
-          // biome-ignore lint/suspicious/noConsole: actually want to print to console
           process.stderr.write("Log summary:\n");
           // Iterate over sessionTraffic to show all servers that handled traffic, even if removed
           for (const [serverName, count] of sessionTraffic.entries()) {
-            // biome-ignore lint/suspicious/noConsole: actually want to print to console
             process.stderr.write(`* ${serverName}: ${count} log events\n`);
           }
-          // biome-ignore lint/suspicious/noConsole: actually want to print to console
           process.stderr.write("\n");
         } else {
-          // biome-ignore lint/suspicious/noConsole: actually want to print to console
           process.stderr.write("\nNo traffic captured during this session\n\n");
         }
       } catch (error) {
-        // biome-ignore lint/suspicious/noConsole: actually want to print to console
         process.stderr.write(`Error showing shutdown summary: ${error}\n`);
       }
 
       // Close server first to immediately release the port
       await new Promise<void>((resolve) => {
         // Force close all connections immediately (Node.js 18.2+)
-        if ("closeAllConnections" in server && typeof server.closeAllConnections === "function") {
+        if (
+          "closeAllConnections" in server &&
+          typeof server.closeAllConnections === "function"
+        ) {
           server.closeAllConnections();
         }
 
@@ -788,7 +785,6 @@ export async function runCli(): Promise<void> {
 
       await gateway.close(); // Close Gateway connections (includes stopping health checks)
 
-      // biome-ignore lint/suspicious/noConsole: actually want to print to console
       process.stderr.write("Shutdown complete\n");
     };
 
@@ -797,7 +793,6 @@ export async function runCli(): Promise<void> {
     process.on("SIGTERM", async () => {
       if (shuttingDown) return;
       shuttingDown = true;
-      // biome-ignore lint/suspicious/noConsole: actually want to print to console
       process.stderr.write("\n"); // Add newline for cleaner output
       await shutdown();
       process.exit(0);
@@ -806,7 +801,6 @@ export async function runCli(): Promise<void> {
     process.on("SIGINT", async () => {
       if (shuttingDown) return;
       shuttingDown = true;
-      // biome-ignore lint/suspicious/noConsole: actually want to print to console
       process.stderr.write("\n"); // Add newline for cleaner output
       await shutdown();
       process.exit(0);
