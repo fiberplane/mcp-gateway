@@ -10,13 +10,22 @@ REST API for querying MCP Gateway logs and managing servers.
 - **Server Management** - Add, update, delete MCP server configurations (optional)
 - **Dependency Injection** - Pass in custom query implementations for testing
 
+## Authentication
+
+⚠️ **This package does NOT include authentication.**
+
+The API package is auth-agnostic by design. Authentication is handled by the orchestration layer (CLI package) using Bearer token middleware. This allows flexible deployment patterns.
+
+When deployed via CLI, all endpoints require `Authorization: Bearer <token>` header.
+
 ## Quick Example
 
 ```typescript
 import { createApp } from "@fiberplane/mcp-gateway-api";
+import { createAuthMiddleware } from "@fiberplane/mcp-gateway";
 import { logger } from "@fiberplane/mcp-gateway-core";
 
-// Create API with dependency injection
+// Create API app with dependency injection
 const apiApp = createApp({
   queries: {
     queryLogs: (options) => storage.queryLogs(options),
@@ -36,8 +45,15 @@ const apiApp = createApp({
   },
 });
 
-// Mount in Hono app
-app.route("/api", apiApp);
+// Wrap with auth middleware (in orchestration layer)
+const authToken = process.env.MCP_GATEWAY_TOKEN || generateToken();
+const authMiddleware = createAuthMiddleware(authToken);
+
+const protectedApi = new Hono();
+protectedApi.use("/*", authMiddleware);  // Add auth
+protectedApi.route("/", apiApp);         // Mount API
+
+app.route("/api", protectedApi);
 ```
 
 ## Key Endpoints
