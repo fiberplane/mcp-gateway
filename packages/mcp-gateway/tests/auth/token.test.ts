@@ -39,4 +39,45 @@ describe("Token generation", () => {
     expect(token).toHaveLength(43);
     expect(token).toMatch(/^[A-Za-z0-9_-]+$/);
   });
+
+  it("loadOrGenerateToken ignores empty MCP_GATEWAY_TOKEN", () => {
+    process.env.MCP_GATEWAY_TOKEN = "";
+
+    const token = loadOrGenerateToken();
+
+    // Should generate a new token, not return empty string
+    expect(token).not.toBe("");
+    expect(token).toHaveLength(43);
+    expect(token).toMatch(/^[A-Za-z0-9_-]+$/);
+
+    // Cleanup
+    delete process.env.MCP_GATEWAY_TOKEN;
+  });
+
+  it("loadOrGenerateToken ignores whitespace-only MCP_GATEWAY_TOKEN", () => {
+    process.env.MCP_GATEWAY_TOKEN = "   ";
+
+    const token = loadOrGenerateToken();
+
+    // Should generate a new token, not return whitespace
+    expect(token).not.toBe("   ");
+    expect(token).toHaveLength(43);
+    expect(token).toMatch(/^[A-Za-z0-9_-]+$/);
+
+    // Cleanup
+    delete process.env.MCP_GATEWAY_TOKEN;
+  });
+
+  it("loadOrGenerateToken trims whitespace from env var", () => {
+    const customToken = "custom-test-token-12345";
+    process.env.MCP_GATEWAY_TOKEN = `  ${customToken}  `;
+
+    const token = loadOrGenerateToken();
+
+    // Should trim the whitespace and return clean token
+    expect(token).toBe(customToken);
+
+    // Cleanup
+    delete process.env.MCP_GATEWAY_TOKEN;
+  });
 });
