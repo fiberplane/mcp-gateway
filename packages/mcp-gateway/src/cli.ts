@@ -387,7 +387,6 @@ export async function runCli(): Promise<void> {
       margin-bottom: 10px;
       text-align: left;
       overflow-x: auto;
-      white-space: pre;
       word-break: break-all;
       white-space: pre-wrap;
     }

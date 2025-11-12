@@ -25,8 +25,8 @@ export function createQueryClient(onAuthError: () => void): QueryClient {
             onAuthError();
             return false;
           }
-          // Retry other errors up to 2 times
-          return failureCount < 2;
+          // Retry other errors once
+          return failureCount < 1;
         },
         refetchOnWindowFocus: false, // Don't refetch on window focus
       },
@@ -38,7 +38,7 @@ export function createQueryClient(onAuthError: () => void): QueryClient {
             return false;
           }
           // Retry mutations once
-          return failureCount < 1;
+          return failureCount === 0;
         },
       },
     },
