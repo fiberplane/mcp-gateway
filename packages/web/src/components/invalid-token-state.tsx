@@ -48,7 +48,6 @@ export function InvalidTokenState() {
         </div>
 
         <div className="text-sm text-muted-foreground grid gap-1 mx-2 text-start">
-          {/* <div className="max-w-xs mx-auto text-left"> */}
           <div className="text-left grid gap-1">
             <p className="text-xs mt-4">
               <strong>Note:</strong> Tokens are unique per gateway session. If
