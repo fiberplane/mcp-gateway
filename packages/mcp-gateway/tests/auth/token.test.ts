@@ -23,9 +23,10 @@ describe("Token generation", () => {
     const customToken = "custom-test-token-12345";
     process.env.MCP_GATEWAY_TOKEN = customToken;
 
-    const token = loadOrGenerateToken();
+    const { token, isFromEnv } = loadOrGenerateToken();
 
     expect(token).toBe(customToken);
+    expect(isFromEnv).toBe(true);
 
     // Cleanup
     delete process.env.MCP_GATEWAY_TOKEN;
@@ -34,21 +35,23 @@ describe("Token generation", () => {
   it("loadOrGenerateToken generates token when env var not set", () => {
     delete process.env.MCP_GATEWAY_TOKEN;
 
-    const token = loadOrGenerateToken();
+    const { token, isFromEnv } = loadOrGenerateToken();
 
     expect(token).toHaveLength(43);
     expect(token).toMatch(/^[A-Za-z0-9_-]+$/);
+    expect(isFromEnv).toBe(false);
   });
 
   it("loadOrGenerateToken ignores empty MCP_GATEWAY_TOKEN", () => {
     process.env.MCP_GATEWAY_TOKEN = "";
 
-    const token = loadOrGenerateToken();
+    const { token, isFromEnv } = loadOrGenerateToken();
 
     // Should generate a new token, not return empty string
     expect(token).not.toBe("");
     expect(token).toHaveLength(43);
     expect(token).toMatch(/^[A-Za-z0-9_-]+$/);
+    expect(isFromEnv).toBe(false);
 
     // Cleanup
     delete process.env.MCP_GATEWAY_TOKEN;
@@ -57,12 +60,13 @@ describe("Token generation", () => {
   it("loadOrGenerateToken ignores whitespace-only MCP_GATEWAY_TOKEN", () => {
     process.env.MCP_GATEWAY_TOKEN = "   ";
 
-    const token = loadOrGenerateToken();
+    const { token, isFromEnv } = loadOrGenerateToken();
 
     // Should generate a new token, not return whitespace
     expect(token).not.toBe("   ");
     expect(token).toHaveLength(43);
     expect(token).toMatch(/^[A-Za-z0-9_-]+$/);
+    expect(isFromEnv).toBe(false);
 
     // Cleanup
     delete process.env.MCP_GATEWAY_TOKEN;
@@ -72,10 +76,11 @@ describe("Token generation", () => {
     const customToken = "custom-test-token-12345";
     process.env.MCP_GATEWAY_TOKEN = `  ${customToken}  `;
 
-    const token = loadOrGenerateToken();
+    const { token, isFromEnv } = loadOrGenerateToken();
 
     // Should trim the whitespace and return clean token
     expect(token).toBe(customToken);
+    expect(isFromEnv).toBe(true);
 
     // Cleanup
     delete process.env.MCP_GATEWAY_TOKEN;

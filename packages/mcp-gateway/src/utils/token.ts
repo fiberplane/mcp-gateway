@@ -16,9 +16,9 @@ export function generateToken(): string {
  * 1. MCP_GATEWAY_TOKEN environment variable (if non-empty)
  * 2. Auto-generated secure token
  *
- * @returns Authentication token
+ * @returns Object with token and whether it came from environment variable
  */
-export function loadOrGenerateToken(): string {
+export function loadOrGenerateToken(): { token: string; isFromEnv: boolean } {
   const envToken = process.env.MCP_GATEWAY_TOKEN?.trim();
 
   if (envToken && envToken.length > 0) {
@@ -31,8 +31,8 @@ export function loadOrGenerateToken(): string {
       // biome-ignore lint/suspicious/noConsole: User-facing security warning
       console.warn("   For better security, use: openssl rand -base64 32");
     }
-    return envToken;
+    return { token: envToken, isFromEnv: true };
   }
 
-  return generateToken();
+  return { token: generateToken(), isFromEnv: false };
 }

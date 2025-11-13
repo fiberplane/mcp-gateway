@@ -262,7 +262,7 @@ export async function runCli(): Promise<void> {
     const app = new Hono();
 
     // Generate or load authentication token
-    const authToken = loadOrGenerateToken();
+    const { token: authToken, isFromEnv } = loadOrGenerateToken();
     const authMiddleware = createAuthMiddleware(authToken);
 
     // Add landing page at root
@@ -655,8 +655,11 @@ MCP Gateway server started at http://localhost:${port}
     console.log(`mcp-gateway v${version}\n`);
     // biome-ignore lint/suspicious/noConsole: actually want to print to console
     console.log(`MCP Gateway server started at http://localhost:${port}`);
+    const displayToken = isFromEnv
+      ? "••<$MCP_GATEWAY_TOKEN>••"
+      : encodeURIComponent(authToken);
     // biome-ignore lint/suspicious/noConsole: actually want to print to console
-    console.log(`Web UI: http://localhost:${port}/ui?token=${authToken}`);
+    console.log(`Web UI: http://localhost:${port}/ui?token=${displayToken}`);
 
     // Show configured MCP servers and their gateway endpoints
     const registeredServers = await gateway.storage.getRegisteredServers();
