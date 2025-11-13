@@ -14,6 +14,11 @@ const MAX_TOKEN_LENGTH = 256; // Reasonable max to prevent DoS
  */
 export function createAuthMiddleware(expectedToken: string): MiddlewareHandler {
   return async (c, next) => {
+    // Allow OPTIONS requests (CORS preflight) through without authentication
+    if (c.req.method === "OPTIONS") {
+      return next();
+    }
+
     const authHeader = c.req.header("Authorization");
 
     // Check for Authorization header presence and Bearer scheme

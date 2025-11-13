@@ -21,6 +21,18 @@ describe("Auth middleware", () => {
     expect(json).toEqual({ success: true });
   });
 
+  it("allows OPTIONS requests without authentication (CORS preflight)", async () => {
+    const app = new Hono();
+    app.use("/*", createAuthMiddleware(testToken));
+    app.options("/test", (c) => c.body(null, 204));
+
+    const response = await app.request("/test", {
+      method: "OPTIONS",
+    });
+
+    expect(response.status).toBe(204);
+  });
+
   it("rejects request without Authorization header", async () => {
     const app = new Hono();
     app.use("/*", createAuthMiddleware(testToken));
