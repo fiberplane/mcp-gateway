@@ -2,9 +2,9 @@ import type { ServerInfo, ServerStatus } from "@fiberplane/mcp-gateway-types";
 import { useQuery } from "@tanstack/react-query";
 import { Check, Copy, Plus, Workflow } from "lucide-react";
 import { useEffect, useMemo, useRef } from "react";
+import { useApi } from "../contexts/ApiContext";
 import { useServerModal } from "../contexts/ServerModalContext";
 import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
-import { api } from "../lib/api";
 import { POLLING_INTERVALS } from "../lib/constants";
 import { Button } from "./ui/button";
 import { ErrorAlert } from "./ui/error-alert";
@@ -160,6 +160,7 @@ function ServerTab({
 }
 
 export function ServerTabs({ value, onChange, panelId }: ServerTabsProps) {
+  const api = useApi();
   const { openAddServerModal } = useServerModal();
   const { data, isLoading, error } = useQuery({
     queryKey: ["servers"],

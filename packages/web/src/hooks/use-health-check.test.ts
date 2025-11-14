@@ -2,11 +2,13 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
-import * as apiModule from "../lib/api";
+import { ApiProvider } from "../contexts/ApiContext";
+import { createMockApiClient } from "../test-utils/mocks";
 import { useHealthCheck } from "./use-health-check";
 
 describe("useHealthCheck", () => {
   let queryClient: QueryClient;
+  let mockApi: ReturnType<typeof createMockApiClient>;
 
   beforeEach(() => {
     queryClient = new QueryClient({
@@ -15,6 +17,7 @@ describe("useHealthCheck", () => {
         mutations: { retry: false },
       },
     });
+    mockApi = createMockApiClient();
   });
 
   afterEach(() => {
@@ -23,20 +26,22 @@ describe("useHealthCheck", () => {
   });
 
   const wrapper = ({ children }: { children: ReactNode }) =>
-    createElement(QueryClientProvider, { client: queryClient }, children);
+    createElement(
+      QueryClientProvider,
+      { client: queryClient },
+      createElement(ApiProvider, { value: mockApi }, children),
+    );
 
   test("should trigger health check for server", async () => {
-    const mockCheckHealth = vi
-      .spyOn(apiModule.api, "checkServerHealth")
-      .mockResolvedValue({
-        server: {
-          name: "test-server",
-          url: "http://localhost:3000",
-          type: "http",
-          headers: {},
-          health: "up",
-        },
-      });
+    mockApi.checkServerHealth.mockResolvedValue({
+      server: {
+        name: "test-server",
+        url: "http://localhost:3000",
+        type: "http",
+        headers: {},
+        health: "up",
+      },
+    });
 
     const { result } = renderHook(() => useHealthCheck(), { wrapper });
 
@@ -46,12 +51,12 @@ describe("useHealthCheck", () => {
       expect(result.current.isSuccess).toBe(true);
     });
 
-    expect(mockCheckHealth).toHaveBeenCalledWith("test-server");
-    expect(mockCheckHealth).toHaveBeenCalledTimes(1);
+    expect(mockApi.checkServerHealth).toHaveBeenCalledWith("test-server");
+    expect(mockApi.checkServerHealth).toHaveBeenCalledTimes(1);
   });
 
   test("should invalidate server-configs query on success", async () => {
-    vi.spyOn(apiModule.api, "checkServerHealth").mockResolvedValue({
+    mockApi.checkServerHealth.mockResolvedValue({
       server: {
         name: "test-server",
         url: "http://localhost:3000",
@@ -77,7 +82,7 @@ describe("useHealthCheck", () => {
   });
 
   test("should invalidate servers query on success", async () => {
-    vi.spyOn(apiModule.api, "checkServerHealth").mockResolvedValue({
+    mockApi.checkServerHealth.mockResolvedValue({
       server: {
         name: "test-server",
         url: "http://localhost:3000",
@@ -104,7 +109,7 @@ describe("useHealthCheck", () => {
 
   test("should handle health check errors", async () => {
     const mockError = new Error("Server not found");
-    vi.spyOn(apiModule.api, "checkServerHealth").mockRejectedValue(mockError);
+    mockApi.checkServerHealth.mockRejectedValue(mockError);
 
     const { result } = renderHook(() => useHealthCheck(), { wrapper });
 
@@ -118,7 +123,7 @@ describe("useHealthCheck", () => {
   });
 
   test("should track isPending state correctly", async () => {
-    vi.spyOn(apiModule.api, "checkServerHealth").mockImplementation(
+    mockApi.checkServerHealth.mockImplementation(
       () =>
         new Promise((resolve) =>
           setTimeout(
@@ -157,9 +162,7 @@ describe("useHealthCheck", () => {
   });
 
   test("should not invalidate queries on error", async () => {
-    vi.spyOn(apiModule.api, "checkServerHealth").mockRejectedValue(
-      new Error("Connection failed"),
-    );
+    mockApi.checkServerHealth.mockRejectedValue(new Error("Connection failed"));
 
     const invalidateQueriesSpy = vi.spyOn(queryClient, "invalidateQueries");
 
@@ -176,17 +179,15 @@ describe("useHealthCheck", () => {
   });
 
   test("should handle multiple consecutive health checks", async () => {
-    const mockCheckHealth = vi
-      .spyOn(apiModule.api, "checkServerHealth")
-      .mockResolvedValue({
-        server: {
-          name: "test-server",
-          url: "http://localhost:3000",
-          type: "http",
-          headers: {},
-          health: "up",
-        },
-      });
+    mockApi.checkServerHealth.mockResolvedValue({
+      server: {
+        name: "test-server",
+        url: "http://localhost:3000",
+        type: "http",
+        headers: {},
+        health: "up",
+      },
+    });
 
     const { result } = renderHook(() => useHealthCheck(), { wrapper });
 
@@ -202,8 +203,8 @@ describe("useHealthCheck", () => {
       expect(result.current.isSuccess).toBe(true);
     });
 
-    expect(mockCheckHealth).toHaveBeenCalledTimes(2);
-    expect(mockCheckHealth).toHaveBeenNthCalledWith(1, "server-1");
-    expect(mockCheckHealth).toHaveBeenNthCalledWith(2, "server-2");
+    expect(mockApi.checkServerHealth).toHaveBeenCalledTimes(2);
+    expect(mockApi.checkServerHealth).toHaveBeenNthCalledWith(1, "server-1");
+    expect(mockApi.checkServerHealth).toHaveBeenNthCalledWith(2, "server-2");
   });
 });

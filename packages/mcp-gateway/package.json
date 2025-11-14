@@ -64,6 +64,7 @@
     "@fiberplane/mcp-gateway-types": "workspace:*",
     "@fiberplane/mcp-gateway-core": "workspace:*",
     "@fiberplane/mcp-gateway-api": "workspace:*",
+    "@fiberplane/mcp-gateway-management-mcp": "workspace:*",
     "@fiberplane/mcp-gateway-server": "workspace:*",
     "@fiberplane/mcp-gateway-web": "workspace:*",
     "@biomejs/biome": "^2.2.4",

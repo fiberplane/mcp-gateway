@@ -6,8 +6,10 @@
  */
 
 import { mock } from "bun:test";
+import type { McpServerConfig } from "@fiberplane/mcp-gateway-types";
 import { createFilter } from "@fiberplane/mcp-gateway-types";
 import type { ReactNode } from "react";
+import type { IApiClient } from "../lib/api";
 
 type FilterBadgeProps = {
   filter: ReturnType<typeof createFilter>;
@@ -195,3 +197,43 @@ export const mockNuqs = (
     },
   }));
 };
+
+/**
+ * Create a mock API client for tests
+ * Returns an object that implements IApiClient interface
+ */
+export const createMockApiClient = (): IApiClient => ({
+  getLogs: mock(async () => ({
+    data: [],
+    pagination: {
+      count: 0,
+      limit: 100,
+      hasMore: false,
+      oldestTimestamp: null,
+      newestTimestamp: null,
+    },
+  })),
+  getServers: mock(async () => ({ servers: [] })),
+  getServerConfigs: mock(async () => ({ servers: [] })),
+  addServer: mock(async () => ({
+    success: true,
+    server: {} as McpServerConfig,
+  })),
+  updateServer: mock(async () => ({ success: true, message: "Updated" })),
+  deleteServer: mock(async () => ({ success: true, message: "Deleted" })),
+  checkServerHealth: mock(async () => ({
+    server: {
+      name: "test",
+      url: "http://localhost",
+      type: "http" as const,
+      headers: {},
+      health: "up" as const,
+      lastActivity: null,
+      exchangeCount: 0,
+    },
+  })),
+  getClients: mock(async () => ({ clients: [] })),
+  getMethods: mock(async () => ({ methods: [] })),
+  getSessions: mock(async () => ({ sessions: [] })),
+  clearSessions: mock(async () => ({ success: true })),
+});

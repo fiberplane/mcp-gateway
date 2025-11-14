@@ -9,18 +9,19 @@ import { parseArgs } from "node:util";
 import { createApp as createApiApp } from "@fiberplane/mcp-gateway-api";
 import {
   createGateway,
-  createMcpApp,
   createRequestCaptureRecord,
   createResponseCaptureRecord,
   getStorageRoot,
   logger,
 } from "@fiberplane/mcp-gateway-core";
-
+import { createMcpApp } from "@fiberplane/mcp-gateway-management-mcp";
 import { createApp as createServerApp } from "@fiberplane/mcp-gateway-server";
 import type { ProxyDependencies } from "@fiberplane/mcp-gateway-types";
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
+import { createAuthMiddleware } from "./middleware/auth";
+import { loadOrGenerateToken } from "./utils/token";
 import { getVersion } from "./utils/version.js";
 
 /**
@@ -295,10 +296,9 @@ export async function runCli(): Promise<void> {
         gateway.getStdioSessionManager(serverName),
     };
 
-    // Create MCP protocol server (proxy, OAuth, gateway MCP server)
+    // Create MCP protocol server (proxy, OAuth)
     const { app: serverApp } = await createServerApp({
       storageDir,
-      createMcpApp,
       appLogger: logger,
       proxyDependencies,
       gateway,
@@ -306,6 +306,10 @@ export async function runCli(): Promise<void> {
 
     // Create main application that orchestrates everything
     const app = new Hono();
+
+    // Generate or load authentication token
+    const { token: authToken, isFromEnv } = loadOrGenerateToken();
+    const authMiddleware = createAuthMiddleware(authToken);
 
     // Add landing page at root
     const publicDir = findPublicDir();
@@ -345,7 +349,7 @@ export async function runCli(): Promise<void> {
     }
 
     .header {
-      margin-bottom: 40px;
+      margin-bottom: 10px;
     }
 
     h1 {
@@ -372,7 +376,8 @@ export async function runCli(): Promise<void> {
       font-size: 15px;
       line-height: 1.6;
       color: #6b7280;
-      margin-bottom: 32px;
+      padding: 0;
+      margin-bottom: 16px;
     }
 
     .button {
@@ -396,10 +401,48 @@ export async function runCli(): Promise<void> {
       box-shadow: 0 4px 12px rgba(39, 38, 36, 0.15);
     }
 
+    .auth-section {
+      text-align: start;
+    }
+
+    .auth-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #272624;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+
+    .auth-note {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #6b7280;
+      margin-bottom: 16px;
+    }
+
+    .terminal-example {
+      background: #1a1817;
+      color: #e5e7eb;
+      border-radius: 6px;
+      padding: 16px;
+      font-family: "Roboto Mono", Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      margin-top: 16px;
+      margin-bottom: 10px;
+      text-align: left;
+      overflow-x: auto;
+      word-break: break-all;
+      white-space: pre-wrap;
+    }
+
+    .terminal-example .token-line {
+      color: #10b981;
+    }
+
     .endpoints-section {
-      margin-top: 40px;
-      padding-top: 40px;
-      border-top: 1px solid #e5e7eb;
+      margin-top: 32px;
     }
 
     .endpoints-title {
@@ -431,6 +474,12 @@ export async function runCli(): Promise<void> {
       color: #8b5cf6;
       font-weight: 600;
     }
+
+    .endpoint-protected {
+      color: #f59e0b;
+      font-size: 11px;
+      margin-left: 8px;
+    }
   </style>
 </head>
 <body>
@@ -439,20 +488,28 @@ export async function runCli(): Promise<void> {
       <h1>MCP Gateway</h1>
       <div class="version">v${version}</div>
     </div>
+    
+    <div class="auth-section">
+    <p>To access the web interface, copy the Web UI URL from your terminal output:</p>
+      <div class="terminal-example">mcp-gateway v${version}
 
-    <p>Access the web interface to view and analyze all captured MCP traffic and interactions.</p>
-
-    <a href="/ui" class="button">Open Web UI</a>
+MCP Gateway server started at http://localhost:${port}
+<span class="token-line">Web UI: http://localhost:${port}/ui?token=•••••••••••••••••••••••••</span></div>
+      <div class="auth-note">
+        The URL includes your authentication token. For API access, use the token shown in your terminal.
+      </div>
+    </div>
 
     <div class="endpoints-section">
       <div class="endpoints-title">Available Endpoints</div>
       <div class="endpoints">
-        <div class="endpoint-item"><span class="endpoint-method">GET</span> /api/logs - Query captured logs</div>
-        <div class="endpoint-item"><span class="endpoint-method">GET</span> /api/servers - List MCP servers</div>
-        <div class="endpoint-item"><span class="endpoint-method">GET</span> /api/sessions - List sessions</div>
-        <div class="endpoint-item"><span class="endpoint-method">GET</span> /api/clients - List clients</div>
-        <div class="endpoint-item"><span class="endpoint-method">POST</span> /api/logs/clear - Clear captured logs</div>
-        <div class="endpoint-item"><span class="endpoint-method">GET</span> /ui - Web interface</div>
+        <div class="endpoint-item"><span class="endpoint-method">GET</span> /api/logs<span class="endpoint-protected">🔒 auth required</span></div>
+        <div class="endpoint-item"><span class="endpoint-method">GET</span> /api/servers<span class="endpoint-protected">🔒 auth required</span></div>
+        <div class="endpoint-item"><span class="endpoint-method">GET</span> /api/sessions<span class="endpoint-protected">🔒 auth required</span></div>
+        <div class="endpoint-item"><span class="endpoint-method">GET</span> /api/clients<span class="endpoint-protected">🔒 auth required</span></div>
+        <div class="endpoint-item"><span class="endpoint-method">POST</span> /api/logs/clear<span class="endpoint-protected">🔒 auth required</span></div>
+        <div class="endpoint-item"><span class="endpoint-method">POST</span> /gateway/mcp<span class="endpoint-protected">🔒 auth required</span></div>
+        <div class="endpoint-item"><span class="endpoint-method">GET</span> /ui - Web interface <span class="endpoint-protected">🔒 requires token in URL</span></div>
       </div>
     </div>
   </div>
@@ -512,7 +569,21 @@ export async function runCli(): Promise<void> {
         },
       },
     });
-    app.route("/api", apiApp);
+
+    // Wrap REST API with authentication
+    const protectedApi = new Hono();
+    protectedApi.use("/*", authMiddleware);
+    protectedApi.route("/", apiApp);
+    app.route("/api", protectedApi);
+
+    // Wrap gateway management MCP server with authentication
+    const managementMcpApp = createMcpApp(gateway);
+    const protectedMcp = new Hono();
+    protectedMcp.use("/*", authMiddleware);
+    protectedMcp.route("/", managementMcpApp);
+    app.route("/gateway", protectedMcp);
+    // Short alias for gateway management MCP server
+    app.route("/g", protectedMcp);
 
     // Serve Web UI for management
     // Check if public directory exists before mounting static file middleware
@@ -659,8 +730,11 @@ export async function runCli(): Promise<void> {
     console.log(`mcp-gateway v${version}\n`);
     // biome-ignore lint/suspicious/noConsole: actually want to print to console
     console.log(`MCP Gateway server started at http://localhost:${port}`);
+    const displayToken = isFromEnv
+      ? "••<$MCP_GATEWAY_TOKEN>••"
+      : encodeURIComponent(authToken);
     // biome-ignore lint/suspicious/noConsole: actually want to print to console
-    console.log(`Web UI: http://localhost:${port}/ui`);
+    console.log(`Web UI: http://localhost:${port}/ui?token=${displayToken}`);
 
     // Show configured MCP servers and their gateway endpoints
     const registeredServers = await gateway.storage.getRegisteredServers();

@@ -10,6 +10,7 @@ import {
   type OperatorPrefixedValue,
 } from "@fiberplane/mcp-gateway-types";
 import {
+  QueryClientProvider,
   useInfiniteQuery,
   useQuery,
   useQueryClient,
@@ -23,7 +24,9 @@ import { EmptyStateNoServers } from "./components/empty-state-no-servers";
 import { ExportButton } from "./components/export-button";
 import { FiberplaneLogo } from "./components/fiberplane-logo";
 import { FilterBar } from "./components/filter-bar";
+import { InvalidTokenState } from "./components/invalid-token-state";
 import { LogTable } from "./components/log-table";
+import { NoTokenState } from "./components/no-token-state";
 import { Pagination } from "./components/pagination";
 import { ServerModalManager } from "./components/ServerModalManager";
 import { ServerHealthBanner } from "./components/server-health-banner";
@@ -40,26 +43,31 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "./components/ui/tooltip";
+import { ApiProvider, useApi } from "./contexts/ApiContext";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { useConfirm } from "./hooks/use-confirm";
 import { useHealthCheck } from "./hooks/use-health-check";
 import {
   useFullServerConfig,
   useServerConfig,
 } from "./hooks/use-server-configs";
-import { api } from "./lib/api";
+import { createApiClient } from "./lib/api";
 import { POLLING_INTERVALS, TIMEOUTS } from "./lib/constants";
 import {
   filterParamsToFilters,
   parseAsFilterParam,
   parseAsSearchArray,
 } from "./lib/filter-parsers";
+import { createQueryClient } from "./lib/query-client";
 import { useHandler } from "./lib/use-handler";
 import { getLogKey } from "./lib/utils";
 
 /**
- * API parameters for getLogs query
+ * API parameters for getLogs query (inferred from first call)
  */
-type GetLogsParams = Parameters<typeof api.getLogs>[0];
+type GetLogsParams = Parameters<
+  ReturnType<typeof createApiClient>["getLogs"]
+>[0];
 
 /**
  * Helper to format string filter value with operator prefix for API
@@ -77,7 +85,7 @@ function formatStringFilter(
   return brandOperatorValue(`${operator}:${value}`);
 }
 
-function App() {
+function AppContent() {
   const logsPanelId = useId();
   const queryClient = useQueryClient();
   const { confirm, ConfirmDialog } = useConfirm();
@@ -85,6 +93,10 @@ function App() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isClearing, setIsClearing] = useState(false);
   const [clearError, setClearError] = useState<string | null>(null);
+
+  // Get auth state and API client from context (shared with App component)
+  const { token, hasAuthError } = useAuth();
+  const api = useApi();
 
   // Health check mutation
   const { mutate: checkHealth, isPending: isCheckingHealth } = useHealthCheck();
@@ -198,7 +210,7 @@ function App() {
     hasNextPage,
     isFetchingNextPage,
     isLoading,
-    error,
+    error: logsError,
   } = useInfiniteQuery({
     // Include URL state in queryKey so query automatically refetches when params change
     queryKey: ["logs", serverName, apiParams, searchQueries],
@@ -225,6 +237,7 @@ function App() {
     // Conditional polling - only when streaming is on
     refetchInterval: isStreaming ? POLLING_INTERVALS.LOGS : false,
     refetchIntervalInBackground: false, // Only poll when tab is active
+    enabled: !!token && !hasAuthError, // Only fetch logs when token is available and valid
   });
 
   // Flatten all pages into single array
@@ -242,10 +255,12 @@ function App() {
   const { data: serversData } = useQuery({
     queryKey: ["servers"],
     queryFn: () => api.getServers(),
-    // Only fetch when showing empty state (no logs captured yet)
-    enabled: !hasLogs,
+    // Only fetch when showing empty state (no logs captured yet) and token is available and valid
+    enabled: !!token && !hasAuthError && !hasLogs,
     refetchInterval: !hasLogs ? POLLING_INTERVALS.SERVERS : false,
   });
+
+  // Note: Error detection now handled globally by QueryClient in createQueryClient()
 
   const handleLoadMore = useHandler(() => {
     fetchNextPage();
@@ -305,6 +320,11 @@ function App() {
       setIsClearing(false);
     }
   });
+
+  // Show invalid-token state if token is invalid/expired (401 error detected)
+  if (hasAuthError) {
+    return <InvalidTokenState />;
+  }
 
   return (
     <TooltipProvider delayDuration={TIMEOUTS.TOOLTIP_DELAY}>
@@ -396,10 +416,10 @@ function App() {
                 </div>
               )}
 
-              {error && (
+              {logsError && (
                 <div className="mb-5" role="alert" aria-live="polite">
                   <ErrorAlert
-                    error={error as Error}
+                    error={logsError as Error}
                     title="Failed to load logs"
                   />
                 </div>
@@ -553,6 +573,53 @@ function App() {
       </ErrorBoundary>
       {ConfirmDialog}
     </TooltipProvider>
+  );
+}
+
+/**
+ * Inner app component that consumes auth context and provides API + QueryClient
+ *
+ * Must be wrapped in AuthProvider to access shared auth state.
+ */
+function AppWithProviders() {
+  // Get shared auth state from context
+  const { token, setHasAuthError } = useAuth();
+
+  // Create API client with token provider (recreated when token changes)
+  const api = useMemo(() => createApiClient(() => token), [token]);
+
+  // Create QueryClient with global error handler (recreated when setHasAuthError changes)
+  const queryClient = useMemo(
+    () => createQueryClient(() => setHasAuthError(true)),
+    [setHasAuthError],
+  );
+
+  // Show no-token state if token is missing
+  if (!token) {
+    return <NoTokenState />;
+  }
+
+  // Provide QueryClient and API to app content
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ApiProvider value={api}>
+        <AppContent />
+      </ApiProvider>
+    </QueryClientProvider>
+  );
+}
+
+/**
+ * App root component
+ *
+ * Provides shared authentication state to entire app tree.
+ * All components can access token and auth error state via useAuth().
+ */
+function App() {
+  return (
+    <AuthProvider>
+      <AppWithProviders />
+    </AuthProvider>
   );
 }
 

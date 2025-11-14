@@ -34,11 +34,21 @@
         "@libsql/client": "^0.15.15",
         "drizzle-orm": "^0.44.6",
         "hono": "^4.9.8",
-        "mcp-lite": "^0.8.1",
         "zod": "^4.1.11",
       },
       "devDependencies": {
         "drizzle-kit": "^0.31.5",
+      },
+    },
+    "packages/management-mcp": {
+      "name": "@fiberplane/mcp-gateway-management-mcp",
+      "version": "0.2.0-next.0",
+      "dependencies": {
+        "@fiberplane/mcp-gateway-core": "workspace:*",
+        "@fiberplane/mcp-gateway-types": "workspace:*",
+        "hono": "^4.9.8",
+        "mcp-lite": "^0.8.1",
+        "zod": "^4.1.11",
       },
     },
     "packages/mcp-gateway": {
@@ -56,6 +66,7 @@
         "@changesets/cli": "^2.29.7",
         "@fiberplane/mcp-gateway-api": "workspace:*",
         "@fiberplane/mcp-gateway-core": "workspace:*",
+        "@fiberplane/mcp-gateway-management-mcp": "workspace:*",
         "@fiberplane/mcp-gateway-server": "workspace:*",
         "@fiberplane/mcp-gateway-types": "workspace:*",
         "@fiberplane/mcp-gateway-web": "workspace:*",
@@ -292,6 +303,8 @@
     "@fiberplane/mcp-gateway-api": ["@fiberplane/mcp-gateway-api@workspace:packages/api"],
 
     "@fiberplane/mcp-gateway-core": ["@fiberplane/mcp-gateway-core@workspace:packages/core"],
+
+    "@fiberplane/mcp-gateway-management-mcp": ["@fiberplane/mcp-gateway-management-mcp@workspace:packages/management-mcp"],
 
     "@fiberplane/mcp-gateway-server": ["@fiberplane/mcp-gateway-server@workspace:packages/server"],
 

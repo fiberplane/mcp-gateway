@@ -16,15 +16,13 @@ import { createProxyRoutes } from "./routes/proxy";
  * This creates a Hono app focused on MCP protocol handling:
  * - Proxy routes for forwarding MCP requests to upstream servers
  * - OAuth routes for MCP authentication/authorization
- * - Gateway's own MCP server for querying the gateway via MCP protocol
  * - Health check endpoint
  *
- * Note: This does NOT include the query API or Web UI - those should be
- * mounted separately by the CLI package for observability/management.
+ * Note: This does NOT include the query API, Web UI, or Gateway MCP server -
+ * those should be mounted separately by the CLI package for observability/management.
  */
 export async function createApp(options: {
   storageDir: string;
-  createMcpApp: (gateway: Gateway) => Hono;
   appLogger: Logger;
   proxyDependencies: ProxyDependencies;
   gateway: Gateway;
@@ -33,7 +31,6 @@ export async function createApp(options: {
 }): Promise<{ app: Hono }> {
   const {
     storageDir,
-    createMcpApp,
     appLogger,
     proxyDependencies,
     gateway,
@@ -101,12 +98,6 @@ export async function createApp(options: {
   app.route("/servers", proxyRoutes);
   // Short alias for server connections
   app.route("/s", proxyRoutes);
-
-  // Mount the gateway's own MCP server at canonical path
-  const gatewayMcp = createMcpApp(gateway);
-  app.route("/gateway", gatewayMcp);
-  // Short alias for gateway's own MCP server
-  app.route("/g", gatewayMcp);
 
   return { app };
 }

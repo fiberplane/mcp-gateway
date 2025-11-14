@@ -7,8 +7,8 @@
 import type { McpServerConfig } from "@fiberplane/mcp-gateway-types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
+import { useApi } from "../contexts/ApiContext";
 import { ServerModalContext } from "../contexts/ServerModalContext";
-import { api } from "../lib/api";
 import { ServerEditModal } from "./server-edit-modal";
 
 interface ServerModalManagerProps {
@@ -16,6 +16,7 @@ interface ServerModalManagerProps {
 }
 
 export function ServerModalManager({ children }: ServerModalManagerProps) {
+  const api = useApi();
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"add" | "edit">("add");

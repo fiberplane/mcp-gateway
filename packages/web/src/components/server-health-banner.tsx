@@ -1,9 +1,9 @@
 import type { ServerInfo } from "@fiberplane/mcp-gateway-types";
 import { RefreshCw, Server } from "lucide-react";
 import { useState } from "react";
+import { useApi } from "../contexts/ApiContext";
 import { useServerModal } from "../contexts/ServerModalContext";
 import { useTimeAgo } from "../hooks/use-time-ago";
-import { api } from "../lib/api";
 import { formatErrorMessage } from "../lib/error-formatting";
 import { Button } from "./ui/button";
 import { StatusDot } from "./ui/status-dot";
@@ -25,6 +25,7 @@ export function ServerHealthBanner({
   onRetry,
   isRetrying,
 }: ServerHealthBannerProps) {
+  const api = useApi();
   const lastChecked = useTimeAgo(server.lastCheckTime);
   const lastOnline = useTimeAgo(server.lastHealthyTime);
   const { openEditServerModal } = useServerModal();

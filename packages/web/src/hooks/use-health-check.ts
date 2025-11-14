@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "../lib/api";
+import { useApi } from "../contexts/ApiContext";
 
 /**
  * Hook to manually trigger a server health check
@@ -16,6 +16,7 @@ import { api } from "../lib/api";
  * ```
  */
 export function useHealthCheck() {
+  const api = useApi();
   const queryClient = useQueryClient();
 
   return useMutation({

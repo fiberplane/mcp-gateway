@@ -80,6 +80,138 @@ packages/web/
 └── vite.config.ts
 ```
 
+## Architecture
+
+### Authentication
+
+Web UI uses token-based authentication with URL query parameter:
+
+```
+http://localhost:3333/ui?token=<your-token>
+```
+
+**Auth Components:**
+- `AuthContext` - Provides token and auth error state to component tree
+- `useAuth()` - Hook to access token and error state in components
+- `NoTokenState` - Shown when no token in URL
+- `InvalidTokenState` - Shown when token is invalid/expired
+
+All API requests include `Authorization: Bearer <token>` header.
+
+### API Client
+
+Type-safe API client with dependency injection:
+
+```typescript
+// Interface defines public API
+interface IApiClient {
+  getLogs(params: {...}): Promise<{...}>;
+  getServers(): Promise<{...}>;
+  // ... other methods
+}
+
+// Factory creates client with token injection
+createApiClient(getToken: () => string | null): IApiClient
+```
+
+**Context Pattern:**
+- `ApiContext` - Provides `IApiClient` instance to component tree
+- `useApi()` - Hook to access API client in components
+
+Components never receive `api` as prop - they use `useApi()` hook internally.
+
+### Domain Hooks
+
+High-level hooks hide context complexity and provide clean interfaces:
+
+```typescript
+// Hooks internally use useApi() - no prop drilling
+useServers()        // List servers with health info
+useServerConfigs()  // Full configs (includes headers)
+useHealthCheck()    // Trigger manual health check
+useServerConfig(name)  // Get single server by name
+useServerMap()      // Get server name → info map
+```
+
+Components call domain hooks directly without knowing about context.
+
+## Testing
+
+### Test Setup
+
+Use `TestApiProvider` to provide mock API client:
+
+```typescript
+import { render } from "@testing-library/react";
+import { TestApiProvider } from "@/test-utils/test-providers";
+
+test("my component", () => {
+  render(
+    <TestApiProvider>
+      <MyComponent />
+    </TestApiProvider>
+  );
+});
+```
+
+### Mock API Client
+
+```typescript
+import { createMockApiClient } from "@/test-utils/mocks";
+
+const mockApi = createMockApiClient();
+
+// Override specific methods
+mockApi.getServers.mockResolvedValue({
+  servers: [{ name: "test", url: "http://localhost", ... }]
+});
+```
+
+All mocks implement `IApiClient` interface for type safety.
+
+## Development Patterns
+
+### Adding New Hooks
+
+1. Add method to `IApiClient` interface:
+```typescript
+// lib/api.ts
+interface IApiClient {
+  myNewMethod(): Promise<Data>;
+}
+```
+
+2. Implement in `APIClient` class:
+```typescript
+class APIClient implements IApiClient {
+  async myNewMethod(): Promise<Data> {
+    const options = this.createAuthHeaders();
+    const response = await fetch(`${this.baseURL}/my-endpoint`, options);
+    return this.handleResponse<Data>(response);
+  }
+}
+```
+
+3. Create domain hook:
+```typescript
+// hooks/use-my-feature.ts
+export function useMyFeature() {
+  const api = useApi();
+  return useQuery({
+    queryKey: ["my-feature"],
+    queryFn: () => api.myNewMethod()
+  });
+}
+```
+
+### Component Guidelines
+
+- **✅ DO:** Use domain hooks (`useServers`, `useHealthCheck`)
+- **✅ DO:** Wrap tests in `TestApiProvider`
+- **✅ DO:** Handle auth errors with `useAuth().isUnauthorizedError()`
+- **❌ DON'T:** Pass `api` as prop (use context)
+- **❌ DON'T:** Call `useApi()` directly in components (use domain hooks)
+
 ## Full Documentation
 
 - [Main README](../../README.md) - User guide

@@ -4,7 +4,6 @@
 
 import {
   createGateway,
-  createMcpApp,
   createRequestCaptureRecord,
   createResponseCaptureRecord,
   type Gateway,
@@ -12,6 +11,7 @@ import {
   logger,
   resetMigrationState,
 } from "@fiberplane/mcp-gateway-core";
+import { createMcpApp } from "@fiberplane/mcp-gateway-management-mcp";
 import {
   createApp as createServerApp,
   type ProxyDependencies,
