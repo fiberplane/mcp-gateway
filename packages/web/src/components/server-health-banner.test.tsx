@@ -8,6 +8,8 @@ import { afterEach, describe, expect, test, vi } from "bun:test";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import type { McpServer } from "@fiberplane/mcp-gateway-types";
+import type React from "react";
+import { TestApiProvider } from "../test-utils/test-providers";
 import { ServerHealthBanner } from "./server-health-banner";
 
 // Mock useTimeAgo hook
@@ -55,13 +57,17 @@ describe("ServerHealthBanner", () => {
     ...overrides,
   });
 
+  // Helper to render with ApiProvider
+  const renderWithProvider = (component: React.ReactElement) =>
+    render(<TestApiProvider>{component}</TestApiProvider>);
+
   test("does not render when server is online", () => {
     const server: McpServer = {
       ...createOfflineServer(),
       health: "up",
     };
 
-    const { container } = render(
+    const { container } = renderWithProvider(
       <ServerHealthBanner
         server={server}
         onRetry={() => {}}
@@ -75,7 +81,7 @@ describe("ServerHealthBanner", () => {
   test("renders banner when server is offline", () => {
     const server = createOfflineServer();
 
-    render(
+    renderWithProvider(
       <ServerHealthBanner
         server={server}
         onRetry={() => {}}
@@ -94,7 +100,7 @@ describe("ServerHealthBanner", () => {
       errorMessage: "Connection refused",
     });
 
-    render(
+    renderWithProvider(
       <ServerHealthBanner
         server={server}
         onRetry={() => {}}
@@ -111,7 +117,7 @@ describe("ServerHealthBanner", () => {
       errorMessage: "Request timed out",
     });
 
-    render(
+    renderWithProvider(
       <ServerHealthBanner
         server={server}
         onRetry={() => {}}
@@ -128,7 +134,7 @@ describe("ServerHealthBanner", () => {
       errorMessage: "HTTP 500: Internal Server Error",
     });
 
-    render(
+    renderWithProvider(
       <ServerHealthBanner
         server={server}
         onRetry={() => {}}
@@ -144,7 +150,7 @@ describe("ServerHealthBanner", () => {
       lastCheckTime: Date.now() - 30000, // 30 seconds ago
     });
 
-    render(
+    renderWithProvider(
       <ServerHealthBanner
         server={server}
         onRetry={() => {}}
@@ -161,7 +167,7 @@ describe("ServerHealthBanner", () => {
       lastHealthyTime: Date.now() - 120000, // 2 minutes ago
     });
 
-    render(
+    renderWithProvider(
       <ServerHealthBanner
         server={server}
         onRetry={() => {}}
@@ -178,7 +184,7 @@ describe("ServerHealthBanner", () => {
       lastHealthyTime: undefined,
     });
 
-    render(
+    renderWithProvider(
       <ServerHealthBanner
         server={server}
         onRetry={() => {}}
@@ -193,7 +199,7 @@ describe("ServerHealthBanner", () => {
     const onRetry = vi.fn();
     const server = createOfflineServer();
 
-    render(
+    renderWithProvider(
       <ServerHealthBanner
         server={server}
         onRetry={onRetry}
@@ -210,7 +216,7 @@ describe("ServerHealthBanner", () => {
   test("disables retry button when isRetrying is true", () => {
     const server = createOfflineServer();
 
-    render(
+    renderWithProvider(
       <ServerHealthBanner
         server={server}
         onRetry={() => {}}
@@ -225,7 +231,7 @@ describe("ServerHealthBanner", () => {
   test("shows 'Checking...' text when isRetrying is true", () => {
     const server = createOfflineServer();
 
-    render(
+    renderWithProvider(
       <ServerHealthBanner
         server={server}
         onRetry={() => {}}
@@ -239,7 +245,7 @@ describe("ServerHealthBanner", () => {
   test("shows 'Check Health' text when not retrying", () => {
     const server = createOfflineServer();
 
-    render(
+    renderWithProvider(
       <ServerHealthBanner
         server={server}
         onRetry={() => {}}
@@ -253,7 +259,7 @@ describe("ServerHealthBanner", () => {
   test("renders edit button", () => {
     const server = createOfflineServer();
 
-    render(
+    renderWithProvider(
       <ServerHealthBanner
         server={server}
         onRetry={() => {}}
@@ -270,7 +276,7 @@ describe("ServerHealthBanner", () => {
       errorMessage: "Some custom error",
     });
 
-    render(
+    renderWithProvider(
       <ServerHealthBanner
         server={server}
         onRetry={() => {}}
@@ -287,7 +293,7 @@ describe("ServerHealthBanner", () => {
       errorMessage: undefined,
     });
 
-    render(
+    renderWithProvider(
       <ServerHealthBanner
         server={server}
         onRetry={() => {}}

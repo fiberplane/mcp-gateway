@@ -16,6 +16,7 @@ import {
   mockFilterBadge,
   mockUseAvailableFilters,
 } from "@/test-utils/mocks";
+import { TestApiProvider } from "@/test-utils/test-providers";
 import { FilterBarUI } from "./filter-bar";
 
 // Set up mocks for child components
@@ -24,6 +25,10 @@ import { FilterBarUI } from "./filter-bar";
 mockUseAvailableFilters();
 mockFilterBadge();
 mockAddFilterDropdown();
+
+// Helper to render with ApiProvider
+const renderWithProvider = (component: React.ReactElement) =>
+  render(<TestApiProvider>{component}</TestApiProvider>);
 
 describe("FilterBarUI", () => {
   let onAddFilter: ReturnType<typeof mock>;
@@ -50,7 +55,7 @@ describe("FilterBarUI", () => {
 
   describe("rendering", () => {
     test("renders command filter input", () => {
-      render(
+      renderWithProvider(
         <FilterBarUI
           filters={[]}
           searchValue=""
@@ -74,7 +79,7 @@ describe("FilterBarUI", () => {
     });
 
     test("renders add filter dropdown", () => {
-      render(
+      renderWithProvider(
         <FilterBarUI
           filters={[]}
           searchValue=""
@@ -96,7 +101,7 @@ describe("FilterBarUI", () => {
     });
 
     test("renders custom actions", () => {
-      render(
+      renderWithProvider(
         <FilterBarUI
           filters={[]}
           searchValue=""
@@ -123,7 +128,7 @@ describe("FilterBarUI", () => {
     });
 
     test("hides Clear all button when no filters or search", () => {
-      render(
+      renderWithProvider(
         <FilterBarUI
           filters={[]}
           searchValue=""
@@ -149,7 +154,7 @@ describe("FilterBarUI", () => {
         createFilter({ field: "tokens", operator: "gt", value: 150 }),
       ];
 
-      render(
+      renderWithProvider(
         <FilterBarUI
           filters={filters}
           searchValue=""
@@ -171,7 +176,7 @@ describe("FilterBarUI", () => {
     });
 
     test("shows Clear all button when search terms exist", () => {
-      render(
+      renderWithProvider(
         <FilterBarUI
           filters={[]}
           searchValue="error"
@@ -200,7 +205,7 @@ describe("FilterBarUI", () => {
         createFilter({ field: "client", operator: "is", value: "claude-code" }),
       ];
 
-      render(
+      renderWithProvider(
         <FilterBarUI
           filters={filters}
           searchValue=""
@@ -232,7 +237,7 @@ describe("FilterBarUI", () => {
         value: 150,
       });
 
-      render(
+      renderWithProvider(
         <FilterBarUI
           filters={[filter]}
           searchValue=""
@@ -259,7 +264,7 @@ describe("FilterBarUI", () => {
 
   describe("adding filters", () => {
     test("adds filter via command input", () => {
-      render(
+      renderWithProvider(
         <FilterBarUI
           filters={[]}
           searchValue=""
@@ -287,7 +292,7 @@ describe("FilterBarUI", () => {
 
   describe("search handling", () => {
     test("input accepts text entry", () => {
-      render(
+      renderWithProvider(
         <FilterBarUI
           filters={[]}
           searchValue=""
@@ -313,7 +318,7 @@ describe("FilterBarUI", () => {
     });
 
     test("clears search when input cleared", () => {
-      render(
+      renderWithProvider(
         <FilterBarUI
           filters={[]}
           searchValue="error"
@@ -345,7 +350,7 @@ describe("FilterBarUI", () => {
         createFilter({ field: "tokens", operator: "gt", value: 150 }),
       ];
 
-      render(
+      renderWithProvider(
         <FilterBarUI
           filters={filters}
           searchValue="error"
@@ -375,7 +380,7 @@ describe("FilterBarUI", () => {
         createFilter({ field: "client", operator: "is", value: "test" }),
       ];
 
-      render(
+      renderWithProvider(
         <FilterBarUI
           filters={filters}
           searchValue="error warning"
@@ -405,7 +410,7 @@ describe("FilterBarUI", () => {
         createFilter({ field: "tokens", operator: "gt", value: 150 }),
       ];
 
-      render(
+      renderWithProvider(
         <FilterBarUI
           filters={filters}
           searchValue=""
@@ -432,7 +437,7 @@ describe("FilterBarUI", () => {
         createFilter({ field: "tokens", operator: "gt", value: 150 }),
       ];
 
-      render(
+      renderWithProvider(
         <FilterBarUI
           filters={filters}
           searchValue="error"
@@ -460,7 +465,7 @@ describe("FilterBarUI", () => {
 
   describe("edit mode", () => {
     test("populates input when editing value is set", () => {
-      render(
+      renderWithProvider(
         <FilterBarUI
           filters={[]}
           searchValue=""
@@ -483,7 +488,7 @@ describe("FilterBarUI", () => {
     });
 
     test("calls onCancelEdit when Escape pressed in input", () => {
-      render(
+      renderWithProvider(
         <FilterBarUI
           filters={[]}
           searchValue=""
@@ -510,7 +515,7 @@ describe("FilterBarUI", () => {
 
   describe("accessibility", () => {
     test("has live region for screen reader announcements", () => {
-      render(
+      renderWithProvider(
         <FilterBarUI
           filters={[]}
           searchValue=""
@@ -536,7 +541,7 @@ describe("FilterBarUI", () => {
     });
 
     test("displays announcement text", () => {
-      render(
+      renderWithProvider(
         <FilterBarUI
           filters={[]}
           searchValue=""
@@ -580,7 +585,7 @@ describe("FilterBarUI", () => {
         createFilter({ field: "tokens", operator: "gt", value: 150 }),
       ];
 
-      render(
+      renderWithProvider(
         <FilterBarUI
           filters={filters}
           searchValue="error"
@@ -606,7 +611,7 @@ describe("FilterBarUI", () => {
     });
 
     test("Add filter invokes callback (preservation in container)", () => {
-      render(
+      renderWithProvider(
         <FilterBarUI
           filters={[]}
           searchValue=""
@@ -638,7 +643,7 @@ describe("FilterBarUI", () => {
         value: 150,
       });
 
-      render(
+      renderWithProvider(
         <FilterBarUI
           filters={[filter]}
           searchValue=""

@@ -7,7 +7,8 @@ MCP Gateway is designed to operate as a **local development and debugging tool**
 ### Default Configuration
 
 - **Network**: Listens on `localhost:3333` by default
-- **Access**: Local machine access only (no authentication required for localhost)
+- **Access**: Local machine access with token-based authentication
+- **Authentication**: Auto-generated Bearer tokens (or custom via `MCP_GATEWAY_TOKEN` env var)
 - **Storage**: All data stored in user's home directory (`~/.mcp-gateway/`)
 - **Data**: No sensitive data encryption at rest (design choice for dev tool)
 
@@ -16,8 +17,9 @@ MCP Gateway is designed to operate as a **local development and debugging tool**
 #### Development (Default)
 - Gateway runs on local machine
 - Used for debugging MCP integrations
-- No network exposure
-- No authentication required
+- No network exposure beyond localhost
+- Token-based authentication protects endpoints
+- Tokens auto-generated per session or custom via env var
 
 #### Testing
 - Standalone test environments
@@ -123,18 +125,25 @@ MCP servers may require OAuth authentication:
 
 ```
 Gateway Server
-├── Web UI: http://localhost:3333/ui
-├── REST API: http://localhost:3333/api
-├── Gateway MCP Server: http://localhost:3333/gateway/mcp
-├── Proxy Endpoints: http://localhost:3333/s/{server-name}/mcp
+├── Web UI: http://localhost:3333/ui?token=<token> (protected)
+├── REST API: http://localhost:3333/api (protected with Bearer token)
+├── Gateway MCP Server: http://localhost:3333/gateway/mcp (protected with Bearer token)
+├── Proxy Endpoints: http://localhost:3333/s/{server-name}/mcp (unprotected - upstream auth)
 └── Outbound: Connects to configured MCP servers
 ```
 
+### Authentication
+
+- **Token-Based**: Bearer token authentication for API, Web UI, and management MCP server
+- **Auto-Generated**: Tokens generated automatically on startup (displayed in terminal)
+- **Custom Tokens**: Set `MCP_GATEWAY_TOKEN` environment variable for consistent tokens
+- **Proxy Passthrough**: Proxy endpoints (`/s/{name}/mcp`) don't require auth - upstream servers handle it
+
 ### Localhost Only
 
-- **No Authentication**: Assumes local network access is trusted
+- **Token Authentication**: Required for management endpoints
 - **No Encryption**: HTTP only (localhost)
-- **No Authorization**: All endpoints fully accessible
+- **Local Access**: Tokens visible in terminal output (local machine access assumed)
 
 ### Production Considerations
 
@@ -156,9 +165,10 @@ For production deployments:
    - Enforce HTTPS
 
 4. **Authentication**
-   - Implement access control
-   - Use bearer tokens or OAuth
-   - Protect API endpoints
+   - Built-in Bearer token authentication enabled by default
+   - Use strong custom tokens via `MCP_GATEWAY_TOKEN` for production
+   - Consider additional authentication layers (OAuth, SAML) via reverse proxy
+   - Rotate tokens regularly
 
 ## Server Communication
 
@@ -304,9 +314,11 @@ Monitor security advisories for these packages.
 
 ⚠️ **NOT Recommended for Production Use** without significant hardening:
 
-1. **No Built-in Authentication**
-   - Relies on network isolation
-   - No access control
+1. **Token Security**
+   - Tokens displayed in terminal output (local machine access assumed)
+   - Tokens visible in browser URL (Web UI)
+   - No token encryption at rest
+   - No multi-user access control
 
 2. **No Encryption at Rest**
    - Logs stored unencrypted
@@ -333,13 +345,15 @@ Monitor security advisories for these packages.
 Potential security enhancements:
 
 - [ ] Built-in TLS support
-- [ ] API authentication (OAuth2, API keys)
+- [x] API authentication (Bearer tokens implemented)
+- [ ] Advanced authentication (OAuth2, API keys, multi-user)
 - [ ] Encrypted storage at rest
 - [ ] Audit logging
 - [ ] Rate limiting and DDoS protection
 - [ ] Secret management integration
 - [ ] Role-based access control
 - [ ] Secrets redaction in logs
+- [ ] Token rotation and expiration
 
 ## Support
 

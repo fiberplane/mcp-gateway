@@ -43,9 +43,14 @@ yarn global add @fiberplane/mcp-gateway
 mcp-gateway
 ```
 
-This launches:
-- **Web UI** - http://localhost:3333/ui (visual dashboard)
-- **Gateway MCP Server** - http://localhost:3333/gateway/mcp (control gateway via MCP)
+This launches the gateway with an authentication token displayed in the terminal output:
+
+```
+MCP Gateway server started at http://localhost:3333
+Web UI: http://localhost:3333/ui?token=sCClW3jIQiUxftKUYH3fj04CchW2ISrmoiwopkl44RE
+```
+
+Copy the full Web UI URL (including the token parameter) to access the dashboard.
 
 ### Alternatively you can run the mcp-gateway from the repo
 
@@ -70,7 +75,7 @@ bun run dev
 
 You can add servers via the web UI:
 
-1. Open http://localhost:3333/ui
+1. Open the authenticated Web UI URL from your terminal output
 2. Click "Add Server"
 3. Enter server name and URL
 4. Gateway performs health check automatically
@@ -123,10 +128,10 @@ The gateway operates in **dual mode**: it's both a proxy for MCP servers AND an 
 ```
 
 **Key Endpoints:**
-- `/ui` - Web dashboard for visual management
-- `/gateway/mcp` - Gateway's own MCP server (manage gateway via MCP protocol)
-- `/s/{server-name}/mcp` - Proxy to registered MCP servers (traffic capture enabled)
-- `/api/*` - REST API (used by web UI, available for programmatic access)
+- `/ui?token=<token>` - Web dashboard for visual management (requires auth token)
+- `/gateway/mcp` - Gateway's own MCP server (requires Bearer token auth)
+- `/s/{server-name}/mcp` - Proxy to registered MCP servers (no auth required - passes through upstream auth)
+- `/api/*` - REST API (requires Bearer token auth)
 
 ## CLI Options
 
@@ -150,6 +155,7 @@ mcp-gateway --version
 **Environment Variables:**
 - `MCP_GATEWAY_PORT` - Server port (default: 3333)
 - `MCP_GATEWAY_STORAGE` - Storage directory (default: ~/.mcp-gateway)
+- `MCP_GATEWAY_TOKEN` - Custom auth token (default: auto-generated)
 - `DEBUG` - Debug logging (`*` for all, `@fiberplane/*` for gateway only)
 
 ## Configuration
@@ -179,6 +185,51 @@ Servers are managed through the Web UI or by editing `~/.mcp-gateway/mcp.json`:
 }
 ```
 
+## Authentication
+
+The gateway uses token-based authentication to protect the Web UI, REST API, and management MCP server endpoints.
+
+### How It Works
+
+When you start the gateway, an authentication token is automatically generated and displayed in the terminal output:
+
+```
+MCP Gateway server started at http://localhost:3333
+Web UI: http://localhost:3333/ui?token=sCClW3jIQiUxftKUYH3fj04CchW2ISrmoiwopkl44RE
+```
+
+### Using a Custom Token
+
+Set the `MCP_GATEWAY_TOKEN` environment variable to use a custom token instead of auto-generated:
+
+```bash
+export MCP_GATEWAY_TOKEN="my-custom-secret-token"
+mcp-gateway
+```
+
+This is useful for:
+- Consistent tokens across gateway restarts
+- Programmatic access via REST API or management MCP server
+- Integration with secrets management systems
+
+### Protected Endpoints
+
+The following endpoints require authentication:
+
+- **Web UI** (`/ui`) - Token via query string: `?token=<token>`
+- **REST API** (`/api/*`) - Bearer token via `Authorization` header
+- **Management MCP Server** (`/gateway/mcp`, `/g/mcp`) - Bearer token via `Authorization` header
+
+**Example API request:**
+```bash
+curl -H "Authorization: Bearer <your-token>" \
+  http://localhost:3333/api/servers
+```
+
+### Unprotected Endpoints
+
+Proxy endpoints (`/s/{server-name}/mcp`) do **not** require authentication. This allows upstream MCP servers to handle their own authentication as needed.
+
 ## Gateway MCP Server
 
 The gateway exposes its own MCP server with tools for programmatic control. This lets you manage the gateway using any MCP client (like Claude Desktop, Continue, etc.).
@@ -188,6 +239,8 @@ The gateway exposes its own MCP server with tools for programmatic control. This
 ```
 http://localhost:3333/gateway/mcp
 ```
+
+**Note:** This endpoint requires Bearer token authentication. Include the token in the `Authorization` header.
 
 ### Available Tools
 
@@ -281,6 +334,17 @@ The gateway includes a REST API primarily used by the web UI. It's available for
 http://localhost:3333/api
 ```
 
+### Authentication
+
+All REST API endpoints require Bearer token authentication:
+
+```bash
+curl -H "Authorization: Bearer <your-token>" \
+  http://localhost:3333/api/servers
+```
+
+Get your token from the terminal output when starting the gateway, or set a custom token via the `MCP_GATEWAY_TOKEN` environment variable.
+
 ### Common Endpoints
 
 - `GET /api/logs` - Query captured traffic (supports filtering by server, session)
@@ -357,8 +421,10 @@ mcp-gateway --port 8080
 2. Check server URL in web UI
 3. View captured traffic in Activity Log
 
-**Web UI shows 404:**
-- Use `http://localhost:3333/ui` (not root `/`)
+**Web UI shows authentication error:**
+- Copy the full URL with token from terminal output
+- Token required: `http://localhost:3333/ui?token=<your-token>`
+- Tokens regenerate on each gateway restart (unless using `MCP_GATEWAY_TOKEN` env var)
 
 **Clear all data:**
 ```bash
@@ -391,12 +457,13 @@ bun run --filter test-mcp-server dev
 # Terminal 2: Start gateway
 bun run dev
 
-# Terminal 3: Add test server via API
+# Terminal 3: Add test server via API (use token from Terminal 2 output)
 curl -X POST http://localhost:3333/api/servers \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <your-token>" \
   -d '{"name": "test-server", "url": "http://localhost:3001/mcp"}'
 
-# View logs in web UI: http://localhost:3333/ui
+# View logs in web UI: http://localhost:3333/ui?token=<your-token>
 ```
 
 ### Development Commands

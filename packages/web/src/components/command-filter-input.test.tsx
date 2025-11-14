@@ -12,12 +12,17 @@ import {
   mockFilterBadge,
   mockUseAvailableFilters,
 } from "@/test-utils/mocks";
+import { TestApiProvider } from "@/test-utils/test-providers";
 import { CommandFilterInput } from "./command-filter-input";
 
 // Set up mocks
 mockUseAvailableFilters();
 mockFilterAutocomplete();
 mockFilterBadge();
+
+// Helper to render with ApiProvider
+const renderWithProvider = (component: React.ReactElement) =>
+  render(<TestApiProvider>{component}</TestApiProvider>);
 
 describe("CommandFilterInput", () => {
   let onAddFilter: ReturnType<typeof mock>;
@@ -36,7 +41,7 @@ describe("CommandFilterInput", () => {
 
   describe("rendering", () => {
     test("renders input with placeholder", () => {
-      render(
+      renderWithProvider(
         <CommandFilterInput
           onAddFilter={onAddFilter}
           searchValue=""
@@ -53,7 +58,7 @@ describe("CommandFilterInput", () => {
     });
 
     test("renders with custom placeholder", () => {
-      render(
+      renderWithProvider(
         <CommandFilterInput
           onAddFilter={onAddFilter}
           searchValue=""
@@ -68,7 +73,7 @@ describe("CommandFilterInput", () => {
     });
 
     test("renders search icon", () => {
-      render(
+      renderWithProvider(
         <CommandFilterInput
           onAddFilter={onAddFilter}
           searchValue=""
@@ -106,7 +111,7 @@ describe("CommandFilterInput", () => {
 
   describe("validation states", () => {
     test("shows empty state initially", () => {
-      render(
+      renderWithProvider(
         <CommandFilterInput
           onAddFilter={onAddFilter}
           searchValue=""
@@ -122,7 +127,7 @@ describe("CommandFilterInput", () => {
     });
 
     test("shows Search button for search text without checkmark", () => {
-      render(
+      renderWithProvider(
         <CommandFilterInput
           onAddFilter={onAddFilter}
           searchValue=""
@@ -141,7 +146,7 @@ describe("CommandFilterInput", () => {
     });
 
     test("shows valid state for complete filter", () => {
-      render(
+      renderWithProvider(
         <CommandFilterInput
           onAddFilter={onAddFilter}
           searchValue=""
@@ -156,7 +161,7 @@ describe("CommandFilterInput", () => {
     });
 
     test("does not show error for incomplete input", () => {
-      render(
+      renderWithProvider(
         <CommandFilterInput
           onAddFilter={onAddFilter}
           searchValue=""
@@ -174,7 +179,7 @@ describe("CommandFilterInput", () => {
 
   describe("filter submission", () => {
     test("adds filter on Enter key", () => {
-      render(
+      renderWithProvider(
         <CommandFilterInput
           onAddFilter={onAddFilter}
           searchValue=""
@@ -194,7 +199,7 @@ describe("CommandFilterInput", () => {
     });
 
     test("adds filter on Add Filter button click", () => {
-      render(
+      renderWithProvider(
         <CommandFilterInput
           onAddFilter={onAddFilter}
           searchValue=""
@@ -215,7 +220,7 @@ describe("CommandFilterInput", () => {
     });
 
     test("clears input after adding filter", () => {
-      render(
+      renderWithProvider(
         <CommandFilterInput
           onAddFilter={onAddFilter}
           searchValue=""
@@ -231,7 +236,7 @@ describe("CommandFilterInput", () => {
     });
 
     test("clears search when adding filter", () => {
-      render(
+      renderWithProvider(
         <CommandFilterInput
           onAddFilter={onAddFilter}
           searchValue="previous search"
@@ -249,7 +254,7 @@ describe("CommandFilterInput", () => {
 
   describe("search submission", () => {
     test("updates search on Enter for non-filter text", () => {
-      render(
+      renderWithProvider(
         <CommandFilterInput
           onAddFilter={onAddFilter}
           searchValue=""
@@ -268,7 +273,7 @@ describe("CommandFilterInput", () => {
 
   describe("escape key behavior", () => {
     test("clears input on Escape when empty", () => {
-      render(
+      renderWithProvider(
         <CommandFilterInput
           onAddFilter={onAddFilter}
           searchValue="test"
@@ -285,7 +290,7 @@ describe("CommandFilterInput", () => {
     });
 
     test("closes autocomplete first, then clears on second Escape", () => {
-      render(
+      renderWithProvider(
         <CommandFilterInput
           onAddFilter={onAddFilter}
           searchValue=""
@@ -311,7 +316,7 @@ describe("CommandFilterInput", () => {
 
   describe("edit mode with initialValue", () => {
     test("populates input with initialValue", () => {
-      render(
+      renderWithProvider(
         <CommandFilterInput
           onAddFilter={onAddFilter}
           searchValue=""
@@ -350,7 +355,7 @@ describe("CommandFilterInput", () => {
     });
 
     test("calls onCancel when Escape pressed in edit mode", () => {
-      render(
+      renderWithProvider(
         <CommandFilterInput
           onAddFilter={onAddFilter}
           searchValue=""
@@ -367,7 +372,7 @@ describe("CommandFilterInput", () => {
     });
 
     test("shows 'Update Filter' button instead of 'Add Filter' in edit mode", () => {
-      render(
+      renderWithProvider(
         <CommandFilterInput
           onAddFilter={onAddFilter}
           searchValue=""
@@ -384,7 +389,7 @@ describe("CommandFilterInput", () => {
     // real browser DOM focus behavior. These tests verify the implementation
     // exists but jsdom has limitations testing actual focus changes.
     test("has focus loss detection implemented", () => {
-      render(
+      renderWithProvider(
         <CommandFilterInput
           onAddFilter={onAddFilter}
           searchValue=""
@@ -405,7 +410,7 @@ describe("CommandFilterInput", () => {
     });
 
     test("preserves active search when updating filter in edit mode", () => {
-      render(
+      renderWithProvider(
         <CommandFilterInput
           onAddFilter={onAddFilter}
           searchValue="error"
@@ -432,7 +437,7 @@ describe("CommandFilterInput", () => {
     });
 
     test("clears search when adding new filter (not in edit mode)", () => {
-      render(
+      renderWithProvider(
         <CommandFilterInput
           onAddFilter={onAddFilter}
           searchValue="error"
@@ -456,7 +461,7 @@ describe("CommandFilterInput", () => {
 
   describe("input changes", () => {
     test("updates input value on change", () => {
-      render(
+      renderWithProvider(
         <CommandFilterInput
           onAddFilter={onAddFilter}
           searchValue=""
@@ -471,7 +476,7 @@ describe("CommandFilterInput", () => {
     });
 
     test("clears search when input is cleared", () => {
-      render(
+      renderWithProvider(
         <CommandFilterInput
           onAddFilter={onAddFilter}
           searchValue="existing"
@@ -486,7 +491,7 @@ describe("CommandFilterInput", () => {
     });
 
     test("shows autocomplete on input change", () => {
-      render(
+      renderWithProvider(
         <CommandFilterInput
           onAddFilter={onAddFilter}
           searchValue=""
@@ -503,7 +508,7 @@ describe("CommandFilterInput", () => {
 
   describe("accessibility", () => {
     test("has proper ARIA attributes", () => {
-      render(
+      renderWithProvider(
         <CommandFilterInput
           onAddFilter={onAddFilter}
           searchValue=""
@@ -522,7 +527,7 @@ describe("CommandFilterInput", () => {
     });
 
     test("has screen reader help text", () => {
-      render(
+      renderWithProvider(
         <CommandFilterInput
           onAddFilter={onAddFilter}
           searchValue=""
@@ -537,7 +542,7 @@ describe("CommandFilterInput", () => {
     });
 
     test("uses enterKeyHint='go' for mobile keyboards", () => {
-      render(
+      renderWithProvider(
         <CommandFilterInput
           onAddFilter={onAddFilter}
           searchValue=""
@@ -552,7 +557,7 @@ describe("CommandFilterInput", () => {
 
   describe("Button visibility and text", () => {
     test("hides button when input is empty", () => {
-      render(
+      renderWithProvider(
         <CommandFilterInput
           onAddFilter={onAddFilter}
           searchValue=""
@@ -565,7 +570,7 @@ describe("CommandFilterInput", () => {
     });
 
     test("shows 'Add Filter' button for valid filter syntax", () => {
-      render(
+      renderWithProvider(
         <CommandFilterInput
           onAddFilter={onAddFilter}
           searchValue=""
@@ -581,7 +586,7 @@ describe("CommandFilterInput", () => {
     });
 
     test("shows 'Search' button for search terms", () => {
-      render(
+      renderWithProvider(
         <CommandFilterInput
           onAddFilter={onAddFilter}
           searchValue=""
@@ -602,7 +607,7 @@ describe("CommandFilterInput", () => {
     });
 
     test("shows checkmark only for filter syntax, not search", () => {
-      render(
+      renderWithProvider(
         <CommandFilterInput
           onAddFilter={onAddFilter}
           searchValue=""
