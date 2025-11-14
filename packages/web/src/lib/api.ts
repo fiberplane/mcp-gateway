@@ -360,26 +360,15 @@ class APIClient implements IApiClient {
   async restartStdioServer(
     name: string,
   ): Promise<{ success: boolean; message: string }> {
+    const options = this.createAuthHeaders({
+      method: "POST",
+    });
     const response = await fetch(
       `${this.baseURL}/servers/${encodeURIComponent(name)}/restart`,
-      {
-        method: "POST",
-      },
+      options,
     );
 
-    if (!response.ok) {
-      const error = (await response.json().catch(() => ({}))) as {
-        error?: string;
-        message?: string;
-      };
-      const errorMessage =
-        (typeof error.message === "string" && error.message) ||
-        (typeof error.error === "string" && error.error) ||
-        response.statusText;
-      throw new Error(`Failed to restart server: ${errorMessage}`);
-    }
-
-    return response.json();
+    return this.handleResponse<{ success: boolean; message: string }>(response);
   }
 }
 
