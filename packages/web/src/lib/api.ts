@@ -68,6 +68,10 @@ export interface IApiClient {
   deleteServer(name: string): Promise<{ success: boolean; message: string }>;
 
   checkServerHealth(name: string): Promise<{ server: McpServer }>;
+
+  restartStdioServer(
+    name: string,
+  ): Promise<{ success: boolean; message: string }>;
 }
 
 /**

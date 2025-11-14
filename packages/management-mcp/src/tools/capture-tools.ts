@@ -1,7 +1,7 @@
+import { getErrorMessage } from "@fiberplane/mcp-gateway-core";
 import type { CaptureToolsDependencies } from "@fiberplane/mcp-gateway-types";
 import type { McpServer } from "mcp-lite";
 import { z } from "zod";
-import { getErrorMessage } from "../../utils/error.js";
 
 /**
  * Schema for search_records tool input

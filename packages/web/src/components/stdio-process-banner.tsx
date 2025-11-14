@@ -1,7 +1,7 @@
 import type { StdioServer } from "@fiberplane/mcp-gateway-types";
 import { RefreshCw } from "lucide-react";
 import { useState } from "react";
-import { api } from "../lib/api";
+import { useApi } from "../contexts/ApiContext";
 import { Button } from "./ui/button";
 import { StatusDot } from "./ui/status-dot";
 
@@ -20,6 +20,7 @@ export function StdioProcessBanner({
   server,
   onRefresh,
 }: StdioProcessBannerProps) {
+  const api = useApi();
   const [isRestarting, setIsRestarting] = useState(false);
   const [restartError, setRestartError] = useState<string | null>(null);
 

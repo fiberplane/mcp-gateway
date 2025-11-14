@@ -236,4 +236,8 @@ export const createMockApiClient = (): IApiClient => ({
   getMethods: mock(async () => ({ methods: [] })),
   getSessions: mock(async () => ({ sessions: [] })),
   clearSessions: mock(async () => ({ success: true })),
+  restartStdioServer: mock(async () => ({
+    success: true,
+    message: "Restarted",
+  })),
 });
