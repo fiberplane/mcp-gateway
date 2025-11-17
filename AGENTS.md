@@ -88,6 +88,8 @@ This is a Bun workspace monorepo containing the MCP Gateway project. The reposit
 - `bun run check-circular` - Check for circular dependencies (both within and between packages)
 - `bun run deps-graph` - Generate dependency graph (deps.svg)
 
+> **Shutdown Note**: `bun run dev` uses watch mode which intercepts SIGINT/SIGTERM. Shutdown messages/statistics may not appear and port 3333 may not release immediately. For clean shutdown, use `bun run --filter @fiberplane/mcp-gateway dev:no-watch` or wait ~1s before restarting.
+
 ### Package-Specific Commands
 - `bun run --filter @fiberplane/mcp-gateway-types build` - Build types package
 - `bun run --filter @fiberplane/mcp-gateway-core build` - Build core package

@@ -537,7 +537,7 @@ describe("clearAllFilters", () => {
 });
 
 // ============================================================================
-// Multi-Value Filter Tests (Phase 3)
+// Multi-Value Filter Tests
 // ============================================================================
 
 describe("parseFiltersFromUrl - multi-value support", () => {

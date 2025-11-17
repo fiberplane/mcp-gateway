@@ -145,7 +145,8 @@ export type ServerStatus = "online" | "offline" | "not-found";
 export interface ServerInfo {
   name: string;
   status: ServerStatus;
-  url: string;
+  /** URL for HTTP servers only */
+  url?: string;
   /** Current health status (from server_health table) */
   health?: "up" | "down";
   /** Timestamp of last health check in ms (from server_health table) */
@@ -160,6 +161,10 @@ export interface ServerInfo {
   errorCode?: string;
   /** Response time from last successful health check in ms (from server_health table) */
   responseTimeMs?: number;
+  /** Server name from MCP initialize response serverInfo */
+  serverInfoName?: string;
+  /** Server version from MCP initialize response serverInfo */
+  serverVersion?: string;
 }
 
 /**

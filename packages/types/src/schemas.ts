@@ -118,6 +118,7 @@ export const sessionHeaderSchema = z
   .object({
     "mcp-session-id": z.string().optional(),
     "Mcp-Session-Id": z.string().optional(),
+    "x-session-id": z.string().optional(),
     "content-type": z.string().optional(),
     "MCP-Protocol-Version": z.string().optional(),
     "x-forwarded-for": z.string().optional(),
@@ -138,6 +139,30 @@ export function extractRemoteAddress(
     forwarded?.split(",")[0]?.trim() || realIp || cfConnectingIp || "unknown"
   );
 }
+
+// Server configuration schemas
+export const httpServerConfigSchema = z.object({
+  name: z.string().min(1),
+  type: z.literal("http"),
+  url: z.string().url(),
+  headers: z.record(z.string(), z.string()),
+});
+
+export const stdioServerConfigSchema = z.object({
+  name: z.string().min(1),
+  type: z.literal("stdio"),
+  command: z.string().min(1),
+  args: z.array(z.string()),
+  env: z.record(z.string(), z.string()).optional(),
+  cwd: z.string().optional(),
+  timeout: z.number().positive().optional(),
+  sessionMode: z.enum(["shared", "isolated"]).optional(),
+});
+
+export const mcpServerConfigSchema = z.union([
+  httpServerConfigSchema,
+  stdioServerConfigSchema,
+]);
 
 // Type exports
 export type JsonRpcRequest = z.infer<typeof jsonRpcRequestSchema>;

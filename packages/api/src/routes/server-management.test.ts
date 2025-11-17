@@ -41,6 +41,7 @@ describe("Server Management API", () => {
           expect(name).toBe("test-server");
           return mockServer;
         },
+        restartStdioServer: async () => {},
       };
 
       const app = new Hono();
@@ -55,7 +56,9 @@ describe("Server Management API", () => {
 
       const data = (await response.json()) as { server: McpServer };
       expect(data.server).toEqual(mockServer);
-      expect(data.server.health).toBe("up");
+      if (data.server.type === "http") {
+        expect(data.server.health).toBe("up");
+      }
     });
 
     test("should return 404 when server not found", async () => {
@@ -67,6 +70,7 @@ describe("Server Management API", () => {
         checkServerHealth: async (name) => {
           throw new ServerNotFoundError(name);
         },
+        restartStdioServer: async () => {},
       };
 
       const app = new Hono();
@@ -99,6 +103,7 @@ describe("Server Management API", () => {
         checkServerHealth: async () => {
           throw new Error("Health check failed");
         },
+        restartStdioServer: async () => {},
       };
 
       const app = new Hono();
@@ -141,6 +146,7 @@ describe("Server Management API", () => {
         updateServer: async () => {},
         removeServer: async () => {},
         checkServerHealth: async () => offlineServer,
+        restartStdioServer: async () => {},
       };
 
       const app = new Hono();
@@ -157,9 +163,11 @@ describe("Server Management API", () => {
       expect(response.status).toBe(200);
 
       const data = (await response.json()) as { server: McpServer };
-      expect(data.server.health).toBe("down");
-      expect(data.server.errorCode).toBe("ECONNREFUSED");
-      expect(data.server.errorMessage).toBe("Connection refused");
+      if (data.server.type === "http") {
+        expect(data.server.health).toBe("down");
+        expect(data.server.errorCode).toBe("ECONNREFUSED");
+        expect(data.server.errorMessage).toBe("Connection refused");
+      }
     });
 
     test("should validate server name parameter", async () => {
@@ -171,6 +179,7 @@ describe("Server Management API", () => {
         checkServerHealth: async (name) => {
           throw new ServerNotFoundError(name);
         },
+        restartStdioServer: async () => {},
       };
 
       const app = new Hono();

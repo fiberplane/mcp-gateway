@@ -1,4 +1,5 @@
 import type { RequestTracker } from "./capture";
+import type { HttpContext, StdioSessionManager } from "./dependencies";
 import type {
   ClientAggregation,
   LogQueryOptions,
@@ -14,17 +15,6 @@ import type {
   JsonRpcResponse,
   McpServerInfo,
 } from "./schemas";
-
-/**
- * HTTP context information for requests
- *
- * Contains metadata about the HTTP request context,
- * extracted from headers and connection information.
- */
-export interface HttpContext {
-  userAgent?: string;
-  clientIp?: string;
-}
 
 /**
  * Server-Sent Event (SSE) structure
@@ -306,6 +296,31 @@ export interface Gateway {
       lastHealthCheck: string;
     }>;
   };
+
+  /**
+   * Server registry operations
+   */
+  registry: {
+    /**
+     * Initialize all shared mode stdio servers eagerly
+     *
+     * @returns Results with succeeded/failed server names and error details
+     */
+    initializeSharedStdioServers(): Promise<{
+      total: number;
+      succeeded: string[];
+      failed: Array<{ name: string; error: string }>;
+    }>;
+  };
+
+  /**
+   * Get or create stdio session manager for a server
+   *
+   * @param serverName - Name of the stdio server
+   * @returns Session manager for the server
+   * @throws Error if server is not stdio type or doesn't exist
+   */
+  getStdioSessionManager(serverName: string): Promise<StdioSessionManager>;
 
   /**
    * Close all connections and clean up resources

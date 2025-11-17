@@ -99,11 +99,19 @@ export function ServerModalManager({ children }: ServerModalManagerProps) {
 
   const handleEditSubmit = useCallback(
     async (config: McpServerConfig) => {
-      const { url, headers } = config;
-      await updateServerMutation.mutateAsync({
-        name: config.name,
-        changes: { url, headers },
-      });
+      if (config.type === "http") {
+        const { url, headers } = config;
+        await updateServerMutation.mutateAsync({
+          name: config.name,
+          changes: { url, headers },
+        });
+      } else {
+        const { command, args, env, cwd, timeout, sessionMode } = config;
+        await updateServerMutation.mutateAsync({
+          name: config.name,
+          changes: { command, args, env, cwd, timeout, sessionMode },
+        });
+      }
     },
     [updateServerMutation],
   );

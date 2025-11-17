@@ -115,7 +115,7 @@ export const serverHealth = sqliteTable("server_health", {
   serverName: text("server_name").primaryKey(),
   health: text("health", { enum: healthStatusValues }).notNull(),
   lastCheck: text("last_check").notNull(),
-  url: text("url").notNull(),
+  url: text("url"), // Optional - stdio servers don't have URLs
   // Extended health check details
   lastCheckTime: integer("last_check_time"), // Timestamp in ms
   lastHealthyTime: integer("last_healthy_time"), // Timestamp in ms

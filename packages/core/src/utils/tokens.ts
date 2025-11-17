@@ -1,3 +1,5 @@
+import { getErrorMessage } from "./error.js";
+
 /**
  * Token estimation utilities for MCP operations
  *
@@ -82,7 +84,7 @@ export function estimateInputTokens(
     // Gracefully handle serialization errors
     logger.warn("[tokens] Failed to estimate input tokens", {
       method,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     });
     return 0;
   }
@@ -192,7 +194,7 @@ export function estimateOutputTokens(
 
     // Fallback: return 0 for unsupported types
     logger.warn("[tokens] Failed to estimate output tokens", {
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
       resultType: typeof result,
     });
     return 0;

@@ -10,6 +10,7 @@ import {
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { HttpServerConfig } from "@fiberplane/mcp-gateway-types";
 import { createGateway } from "./gateway.js";
 import { resetMigrationState } from "./logs/migrations.js";
 
@@ -170,8 +171,12 @@ describe("Health Check System", () => {
       const servers = await gateway.storage.getRegisteredServers();
 
       expect(servers).toHaveLength(1);
-      expect(servers[0]?.health).toBe("up");
-      expect(servers[0]?.lastHealthCheck).toBeDefined();
+      const server = servers[0];
+      expect(server?.type).toBe("http");
+      if (server?.type === "http") {
+        expect(server.health).toBe("up");
+        expect(server.lastHealthCheck).toBeDefined();
+      }
 
       await gateway.close();
     });
@@ -194,17 +199,25 @@ describe("Health Check System", () => {
       // First health check - should be "up"
       await gateway.health.check();
       let servers = await gateway.storage.getRegisteredServers();
-      expect(servers[0]?.health).toBe("up");
+      let server = servers[0];
+      expect(server?.type).toBe("http");
+      if (server?.type === "http") {
+        expect(server.health).toBe("up");
+      }
 
       // Update server to point to unhealthy endpoint
       await gateway.storage.updateServer("test-server", {
         url: unreachableUrl,
-      });
+      } as Partial<Omit<HttpServerConfig, "name">>);
 
       // Second health check - should be "down"
       await gateway.health.check();
       servers = await gateway.storage.getRegisteredServers();
-      expect(servers[0]?.health).toBe("down");
+      server = servers[0];
+      expect(server?.type).toBe("http");
+      if (server?.type === "http") {
+        expect(server.health).toBe("down");
+      }
 
       await gateway.close();
     });
@@ -231,8 +244,12 @@ describe("Health Check System", () => {
 
       // Verify health was checked
       const servers = await gateway.storage.getRegisteredServers();
-      expect(servers[0]?.health).toBe("up");
-      expect(servers[0]?.lastHealthCheck).toBeDefined();
+      const server = servers[0];
+      expect(server?.type).toBe("http");
+      if (server?.type === "http") {
+        expect(server.health).toBe("up");
+        expect(server.lastHealthCheck).toBeDefined();
+      }
 
       await gateway.close();
     });
@@ -417,11 +434,15 @@ describe("Health Check System", () => {
       await gateway.health.check();
 
       const servers = await gateway.storage.getRegisteredServers();
-      expect(servers[0]?.health).toBe("down");
-      expect(servers[0]?.errorCode).toBe("ECONNREFUSED");
-      expect(servers[0]?.errorMessage).toBeDefined();
-      expect(servers[0]?.lastCheckTime).toBeTypeOf("number");
-      expect(servers[0]?.lastErrorTime).toBeTypeOf("number");
+      const server = servers[0];
+      expect(server?.type).toBe("http");
+      if (server?.type === "http") {
+        expect(server.health).toBe("down");
+        expect(server.errorCode).toBe("ECONNREFUSED");
+        expect(server.errorMessage).toBeDefined();
+        expect(server.lastCheckTime).toBeTypeOf("number");
+        expect(server.lastErrorTime).toBeTypeOf("number");
+      }
 
       await gateway.close();
     });
@@ -443,11 +464,15 @@ describe("Health Check System", () => {
       await gateway.health.check();
 
       const servers = await gateway.storage.getRegisteredServers();
-      expect(servers[0]?.health).toBe("up");
-      expect(servers[0]?.responseTimeMs).toBeTypeOf("number");
-      expect(servers[0]?.responseTimeMs).toBeGreaterThanOrEqual(0);
-      expect(servers[0]?.lastCheckTime).toBeTypeOf("number");
-      expect(servers[0]?.lastHealthyTime).toBeTypeOf("number");
+      const server = servers[0];
+      expect(server?.type).toBe("http");
+      if (server?.type === "http") {
+        expect(server.health).toBe("up");
+        expect(server.responseTimeMs).toBeTypeOf("number");
+        expect(server.responseTimeMs).toBeGreaterThanOrEqual(0);
+        expect(server.lastCheckTime).toBeTypeOf("number");
+        expect(server.lastHealthyTime).toBeTypeOf("number");
+      }
 
       await gateway.close();
     });
@@ -470,9 +495,13 @@ describe("Health Check System", () => {
       await gateway.health.check();
 
       const servers = await gateway.storage.getRegisteredServers();
-      expect(servers[0]?.health).toBe("down");
-      expect(servers[0]?.errorCode).toBe("HTTP_ERROR");
-      expect(servers[0]?.errorMessage).toMatch(/HTTP 500/);
+      const server = servers[0];
+      expect(server?.type).toBe("http");
+      if (server?.type === "http") {
+        expect(server.health).toBe("down");
+        expect(server.errorCode).toBe("HTTP_ERROR");
+        expect(server.errorMessage).toMatch(/HTTP 500/);
+      }
 
       errorServer.stop();
       await gateway.close();
@@ -501,9 +530,13 @@ describe("Health Check System", () => {
         await gateway.health.check();
 
         const servers = await gateway.storage.getRegisteredServers();
-        expect(servers[0]?.health).toBe("down");
-        expect(servers[0]?.errorCode).toBe("TIMEOUT");
-        expect(servers[0]?.lastErrorTime).toBeTypeOf("number");
+        const server = servers[0];
+        expect(server?.type).toBe("http");
+        if (server?.type === "http") {
+          expect(server.health).toBe("down");
+          expect(server.errorCode).toBe("TIMEOUT");
+          expect(server.lastErrorTime).toBeTypeOf("number");
+        }
 
         slowServer.stop();
         await gateway.close();
@@ -528,20 +561,29 @@ describe("Health Check System", () => {
       // First check - healthy
       await gateway.health.check();
       let servers = await gateway.storage.getRegisteredServers();
-      const firstHealthyTime = servers[0]?.lastHealthyTime;
-      expect(firstHealthyTime).toBeTypeOf("number");
+      let server = servers[0];
+      expect(server?.type).toBe("http");
+      let firstHealthyTime: number | undefined;
+      if (server?.type === "http") {
+        firstHealthyTime = server.lastHealthyTime;
+        expect(firstHealthyTime).toBeTypeOf("number");
+      }
 
       // Update to unreachable
       await gateway.storage.updateServer("test-server", {
         url: unreachableUrl,
-      });
+      } as Partial<Omit<HttpServerConfig, "name">>);
 
       // Second check - unhealthy
       await gateway.health.check();
       servers = await gateway.storage.getRegisteredServers();
-      expect(servers[0]?.health).toBe("down");
-      expect(servers[0]?.lastHealthyTime).toBe(firstHealthyTime); // Should not update
-      expect(servers[0]?.lastErrorTime).toBeTypeOf("number");
+      server = servers[0];
+      expect(server?.type).toBe("http");
+      if (server?.type === "http") {
+        expect(server.health).toBe("down");
+        expect(server.lastHealthyTime).toBe(firstHealthyTime); // Should not update
+        expect(server.lastErrorTime).toBeTypeOf("number");
+      }
 
       await gateway.close();
     });
@@ -563,7 +605,13 @@ describe("Health Check System", () => {
       // First check
       await gateway.health.check();
       let servers = await gateway.storage.getRegisteredServers();
-      const firstCheckTime = servers[0]?.lastCheckTime;
+      let server = servers[0];
+      expect(server?.type).toBe("http");
+      let firstCheckTime: number | undefined;
+      if (server?.type === "http") {
+        firstCheckTime = server.lastCheckTime;
+        expect(firstCheckTime).toBeTypeOf("number");
+      }
 
       // Wait a bit
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -571,11 +619,13 @@ describe("Health Check System", () => {
       // Second check
       await gateway.health.check();
       servers = await gateway.storage.getRegisteredServers();
-      const secondCheckTime = servers[0]?.lastCheckTime;
-
-      expect(firstCheckTime).toBeTypeOf("number");
-      expect(secondCheckTime).toBeTypeOf("number");
-      expect(secondCheckTime).toBeGreaterThan(firstCheckTime as number);
+      server = servers[0];
+      expect(server?.type).toBe("http");
+      // Type is asserted above, safe to access HTTP-only properties
+      if (server?.type === "http") {
+        expect(server.lastCheckTime).toBeTypeOf("number");
+        expect(server.lastCheckTime).toBeGreaterThan(firstCheckTime as number);
+      }
 
       await gateway.close();
     });

@@ -78,6 +78,49 @@ function showVersion(): void {
 }
 
 export async function runCli(): Promise<void> {
+  // Global error handler for uncaught exceptions
+  // Prevents zombie stdio processes from unhandled errors
+  let gatewayForCleanup: Awaited<ReturnType<typeof createGateway>> | null =
+    null;
+
+  process.on("uncaughtException", async (error, origin) => {
+    logger.error("Uncaught exception - cleaning up", {
+      error: error.message,
+      stack: error.stack,
+      origin,
+    });
+
+    // biome-ignore lint/suspicious/noConsole: Important error message
+    console.error("Fatal error occurred. Cleaning up stdio processes...");
+
+    try {
+      if (gatewayForCleanup) {
+        await gatewayForCleanup.close();
+      }
+    } catch (cleanupError) {
+      logger.error("Cleanup failed", {
+        error:
+          cleanupError instanceof Error
+            ? cleanupError.message
+            : String(cleanupError),
+      });
+    }
+
+    // Exit with error code
+    process.exit(1);
+  });
+
+  // Global handler for unhandled promise rejections
+  process.on("unhandledRejection", (reason, _promise) => {
+    logger.error("Unhandled promise rejection", {
+      reason: reason instanceof Error ? reason.message : String(reason),
+      stack: reason instanceof Error ? reason.stack : undefined,
+    });
+
+    // biome-ignore lint/suspicious/noConsole: Important warning
+    console.warn("Unhandled promise rejection detected. See logs for details.");
+  });
+
   try {
     const { values } = parseArgs({
       args: process.argv.slice(2),
@@ -130,6 +173,7 @@ export async function runCli(): Promise<void> {
 
     // Create Gateway instance with scoped storage and state
     const gateway = await createGateway({ storageDir });
+    gatewayForCleanup = gateway; // Track for global error handler
 
     // Track when this session started for shutdown traffic summary
     const sessionStartTime = new Date().toISOString();
@@ -248,6 +292,8 @@ export async function runCli(): Promise<void> {
           serverInfo,
         ),
       getServer: (name) => gateway.storage.getServer(name),
+      getStdioSessionManager: (serverName) =>
+        gateway.getStdioSessionManager(serverName),
     };
 
     // Create MCP protocol server (proxy, OAuth)
@@ -508,6 +554,19 @@ MCP Gateway server started at http://localhost:${port}
           // Return updated server info (throws ServerNotFoundError if not found)
           return await gateway.storage.getServer(name);
         },
+        restartStdioServer: async (name) => {
+          // Get server to verify it exists (throws ServerNotFoundError if not found)
+          const server = await gateway.storage.getServer(name);
+
+          // Verify it's a stdio server
+          if (server.type !== "stdio") {
+            throw new Error(`Server '${name}' is not a stdio server`);
+          }
+
+          // Get the session manager and restart it
+          const manager = await gateway.getStdioSessionManager(name);
+          await manager.restart();
+        },
       },
     });
 
@@ -579,6 +638,22 @@ MCP Gateway server started at http://localhost:${port}
 
     // Track previous health states to only show changes
     const previousHealthStates = new Map<string, string>();
+
+    // Eagerly initialize shared stdio servers BEFORE health checks start
+    // This ensures process state is available for health checks
+    const initResults = await gateway.registry.initializeSharedStdioServers();
+
+    // Log initialization results to terminal
+    if (initResults.total > 0) {
+      for (const name of initResults.succeeded) {
+        // biome-ignore lint/suspicious/noConsole: actually want to print to console
+        console.log(`✓ stdio server "${name}" initialized`);
+      }
+      for (const { name, error } of initResults.failed) {
+        // biome-ignore lint/suspicious/noConsole: actually want to print to console
+        console.log(`✗ stdio server "${name}" failed: ${error}`);
+      }
+    }
 
     // Start health checks BEFORE server starts to ensure accurate initial status
     // This runs the first health check synchronously before any Web UI requests can be made
@@ -680,14 +755,53 @@ MCP Gateway server started at http://localhost:${port}
         ),
       );
       const maxUpstreamLen = Math.max(
-        ...registeredServers.map((s) => s.url.length),
+        ...registeredServers.map((s) => {
+          if (s.type === "http") {
+            return s.url.length;
+          }
+          // For stdio: show command + args
+          return `${s.command} ${s.args.join(" ")}`.length;
+        }),
       );
 
       for (const server of registeredServers) {
         const gatewayUrl = `http://localhost:${port}/s/${server.name}/mcp`;
-        const upstreamUrl = server.url;
-        const healthStatus = server.health || "unknown";
-        const healthIcon = getHealthIcon(healthStatus);
+        const upstreamUrl =
+          server.type === "http"
+            ? server.url
+            : `${server.command} ${server.args.join(" ")}`;
+
+        // Determine health status display
+        let healthStatus: string;
+        let healthIcon: string;
+
+        if (server.type === "http") {
+          healthStatus = server.health || "unknown";
+          healthIcon = getHealthIcon(healthStatus);
+        } else {
+          // Stdio server
+          if (server.sessionMode === "isolated") {
+            healthStatus = "on-demand";
+            healthIcon = "○";
+          } else if (server.health) {
+            // Shared mode with health check result
+            healthStatus = server.health;
+            healthIcon = getHealthIcon(healthStatus);
+          } else if (server.processState.status === "running") {
+            // Shared mode, process running but no health check yet
+            healthStatus = "starting";
+            healthIcon = "⚙";
+          } else if (
+            server.processState.status === "stopped" ||
+            server.processState.status === "crashed"
+          ) {
+            healthStatus = "offline";
+            healthIcon = "○";
+          } else {
+            healthStatus = "unknown";
+            healthIcon = "?";
+          }
+        }
 
         // Pad columns for alignment
         const name = server.name.padEnd(maxNameLen);
@@ -707,6 +821,8 @@ MCP Gateway server started at http://localhost:${port}
 
     // Keep process alive and handle graceful shutdown signals
     const shutdown = async () => {
+      process.stderr.write("\nShutting down gracefully...\n");
+
       try {
         // Show traffic summary for this session only (after sessionStartTime)
         const result = await gateway.storage.query({
@@ -732,42 +848,63 @@ MCP Gateway server started at http://localhost:${port}
             sessionTraffic.set(serverName, count + 1);
           }
 
-          // biome-ignore lint/suspicious/noConsole: actually want to print to console
-          console.log("Log summary:");
+          process.stderr.write("Log summary:\n");
           // Iterate over sessionTraffic to show all servers that handled traffic, even if removed
           for (const [serverName, count] of sessionTraffic.entries()) {
-            // biome-ignore lint/suspicious/noConsole: actually want to print to console
-            console.log(`* ${serverName}: ${count} log events`);
+            process.stderr.write(`* ${serverName}: ${count} log events\n`);
           }
-          // biome-ignore lint/suspicious/noConsole: actually want to print to console
-          console.log("");
+          process.stderr.write("\n");
         } else {
-          // biome-ignore lint/suspicious/noConsole: actually want to print to console
-          console.log("\nNo traffic captured during this session\n");
+          process.stderr.write("\nNo traffic captured during this session\n\n");
         }
       } catch (error) {
-        // Log error at debug level to aid troubleshooting, but don't block shutdown
-        logger.debug?.("Error during shutdown summary", { error });
+        process.stderr.write(`Error showing shutdown summary: ${error}\n`);
       }
 
-      await gateway.close(); // Close Gateway connections (includes stopping health checks)
+      // Close server first to immediately release the port
       await new Promise<void>((resolve) => {
+        // Force close all connections immediately (Node.js 18.2+)
+        if (
+          "closeAllConnections" in server &&
+          typeof server.closeAllConnections === "function"
+        ) {
+          server.closeAllConnections();
+        }
+
+        // Allow process to exit even if connections don't close
+        if ("unref" in server && typeof server.unref === "function") {
+          server.unref();
+        }
+
+        const timeout = setTimeout(() => {
+          resolve();
+        }, 500);
+
         server.close(() => {
+          clearTimeout(timeout);
           resolve();
         });
       });
+
+      await gateway.close(); // Close Gateway connections (includes stopping health checks)
+
+      process.stderr.write("Shutdown complete\n");
     };
 
+    let shuttingDown = false;
+
     process.on("SIGTERM", async () => {
-      // biome-ignore lint/suspicious/noConsole: actually want to print to console
-      console.log("\nReceived SIGTERM, shutting down...");
+      if (shuttingDown) return;
+      shuttingDown = true;
+      process.stderr.write("\n"); // Add newline for cleaner output
       await shutdown();
       process.exit(0);
     });
 
     process.on("SIGINT", async () => {
-      // biome-ignore lint/suspicious/noConsole: actually want to print to console
-      console.log("\nReceived SIGINT, shutting down...");
+      if (shuttingDown) return;
+      shuttingDown = true;
+      process.stderr.write("\n"); // Add newline for cleaner output
       await shutdown();
       process.exit(0);
     });

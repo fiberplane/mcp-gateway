@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@fiberplane/mcp-gateway-core";
 import type { CaptureToolsDependencies } from "@fiberplane/mcp-gateway-types";
 import type { McpServer } from "mcp-lite";
 import { z } from "zod";
@@ -114,7 +115,7 @@ Examples:
           content: [
             {
               type: "text",
-              text: `Error searching records: ${error instanceof Error ? error.message : String(error)}`,
+              text: `Error searching records: ${getErrorMessage(error)}`,
             },
           ],
           isError: true,

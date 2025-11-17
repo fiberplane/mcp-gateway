@@ -1,5 +1,5 @@
 import { logger } from "@fiberplane/mcp-gateway-core";
-import type { Gateway } from "@fiberplane/mcp-gateway-types";
+import { type Gateway, JSON_RPC_ERRORS } from "@fiberplane/mcp-gateway-types";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { McpServer, RpcError, StreamableHttpTransport } from "mcp-lite";
@@ -83,7 +83,7 @@ export function createMcpServer(gateway: Gateway): McpServer {
 
     if (error instanceof z.ZodError) {
       return {
-        code: -32602, // Invalid params
+        code: JSON_RPC_ERRORS.INVALID_PARAMS,
         message: "Input validation failed",
         data: {
           issues: error.issues.map((issue) => ({
@@ -97,14 +97,14 @@ export function createMcpServer(gateway: Gateway): McpServer {
 
     if (error instanceof Error && error.message.includes("not found")) {
       return {
-        code: -32601, // Method not found
+        code: JSON_RPC_ERRORS.METHOD_NOT_FOUND,
         message: error.message,
         data: { requestId: ctx.requestId },
       };
     }
 
     return {
-      code: -32603, // Internal error
+      code: JSON_RPC_ERRORS.INTERNAL_ERROR,
       message: "Internal server error",
       data: { requestId: ctx.requestId },
     };

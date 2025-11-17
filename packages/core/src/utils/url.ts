@@ -2,6 +2,8 @@
  * URL utility functions for MCP Gateway
  */
 
+import { getErrorMessage } from "./error.js";
+
 /**
  * Normalize URL for consistent storage and comparison
  *
@@ -41,9 +43,7 @@ export function normalizeUrl(url: string): string {
 
     return parsed.toString();
   } catch (error) {
-    throw new Error(
-      `Invalid URL format: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    throw new Error(`Invalid URL format: ${getErrorMessage(error)}`);
   }
 }
 

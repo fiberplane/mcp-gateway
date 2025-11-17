@@ -68,6 +68,10 @@ export interface IApiClient {
   deleteServer(name: string): Promise<{ success: boolean; message: string }>;
 
   checkServerHealth(name: string): Promise<{ server: McpServer }>;
+
+  restartStdioServer(
+    name: string,
+  ): Promise<{ success: boolean; message: string }>;
 }
 
 /**
@@ -342,6 +346,29 @@ class APIClient implements IApiClient {
       options,
     );
     return this.handleResponse<{ server: McpServer }>(response);
+  }
+
+  /**
+   * Restart a stdio server process
+   *
+   * Only works for stdio servers in shared mode.
+   * Returns error if called on HTTP server or isolated mode stdio server.
+   *
+   * @param name Server name (normalized to lowercase)
+   * @returns Success confirmation
+   */
+  async restartStdioServer(
+    name: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const options = this.createAuthHeaders({
+      method: "POST",
+    });
+    const response = await fetch(
+      `${this.baseURL}/servers/${encodeURIComponent(name)}/restart`,
+      options,
+    );
+
+    return this.handleResponse<{ success: boolean; message: string }>(response);
   }
 }
 

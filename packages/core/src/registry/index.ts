@@ -24,23 +24,58 @@ export function addServer(
   servers: McpServer[],
   server: Omit<McpServer, "lastActivity" | "exchangeCount">,
 ): McpServer[] {
-  const normalized = {
-    ...server,
-    name: server.name.toLowerCase().trim(),
-    url: normalizeUrl(server.url),
-    lastActivity: null,
-    exchangeCount: 0,
-  };
+  const name = server.name.toLowerCase().trim();
 
-  if (hasServer(servers, normalized.name)) {
-    throw new ServerAlreadyExistsError(server.name);
-  }
-
-  if (!normalized.name) {
+  if (!name) {
     throw new Error("Server name cannot be empty");
   }
 
-  return [...servers, normalized];
+  if (hasServer(servers, name)) {
+    throw new ServerAlreadyExistsError(server.name);
+  }
+
+  // Handle both HTTP and stdio servers
+  if (server.type === "http") {
+    // TypeScript doesn't narrow Omit types, so we need to cast
+    const httpServer = server as Omit<
+      Extract<McpServer, { type: "http" }>,
+      "lastActivity" | "exchangeCount"
+    >;
+    const normalized: McpServer = {
+      type: "http",
+      name,
+      url: normalizeUrl(httpServer.url),
+      headers: httpServer.headers,
+      lastActivity: null,
+      exchangeCount: 0,
+    };
+    return [...servers, normalized];
+  } else {
+    // TypeScript doesn't narrow Omit types, so we need to cast
+    const stdioServer = server as Omit<
+      Extract<McpServer, { type: "stdio" }>,
+      "lastActivity" | "exchangeCount"
+    >;
+    const normalized: McpServer = {
+      type: "stdio",
+      name,
+      command: stdioServer.command,
+      args: stdioServer.args,
+      env: stdioServer.env,
+      cwd: stdioServer.cwd,
+      timeout: stdioServer.timeout,
+      sessionMode: stdioServer.sessionMode,
+      lastActivity: null,
+      exchangeCount: 0,
+      processState: {
+        status: "stopped",
+        pid: null,
+        lastError: null,
+        stderrLogs: [],
+      },
+    };
+    return [...servers, normalized];
+  }
 }
 
 // Pure function to remove server from servers array
@@ -59,14 +94,31 @@ export function removeServer(servers: McpServer[], name: string): McpServer[] {
 export function toMcpJson(servers: McpServer[]) {
   return {
     mcpServers: Object.fromEntries(
-      servers.map((s) => [
-        s.name,
-        {
-          type: s.type,
-          url: s.url,
-          headers: s.headers,
-        },
-      ]),
+      servers.map((s) => {
+        if (s.type === "http") {
+          return [
+            s.name,
+            {
+              type: s.type,
+              url: s.url,
+              headers: s.headers,
+            },
+          ];
+        } else {
+          return [
+            s.name,
+            {
+              type: s.type,
+              command: s.command,
+              args: s.args,
+              ...(s.env && { env: s.env }),
+              ...(s.cwd && { cwd: s.cwd }),
+              ...(s.timeout && { timeout: s.timeout }),
+              ...(s.sessionMode && { sessionMode: s.sessionMode }),
+            },
+          ];
+        }
+      }),
     ),
   };
 }
@@ -79,6 +131,12 @@ interface McpJsonData {
       type?: string;
       url?: string;
       headers?: Record<string, string>;
+      command?: string;
+      args?: string[];
+      env?: Record<string, string>;
+      cwd?: string;
+      timeout?: number;
+      sessionMode?: "shared" | "isolated";
     }
   >;
 }
@@ -95,23 +153,53 @@ export function fromMcpJson(data: unknown): McpServer[] {
   }
 
   const servers: McpServer[] = Object.entries(typedData.mcpServers)
-    .map(([name, config]) => {
+    .map(([name, config]): McpServer | null => {
       if (!config || typeof config !== "object") {
         return null;
       }
 
-      return {
-        name: name.toLowerCase().trim(),
-        type: config.type === "http" ? ("http" as const) : ("http" as const),
-        url: config.url || "",
-        headers: config.headers || {},
-        lastActivity: null as string | null,
-        exchangeCount: 0,
-      };
+      const normalizedName = name.toLowerCase().trim();
+
+      // Stdio server
+      if (config.type === "stdio" && config.command && config.args) {
+        const server: McpServer = {
+          type: "stdio",
+          name: normalizedName,
+          command: config.command,
+          args: config.args,
+          env: config.env,
+          cwd: config.cwd,
+          timeout: config.timeout,
+          sessionMode:
+            config.sessionMode === "isolated" ? "isolated" : "shared",
+          lastActivity: null,
+          exchangeCount: 0,
+          processState: {
+            status: "stopped",
+            pid: null,
+            lastError: null,
+            stderrLogs: [],
+          },
+        };
+        return server;
+      }
+
+      // HTTP server (default)
+      if (config.url) {
+        const server: McpServer = {
+          type: "http",
+          name: normalizedName,
+          url: config.url,
+          headers: config.headers || {},
+          lastActivity: null,
+          exchangeCount: 0,
+        };
+        return server;
+      }
+
+      return null;
     })
-    .filter(
-      (server): server is McpServer => server !== null && server.url !== "",
-    );
+    .filter((server): server is McpServer => server !== null);
 
   return servers;
 }

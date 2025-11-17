@@ -14,6 +14,16 @@ kill <PID>
 mcp-gateway --port 3334
 ```
 
+**Development mode (watch) shutdown issues**
+- `bun run --watch` intercepts SIGINT/SIGTERM signals
+- May not show shutdown messages/statistics
+- Port may not release immediately
+- **Solution**: Run without watch or wait ~1s before restart
+  ```bash
+  # Use regular mode for clean shutdown
+  bun run --filter @fiberplane/mcp-gateway dev:no-watch
+  ```
+
 **Error: "EACCES: permission denied"**
 ```bash
 chmod 755 ~/.mcp-gateway/
@@ -42,6 +52,50 @@ curl -X POST http://localhost:3333/api/servers \
     "url": "http://localhost:5000",
     "headers": {"Authorization": "Bearer token123"}
   }'
+```
+
+## Stdio Servers
+
+**Stdio server shows "crashed" or "offline"**
+1. Check stderr logs in UI for crash details
+2. Verify command is executable: `which npx` or `which node`
+3. Test command manually: `npx -y @modelcontextprotocol/server-memory`
+4. Restart via UI "Restart Process" button or API:
+```bash
+curl -X POST http://localhost:3333/api/servers/my-server/restart
+```
+
+**Stdio server won't start**
+```bash
+# Check command exists
+which node
+which npx
+
+# Test command directly
+npx -y @modelcontextprotocol/server-memory
+
+# Check permissions
+ls -la /path/to/command
+
+# Verify config
+cat ~/.mcp-gateway/mcp.json | grep -A 10 "my-server"
+```
+
+**Session isolation issues**
+- **Shared mode** (default): Sessions share state. One crash affects all.
+- **Isolated mode**: Use `x-session-id` header. Each session = separate process.
+```json
+{
+  "sessionMode": "isolated"
+}
+```
+
+**Stderr logs missing**
+- Only last 100 lines kept in memory
+- Not persisted to database
+- View in UI health banner or via API:
+```bash
+curl http://localhost:3333/api/servers/my-server | grep stderrLogs
 ```
 
 ## Proxy Issues

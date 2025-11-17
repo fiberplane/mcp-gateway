@@ -1,10 +1,15 @@
 import {
+  getErrorMessage,
   isValidUrl,
   normalizeUrl,
   ServerAlreadyExistsError,
   ServerNotFoundError,
 } from "@fiberplane/mcp-gateway-core";
-import type { McpServer, McpServerConfig } from "@fiberplane/mcp-gateway-types";
+import {
+  type McpServer,
+  type McpServerConfig,
+  RestartNotSupportedError,
+} from "@fiberplane/mcp-gateway-types";
 import { sValidator } from "@hono/standard-validator";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -54,39 +59,81 @@ export interface ServerManagementFunctions {
    * @throws {ServerNotFoundError} When server doesn't exist
    */
   checkServerHealth: (name: string) => Promise<McpServer>;
+
+  /**
+   * Restart a stdio server (for recovery after crash)
+   *
+   * @throws {ServerNotFoundError} When server doesn't exist
+   * @throws {Error} When server is not stdio type
+   */
+  restartStdioServer: (name: string) => Promise<void>;
 }
 
 /**
- * Validation schema for server configuration
+ * Validation schema for server configuration (HTTP or stdio)
+ * Wraps the base schema with name normalization and HTTP-specific validation
  */
-const serverConfigSchema = z.object({
-  name: z.string().min(1, "Server name is required").toLowerCase().trim(),
-  url: z
-    .string()
-    .url("Invalid URL format")
-    .transform((val): string => normalizeUrl(val))
-    .refine((url) => isValidUrl(url), {
-      message: "URL must use HTTP or HTTPS protocol",
-    }),
-  type: z.literal("http"),
-  headers: z.record(z.string(), z.string()).optional().default({}),
-});
+const serverConfigSchema = z.union([
+  // HTTP server with URL normalization
+  z.object({
+    name: z.string().min(1, "Server name is required").toLowerCase().trim(),
+    type: z.literal("http"),
+    url: z
+      .string()
+      .url("Invalid URL format")
+      .transform((val): string => normalizeUrl(val))
+      .refine((url) => isValidUrl(url), {
+        message: "URL must use HTTP or HTTPS protocol",
+      }),
+    headers: z.record(z.string(), z.string()).optional().default({}),
+  }),
+  // Stdio server with name normalization
+  z.object({
+    name: z.string().min(1, "Server name is required").toLowerCase().trim(),
+    type: z.literal("stdio"),
+    command: z.string().min(1, "Command is required"),
+    args: z.array(z.string()),
+    env: z.record(z.string(), z.string()).optional(),
+    cwd: z.string().optional(),
+    timeout: z.number().positive().optional(),
+    sessionMode: z
+      .enum(["shared", "isolated"])
+      .optional()
+      .describe(
+        'Session isolation mode. "shared" (default): single subprocess for all sessions. "isolated": one subprocess per session.',
+      ),
+  }),
+]);
 
 /**
  * Validation schema for server updates
- * Name cannot be changed, only url and headers
+ * Name and type cannot be changed
+ * HTTP servers: url, headers
+ * Stdio servers: command, args, env, cwd, timeout, sessionMode
+ *
+ * Uses passthrough to allow all stdio fields in a single schema
  */
-const serverUpdateSchema = z.object({
-  url: z
-    .string()
-    .url("Invalid URL format")
-    .transform((val): string => normalizeUrl(val))
-    .refine((url) => isValidUrl(url), {
-      message: "URL must use HTTP or HTTPS protocol",
-    })
-    .optional(),
-  headers: z.record(z.string(), z.string()).optional(),
-});
+const serverUpdateSchema = z
+  .object({
+    // HTTP fields
+    url: z
+      .string()
+      .url("Invalid URL format")
+      .transform((val): string => normalizeUrl(val))
+      .refine((url) => isValidUrl(url), {
+        message: "URL must use HTTP or HTTPS protocol",
+      })
+      .optional(),
+    headers: z.record(z.string(), z.string()).optional(),
+    // Stdio fields
+    command: z.string().min(1).optional(),
+    args: z.array(z.string()).optional(),
+    env: z.record(z.string(), z.string()).optional(),
+    cwd: z.string().optional(),
+    timeout: z.number().positive().optional(),
+    sessionMode: z.enum(["shared", "isolated"]).optional(),
+  })
+  .passthrough();
 
 /**
  * Validation schema for server name parameter
@@ -131,7 +178,7 @@ export function createServerManagementRoutes(
       return c.json(
         {
           error: "Failed to fetch server configurations",
-          message: error instanceof Error ? error.message : String(error),
+          message: getErrorMessage(error),
         },
         500,
       );
@@ -180,7 +227,7 @@ export function createServerManagementRoutes(
         return c.json(
           {
             error: "Failed to add server",
-            message: error instanceof Error ? error.message : String(error),
+            message: getErrorMessage(error),
           },
           500,
         );
@@ -207,18 +254,30 @@ export function createServerManagementRoutes(
       const changes = c.req.valid("json") as z.infer<typeof serverUpdateSchema>;
 
       // Validate that at least one field is provided
-      if (!changes.url && !changes.headers) {
+      const hasHttpChanges = "url" in changes || "headers" in changes;
+      const hasStdioChanges =
+        "command" in changes ||
+        "args" in changes ||
+        "env" in changes ||
+        "cwd" in changes ||
+        "timeout" in changes ||
+        "sessionMode" in changes;
+
+      if (!hasHttpChanges && !hasStdioChanges) {
         return c.json(
           {
             error: "No changes provided",
-            message: "At least one of 'url' or 'headers' must be provided",
+            message: "At least one field must be provided for update",
           },
           400,
         );
       }
 
       try {
-        await functions.updateServer(name, changes);
+        await functions.updateServer(
+          name,
+          changes as Partial<Omit<McpServerConfig, "name" | "type">>,
+        );
 
         return c.json({
           success: true,
@@ -239,7 +298,7 @@ export function createServerManagementRoutes(
         return c.json(
           {
             error: "Failed to update server",
-            message: error instanceof Error ? error.message : String(error),
+            message: getErrorMessage(error),
           },
           500,
         );
@@ -287,7 +346,7 @@ export function createServerManagementRoutes(
         return c.json(
           {
             error: "Failed to remove server",
-            message: error instanceof Error ? error.message : String(error),
+            message: getErrorMessage(error),
           },
           500,
         );
@@ -325,9 +384,67 @@ export function createServerManagementRoutes(
         return c.json(
           {
             error: "Health check failed",
-            message: error instanceof Error ? error.message : String(error),
+            message: getErrorMessage(error),
           },
           500,
+        );
+      }
+    },
+  );
+
+  /**
+   * POST /servers/:name/restart
+   *
+   * Manually restart a stdio server (for recovery after crash)
+   *
+   * Only works for stdio servers. HTTP servers don't have a restart operation.
+   */
+  app.post(
+    "/servers/:name/restart",
+    sValidator("param", serverNameParamSchema),
+    async (c) => {
+      const { name } = c.req.valid("param");
+
+      try {
+        await functions.restartStdioServer(name);
+        return c.json({
+          success: true,
+          message: `Server '${name}' restarted successfully`,
+        });
+      } catch (error) {
+        // Server not found - return 404
+        if (error instanceof ServerNotFoundError) {
+          return c.json(
+            {
+              error: "Server not found",
+              message: `Server '${name}' does not exist`,
+            },
+            404,
+          );
+        }
+
+        // RestartNotSupportedError (isolated mode) - return 400
+        if (error instanceof RestartNotSupportedError) {
+          return c.json(
+            {
+              error: error.message,
+            },
+            400,
+          );
+        }
+
+        // Other errors (not stdio, restart failed, etc.) - return 400 or 500
+        const errorMessage = getErrorMessage(error);
+        const statusCode = errorMessage.includes("not a stdio server")
+          ? 400
+          : 500;
+
+        return c.json(
+          {
+            error: "Restart failed",
+            message: errorMessage,
+          },
+          statusCode,
         );
       }
     },

@@ -24,6 +24,8 @@ import {
   clientInfoSchema,
   extractRemoteAddress,
   isJsonRpcRequest,
+  isStdioServer,
+  JSON_RPC_ERRORS,
   jsonRpcReqResSchema,
   mcpServerInfoSchema,
   serverParamSchema,
@@ -58,6 +60,7 @@ function extractSessionId(
   return (
     validatedHeaders["Mcp-Session-Id"] ||
     validatedHeaders["mcp-session-id"] ||
+    validatedHeaders["x-session-id"] ||
     SESSIONLESS_ID
   );
 }
@@ -65,6 +68,36 @@ function extractSessionId(
 // Helper: Extract session ID from response headers
 function extractSessionIdFromResponse(headers: Headers): string | null {
   return headers.get("Mcp-Session-Id") || headers.get("mcp-session-id");
+}
+
+// Helper: Resolve session ID for stdio servers
+function resolveSessionId(
+  server: McpServer,
+  sessionId: string,
+  jsonRpcRequest: JsonRpcRequest,
+): {
+  effectiveSessionId: string;
+  generatedSessionId: string | null;
+} {
+  // For stdio servers: generate session ID for initialize requests without one
+  // This is required even in shared mode to prevent JSON-RPC id collisions
+  if (
+    isStdioServer(server) &&
+    jsonRpcRequest.method === "initialize" &&
+    sessionId === SESSIONLESS_ID
+  ) {
+    const generated = crypto.randomUUID();
+    return {
+      effectiveSessionId: generated,
+      generatedSessionId: generated,
+    };
+  }
+
+  // All other cases: use provided session ID
+  return {
+    effectiveSessionId: sessionId,
+    generatedSessionId: null,
+  };
 }
 
 // Helper: Build proxy headers
@@ -76,12 +109,19 @@ function buildProxyHeaders(
     "Content-Type": "application/json",
     "MCP-Protocol-Version":
       c.req.raw.headers.get("MCP-Protocol-Version") || "2025-06-18",
-    ...Object.fromEntries(
-      Object.entries(server.headers).filter(
-        ([key]) => !AUTO_HEADERS.includes(key.toLowerCase()),
-      ),
-    ),
   };
+
+  // Add custom headers if HTTP server
+  if (server.type === "http" && server.headers) {
+    Object.assign(
+      proxyHeaders,
+      Object.fromEntries(
+        Object.entries(server.headers).filter(
+          ([key]) => !AUTO_HEADERS.includes(key.toLowerCase()),
+        ),
+      ),
+    );
+  }
 
   // Only include Mcp-Session-Id if it's present (don't send empty string)
   const sessionId =
@@ -391,6 +431,14 @@ export async function createProxyRoutes(options: {
         throw error;
       }
 
+      // GET/SSE only supported for HTTP servers
+      if (server.type !== "http") {
+        return c.json(
+          { error: "SSE streaming only supported for HTTP servers" },
+          400,
+        );
+      }
+
       // Extract session ID from headers
       const validatedHeaders = c.req.valid("header");
       const sessionId = extractSessionId(validatedHeaders);
@@ -561,6 +609,11 @@ export async function createProxyRoutes(options: {
         throw error;
       }
 
+      // DELETE only supported for HTTP servers
+      if (server.type !== "http") {
+        return c.json({ error: "DELETE only supported for HTTP servers" }, 400);
+      }
+
       // We don't want to forward the Content-Type header, since this is a DELETE request
       const { "Content-Type": _, ...proxyHeaders } = buildProxyHeaders(
         c,
@@ -626,7 +679,15 @@ export async function createProxyRoutes(options: {
       const isRequest = isJsonRpcRequest(jsonRpcMessage);
 
       // For responses (e.g., elicitation responses), we still need to capture and forward
+      // This only works for HTTP servers
       if (!isRequest) {
+        if (server.type !== "http") {
+          return c.json(
+            { error: "Response forwarding only supported for HTTP servers" },
+            400,
+          );
+        }
+
         const jsonRpcResponse = jsonRpcMessage;
 
         // Determine the method from the response ID if we have it
@@ -695,21 +756,28 @@ export async function createProxyRoutes(options: {
       // From here on, we know it's a request
       const jsonRpcRequest = jsonRpcMessage;
 
+      // Resolve session ID for stdio servers (generates if needed for initialize)
+      const { effectiveSessionId, generatedSessionId } = resolveSessionId(
+        server,
+        sessionId,
+        jsonRpcRequest,
+      );
+
       // Handle initialize method - store client info BEFORE capturing request
-      handleInitializeClientInfo(c, sessionId, jsonRpcRequest, deps);
+      handleInitializeClientInfo(c, effectiveSessionId, jsonRpcRequest, deps);
 
       // Get stored client and server info for this session
       // For stateless requests, check context first (to avoid race conditions)
       const clientInfo =
-        sessionId === SESSIONLESS_ID
+        effectiveSessionId === SESSIONLESS_ID
           ? c.get("tempClientInfo") ||
-            (await deps.getClientInfoForSession(sessionId))
-          : await deps.getClientInfoForSession(sessionId);
+            (await deps.getClientInfoForSession(effectiveSessionId))
+          : await deps.getClientInfoForSession(effectiveSessionId);
       const serverInfo =
-        sessionId === SESSIONLESS_ID
+        effectiveSessionId === SESSIONLESS_ID
           ? c.get("tempServerInfo") ||
-            (await deps.getServerInfoForSession(sessionId))
-          : await deps.getServerInfoForSession(sessionId);
+            (await deps.getServerInfoForSession(effectiveSessionId))
+          : await deps.getServerInfoForSession(effectiveSessionId);
 
       // Compute methodDetail for database storage
       const timestamp = new Date().toISOString();
@@ -720,7 +788,7 @@ export async function createProxyRoutes(options: {
         direction: "request" as const,
         metadata: {
           serverName: server.name,
-          sessionId,
+          sessionId: effectiveSessionId,
           durationMs: 0,
           httpStatus: 0,
         },
@@ -731,7 +799,7 @@ export async function createProxyRoutes(options: {
       // Capture request immediately (before forwarding)
       const requestRecord = deps.createRequestRecord(
         server.name,
-        sessionId,
+        effectiveSessionId,
         jsonRpcRequest,
         httpContext,
         clientInfo,
@@ -741,13 +809,181 @@ export async function createProxyRoutes(options: {
       await deps.appendRecord(requestRecord);
 
       // Log incoming request from client
-      logRequest({ server, sessionId, request: jsonRpcRequest, onProxyEvent });
+      logRequest({
+        server,
+        sessionId: effectiveSessionId,
+        request: jsonRpcRequest,
+        onProxyEvent,
+      });
+
+      // === STDIO SERVER HANDLING ===
+      // Handle stdio servers with early return to avoid HTTP-specific complexity
+      if (isStdioServer(server)) {
+        if (!deps.getStdioSessionManager) {
+          return c.json(
+            {
+              jsonrpc: "2.0",
+              error: {
+                code: JSON_RPC_ERRORS.STDIO_NOT_CONFIGURED,
+                message: "Stdio support not configured",
+              },
+              id: jsonRpcRequest.id,
+            },
+            500,
+          );
+        }
+
+        try {
+          const stdioManager = await deps.getStdioSessionManager(server.name);
+
+          // effectiveSessionId and generatedSessionId already computed above
+          const response = await stdioManager.send(
+            effectiveSessionId === SESSIONLESS_ID
+              ? undefined
+              : effectiveSessionId,
+            jsonRpcRequest,
+          );
+          const duration = Date.now() - startTime;
+          const httpStatus = response.error ? 500 : 200;
+
+          // For initialize responses: store client/server metadata
+          if (jsonRpcRequest.method === "initialize") {
+            // Parse server info from response
+            if (
+              response.result &&
+              typeof response.result === "object" &&
+              "serverInfo" in response.result
+            ) {
+              const serverResult = mcpServerInfoSchema.safeParse(
+                response.result.serverInfo,
+              );
+              if (serverResult.success) {
+                // Always store for the effective session
+                deps.storeServerInfoForSession(
+                  effectiveSessionId,
+                  serverResult.data,
+                );
+
+                // For stateless sessions, also store in context to avoid race conditions
+                if (effectiveSessionId === SESSIONLESS_ID) {
+                  c.set("tempServerInfo", serverResult.data);
+                }
+
+                // Backfill server info on the initialize request record
+                if (jsonRpcRequest.id != null) {
+                  await deps.updateServerInfoForInitializeRequest(
+                    server.name,
+                    effectiveSessionId,
+                    jsonRpcRequest.id,
+                    serverResult.data,
+                  );
+                }
+              }
+            }
+
+            // For isolated mode with generated session ID: also store client info
+            if (generatedSessionId && clientInfo) {
+              deps.storeClientInfoForSession(generatedSessionId, clientInfo);
+            }
+          }
+
+          // Compute methodDetail for response
+          const apiResponseEntry: ApiResponseLogEntry = {
+            timestamp: new Date().toISOString(),
+            method: jsonRpcRequest.method,
+            id: jsonRpcRequest.id ?? null,
+            direction: "response" as const,
+            metadata: {
+              serverName: server.name,
+              sessionId: effectiveSessionId,
+              durationMs: duration,
+              httpStatus,
+            },
+            response,
+          };
+          const responseMethodDetail = getMethodDetail(apiResponseEntry);
+
+          // Capture response
+          const responseRecord = deps.createResponseRecord(
+            server.name,
+            effectiveSessionId,
+            response,
+            httpStatus,
+            jsonRpcRequest.method,
+            httpContext,
+            clientInfo,
+            serverInfo,
+            responseMethodDetail,
+          );
+          await deps.appendRecord(responseRecord);
+
+          // Log outgoing response to client
+          logResponse({
+            server,
+            sessionId: effectiveSessionId,
+            method: jsonRpcRequest.method,
+            httpStatus,
+            duration,
+            response,
+            onProxyEvent,
+          });
+
+          // Trigger cache invalidation
+          await updateServerActivity(onRegistryUpdate);
+
+          // If we generated a session ID, return it in the header
+          if (generatedSessionId) {
+            return c.json(response, httpStatus, {
+              "Mcp-Session-Id": generatedSessionId,
+            });
+          }
+
+          return c.json(response, httpStatus);
+        } catch (error) {
+          const duration = Date.now() - startTime;
+          const errorResponse: JsonRpcResponse = {
+            jsonrpc: "2.0",
+            error: {
+              code: JSON_RPC_ERRORS.SERVER_ERROR,
+              message:
+                error instanceof Error ? error.message : "Request failed",
+              data: {
+                serverName: server.name,
+              },
+            },
+            id: jsonRpcRequest.id ?? null,
+          };
+
+          // errorResponse.error is guaranteed to exist since we just created it above
+          if (errorResponse.error) {
+            await deps.captureErrorResponse(
+              server.name,
+              effectiveSessionId,
+              jsonRpcRequest,
+              errorResponse.error,
+              500,
+              duration,
+              httpContext,
+            );
+          }
+
+          // If we generated a session ID, return it in the error response header too
+          if (generatedSessionId) {
+            return c.json(errorResponse, 500, {
+              "Mcp-Session-Id": generatedSessionId,
+            });
+          }
+
+          return c.json(errorResponse, 500);
+        }
+      }
+      // === END STDIO HANDLING ===
 
       let response: JsonRpcResponse | undefined;
       let httpStatus = 200;
 
       try {
-        // Forward request to target MCP server using Hono proxy helper
+        // Forward request to HTTP target MCP server using Hono proxy helper
         const proxyHeaders = buildProxyHeaders(c, server);
 
         const targetResponse = await proxy(server.url, {
@@ -899,14 +1135,6 @@ export async function createProxyRoutes(options: {
             if (serverResult.success) {
               // Always store in Gateway stores for the current session
               deps.storeServerInfoForSession(sessionId, serverResult.data);
-
-              // Also store for stateless as fallback (for sessions that haven't received their ID yet)
-              if (sessionId !== SESSIONLESS_ID) {
-                deps.storeServerInfoForSession(
-                  SESSIONLESS_ID,
-                  serverResult.data,
-                );
-              }
 
               // For stateless sessions, also store in context to avoid race conditions
               if (sessionId === SESSIONLESS_ID) {
@@ -1104,7 +1332,7 @@ export async function createProxyRoutes(options: {
           jsonrpc: "2.0",
           id: jsonRpcRequest.id ?? null,
           error: {
-            code: -32603,
+            code: JSON_RPC_ERRORS.INTERNAL_ERROR,
             message: String(error),
           },
         };
@@ -1126,7 +1354,7 @@ export async function createProxyRoutes(options: {
           sessionId,
           jsonRpcRequest,
           {
-            code: -32603,
+            code: JSON_RPC_ERRORS.INTERNAL_ERROR,
             message: String(error),
           },
           httpStatus,
