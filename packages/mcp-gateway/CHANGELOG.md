@@ -1,5 +1,70 @@
 # @fiberplane/mcp-gateway
 
+## 0.6.0
+
+### Minor Changes
+
+- 64786e5: Add token-based authentication and refactor web UI architecture
+
+  **Authentication:**
+
+  - Auto-generate secure Bearer tokens (or use `MCP_GATEWAY_TOKEN` env var)
+  - Protect `/api/*` and `/gateway/mcp` endpoints with token auth
+  - Display token in web UI URL: `http://localhost:3333/ui?token=...`
+  - Security hardening: constant-time comparison, DoS protection, input validation
+
+  **Package Structure:**
+
+  - Extract `@fiberplane/mcp-gateway-management-mcp` package for gateway MCP server
+  - Cleaner separation: server handles proxy/OAuth, management-mcp handles gateway tools
+  - CLI orchestrates management MCP at `/gateway/mcp` with auth middleware
+
+  **Web UI Architecture:**
+
+  - Eliminate API prop drilling using React Context pattern
+  - Domain hooks (`useServers()`, `useHealthCheck()`) hide context internally
+  - `IApiClient` interface for type safety (zero type assertions)
+  - Fix critical bugs: ApiContext availability and shared auth state
+
+  **Documentation:**
+
+  - Comprehensive authentication docs (setup, security, troubleshooting)
+  - Updated web/API READMEs with architecture details
+  - Security guidelines in SECURITY.md
+
+- 0ef3447: Add stdio MCP server support with session isolation
+
+  **New Features:**
+
+  - **Stdio server support**: Run MCP servers as child processes (npx, node, python, etc.)
+  - **Session modes**: Shared (default) or isolated mode with separate processes per session
+  - **Process management**: Auto health checks, manual restart, hang detection
+  - **UI improvements**: Process status banner, stderr logs viewer, session mode display
+  - **Advanced features**: JSON-RPC id namespacing, session limit (100), stderr buffering (10MB)
+
+  **Core Changes:**
+
+  - Add subprocess management with StdioSessionManager
+  - Implement session isolation with automatic session ID generation
+  - Add health timestamp preservation across state changes
+  - Support serverInfo persistence and backfilling for stdio servers
+  - Proper shell-style argument parsing with quote and escape handling
+
+  **UI/UX:**
+
+  - New stdio process status banner with restart button
+  - Stderr logs viewer with last 100 lines
+  - Server form improvements for stdio configuration
+  - Accessibility fixes (WCAG Level A compliance)
+  - Health status indicators with timestamps
+
+  **Documentation:**
+
+  - Add stdio server usage guide
+  - Document session isolation patterns
+  - Add troubleshooting section for stdio servers
+  - Document bun watch mode shutdown behavior
+
 ## 0.5.1
 
 ### Patch Changes
