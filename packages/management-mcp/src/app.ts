@@ -1,8 +1,5 @@
 import { logger } from "@fiberplane/mcp-gateway-core";
-import {
-	type Gateway,
-	JSON_RPC_ERRORS,
-} from "@fiberplane/mcp-gateway-types";
+import { type Gateway, JSON_RPC_ERRORS } from "@fiberplane/mcp-gateway-types";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { McpServer, RpcError, StreamableHttpTransport } from "mcp-lite";
