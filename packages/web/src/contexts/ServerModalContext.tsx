@@ -2,7 +2,7 @@ import type { McpServerConfig } from "@fiberplane/mcp-gateway-types";
 import { createContext, useContext } from "react";
 
 interface ServerModalContextValue {
-  openAddServerModal: () => void;
+  openAddServerModal: (initialData?: Partial<McpServerConfig>) => void;
   openEditServerModal: (server: McpServerConfig) => void;
 }
 

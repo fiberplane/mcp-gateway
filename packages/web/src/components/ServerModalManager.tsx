@@ -78,11 +78,14 @@ export function ServerModalManager({ children }: ServerModalManagerProps) {
     },
   });
 
-  const openAddServerModal = useCallback(() => {
-    setModalMode("add");
-    setSelectedServer(undefined);
-    setModalOpen(true);
-  }, []);
+  const openAddServerModal = useCallback(
+    (initialData?: Partial<McpServerConfig>) => {
+      setModalMode("add");
+      setSelectedServer(initialData as McpServerConfig | undefined);
+      setModalOpen(true);
+    },
+    [],
+  );
 
   const openEditServerModal = useCallback((server: McpServerConfig) => {
     setModalMode("edit");

@@ -37,7 +37,7 @@ export function SettingsDropdown({
       <DropdownMenu.Portal>
         <DropdownMenu.Content align="end">
           <DropdownMenu.Label>Manage Servers</DropdownMenu.Label>
-          <DropdownMenu.Item onClick={openAddServerModal}>
+          <DropdownMenu.Item onClick={() => openAddServerModal()}>
             <Plus className="w-4 h-4 text-muted-foreground" />
             Add Server
           </DropdownMenu.Item>

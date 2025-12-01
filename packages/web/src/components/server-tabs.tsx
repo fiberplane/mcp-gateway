@@ -322,7 +322,7 @@ export function ServerTabs({ value, onChange, panelId }: ServerTabsProps) {
         <Button
           variant="outline"
           size="sm"
-          onClick={openAddServerModal}
+          onClick={() => openAddServerModal()}
           className="h-8"
         >
           <Plus className="w-4 h-4 mr-1" />

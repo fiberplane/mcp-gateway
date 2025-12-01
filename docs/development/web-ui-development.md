@@ -58,7 +58,7 @@ Tailwind v4 auto-generates utilities from `--color-*` variables. Use these class
 |--------------|------------------|-------|
 | `--color-primary` | `bg-primary` `text-primary` | Primary backgrounds/text |
 | `--color-primary-foreground` | `text-primary-foreground` | Text on primary bg |
-| `--color-background` | `bg-background` | Page background (#f5f5f5) |
+| `--color-background` | `bg-background` | Page background (#f5f6f7) |
 | `--color-card` | `bg-card` | Card backgrounds (#ffffff) |
 | `--color-muted` | `bg-muted` | Muted backgrounds (#f9fafb) |
 | `--color-muted-foreground` | `text-muted-foreground` | Muted text (#6b7280) |
@@ -140,7 +140,7 @@ Location: `packages/web/src/index.css`
 
 @theme {
   /* Background */
-  --color-background: #f5f5f5;
+  --color-background: #f5f6f7;
   --color-card: #ffffff;
   --color-muted: #f9fafb;
   --color-primary: #272624;
