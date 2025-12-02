@@ -24,3 +24,13 @@ export class ServerNotFoundError extends Error {
     this.name = "ServerNotFoundError";
   }
 }
+
+/**
+ * Thrown when attempting to add a server with an unsupported URL format
+ */
+export class UnsupportedServerUrlError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "UnsupportedServerUrlError";
+  }
+}

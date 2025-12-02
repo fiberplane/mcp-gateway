@@ -1,6 +1,10 @@
 import type { McpServer } from "@fiberplane/mcp-gateway-types";
 import { normalizeUrl } from "../utils/url";
-import { ServerAlreadyExistsError, ServerNotFoundError } from "./errors";
+import {
+  ServerAlreadyExistsError,
+  ServerNotFoundError,
+  UnsupportedServerUrlError,
+} from "./errors";
 
 /**
  * Pure registry manipulation functions
@@ -41,6 +45,22 @@ export function addServer(
       Extract<McpServer, { type: "http" }>,
       "lastActivity" | "exchangeCount"
     >;
+
+    // Check for unsupported /sse endpoint
+    try {
+      const parsedUrl = new URL(httpServer.url);
+      if (parsedUrl.pathname.endsWith("/sse")) {
+        throw new UnsupportedServerUrlError(
+          "SSE transport (/sse endpoint) is not yet supported. Please use the /mcp endpoint instead.",
+        );
+      }
+    } catch (e) {
+      if (e instanceof UnsupportedServerUrlError) {
+        throw e;
+      }
+      // URL parsing failed - let normalizeUrl handle the error
+    }
+
     const normalized: McpServer = {
       type: "http",
       name,

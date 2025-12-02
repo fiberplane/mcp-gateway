@@ -4,6 +4,7 @@ import {
   normalizeUrl,
   ServerAlreadyExistsError,
   ServerNotFoundError,
+  UnsupportedServerUrlError,
 } from "@fiberplane/mcp-gateway-core";
 import {
   type McpServer,
@@ -221,6 +222,17 @@ export function createServerManagementRoutes(
               message: error.message,
             },
             409, // Conflict
+          );
+        }
+
+        // Check if it's an unsupported URL error
+        if (error instanceof UnsupportedServerUrlError) {
+          return c.json(
+            {
+              error: "Unsupported server URL",
+              message: error.message,
+            },
+            400, // Bad Request
           );
         }
 

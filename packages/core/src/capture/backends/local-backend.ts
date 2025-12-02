@@ -36,6 +36,7 @@ import {
 import {
   ServerAlreadyExistsError,
   ServerNotFoundError,
+  UnsupportedServerUrlError,
 } from "../../registry/errors";
 import { fromMcpJson, toMcpJson } from "../../registry/index";
 import { StdioSessionManager } from "../../subprocess/stdio-session-manager";
@@ -461,6 +462,23 @@ export class LocalStorageBackend implements StorageBackend {
       // Check for duplicate server name
       if (servers.some((s) => s.name === server.name)) {
         throw new ServerAlreadyExistsError(server.name);
+      }
+
+      // Check for unsupported /sse endpoint
+      if (server.type === "http") {
+        try {
+          const parsedUrl = new URL(server.url);
+          if (parsedUrl.pathname.endsWith("/sse")) {
+            throw new UnsupportedServerUrlError(
+              "SSE transport (/sse endpoint) is not yet supported. Please use the /mcp endpoint instead.",
+            );
+          }
+        } catch (e) {
+          if (e instanceof UnsupportedServerUrlError) {
+            throw e;
+          }
+          // URL parsing failed - will be caught by other validation
+        }
       }
 
       // Add new server with zero metrics (will be computed from logs)
