@@ -18,9 +18,9 @@ interface ServerFormProps {
    */
   mode: "add" | "edit";
   /**
-   * Initial server configuration (for edit mode)
+   * Initial server configuration (partial for add mode, full for edit mode)
    */
-  initialData?: McpServerConfig;
+  initialData?: Partial<McpServerConfig>;
   /**
    * Callback when form is submitted
    */
@@ -62,20 +62,20 @@ export function ServerForm({
 
   // HTTP fields
   const [url, setUrl] = useState(
-    initialData?.type === "http" ? initialData.url : "",
+    initialData?.type === "http" ? (initialData.url ?? "") : "",
   );
   const [headers, setHeaders] = useState<Record<string, string>>(
-    initialData?.type === "http" ? initialData.headers : {},
+    initialData?.type === "http" ? (initialData.headers ?? {}) : {},
   );
   const [headerKey, setHeaderKey] = useState("");
   const [headerValue, setHeaderValue] = useState("");
 
   // Stdio fields
   const [command, setCommand] = useState(
-    initialData?.type === "stdio" ? initialData.command : "",
+    initialData?.type === "stdio" ? (initialData.command ?? "") : "",
   );
   const [args, setArgs] = useState(
-    initialData?.type === "stdio"
+    initialData?.type === "stdio" && initialData.args
       ? initialData.args
           .map((arg) => {
             // Quote args that contain spaces or special chars
@@ -331,7 +331,7 @@ export function ServerForm({
                 name="serverType"
                 value="http"
                 checked={serverType === "http"}
-                onChange={(e) => setServerType(e.target.value as "http")}
+                onChange={() => setServerType("http")}
                 disabled={isSubmitting}
                 className="w-4 h-4"
               />
@@ -343,7 +343,7 @@ export function ServerForm({
                 name="serverType"
                 value="stdio"
                 checked={serverType === "stdio"}
-                onChange={(e) => setServerType(e.target.value as "stdio")}
+                onChange={() => setServerType("stdio")}
                 disabled={isSubmitting}
                 className="w-4 h-4"
               />
@@ -695,7 +695,9 @@ export function ServerForm({
                   id={sessionModeId}
                   value={sessionMode}
                   onChange={(e) =>
-                    setSessionMode(e.target.value as "shared" | "isolated")
+                    setSessionMode(
+                      e.target.value === "isolated" ? "isolated" : "shared",
+                    )
                   }
                   disabled={isSubmitting}
                   className="w-full px-3 py-2 bg-background border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring"

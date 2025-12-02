@@ -50,6 +50,7 @@ import {
   parseAsFilterParam,
   parseAsSearchArray,
 } from "../lib/filter-parsers";
+import { invalidateAllQueries } from "../lib/query-keys";
 import { useHandler } from "../lib/use-handler";
 import { getLogKey } from "../lib/utils";
 
@@ -81,7 +82,7 @@ function AppContent() {
   const queryClient = useQueryClient();
   const { confirm, ConfirmDialog } = useConfirm();
   const [serverName, setServerName] = useQueryState("server");
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [isClearing, setIsClearing] = useState(false);
   const [clearError, setClearError] = useState<string | null>(null);
 
@@ -288,13 +289,8 @@ function AppContent() {
     setClearError(null); // Clear any previous errors
     try {
       await api.clearSessions();
-      // Invalidate all queries to refetch data after clearing (in parallel)
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["logs"] }),
-        queryClient.invalidateQueries({ queryKey: ["servers"] }),
-        queryClient.invalidateQueries({ queryKey: ["sessions"] }),
-        queryClient.invalidateQueries({ queryKey: ["clients"] }),
-      ]);
+      // Invalidate all queries to refetch data after clearing
+      await invalidateAllQueries(queryClient);
 
       if (selectedIds.size > 0) {
         // Reset selection after successful clear

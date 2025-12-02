@@ -150,4 +150,13 @@
     animation: filter-slide-in 0.2s cubic-bezier(0.25, 1, 0.5, 1);
     animation-fill-mode: backwards;
   }
+
+  /* Respect user's reduced motion preference for custom animations */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-fade-in,
+    .animate-scale-in,
+    .animate-filter-slide-in {
+      animation: none;
+    }
+  }
 }

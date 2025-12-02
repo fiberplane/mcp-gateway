@@ -2,23 +2,22 @@ import type { McpServer } from "@fiberplane/mcp-gateway-types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import {
-  Activity,
   AlertCircle,
   ArrowLeft,
-  CheckCircle2,
   Edit,
-  Pause,
   RefreshCw,
   Server,
   Trash2,
 } from "lucide-react";
-import { useState } from "react";
 import { PageLayout } from "../components/layout/page-layout";
+import { ServerStatusBadge } from "../components/server-status-badge";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { StatusDot } from "../components/ui/status-dot";
 import { useApi } from "../contexts/ApiContext";
 import { useServerModal } from "../contexts/ServerModalContext";
+import { useConfirm } from "../hooks/use-confirm";
+import { invalidateServerQueries, queryKeys } from "../lib/query-keys";
 
 export function ServerDetailsPage() {
   const { serverName } = useParams({ from: "/servers/$serverName" });
@@ -26,11 +25,11 @@ export function ServerDetailsPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { openEditServerModal } = useServerModal();
-  const [isDeleting, setIsDeleting] = useState(false);
+  const { confirm, ConfirmDialog } = useConfirm();
 
   // Fetch server configs
   const { data, isLoading, error } = useQuery({
-    queryKey: ["server-configs"],
+    queryKey: queryKeys.serverConfigs,
     queryFn: () => api.getServerConfigs(),
   });
 
@@ -38,8 +37,7 @@ export function ServerDetailsPage() {
   const deleteMutation = useMutation({
     mutationFn: (name: string) => api.deleteServer(name),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["server-configs"] });
-      queryClient.invalidateQueries({ queryKey: ["servers"] });
+      invalidateServerQueries(queryClient);
       navigate({ to: "/servers", search: (prev) => ({ token: prev.token }) });
     },
   });
@@ -48,17 +46,22 @@ export function ServerDetailsPage() {
   const restartMutation = useMutation({
     mutationFn: (name: string) => api.restartStdioServer(name),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["server-configs"] });
-      queryClient.invalidateQueries({ queryKey: ["servers"] });
+      invalidateServerQueries(queryClient);
     },
   });
 
   const handleDelete = async () => {
-    if (!isDeleting) {
-      setIsDeleting(true);
-      return;
+    const confirmed = await confirm({
+      title: "Delete Server",
+      description: `Are you sure you want to delete "${serverName}"? This action cannot be undone.`,
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      variant: "destructive",
+    });
+
+    if (confirmed) {
+      await deleteMutation.mutateAsync(serverName);
     }
-    await deleteMutation.mutateAsync(serverName);
   };
 
   const handleRestart = async () => {
@@ -98,149 +101,85 @@ export function ServerDetailsPage() {
   }
 
   return (
-    <PageLayout icon={<Server className="h-4 w-4" />} breadcrumb="Servers">
-      {/* Header with back button */}
-      <div className="mb-6">
-        <Button variant="ghost" size="sm" asChild>
-          <Link to="/servers" search={(prev) => ({ token: prev.token })}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Servers
-          </Link>
-        </Button>
-      </div>
+    <>
+      <PageLayout icon={<Server className="h-4 w-4" />} breadcrumb="Servers">
+        {/* Header with back button */}
+        <div className="mb-6">
+          <Button variant="ghost" size="sm" asChild>
+            <Link to="/servers" search={(prev) => ({ token: prev.token })}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Servers
+            </Link>
+          </Button>
+        </div>
 
-      {/* Server Overview */}
-      <div className="mb-8">
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <h1 className="text-xl font-medium mb-2">{server.name}</h1>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline">{server.type}</Badge>
-              <ServerStatus server={server} />
+        {/* Server Overview */}
+        <div className="mb-8">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h1 className="text-xl font-medium mb-2">{server.name}</h1>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline">{server.type}</Badge>
+                <ServerStatusBadge server={server} />
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={() => openEditServerModal(server)}
-            >
-              <Edit className="h-4 w-4 mr-2" />
-              Edit
-            </Button>
-            {server.type === "stdio" && (
+            <div className="flex items-center gap-2">
               <Button
                 variant="outline"
-                onClick={handleRestart}
-                disabled={restartMutation.isPending}
+                onClick={() => openEditServerModal(server)}
               >
-                <RefreshCw
-                  className={`h-4 w-4 mr-2 ${restartMutation.isPending ? "animate-spin" : ""}`}
-                />
-                {restartMutation.isPending ? "Restarting..." : "Restart"}
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
               </Button>
-            )}
-            <Button
-              variant={isDeleting ? "destructive" : "outline"}
-              onClick={handleDelete}
-              disabled={deleteMutation.isPending}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              {isDeleting ? "Click to confirm" : "Delete"}
-            </Button>
+              {server.type === "stdio" && (
+                <Button
+                  variant="outline"
+                  onClick={handleRestart}
+                  disabled={restartMutation.isPending}
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 mr-2 ${restartMutation.isPending ? "animate-spin" : ""}`}
+                  />
+                  {restartMutation.isPending ? "Restarting..." : "Restart"}
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                onClick={handleDelete}
+                disabled={deleteMutation.isPending}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                {deleteMutation.isPending ? "Deleting..." : "Delete"}
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Server Details Grid */}
-      <div className="grid gap-6">
-        {/* Command/URL Section */}
-        <ServerCommandSection server={server} />
+        {/* Server Details Grid */}
+        <div className="grid gap-6">
+          {/* Command/URL Section */}
+          <ServerCommandSection server={server} />
 
-        {/* Error Details (if any) */}
-        <ServerErrorSection server={server} />
+          {/* Error Details (if any) */}
+          <ServerErrorSection
+            server={server}
+            onRestart={handleRestart}
+            isRestarting={restartMutation.isPending}
+          />
 
-        {/* Stderr Logs (for stdio servers) */}
-        {server.type === "stdio" &&
-          server.processState.stderrLogs.length > 0 && (
-            <StderrLogsSection server={server} />
-          )}
+          {/* Stderr Logs (for stdio servers) */}
+          {server.type === "stdio" &&
+            server.processState.stderrLogs.length > 0 && (
+              <StderrLogsSection server={server} />
+            )}
 
-        {/* Health Info (for HTTP servers) */}
-        {server.type === "http" && <ServerHealthSection server={server} />}
-      </div>
-    </PageLayout>
+          {/* Health Info (for HTTP servers) */}
+          {server.type === "http" && <ServerHealthSection server={server} />}
+        </div>
+      </PageLayout>
+      {ConfirmDialog}
+    </>
   );
-}
-
-interface ServerStatusProps {
-  server: McpServer;
-}
-
-function ServerStatus({ server }: ServerStatusProps) {
-  const health = server.health;
-  const isHealthy = health === "up";
-  const isUnhealthy = health === "down";
-  const isStdio = server.type === "stdio";
-  const processState = isStdio ? server.processState : undefined;
-  const isRunning = processState?.status === "running";
-  const isCrashed = processState?.status === "crashed";
-  const isStopped = processState?.status === "stopped";
-
-  if (isHealthy) {
-    return (
-      <div className="flex items-center gap-2">
-        <CheckCircle2 className="h-4 w-4 text-green-500" />
-        <span className="text-sm">Healthy</span>
-      </div>
-    );
-  }
-
-  if (isUnhealthy) {
-    return (
-      <div className="flex items-center gap-2">
-        <AlertCircle className="h-4 w-4 text-red-500" />
-        <span className="text-sm">Unhealthy</span>
-      </div>
-    );
-  }
-
-  if (isCrashed) {
-    return (
-      <div className="flex items-center gap-2">
-        <AlertCircle className="h-4 w-4 text-red-500" />
-        <span className="text-sm">Crashed</span>
-      </div>
-    );
-  }
-
-  if (isStopped && processState?.lastError) {
-    return (
-      <div className="flex items-center gap-2">
-        <AlertCircle className="h-4 w-4 text-orange-500" />
-        <span className="text-sm">Stopped</span>
-      </div>
-    );
-  }
-
-  if (isStdio && isRunning) {
-    return (
-      <div className="flex items-center gap-2">
-        <Activity className="h-4 w-4 text-blue-500" />
-        <span className="text-sm">Running</span>
-      </div>
-    );
-  }
-
-  if (isStdio && !isRunning) {
-    return (
-      <div className="flex items-center gap-2">
-        <Pause className="h-4 w-4 text-gray-500" />
-        <span className="text-sm">Stopped</span>
-      </div>
-    );
-  }
-
-  return null;
 }
 
 interface ServerCommandSectionProps {
@@ -298,30 +237,20 @@ function ServerCommandSection({ server }: ServerCommandSectionProps) {
 
 interface ServerErrorSectionProps {
   server: McpServer;
+  onRestart: () => void;
+  isRestarting: boolean;
 }
 
-function ServerErrorSection({ server }: ServerErrorSectionProps) {
-  const api = useApi();
-  const queryClient = useQueryClient();
-
+function ServerErrorSection({
+  server,
+  onRestart,
+  isRestarting,
+}: ServerErrorSectionProps) {
   const isStdio = server.type === "stdio";
   const processState = isStdio ? server.processState : undefined;
   const hasProcessError = processState?.lastError;
   const hasHealthError =
     server.health === "down" && (server.errorMessage || server.errorCode);
-
-  // Restart mutation (stdio only)
-  const restartMutation = useMutation({
-    mutationFn: (name: string) => api.restartStdioServer(name),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["server-configs"] });
-      queryClient.invalidateQueries({ queryKey: ["servers"] });
-    },
-  });
-
-  const handleRestart = async () => {
-    await restartMutation.mutateAsync(server.name);
-  };
 
   if (!hasProcessError && !hasHealthError) {
     return null;
@@ -369,18 +298,16 @@ function ServerErrorSection({ server }: ServerErrorSectionProps) {
             {isStdio && server.sessionMode === "shared" && (
               <div className="pt-2">
                 <Button
-                  onClick={handleRestart}
-                  disabled={restartMutation.isPending}
+                  onClick={onRestart}
+                  disabled={isRestarting}
                   variant="outline"
                   size="sm"
                   className="gap-2"
                 >
                   <RefreshCw
-                    className={`w-4 h-4 ${restartMutation.isPending ? "animate-spin" : ""}`}
+                    className={`w-4 h-4 ${isRestarting ? "animate-spin" : ""}`}
                   />
-                  {restartMutation.isPending
-                    ? "Restarting..."
-                    : "Restart Process"}
+                  {isRestarting ? "Restarting..." : "Restart Process"}
                 </Button>
               </div>
             )}
@@ -425,7 +352,7 @@ function StderrLogsSection({ server }: StderrLogsSectionProps) {
       <div className="bg-muted rounded p-4 font-mono text-xs space-y-1 max-h-96 overflow-y-auto">
         {server.processState.stderrLogs.map((log, i) => (
           <div
-            key={i}
+            key={`stderr-${i}`}
             className="text-muted-foreground whitespace-pre-wrap break-all"
           >
             {log}

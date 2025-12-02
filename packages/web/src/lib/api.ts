@@ -101,22 +101,18 @@ class APIClient implements IApiClient {
   }
 
   /**
-   * Create fetch options with authentication header
+   * Create Headers with authentication token
+   * @param existingHeaders Optional existing headers to merge with
    */
-  private createAuthHeaders(options: RequestInit = {}): RequestInit {
+  private createAuthHeaders(existingHeaders?: HeadersInit): Headers {
     const token = this.getToken();
     if (!token) {
       throw new UnauthorizedError("Authentication token not set");
     }
 
-    // Use Headers API for type-safe header merging
-    const headers = new Headers(options.headers);
+    const headers = new Headers(existingHeaders);
     headers.set("Authorization", `Bearer ${token}`);
-
-    return {
-      ...options,
-      headers,
-    };
+    return headers;
   }
 
   /**
@@ -178,8 +174,8 @@ class APIClient implements IApiClient {
       }
     }
 
-    const options = this.createAuthHeaders();
-    const response = await fetch(url.toString(), options);
+    const headers = this.createAuthHeaders();
+    const response = await fetch(url.toString(), { headers });
     return this.handleResponse<{
       data: ApiLogEntry[];
       pagination: LogQueryResult["pagination"];
@@ -190,8 +186,8 @@ class APIClient implements IApiClient {
    * Get list of servers with aggregations
    */
   async getServers(): Promise<{ servers: ServerInfo[] }> {
-    const options = this.createAuthHeaders();
-    const response = await fetch(`${this.baseURL}/servers`, options);
+    const headers = this.createAuthHeaders();
+    const response = await fetch(`${this.baseURL}/servers`, { headers });
     return this.handleResponse<{ servers: ServerInfo[] }>(response);
   }
 
@@ -204,8 +200,8 @@ class APIClient implements IApiClient {
       url.searchParams.append("server", serverName);
     }
 
-    const options = this.createAuthHeaders();
-    const response = await fetch(url.toString(), options);
+    const headers = this.createAuthHeaders();
+    const response = await fetch(url.toString(), { headers });
     return this.handleResponse<{ sessions: SessionInfo[] }>(response);
   }
 
@@ -213,8 +209,8 @@ class APIClient implements IApiClient {
    * Get list of clients with aggregations
    */
   async getClients(): Promise<{ clients: ClientAggregation[] }> {
-    const options = this.createAuthHeaders();
-    const response = await fetch(`${this.baseURL}/clients`, options);
+    const headers = this.createAuthHeaders();
+    const response = await fetch(`${this.baseURL}/clients`, { headers });
     return this.handleResponse<{ clients: ClientAggregation[] }>(response);
   }
 
@@ -229,8 +225,8 @@ class APIClient implements IApiClient {
       url.searchParams.append("server", serverName);
     }
 
-    const options = this.createAuthHeaders();
-    const response = await fetch(url.toString(), options);
+    const headers = this.createAuthHeaders();
+    const response = await fetch(url.toString(), { headers });
     return this.handleResponse<{ methods: Array<{ method: string }> }>(
       response,
     );
@@ -240,10 +236,11 @@ class APIClient implements IApiClient {
    * Clear all session data (client info and server info)
    */
   async clearSessions(): Promise<{ success: boolean }> {
-    const options = this.createAuthHeaders({
+    const headers = this.createAuthHeaders();
+    const response = await fetch(`${this.baseURL}/logs/clear`, {
       method: "POST",
+      headers,
     });
-    const response = await fetch(`${this.baseURL}/logs/clear`, options);
     return this.handleResponse<{ success: boolean }>(response);
   }
 
@@ -254,8 +251,8 @@ class APIClient implements IApiClient {
    * This is different from getServers() which returns aggregated stats.
    */
   async getServerConfigs(): Promise<{ servers: McpServer[] }> {
-    const options = this.createAuthHeaders();
-    const response = await fetch(`${this.baseURL}/servers/config`, options);
+    const headers = this.createAuthHeaders();
+    const response = await fetch(`${this.baseURL}/servers/config`, { headers });
     return this.handleResponse<{ servers: McpServer[] }>(response);
   }
 
@@ -268,15 +265,14 @@ class APIClient implements IApiClient {
   async addServer(
     config: McpServerConfig,
   ): Promise<{ success: boolean; server: McpServerConfig }> {
-    const options = this.createAuthHeaders({
+    const headers = this.createAuthHeaders();
+    headers.set("Content-Type", "application/json");
+
+    const response = await fetch(`${this.baseURL}/servers/config`, {
       method: "POST",
+      headers,
       body: JSON.stringify(config),
     });
-
-    // Manually set Content-Type since we're using Headers API
-    (options.headers as Headers).set("Content-Type", "application/json");
-
-    const response = await fetch(`${this.baseURL}/servers/config`, options);
     return this.handleResponse<{ success: boolean; server: McpServerConfig }>(
       response,
     );
@@ -293,17 +289,16 @@ class APIClient implements IApiClient {
     name: string,
     changes: Partial<Omit<McpServerConfig, "name" | "type">>,
   ): Promise<{ success: boolean; message: string }> {
-    const options = this.createAuthHeaders({
-      method: "PUT",
-      body: JSON.stringify(changes),
-    });
-
-    // Manually set Content-Type since we're using Headers API
-    (options.headers as Headers).set("Content-Type", "application/json");
+    const headers = this.createAuthHeaders();
+    headers.set("Content-Type", "application/json");
 
     const response = await fetch(
       `${this.baseURL}/servers/config/${encodeURIComponent(name)}`,
-      options,
+      {
+        method: "PUT",
+        headers,
+        body: JSON.stringify(changes),
+      },
     );
     return this.handleResponse<{ success: boolean; message: string }>(response);
   }
@@ -319,13 +314,13 @@ class APIClient implements IApiClient {
   async deleteServer(
     name: string,
   ): Promise<{ success: boolean; message: string }> {
-    const options = this.createAuthHeaders({
-      method: "DELETE",
-    });
-
+    const headers = this.createAuthHeaders();
     const response = await fetch(
       `${this.baseURL}/servers/config/${encodeURIComponent(name)}`,
-      options,
+      {
+        method: "DELETE",
+        headers,
+      },
     );
     return this.handleResponse<{ success: boolean; message: string }>(response);
   }
@@ -337,13 +332,13 @@ class APIClient implements IApiClient {
    * @returns Updated server with health check results
    */
   async checkServerHealth(name: string): Promise<{ server: McpServer }> {
-    const options = this.createAuthHeaders({
-      method: "POST",
-    });
-
+    const headers = this.createAuthHeaders();
     const response = await fetch(
       `${this.baseURL}/servers/${encodeURIComponent(name)}/health-check`,
-      options,
+      {
+        method: "POST",
+        headers,
+      },
     );
     return this.handleResponse<{ server: McpServer }>(response);
   }
@@ -360,12 +355,13 @@ class APIClient implements IApiClient {
   async restartStdioServer(
     name: string,
   ): Promise<{ success: boolean; message: string }> {
-    const options = this.createAuthHeaders({
-      method: "POST",
-    });
+    const headers = this.createAuthHeaders();
     const response = await fetch(
       `${this.baseURL}/servers/${encodeURIComponent(name)}/restart`,
-      options,
+      {
+        method: "POST",
+        headers,
+      },
     );
 
     return this.handleResponse<{ success: boolean; message: string }>(response);

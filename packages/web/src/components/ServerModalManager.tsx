@@ -15,14 +15,21 @@ interface ServerModalManagerProps {
   children: React.ReactNode;
 }
 
+/**
+ * Discriminated union for modal state
+ * - Closed: no data needed
+ * - Add mode: optional partial config for pre-filling
+ * - Edit mode: full config required
+ */
+type ModalState =
+  | { isOpen: false }
+  | { isOpen: true; mode: "add"; data?: Partial<McpServerConfig> }
+  | { isOpen: true; mode: "edit"; data: McpServerConfig };
+
 export function ServerModalManager({ children }: ServerModalManagerProps) {
   const api = useApi();
   const queryClient = useQueryClient();
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<"add" | "edit">("add");
-  const [selectedServer, setSelectedServer] = useState<
-    McpServerConfig | undefined
-  >();
+  const [modalState, setModalState] = useState<ModalState>({ isOpen: false });
 
   // Add server mutation
   const addServerMutation = useMutation({
@@ -35,8 +42,7 @@ export function ServerModalManager({ children }: ServerModalManagerProps) {
       ]);
       // Wait one more tick for UI to update
       await new Promise((resolve) => setTimeout(resolve, 0));
-      setModalOpen(false);
-      setSelectedServer(undefined);
+      setModalState({ isOpen: false });
     },
   });
 
@@ -57,8 +63,7 @@ export function ServerModalManager({ children }: ServerModalManagerProps) {
       ]);
       // Wait one more tick for UI to update
       await new Promise((resolve) => setTimeout(resolve, 0));
-      setModalOpen(false);
-      setSelectedServer(undefined);
+      setModalState({ isOpen: false });
     },
   });
 
@@ -73,24 +78,19 @@ export function ServerModalManager({ children }: ServerModalManagerProps) {
       ]);
       // Wait one more tick for UI to update
       await new Promise((resolve) => setTimeout(resolve, 0));
-      setModalOpen(false);
-      setSelectedServer(undefined);
+      setModalState({ isOpen: false });
     },
   });
 
   const openAddServerModal = useCallback(
     (initialData?: Partial<McpServerConfig>) => {
-      setModalMode("add");
-      setSelectedServer(initialData as McpServerConfig | undefined);
-      setModalOpen(true);
+      setModalState({ isOpen: true, mode: "add", data: initialData });
     },
     [],
   );
 
   const openEditServerModal = useCallback((server: McpServerConfig) => {
-    setModalMode("edit");
-    setSelectedServer(server);
-    setModalOpen(true);
+    setModalState({ isOpen: true, mode: "edit", data: server });
   }, []);
 
   const handleAddSubmit = useCallback(
@@ -120,15 +120,14 @@ export function ServerModalManager({ children }: ServerModalManagerProps) {
   );
 
   const handleDelete = useCallback(
-    async (config: McpServerConfig) => {
+    async (config: Partial<McpServerConfig> & { name: string }) => {
       await deleteServerMutation.mutateAsync(config.name);
     },
     [deleteServerMutation],
   );
 
   const handleClose = useCallback(() => {
-    setModalOpen(false);
-    setSelectedServer(undefined);
+    setModalState({ isOpen: false });
   }, []);
 
   const contextValue = useMemo(
@@ -143,14 +142,16 @@ export function ServerModalManager({ children }: ServerModalManagerProps) {
     <ServerModalContext.Provider value={contextValue}>
       {children}
 
-      {/* Modal */}
-      {modalOpen && (
+      {/* Modal - TypeScript knows: if mode="edit", data is McpServerConfig */}
+      {modalState.isOpen && (
         <ServerEditModal
-          mode={modalMode}
-          initialData={selectedServer}
-          onSubmit={modalMode === "add" ? handleAddSubmit : handleEditSubmit}
+          mode={modalState.mode}
+          initialData={modalState.data}
+          onSubmit={
+            modalState.mode === "add" ? handleAddSubmit : handleEditSubmit
+          }
           onClose={handleClose}
-          onDelete={modalMode === "edit" ? handleDelete : undefined}
+          onDelete={modalState.mode === "edit" ? handleDelete : undefined}
           isSubmitting={
             addServerMutation.isPending ||
             updateServerMutation.isPending ||

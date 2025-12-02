@@ -24,7 +24,7 @@ const statusDotVariants = cva("w-2 h-2 rounded-full", {
       neutral: "bg-status-neutral",
     },
     animate: {
-      true: "animate-pulse",
+      true: "motion-safe:animate-pulse",
       false: "",
     },
   },
