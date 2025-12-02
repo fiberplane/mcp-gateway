@@ -18,6 +18,7 @@ import { FileText } from "lucide-react";
 
 import { useQueryState, useQueryStates } from "nuqs";
 import { useDeferredValue, useId, useMemo, useState } from "react";
+import { ClearSessionsButton } from "../components/clear-sessions-button";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { EmptyStateNoLogs } from "../components/empty-state-no-logs";
 import { EmptyStateNoServers } from "../components/empty-state-no-servers";
@@ -29,7 +30,6 @@ import { PageHeader } from "../components/page-header";
 import { Pagination } from "../components/pagination";
 import { ServerHealthBanner } from "../components/server-health-banner";
 import { ServerTabs } from "../components/server-tabs";
-import { SettingsDropdown } from "../components/settings-dropdown";
 import { StderrLogsViewer } from "../components/stderr-logs-viewer";
 import { StdioProcessBanner } from "../components/stdio-process-banner";
 import { StreamingBadge } from "../components/streaming-badge";
@@ -327,7 +327,7 @@ function AppContent() {
           <PageHeader
             title="MCP server logs"
             actions={
-              <SettingsDropdown
+              <ClearSessionsButton
                 onClearSessions={handleClearSessions}
                 isClearing={isClearing}
               />
