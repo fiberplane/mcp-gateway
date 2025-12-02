@@ -1,19 +1,12 @@
 import type { McpServer } from "@fiberplane/mcp-gateway-types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
-import {
-  AlertCircle,
-  ArrowLeft,
-  Edit,
-  RefreshCw,
-  Server,
-  Trash2,
-} from "lucide-react";
+import { AlertCircle, Edit, RefreshCw, Server, Trash2 } from "lucide-react";
 import { PageLayout } from "../components/layout/page-layout";
 import { ServerStatusBadge } from "../components/server-status-badge";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
-import { StatusDot } from "../components/ui/status-dot";
+
 import { useApi } from "../contexts/ApiContext";
 import { useServerModal } from "../contexts/ServerModalContext";
 import { useConfirm } from "../hooks/use-confirm";
@@ -50,6 +43,14 @@ export function ServerDetailsPage() {
     },
   });
 
+  // Health check mutation (http only)
+  const healthCheckMutation = useMutation({
+    mutationFn: (name: string) => api.checkServerHealth(name),
+    onSuccess: () => {
+      invalidateServerQueries(queryClient);
+    },
+  });
+
   const handleDelete = async () => {
     const confirmed = await confirm({
       title: "Delete Server",
@@ -81,14 +82,6 @@ export function ServerDetailsPage() {
   if (error || !server) {
     return (
       <PageLayout icon={<Server className="h-4 w-4" />} breadcrumb="Servers">
-        <div className="mb-6">
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/servers" search={(prev) => ({ token: prev.token })}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Servers
-            </Link>
-          </Button>
-        </div>
         <div className="text-center py-12">
           <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
           <h2 className="text-xl font-semibold mb-2">Server not found</h2>
@@ -103,78 +96,49 @@ export function ServerDetailsPage() {
   return (
     <>
       <PageLayout icon={<Server className="h-4 w-4" />} breadcrumb="Servers">
-        {/* Header with back button */}
-        <div className="mb-6">
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/servers" search={(prev) => ({ token: prev.token })}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Servers
-            </Link>
-          </Button>
-        </div>
-
-        {/* Server Overview */}
-        <div className="mb-8">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h1 className="text-xl font-medium mb-2">{server.name}</h1>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline">{server.type}</Badge>
-                <ServerStatusBadge server={server} />
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                onClick={() => openEditServerModal(server)}
-              >
-                <Edit className="h-4 w-4 mr-2" />
-                Edit
-              </Button>
-              {server.type === "stdio" && (
-                <Button
-                  variant="outline"
-                  onClick={handleRestart}
-                  disabled={restartMutation.isPending}
-                >
-                  <RefreshCw
-                    className={`h-4 w-4 mr-2 ${restartMutation.isPending ? "animate-spin" : ""}`}
-                  />
-                  {restartMutation.isPending ? "Restarting..." : "Restart"}
-                </Button>
-              )}
-              <Button
-                variant="outline"
-                onClick={handleDelete}
-                disabled={deleteMutation.isPending}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                {deleteMutation.isPending ? "Deleting..." : "Delete"}
-              </Button>
-            </div>
-          </div>
+        {/* Server Header */}
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-xl font-medium">{server.name}</h1>
+          <Link
+            to="/"
+            search={(prev) => ({ ...prev, server: server.name })}
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
+            MCP Traffic
+          </Link>
         </div>
 
         {/* Server Details Grid */}
         <div className="grid gap-6">
-          {/* Command/URL Section */}
-          <ServerCommandSection server={server} />
+          {/* Health Info (for HTTP servers) */}
+          {server.type === "http" && (
+            <ServerHealthSection
+              server={server}
+              onCheckHealth={() => healthCheckMutation.mutate(server.name)}
+              isCheckingHealth={healthCheckMutation.isPending}
+            />
+          )}
 
-          {/* Error Details (if any) */}
-          <ServerErrorSection
+          {/* Process Status (for stdio servers) - combined status, errors, stderr */}
+          {server.type === "stdio" && (
+            <ProcessStatusSection
+              server={server}
+              onRestart={handleRestart}
+              isRestarting={restartMutation.isPending}
+            />
+          )}
+
+          {/* Configuration Section */}
+          <ServerCommandSection
             server={server}
-            onRestart={handleRestart}
-            isRestarting={restartMutation.isPending}
+            onEdit={() => openEditServerModal(server)}
           />
 
-          {/* Stderr Logs (for stdio servers) */}
-          {server.type === "stdio" &&
-            server.processState.stderrLogs.length > 0 && (
-              <StderrLogsSection server={server} />
-            )}
-
-          {/* Health Info (for HTTP servers) */}
-          {server.type === "http" && <ServerHealthSection server={server} />}
+          {/* Danger Zone */}
+          <DangerZoneSection
+            onDelete={handleDelete}
+            isDeleting={deleteMutation.isPending}
+          />
         </div>
       </PageLayout>
       {ConfirmDialog}
@@ -184,13 +148,26 @@ export function ServerDetailsPage() {
 
 interface ServerCommandSectionProps {
   server: McpServer;
+  onEdit: () => void;
 }
 
-function ServerCommandSection({ server }: ServerCommandSectionProps) {
+function ServerCommandSection({ server, onEdit }: ServerCommandSectionProps) {
   return (
     <div className="border rounded-lg p-6">
-      <h2 className="text-lg font-semibold mb-4">Configuration</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold">Configuration</h2>
+        <Button variant="outline" size="sm" onClick={onEdit}>
+          <Edit className="h-4 w-4 mr-2" />
+          Edit
+        </Button>
+      </div>
       <div className="space-y-3">
+        <div>
+          <div className="text-sm font-medium text-muted-foreground mb-1">
+            Type
+          </div>
+          <Badge variant="outline">{server.type}</Badge>
+        </div>
         {server.type === "stdio" ? (
           <>
             <div>
@@ -235,37 +212,53 @@ function ServerCommandSection({ server }: ServerCommandSectionProps) {
   );
 }
 
-interface ServerErrorSectionProps {
-  server: McpServer;
+interface ProcessStatusSectionProps {
+  server: McpServer & { type: "stdio" };
   onRestart: () => void;
   isRestarting: boolean;
 }
 
-function ServerErrorSection({
+function ProcessStatusSection({
   server,
   onRestart,
   isRestarting,
-}: ServerErrorSectionProps) {
-  const isStdio = server.type === "stdio";
-  const processState = isStdio ? server.processState : undefined;
-  const hasProcessError = processState?.lastError;
-  const hasHealthError =
-    server.health === "down" && (server.errorMessage || server.errorCode);
+}: ProcessStatusSectionProps) {
+  const { processState } = server;
+  const hasError = processState.lastError;
+  const hasStderrLogs = processState.stderrLogs.length > 0;
 
-  if (!hasProcessError && !hasHealthError) {
-    return null;
-  }
+  // Create stable keys by combining index with content hash
+  // This is safe because stderr logs are append-only and never reorder
+  const logsWithKeys = processState.stderrLogs.map((log, i) => ({
+    key: `stderr-${i}-${log.slice(0, 20)}`,
+    log,
+  }));
 
   return (
-    <div className="border border-destructive/20 rounded-lg p-6 bg-destructive/5">
-      <div className="flex items-center gap-2 mb-4">
-        <StatusDot variant="error" />
-        <h2 className="text-lg font-semibold">Error Details</h2>
+    <div
+      className={`border rounded-lg p-6 ${hasError ? "border-destructive/20" : ""}`}
+    >
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg font-semibold">Process Status</h2>
+          <ServerStatusBadge server={server} />
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onRestart}
+          disabled={isRestarting}
+        >
+          <RefreshCw
+            className={`h-4 w-4 mr-2 ${isRestarting ? "animate-spin" : ""}`}
+          />
+          {isRestarting ? "Restarting..." : "Restart Process"}
+        </Button>
       </div>
 
       <div className="space-y-4">
-        {/* Stdio Process Error */}
-        {hasProcessError && processState?.lastError && (
+        {/* Error Details */}
+        {hasError && processState.lastError && (
           <>
             <div>
               <div className="text-sm font-medium text-muted-foreground mb-2">
@@ -294,70 +287,61 @@ function ServerErrorSection({
                 </p>
               </div>
             </div>
-
-            {isStdio && server.sessionMode === "shared" && (
-              <div className="pt-2">
-                <Button
-                  onClick={onRestart}
-                  disabled={isRestarting}
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                >
-                  <RefreshCw
-                    className={`w-4 h-4 ${isRestarting ? "animate-spin" : ""}`}
-                  />
-                  {isRestarting ? "Restarting..." : "Restart Process"}
-                </Button>
-              </div>
-            )}
           </>
         )}
 
-        {/* HTTP Health Error */}
-        {hasHealthError && !hasProcessError && (
-          <>
-            <div>
-              <div className="text-sm font-medium text-muted-foreground mb-2">
-                Error Message
-              </div>
-              <p className="text-sm font-mono bg-muted px-3 py-2 rounded">
-                {server.errorMessage || "Connection failed"}
-              </p>
+        {/* Stderr Logs */}
+        {hasStderrLogs && (
+          <div>
+            <div className="text-sm font-medium text-muted-foreground mb-2">
+              Standard Error Output
             </div>
-
-            {server.errorCode && (
-              <div>
-                <div className="text-sm font-medium text-muted-foreground mb-1">
-                  Error Code
+            <div className="bg-muted rounded p-4 font-mono text-xs space-y-1 max-h-96 overflow-y-auto">
+              {logsWithKeys.map(({ key, log }) => (
+                <div
+                  key={key}
+                  className="text-muted-foreground whitespace-pre-wrap break-all"
+                >
+                  {log}
                 </div>
-                <Badge variant="destructive">{server.errorCode}</Badge>
-              </div>
-            )}
-          </>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Show message when no errors and no stderr */}
+        {!hasError && !hasStderrLogs && (
+          <p className="text-sm text-muted-foreground">
+            Process is running normally with no errors.
+          </p>
         )}
       </div>
     </div>
   );
 }
 
-interface StderrLogsSectionProps {
-  server: McpServer & { type: "stdio" };
+interface DangerZoneSectionProps {
+  onDelete: () => void;
+  isDeleting: boolean;
 }
 
-function StderrLogsSection({ server }: StderrLogsSectionProps) {
+function DangerZoneSection({ onDelete, isDeleting }: DangerZoneSectionProps) {
   return (
-    <div className="border rounded-lg p-6">
-      <h2 className="text-lg font-semibold mb-4">Standard Error Output</h2>
-      <div className="bg-muted rounded p-4 font-mono text-xs space-y-1 max-h-96 overflow-y-auto">
-        {server.processState.stderrLogs.map((log, i) => (
-          <div
-            key={`stderr-${i}`}
-            className="text-muted-foreground whitespace-pre-wrap break-all"
-          >
-            {log}
-          </div>
-        ))}
+    <div className="border border-destructive/20 rounded-lg p-6">
+      <h2 className="text-lg font-semibold mb-4 text-destructive">
+        Danger Zone
+      </h2>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium">Delete this server</p>
+          <p className="text-sm text-muted-foreground">
+            This action cannot be undone.
+          </p>
+        </div>
+        <Button variant="destructive" onClick={onDelete} disabled={isDeleting}>
+          <Trash2 className="h-4 w-4 mr-2" />
+          {isDeleting ? "Deleting..." : "Delete Server"}
+        </Button>
       </div>
     </div>
   );
@@ -365,12 +349,34 @@ function StderrLogsSection({ server }: StderrLogsSectionProps) {
 
 interface ServerHealthSectionProps {
   server: McpServer & { type: "http" };
+  onCheckHealth: () => void;
+  isCheckingHealth: boolean;
 }
 
-function ServerHealthSection({ server }: ServerHealthSectionProps) {
+function ServerHealthSection({
+  server,
+  onCheckHealth,
+  isCheckingHealth,
+}: ServerHealthSectionProps) {
   return (
     <div className="border rounded-lg p-6">
-      <h2 className="text-lg font-semibold mb-4">Health Information</h2>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg font-semibold">Health Information</h2>
+          <ServerStatusBadge server={server} />
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onCheckHealth}
+          disabled={isCheckingHealth}
+        >
+          <RefreshCw
+            className={`h-4 w-4 mr-2 ${isCheckingHealth ? "animate-spin" : ""}`}
+          />
+          {isCheckingHealth ? "Checking..." : "Check Health"}
+        </Button>
+      </div>
       <div className="grid grid-cols-2 gap-4">
         {server.lastCheckTime && (
           <div>

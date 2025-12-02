@@ -1,97 +1,468 @@
+/** biome-ignore-all lint/suspicious/noUnknownAtRules: can remove this with biome 2.3 or later */
+
 @import "tailwindcss";
+@import "tw-animate-css";
 
-@theme {
-  /* Background colors */
-  --color-background: #f5f6f7;  /* Light gray page background - matches Figma bg/emphasis-subtle */
-  --color-card: #ffffff;        /* White card/content backgrounds - matches Figma bg/emphasis-on-bg */
-  --color-muted: #f9fafb;
-  --color-primary: #272624;
+@custom-variant dark (&:is(.dark *));
 
-  /* Badge colors (intent-based) */
-  --color-badge-info: #dddbff;     /* purple - for tools/* */
-  --color-badge-success: #dcfce7;  /* green - for initialize */
-  --color-badge-warning: #fef3c7;  /* yellow - for resources/*, notifications/* */
-  --color-badge-error: #fee2e2;    /* red - for errors */
-
-  /* Method category colors (for ColorPill components in filters/logs) */
-  --color-method-init: #dddbff;      /* purple - initialization & lifecycle (initialize, ping) */
-  --color-method-resource: #ffe6e0;  /* peach - resource methods (resources/*) */
-  --color-method-tool: #f7dd91;      /* yellow - tool methods (tools/*) */
-  --color-method-prompt: #d1eaac;    /* lime - prompt methods (prompts/*) */
-  --color-method-notification: #f8d2e8; /* pink - notification methods (notifications/*) */
-  --color-method-default: #e5e7eb;   /* gray - unknown/other methods */
-
-  /* Foreground colors */
-  --color-foreground: #000000;
-  --color-primary-foreground: #ffffff;
-  --color-muted-foreground: #6b7280;
-
-  /* Border colors */
-  --color-border: #e5e7eb;
-  --color-input: #e5e7eb;
-  --color-ring: #1e293b;
-
-  /* Status indicator colors (for badges, dots, etc.) */
-  --color-status-success: #22c55e;   /* green - for online status */
-  --color-status-warning: #f59e0b;   /* amber - for warnings */
-  --color-status-error: #ef4444;     /* red - for errors */
-  --color-status-neutral: #9ca3af;   /* gray - for offline/not-found */
-
-  /* Shadcn compatibility */
-  --color-secondary: #f9fafb;
-  --color-secondary-foreground: #1e293b;
-  --color-accent: #ebebed;
-  --color-accent-foreground: #1e293b;
-  --color-destructive: #ef4444;
-  --color-destructive-foreground: #ffffff;
-  --color-popover: #ffffff;
-  --color-popover-foreground: #1e293b;
-  --color-card-foreground: #1e293b;
-
-  /* Sidebar tokens (for sidebar navigation) */
-  --color-sidebar: var(--color-background);
-  --color-sidebar-foreground: var(--color-foreground);
-  --color-sidebar-primary: var(--color-foreground);
-  --color-sidebar-primary-foreground: var(--color-background);
-  --color-sidebar-accent: var(--color-secondary);
-  --color-sidebar-accent-foreground: var(--color-foreground);
-  --color-sidebar-border: var(--color-border);
-  --color-sidebar-ring: var(--color-ring);
-
-  /* Border radius */
-  --radius: 0.5rem;
-  --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
+@theme inline {
   --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 
-  /* Shadows - matches Figma drop shadows */
-  --shadow-card: 0 4px 6px -2px rgba(0, 0, 0, 0.05);  /* Page content card shadow */
+  /* Expose Figma primitive color scales to Tailwind */
+  /* This replaces default Tailwind colors with design system colors */
 
-  /* Font families */
-  --font-sans: "Inter", system-ui, sans-serif;
-  --font-mono: "Roboto Mono", Consolas, monospace;
+  --color-neutral-50: var(--neutral-50);
+  --color-neutral-100: var(--neutral-100);
+  --color-neutral-200: var(--neutral-200);
+  --color-neutral-300: var(--neutral-300);
+  --color-neutral-400: var(--neutral-400);
+  --color-neutral-500: var(--neutral-500);
+  --color-neutral-600: var(--neutral-600);
+  --color-neutral-700: var(--neutral-700);
+  --color-neutral-800: var(--neutral-800);
+  --color-neutral-900: var(--neutral-900);
+  --color-neutral-950: var(--neutral-950);
+
+  /* Keep semantic colors for shadcn/ui components */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-border: var(--border);
+  --color-border-primary: var(--border-primary);
+  --color-border-secondary: var(--border-secondary);
+  --color-border-success: var(--border-success);
+  --color-border-danger: var(--border-danger);
+  --color-border-warning: var(--border-warning);
+  --color-border-focus: var(--border-focus);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Sidebar semantic colors */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Additional semantic utilities */
+  --color-emphasis: var(--emphasis);
+  --color-subtle: var(--subtle);
+  --color-emphasis-subtle: var(--emphasis-subtle);
+  --color-primary-hover: var(--primary-hover);
+  --color-secondary-hover: var(--secondary-hover);
+  --color-destructive-hover: var(--destructive-hover);
+  --color-bg-warning: var(--bg-warning);
+  --color-bg-success: var(--bg-success);
+
+  --color-accent-1: var(--bg-accent-1);
+  --color-accent-1-foreground: var(--accent-1-foreground);
+  --color-accent-1-border: var(--accent-1-border);
+  --color-accent-2: var(--bg-accent-2);
+  --color-accent-2-foreground: var(--accent-2-foreground);
+  --color-accent-2-border: var(--accent-2-border);
+  --color-accent-3: var(--bg-accent-3);
+  --color-accent-3-foreground: var(--accent-3-foreground);
+  --color-accent-3-border: var(--accent-3-border);
+  --color-accent-4: var(--accent-4);
+  --color-accent-5: var(--accent-5);
+  --color-accent-6: var(--accent-6);
+  --color-accent-7: var(--accent-7);
+  --color-accent-8: var(--accent-8);
+  --color-accent-9: var(--accent-9);
+}
+
+:root {
+  --radius: 0.625rem;
+
+  /* ============================================
+     LAYER 1: Figma Color Primitives
+     ============================================ */
+
+  /* Electric (Primary Blue) */
+  --electric-50: oklch(0.976 0.011 269.6);
+  --electric-100: oklch(0.907 0.044 268.7);
+  --electric-200: oklch(0.815 0.092 268);
+  --electric-300: oklch(0.725 0.142 266.5);
+  --electric-400: oklch(0.64 0.192 265.2);
+  --electric-500: oklch(0.565 0.239 263.9);
+  --electric-600: oklch(0.436 0.227 263.4);
+  --electric-700: oklch(0.347 0.166 263.6);
+  --electric-800: oklch(0.264 0.125 262.7);
+  --electric-900: oklch(0.202 0.085 261.7);
+  --electric-950: oklch(0.132 0.045 255.9);
+  --electric-alpha-10: oklch(0.565 0.239 263.9 / 0.1);
+  --electric-alpha-50: oklch(0.565 0.239 263.9 / 0.5);
+
+  --white: oklch(1 0 0);
+  /* Neutral (Gray) */
+  --neutral-50: oklch(0.973 0.002 247.8);
+  --neutral-100: oklch(0.941 0.003 286.3);
+  --neutral-200: oklch(0.898 0.004 271.4);
+  --neutral-300: oklch(0.836 0.006 264.5);
+  --neutral-400: oklch(0.742 0.006 274.9);
+  --neutral-500: oklch(0.573 0.005 271.3);
+  --neutral-600: oklch(0.449 0.003 264.5);
+  --neutral-700: oklch(0.34 0.004 264.5);
+  --neutral-800: oklch(0.264 0.004 264.5);
+  --neutral-900: oklch(0.213 0.004 264.5);
+  --neutral-950: oklch(0.159 0.005 264.4);
+
+  /* Danger (Red) */
+  --danger-50: oklch(0.973 0.012 17.4);
+  --danger-100: oklch(0.919 0.037 17.8);
+  --danger-200: oklch(0.814 0.09 20);
+  --danger-300: oklch(0.721 0.147 22.9);
+  --danger-400: oklch(0.645 0.2 25.6);
+  --danger-500: oklch(0.59 0.237 29.1);
+  --danger-600: oklch(0.5 0.201 29.1);
+  --danger-700: oklch(0.421 0.169 29.1);
+  --danger-800: oklch(0.343 0.136 29.2);
+  --danger-900: oklch(0.288 0.113 29.4);
+  --danger-950: oklch(0.241 0.095 29.4);
+  --danger-alpha-10: oklch(0.59 0.237 29.1 / 0.1);
+  --danger-alpha-50: oklch(0.59 0.237 29.1 / 0.5);
+
+  /* Success (Green) */
+  --success-50: oklch(0.983 0.013 145.5);
+  --success-100: oklch(0.936 0.06 143.6);
+  --success-200: oklch(0.874 0.117 143.2);
+  --success-300: oklch(0.821 0.172 142.9);
+  --success-400: oklch(0.771 0.215 142.4);
+  --success-500: oklch(0.733 0.24 142.3);
+  --success-600: oklch(0.631 0.206 142.3);
+  --success-700: oklch(0.525 0.171 142.3);
+  --success-800: oklch(0.429 0.14 142.2);
+  --success-900: oklch(0.35 0.113 142.1);
+  --success-950: oklch(0.267 0.085 141.7);
+  --success-alpha-10: oklch(0.733 0.24 142.3 / 0.1);
+  --success-alpha-50: oklch(0.733 0.24 142.3 / 0.5);
+
+  /* Warning (Orange-Yellow) */
+  --warning-50: oklch(0.987 0.011 76.6);
+  --warning-100: oklch(0.949 0.041 74.5);
+  --warning-200: oklch(0.898 0.081 73.8);
+  --warning-300: oklch(0.852 0.118 72.4);
+  --warning-400: oklch(0.808 0.149 69.5);
+  --warning-500: oklch(0.77 0.169 64.1);
+  --warning-600: oklch(0.681 0.157 61.5);
+  --warning-700: oklch(0.577 0.133 61.8);
+  --warning-800: oklch(0.424 0.095 64.3);
+  --warning-900: oklch(0.354 0.077 66.4);
+  --warning-950: oklch(0.289 0.062 67.7);
+  --warning-alpha-10: oklch(0.77 0.169 64.1 / 0.1);
+  --warning-alpha-50: oklch(0.77 0.169 64.1 / 0.5);
+
+  /* Accent Orange */
+  --accent-orange-50: oklch(0.986 0.008 56.3);
+  --accent-orange-100: oklch(0.941 0.035 54.8);
+  --accent-orange-200: oklch(0.884 0.071 54.2);
+  --accent-orange-300: oklch(0.829 0.108 51.9);
+  --accent-orange-400: oklch(0.779 0.144 50.8);
+  --accent-orange-500: oklch(0.735 0.176 48.3);
+  --accent-orange-600: oklch(0.659 0.197 42.5);
+  --accent-orange-700: oklch(0.594 0.174 43.1);
+  --accent-orange-800: oklch(0.516 0.151 43.6);
+  --accent-orange-900: oklch(0.412 0.117 44.8);
+  --accent-orange-950: oklch(0.286 0.076 48.6);
+  --accent-orange-alpha-10: oklch(0.735 0.176 48.3 / 0.1);
+  --accent-orange-alpha-50: oklch(0.735 0.176 48.3 / 0.5);
+
+  /* Accent Yellow */
+  --accent-yellow-50: oklch(0.986 0.012 101.5);
+  --accent-yellow-100: oklch(0.943 0.049 102.2);
+  --accent-yellow-200: oklch(0.92 0.096 103);
+  --accent-yellow-300: oklch(0.895 0.136 102.8);
+  --accent-yellow-400: oklch(0.875 0.164 102.4);
+  --accent-yellow-500: oklch(0.858 0.177 102);
+  --accent-yellow-600: oklch(0.775 0.162 101.5);
+  --accent-yellow-700: oklch(0.673 0.141 101.9);
+  --accent-yellow-800: oklch(0.533 0.111 101.9);
+  --accent-yellow-900: oklch(0.393 0.08 102.7);
+  --accent-yellow-950: oklch(0.332 0.068 103.6);
+  --accent-yellow-alpha-10: oklch(0.858 0.177 102 / 0.1);
+  --accent-yellow-alpha-50: oklch(0.858 0.177 102 / 0.5);
+
+  /* Accent Purple */
+  --accent-purple-50: oklch(0.979 0.013 306);
+  --accent-purple-100: oklch(0.912 0.055 307.8);
+  --accent-purple-200: oklch(0.825 0.111 306.4);
+  --accent-purple-300: oklch(0.744 0.166 305.2);
+  --accent-purple-400: oklch(0.667 0.218 303.3);
+  --accent-purple-500: oklch(0.601 0.26 300.8);
+  --accent-purple-600: oklch(0.54 0.288 295.3);
+  --accent-purple-700: oklch(0.445 0.246 293.3);
+  --accent-purple-800: oklch(0.343 0.188 294.5);
+  --accent-purple-900: oklch(0.256 0.137 296.8);
+  --accent-purple-950: oklch(0.204 0.109 299.3);
+  --accent-purple-alpha-10: oklch(0.601 0.26 300.8 / 0.1);
+  --accent-purple-alpha-50: oklch(0.601 0.26 300.8 / 0.5);
+
+  /* Accent Pink */
+  --accent-pink-50: oklch(0.983 0.01 335.5);
+  --accent-pink-100: oklch(0.936 0.039 340.2);
+  --accent-pink-200: oklch(0.875 0.079 341.5);
+  --accent-pink-300: oklch(0.816 0.121 342.5);
+  --accent-pink-400: oklch(0.763 0.16 343.9);
+  --accent-pink-500: oklch(0.714 0.198 345.4);
+  --accent-pink-600: oklch(0.623 0.228 348.3);
+  --accent-pink-700: oklch(0.544 0.224 353);
+  --accent-pink-800: oklch(0.405 0.167 352.2);
+  --accent-pink-900: oklch(0.309 0.126 350.8);
+  --accent-pink-950: oklch(0.241 0.099 349.9);
+  --accent-pink-alpha-10: oklch(0.714 0.198 345.4 / 0.1);
+  --accent-pink-alpha-50: oklch(0.714 0.198 345.4 / 0.5);
+
+  /* Accent Turquoise */
+  --accent-turquoise-50: oklch(0.986 0.009 222.1);
+  --accent-turquoise-100: oklch(0.944 0.034 224.6);
+  --accent-turquoise-200: oklch(0.89 0.068 225.4);
+  --accent-turquoise-300: oklch(0.839 0.099 228.3);
+  --accent-turquoise-400: oklch(0.793 0.125 229.9);
+  --accent-turquoise-500: oklch(0.753 0.145 233);
+  --accent-turquoise-600: oklch(0.651 0.144 237.8);
+  --accent-turquoise-700: oklch(0.546 0.12 237.3);
+  --accent-turquoise-800: oklch(0.453 0.098 236.5);
+  --accent-turquoise-900: oklch(0.362 0.077 235.5);
+  --accent-turquoise-950: oklch(0.279 0.057 232.5);
+  --accent-turquoise-alpha-10: oklch(0.753 0.145 233 / 0.1);
+  --accent-turquoise-alpha-50: oklch(0.753 0.145 233 / 0.5);
+
+  /* Accent Mint */
+  --accent-mint-50: oklch(0.983 0.011 176.3);
+  --accent-mint-100: oklch(0.936 0.048 173.5);
+  --accent-mint-200: oklch(0.907 0.093 171.8);
+  --accent-mint-300: oklch(0.876 0.131 170);
+  --accent-mint-400: oklch(0.834 0.155 167);
+  --accent-mint-500: oklch(0.798 0.17 163);
+  --accent-mint-600: oklch(0.747 0.165 161.5);
+  --accent-mint-700: oklch(0.63 0.138 162.1);
+  --accent-mint-800: oklch(0.479 0.104 162.9);
+  --accent-mint-900: oklch(0.366 0.076 164.4);
+  --accent-mint-950: oklch(0.299 0.061 165.1);
+
+  /* Accent Red */
+  --accent-red-50: oklch(0.981 0.01 2);
+  --accent-red-100: oklch(0.945 0.03 359.5);
+  --accent-red-200: oklch(0.883 0.066 0.8);
+  --accent-red-300: oklch(0.814 0.112 2.9);
+  --accent-red-400: oklch(0.752 0.157 5.1);
+  --accent-red-500: oklch(0.69 0.201 7.8);
+  --accent-red-600: oklch(0.634 0.226 12);
+  --accent-red-700: oklch(0.567 0.208 13.2);
+  --accent-red-800: oklch(0.491 0.188 15.3);
+  --accent-red-900: oklch(0.357 0.14 16);
+  --accent-red-950: oklch(0.281 0.107 13.4);
+
+  /* Accent Lime */
+  --accent-lime-50: oklch(0.98 0.014 120.3);
+  --accent-lime-100: oklch(0.956 0.053 123.5);
+  --accent-lime-200: oklch(0.93 0.105 125.5);
+  --accent-lime-300: oklch(0.913 0.155 126.4);
+  --accent-lime-400: oklch(0.878 0.211 128.9);
+  --accent-lime-500: oklch(0.818 0.219 130.7);
+  --accent-lime-600: oklch(0.753 0.203 131);
+  --accent-lime-700: oklch(0.65 0.175 130.8);
+  --accent-lime-800: oklch(0.524 0.14 130.5);
+  --accent-lime-900: oklch(0.415 0.111 130.5);
+  --accent-lime-950: oklch(0.311 0.082 129.3);
+
+  /* Accent Blue */
+  --accent-blue-50: oklch(0.984 0.007 260.7);
+  --accent-blue-100: oklch(0.932 0.033 262.7);
+  --accent-blue-200: oklch(0.864 0.066 263.3);
+  --accent-blue-300: oklch(0.8 0.101 261.9);
+  --accent-blue-400: oklch(0.735 0.137 262);
+  --accent-blue-500: oklch(0.673 0.173 261.5);
+  --accent-blue-600: oklch(0.605 0.198 261.4);
+  --accent-blue-700: oklch(0.54 0.199 261.3);
+  --accent-blue-800: oklch(0.431 0.17 261.5);
+  --accent-blue-900: oklch(0.313 0.123 261.2);
+  --accent-blue-950: oklch(0.205 0.069 260.9);
+
+  /* ============================================
+     LAYER 2: shadcn/ui Semantic Tokens
+     ============================================ */
+
+  --background: var(--neutral-50);
+  --foreground: var(--neutral-950);
+  /* Still needs to be updated */
+  --card: var(--white);
+  /* Still needs to be updated */
+  --card-foreground: var(--neutral-950);
+  /* Still needs to be updated */
+  --popover: var(--white);
+  --popover-foreground: var(--neutral-950);
+  --primary: var(--electric-500);
+  --primary-foreground: var(--white);
+  --secondary: var(--neutral-100);
+  --secondary-foreground: var(--neutral-950);
+  --muted: var(--neutral-100);
+  --muted-foreground: var(--neutral-600);
+  --accent: var(--neutral-100);
+  --accent-foreground: var(--neutral-950);
+  --destructive: var(--danger-500);
+  --success: var(--success-600);
+  --success-foreground: var(--success-950);
+  --warning: var(--warning-600);
+  --warning-foreground: var(--warning-950);
+  --border: var(--neutral-100);
+  --border-primary: var(--electric-500);
+  --border-secondary: var(--neutral-400);
+  --border-success: var(--success-500);
+  --border-danger: var(--danger-500);
+  --border-warning: var(--warning-500);
+  --border-focus: var(--electric-400);
+  --input: var(--neutral-200);
+  --ring: var(--electric-500);
+  --emphasis: var(--white);
+  --subtle: var(--neutral-400);
+  --emphasis-subtle: var(--neutral-50);
+  --primary-hover: var(--electric-600);
+  --secondary-hover: var(--neutral-200);
+  --destructive-hover: var(--danger-600);
+  --bg-warning: var(--warning-100);
+  --bg-success: var(--success-100);
+
+  /* Data Visualization Categorical Colors (from Figma Color Tokens) */
+  --accent-1: var(--accent-purple-300);
+  --bg-accent-1: var(--accent-purple-50);
+  --accent-1-border: var(--accent-purple-200);
+  --accent-1-foreground: var(--accent-purple-700);
+  --accent-2: var(--accent-pink-300);
+  --bg-accent-2: var(--accent-pink-50);
+  --accent-2-border: var(--accent-pink-200);
+  --accent-2-foreground: var(--accent-pink-700);
+  --accent-3: var(--accent-turquoise-300);
+  --bg-accent-3: var(--accent-turquoise-50);
+  --accent-3-border: var(--accent-turquoise-200);
+  --accent-3-foreground: var(--accent-turquoise-700);
+  --accent-4: var(--accent-yellow-400);
+  --accent-5: var(--accent-orange-300);
+  --accent-6: var(--accent-blue-300);
+  --accent-7: var(--accent-mint-400);
+  --accent-8: var(--accent-red-300);
+  --accent-9: var(--accent-lime-400);
+
+  /* Sidebar (custom, not in Figma) */
+  --sidebar: var(--bg-background);
+  --sidebar-foreground: var(--fg-default);
+  --sidebar-primary: var(--fg-default);
+  --sidebar-primary-foreground: var(--bg-emphasis);
+  --sidebar-accent: var(--bg-secondary);
+  --sidebar-accent-foreground: var(--fg-default);
+  --sidebar-border: var(--border-default);
+  --sidebar-ring: var(--border-focus);
+}
+
+.dark {
+  /* Primitives are the same in dark mode, only semantic tokens change */
+
+  --background: var(--neutral-950);
+  --foreground: oklch(1 0 0);
+  --card: var(--neutral-900);
+  --card-foreground: oklch(1 0 0);
+  --popover: var(--neutral-900);
+  --popover-foreground: oklch(1 0 0);
+  --primary: var(--electric-500);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: var(--neutral-800);
+  --secondary-foreground: oklch(1 0 0);
+  --muted: var(--neutral-800);
+  --muted-foreground: var(--neutral-300);
+  --accent: var(--neutral-800);
+  --accent-foreground: oklch(1 0 0);
+  --destructive: var(--danger-500);
+  --success: var(--success-600);
+  --success-foreground: oklch(1 0 0);
+  --warning: var(--warning-500);
+  --warning-foreground: var(--neutral-950);
+  --border: var(--neutral-800);
+  --border-primary: var(--electric-500);
+  --border-secondary: var(--neutral-500);
+  --border-success: var(--success-500);
+  --border-danger: var(--danger-500);
+  --border-warning: var(--warning-500);
+  --border-focus: var(--electric-600);
+  --input: oklch(1 0 0 / 15%);
+  --ring: var(--electric-500);
+  --emphasis: var(--neutral-900);
+  --subtle: var(--neutral-500);
+  --emphasis-subtle: var(--neutral-900);
+  --primary-hover: var(--electric-600);
+  --secondary-hover: var(--neutral-700);
+  --destructive-hover: var(--danger-600);
+  --bg-warning: var(--warning-950);
+  --bg-success: var(--success-950);
+
+  /* Data viz colors use darker shades in dark mode (from Figma) */
+  --accent-1: var(--accent-purple-700);
+  --accent-2: var(--accent-pink-700);
+  --accent-3: var(--accent-turquoise-700);
+  --accent-4: var(--accent-yellow-700);
+  --accent-5: var(--accent-orange-700);
+  --accent-6: var(--accent-blue-700);
+  --accent-7: var(--accent-mint-700);
+  --accent-8: var(--accent-red-700);
+  --accent-9: var(--accent-lime-700);
+
+  /* Sidebar dark mode */
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: var(--electric-500);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
 }
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-border outline-ring/50;
   }
-
-  html,
   body {
-    @apply h-full;
-  }
-
-  body {
-    @apply bg-background text-foreground font-sans;
-  }
-
-  #root {
-    @apply h-full;
+    @apply bg-background text-foreground;
   }
 }
 
 @layer utilities {
+  /* Subtle inner shadow utilities for grouped table rows */
+  .shadow-inner-top {
+    box-shadow: inset 0px 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+
+  .shadow-inner-bottom {
+    box-shadow: inset 0px -4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+
+  .shadow-inner-both {
+    box-shadow:
+      inset 0px -4px 6px -2px rgba(0, 0, 0, 0.05),
+      inset 0px 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+
   /* Screen reader only - visually hidden but accessible to assistive technology */
   .sr-only {
     position: absolute;

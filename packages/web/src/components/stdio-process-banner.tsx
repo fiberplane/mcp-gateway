@@ -1,4 +1,5 @@
 import type { StdioServer } from "@fiberplane/mcp-gateway-types";
+import { Link } from "@tanstack/react-router";
 import { RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { useApi } from "../contexts/ApiContext";
@@ -115,7 +116,7 @@ export function StdioProcessBanner({
 
             {/* Actions - only show for shared mode */}
             {restartSupported ? (
-              <div className="grid gap-2">
+              <div className="grid gap-2 grid-cols-2">
                 <Button
                   onClick={handleRestart}
                   disabled={isRestarting}
@@ -126,6 +127,15 @@ export function StdioProcessBanner({
                     className={`w-4 h-4 ${isRestarting ? "animate-spin" : ""}`}
                   />
                   {isRestarting ? "Restarting..." : "Restart Process"}
+                </Button>
+                <Button variant="outline" asChild>
+                  <Link
+                    to="/servers/$serverName"
+                    params={{ serverName: server.name }}
+                    search={(prev) => ({ token: prev.token })}
+                  >
+                    View Server
+                  </Link>
                 </Button>
               </div>
             ) : (

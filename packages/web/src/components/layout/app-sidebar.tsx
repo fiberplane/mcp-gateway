@@ -24,7 +24,7 @@ import {
 const workspaceNavItems = [
   { title: "Home", icon: Home, to: "/" },
   { title: "Popular MCP Servers", icon: Store, to: "/marketplace" },
-  { title: "Your Servers", icon: Server, to: "/servers" },
+  { title: "Manage Servers", icon: Server, to: "/servers" },
 ] as const;
 
 const footerLinks = [
@@ -71,7 +71,9 @@ export function AppSidebar() {
             <SidebarMenu>
               {workspaceNavItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = currentPath === item.to;
+                const isActive =
+                  currentPath === item.to ||
+                  currentPath.startsWith(`${item.to}/`);
                 return (
                   <SidebarMenuItem key={item.to}>
                     <NavBarItem asChild isActive={isActive}>

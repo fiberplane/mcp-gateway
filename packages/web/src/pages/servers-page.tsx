@@ -93,7 +93,9 @@ function ServerRow({ server }: ServerRowProps) {
         <ServerStatusBadge server={server} />
       </TableCell>
       <TableCell className="max-w-md truncate font-mono text-xs">
-        {server.type === "stdio" ? server.command : server.url}
+        {server.type === "stdio"
+          ? `${server.command} ${server.args.join(" ")}`.trim()
+          : server.url}
       </TableCell>
     </TableRow>
   );

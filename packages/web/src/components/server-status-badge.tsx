@@ -4,7 +4,7 @@ import {
   AlertCircle,
   CheckCircle2,
   type LucideIcon,
-  Pause,
+  Square,
 } from "lucide-react";
 import {
   getStatusDisplayVariant,
@@ -29,7 +29,7 @@ const statusConfig: Record<
   unhealthy: { icon: AlertCircle, colorClass: "text-red-500" },
   running: { icon: Activity, colorClass: "text-blue-500" },
   crashed: { icon: AlertCircle, colorClass: "text-red-500" },
-  stopped: { icon: Pause, colorClass: "text-gray-500" },
+  stopped: { icon: Square, colorClass: "text-gray-500" },
   remote: { icon: Activity, colorClass: "text-blue-500" },
 };
 

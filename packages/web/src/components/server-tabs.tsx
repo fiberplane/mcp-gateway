@@ -34,13 +34,17 @@ function getStatusVariant(
   }
 }
 
-function getTextColor(status: ServerStatus, isSelected: boolean): string {
+function getTextColor(
+  status: ServerStatus,
+  isSelected: boolean,
+  hasHistory?: boolean,
+): string {
   if (isSelected) {
     return "text-primary-foreground";
   }
-  // Offline servers get destructive (red) text from design system
   if (status === "offline") {
-    return "text-destructive";
+    // Match dot color: warning if used to work, error (destructive) if never worked
+    return hasHistory ? "text-status-warning" : "text-destructive";
   }
   return "text-foreground";
 }
@@ -105,7 +109,9 @@ function ServerTab({
         variant={getStatusVariant(status, !!lastHealthyTime)}
         aria-label={status}
       />
-      <span className={getTextColor(status, isSelected)}>{name}</span>
+      <span className={getTextColor(status, isSelected, !!lastHealthyTime)}>
+        {name}
+      </span>
       {isStdio && (
         <Workflow
           className={`w-3 h-3 ${isSelected ? "text-background" : "text-muted-foreground"}`}

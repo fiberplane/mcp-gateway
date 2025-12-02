@@ -56,7 +56,8 @@
       "!**/dist",
       "!**/build",
       "!**/public",
-      "!**/node_modules"
+      "!**/node_modules",
+      "!**/routeTree.gen.ts"
     ]
   }
 }

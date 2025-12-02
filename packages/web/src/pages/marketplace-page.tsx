@@ -1,8 +1,12 @@
-import { ArrowUpRight, Check, Plus, Search, Store } from "lucide-react";
+import type { McpServer } from "@fiberplane/mcp-gateway-types";
+import { Link } from "@tanstack/react-router";
+import { ArrowUpRight, Check, Plus, Search, Store, Wrench } from "lucide-react";
 import { useState } from "react";
+import { McpServerIcon } from "@/components/ui/McpServerIcon";
+import { cn } from "@/lib/utils";
 import { PageLayout } from "../components/layout/page-layout";
 import { PageHeader } from "../components/page-header";
-import { Button } from "../components/ui/button";
+import { Button, buttonVariants } from "../components/ui/button";
 import { useServerModal } from "../contexts/ServerModalContext";
 import { useServerConfigs } from "../hooks/use-server-configs";
 import {
@@ -26,13 +30,15 @@ export function MarketplacePage() {
     );
   });
 
-  // Check if a server is already added by comparing commands
-  const isServerAdded = (marketplaceServer: MarketplaceServer): boolean => {
-    if (!serverConfigs) return false;
+  // Find matching server config if already added
+  const findAddedServer = (
+    marketplaceServer: MarketplaceServer,
+  ): McpServer | undefined => {
+    if (!serverConfigs) return undefined;
     const normalizedMarketplaceCmd = normalizeServerCommand(
       marketplaceServer.command,
     );
-    return serverConfigs.servers.some((config) => {
+    return serverConfigs.servers.find((config) => {
       if (config.type === "http") {
         return normalizeServerCommand(config.url) === normalizedMarketplaceCmd;
       }
@@ -57,6 +63,7 @@ export function MarketplacePage() {
               onBlur={() => {
                 if (!searchQuery) setShowSearch(false);
               }}
+              // biome-ignore lint/a11y/noAutofocus: Intentional UX - focus search when revealed
               autoFocus
               className="w-64 px-3 py-2 border border-input rounded-[10px] bg-secondary text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
@@ -75,19 +82,20 @@ export function MarketplacePage() {
       />
 
       {/* Server Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-        {filteredServers.map((server) => {
-          const added = isServerAdded(server);
-          return (
-            <MarketplaceServerCard
-              key={server.command}
-              server={server}
-              isAdded={added}
-            />
-          );
-        })}
+      <div className="@container">
+        <div className="grid grid-cols-1 @lg:grid-cols-2 @3xl:grid-cols-3 @5xl:grid-cols-5 @7xl:grid-cols-6 gap-3">
+          {filteredServers.map((server) => {
+            const addedServer = findAddedServer(server);
+            return (
+              <MarketplaceServerCard
+                key={server.command}
+                server={server}
+                addedServer={addedServer}
+              />
+            );
+          })}
+        </div>
       </div>
-
       {/* Empty State */}
       {filteredServers.length === 0 && (
         <div className="text-center py-12">
@@ -102,13 +110,14 @@ export function MarketplacePage() {
 
 interface MarketplaceServerCardProps {
   server: MarketplaceServer;
-  isAdded: boolean;
+  addedServer?: McpServer;
 }
 
 function MarketplaceServerCard({
   server,
-  isAdded,
+  addedServer,
 }: MarketplaceServerCardProps) {
+  const isAdded = !!addedServer;
   const { openAddServerModal } = useServerModal();
 
   const handleAdd = () => {
@@ -130,12 +139,12 @@ function MarketplaceServerCard({
   };
 
   return (
-    <div className="bg-card border border-border rounded-lg p-4 hover:border-accent transition-colors">
+    <div className="bg-card border border-border rounded-lg p-4 hover:border-accent transition-colors grid grid-rows-[auto_1fr_auto] gap-4 min-w-0">
       {/* Icon + Name + Command Row */}
-      <div className="flex items-start gap-3 mb-3">
+      <div className="flex items-start gap-3 min-w-0">
         {/* Large Icon */}
         <div className="flex-shrink-0 w-12 h-12 rounded-md bg-muted flex items-center justify-center text-2xl">
-          {server.icon || "📦"}
+          <McpServerIcon server={server} />
         </div>
 
         {/* Name + Command */}
@@ -148,50 +157,60 @@ function MarketplaceServerCard({
       </div>
 
       {/* Description */}
-      <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+      <p className="text-sm text-muted-foreground line-clamp-2">
         {server.description}
       </p>
 
       {/* Metadata Row + Action */}
-      <div className="flex items-center justify-between">
-        {/* Tool Count + GitHub Link */}
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          {server.toolCount && (
-            <span>
-              <span className="font-medium text-foreground">
-                {server.toolCount}
-              </span>{" "}
-              tools
-            </span>
-          )}
-          {server.githubUrl && (
-            <a
-              href={server.githubUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-0.5 hover:text-foreground transition-colors"
-            >
-              GitHub
-              <ArrowUpRight className="h-3 w-3" />
-            </a>
-          )}
-        </div>
-
-        {/* Add Action */}
-        {isAdded ? (
-          <div className="flex items-center gap-1 text-xs text-status-success">
-            <Check className="h-3 w-3" />
-            <span>Added</span>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={handleAdd}
-            className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors font-medium"
+      {/* Tool Count + Docs Link - Pill Style */}
+      <div className="flex items-center flex-wrap gap-2">
+        {server.toolCount && (
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-secondary text-xs text-muted-foreground text-nowrap">
+            <Wrench className="h-3 w-3" />
+            <span className="text-foreground">{server.toolCount} tools</span>
+          </span>
+        )}
+        {server.docsUrl && (
+          <a
+            href={server.docsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-secondary text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
-            <Plus className="h-3 w-3" />
+            <ArrowUpRight className="h-3 w-3" />
+            <span className="text-foreground">
+              {getDomainFromUrl(server.docsUrl)}
+            </span>
+          </a>
+        )}
+      </div>
+
+      <div className="flex justify-end flex-1">
+        {/* Add Action */}
+        {isAdded && addedServer ? (
+          <Link
+            to="/servers/$serverName"
+            params={{ serverName: addedServer.name }}
+            search={(prev) => ({ token: prev.token })}
+            className={cn(
+              buttonVariants({
+                variant: "ghost",
+              }),
+              "h-auto px-1.5 py-1 text-sm text-status-success",
+            )}
+          >
+            <Check className="h-3.5 w-3.5" />
+            <span>Added</span>
+          </Link>
+        ) : (
+          <Button
+            variant="ghost"
+            onClick={handleAdd}
+            className="h-auto px-1.5 py-1 text-sm text-muted-foreground"
+          >
+            <Plus className="h-3.5 w-3.5" />
             <span>Add</span>
-          </button>
+          </Button>
         )}
       </div>
     </div>
@@ -222,4 +241,18 @@ function parseCommand(cmdString: string): { command: string; args: string[] } {
   const args = parts.slice(1);
 
   return { command, args };
+}
+
+/**
+ * Extract domain name from URL for display
+ * Example: "https://linear.app/docs/mcp" -> "linear.app"
+ */
+function getDomainFromUrl(url: string): string {
+  try {
+    const hostname = new URL(url).hostname;
+    // Remove www. prefix if present
+    return hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
 }
