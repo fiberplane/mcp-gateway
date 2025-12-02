@@ -43,15 +43,31 @@ class ClientInfoStore {
 
   async get(sessionId: string): Promise<ClientInfo | undefined> {
     // Try in-memory first
-    const cached = this.sessionClientInfo.get(sessionId);
-    if (cached) {
-      return cached;
+    let clientInfo = this.sessionClientInfo.get(sessionId);
+    if (clientInfo) {
+      return clientInfo;
+    }
+
+    // Also try "stateless" as fallback in memory
+    // This handles the case where client sends its own session ID after initialize
+    if (sessionId !== "stateless") {
+      clientInfo = this.sessionClientInfo.get("stateless");
+      if (clientInfo) {
+        return clientInfo;
+      }
     }
 
     // Fall back to storage backend
     try {
       const metadata = await this.backend.getSessionMetadata(sessionId);
-      return metadata?.client;
+      clientInfo = metadata?.client;
+      // Also try stateless as fallback in storage
+      if (!clientInfo && sessionId !== "stateless") {
+        const statelessMetadata =
+          await this.backend.getSessionMetadata("stateless");
+        clientInfo = statelessMetadata?.client;
+      }
+      return clientInfo;
     } catch {
       // If storage query fails, return undefined
       return undefined;
