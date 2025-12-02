@@ -1,6 +1,7 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { createRootRoute } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/router-devtools";
+import { NuqsAdapter } from "nuqs/adapters/tanstack-router";
 import { useMemo } from "react";
 import { z } from "zod";
 import { InvalidTokenState } from "../components/invalid-token-state";
@@ -63,9 +64,11 @@ function RootWithProviders() {
 export const Route = createRootRoute({
   validateSearch: searchSchema,
   component: () => (
-    <AuthProvider>
-      <RootWithProviders />
-      {import.meta.env.DEV && <TanStackRouterDevtools />}
-    </AuthProvider>
+    <NuqsAdapter>
+      <AuthProvider>
+        <RootWithProviders />
+        {import.meta.env.DEV && <TanStackRouterDevtools />}
+      </AuthProvider>
+    </NuqsAdapter>
   ),
 });
