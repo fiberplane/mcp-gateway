@@ -887,6 +887,19 @@ export async function createProxyRoutes(options: {
             }
           }
 
+          // Get updated client and server info after initialize response
+          // For stateless requests, check context first (to avoid race conditions)
+          const updatedClientInfo =
+            effectiveSessionId === SESSIONLESS_ID
+              ? c.get("tempClientInfo") ||
+                (await deps.getClientInfoForSession(effectiveSessionId))
+              : await deps.getClientInfoForSession(effectiveSessionId);
+          const updatedServerInfo =
+            effectiveSessionId === SESSIONLESS_ID
+              ? c.get("tempServerInfo") ||
+                (await deps.getServerInfoForSession(effectiveSessionId))
+              : await deps.getServerInfoForSession(effectiveSessionId);
+
           // Compute methodDetail for response
           const apiResponseEntry: ApiResponseLogEntry = {
             timestamp: new Date().toISOString(),
@@ -911,8 +924,8 @@ export async function createProxyRoutes(options: {
             httpStatus,
             jsonRpcRequest.method,
             httpContext,
-            clientInfo,
-            serverInfo,
+            updatedClientInfo,
+            updatedServerInfo,
             responseMethodDetail,
           );
           await deps.appendRecord(responseRecord);
