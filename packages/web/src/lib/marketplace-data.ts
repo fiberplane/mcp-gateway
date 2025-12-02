@@ -14,7 +14,6 @@ export interface MarketplaceServer {
   toolCount?: number;
   /** Documentation URL for the server */
   docsUrl?: string;
-  tags?: string[];
   category?: "productivity" | "development" | "data" | "ai" | "other";
   /** Server type - almost all marketplace servers are stdio */
   type: "stdio" | "http";
@@ -30,7 +29,6 @@ export const MARKETPLACE_SERVERS: MarketplaceServer[] = [
     icon: "linear",
     toolCount: 23,
     docsUrl: "https://linear.app/docs/mcp",
-    tags: ["project-management", "issues", "teams"],
     category: "productivity",
   },
   {
@@ -41,7 +39,6 @@ export const MARKETPLACE_SERVERS: MarketplaceServer[] = [
     icon: "notion",
     toolCount: 15,
     docsUrl: "https://developers.notion.com/docs/mcp",
-    tags: ["notes", "database", "collaboration"],
     category: "productivity",
   },
   {
@@ -52,7 +49,6 @@ export const MARKETPLACE_SERVERS: MarketplaceServer[] = [
     icon: "github",
     toolCount: 51,
     docsUrl: "https://github.com/github/github-mcp-server",
-    tags: ["git", "code-review", "ci-cd"],
     category: "development",
   },
   {
@@ -64,7 +60,6 @@ export const MARKETPLACE_SERVERS: MarketplaceServer[] = [
     toolCount: 8,
     docsUrl:
       "https://help.figma.com/hc/en-us/articles/32132100833559-Guide-to-the-Figma-MCP-server",
-    tags: ["design", "ui-ux", "collaboration"],
     category: "development",
   },
   {
@@ -75,7 +70,6 @@ export const MARKETPLACE_SERVERS: MarketplaceServer[] = [
     icon: "context7",
     toolCount: 2,
     docsUrl: "https://context7.com/docs/overview",
-    tags: ["coding", "documentation"],
     category: "productivity",
   },
   {
@@ -87,7 +81,6 @@ export const MARKETPLACE_SERVERS: MarketplaceServer[] = [
     icon: "neon",
     toolCount: 27,
     docsUrl: "https://mcp.neon.tech/",
-    tags: ["database", "sql", "data"],
     category: "data",
   },
   {
@@ -99,7 +92,6 @@ export const MARKETPLACE_SERVERS: MarketplaceServer[] = [
     icon: "shadcn",
     toolCount: 10,
     docsUrl: "https://ui.shadcn.com/docs/mcp",
-    tags: ["web", "components", "ui"],
     category: "development",
   },
   {
@@ -110,7 +102,6 @@ export const MARKETPLACE_SERVERS: MarketplaceServer[] = [
     icon: "prisma",
     toolCount: 13,
     docsUrl: "https://www.prisma.io/docs/postgres/integrations/mcp-server",
-    tags: ["database", "sql", "data"],
     category: "data",
   },
   {
@@ -121,7 +112,6 @@ export const MARKETPLACE_SERVERS: MarketplaceServer[] = [
     icon: "astro",
     toolCount: 1,
     docsUrl: "https://mcp.docs.astro.build/",
-    tags: ["web", "components", "ui"],
     category: "development",
   },
 ];

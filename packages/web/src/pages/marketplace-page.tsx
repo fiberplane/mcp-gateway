@@ -25,8 +25,7 @@ export function MarketplacePage() {
     const query = searchQuery.toLowerCase();
     return (
       server.name.toLowerCase().includes(query) ||
-      server.description.toLowerCase().includes(query) ||
-      server.tags?.some((tag) => tag.toLowerCase().includes(query))
+      server.description.toLowerCase().includes(query)
     );
   });
 
