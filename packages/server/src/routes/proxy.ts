@@ -222,6 +222,30 @@ async function handleSessionTransition(
   }
 }
 
+// Default timeout for serverInfo extraction (5 seconds)
+const SERVER_INFO_EXTRACTION_TIMEOUT_MS = 5000;
+
+// Helper: Log SSE capture errors with consistent formatting
+// Used to avoid duplicated error handling code across SSE capture call sites
+function logSSECaptureError(
+  error: unknown,
+  serverName: string,
+  sessionId: string,
+): void {
+  const errorCode = (error as { code?: string } | undefined)?.code || "UNKNOWN";
+  const errorMsg =
+    (error as { message?: string } | undefined)?.message || String(error);
+  logger.error("[SSE Capture] error", {
+    server: serverName,
+    sessionId,
+    error: {
+      code: errorCode,
+      message: errorMsg,
+      stack: (error as { stack?: string } | undefined)?.stack,
+    },
+  });
+}
+
 // Helper: Extract serverInfo from SSE initialize response
 // Reads the first SSE event containing JSON-RPC, extracts serverInfo,
 // and stores it in the Gateway stores
@@ -230,68 +254,98 @@ async function extractServerInfoFromSSE(
   sessionId: string,
   deps: ProxyDependencies,
   c: Context<{ Variables: Variables }>,
+  timeoutMs: number = SERVER_INFO_EXTRACTION_TIMEOUT_MS,
 ): Promise<void> {
   const reader = stream.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  // Create a timeout promise that rejects after timeoutMs
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`ServerInfo extraction timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
 
   try {
-    // Read until we find a complete SSE event with JSON-RPC data
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+    // Race the extraction against the timeout
+    await Promise.race([
+      (async () => {
+        // Read until we find a complete SSE event with JSON-RPC data
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-      buffer += decoder.decode(value, { stream: true });
+          buffer += decoder.decode(value, { stream: true });
 
-      // Look for complete SSE events (double newline separated)
-      const eventEnd = buffer.indexOf("\n\n");
-      if (eventEnd === -1) continue;
+          // Look for complete SSE events (double newline separated)
+          const eventEnd = buffer.indexOf("\n\n");
+          if (eventEnd === -1) continue;
 
-      const eventText = buffer.substring(0, eventEnd);
+          const eventText = buffer.substring(0, eventEnd);
 
-      // Parse SSE event - look for data: line
-      const dataMatch = eventText.match(/^data:\s*(.+)$/m);
-      if (!dataMatch?.[1]) continue;
+          // Parse SSE event - look for data: line
+          const dataMatch = eventText.match(/^data:\s*(.+)$/m);
+          if (!dataMatch?.[1]) continue;
 
-      const dataStr = dataMatch[1];
-      try {
-        const parsed = JSON.parse(dataStr);
+          const dataStr = dataMatch[1];
+          try {
+            const parsed = JSON.parse(dataStr);
 
-        // Check if it's a JSON-RPC response with serverInfo
-        if (
-          parsed.result &&
-          typeof parsed.result === "object" &&
-          parsed.result.serverInfo
-        ) {
-          const serverResult = mcpServerInfoSchema.safeParse(
-            parsed.result.serverInfo,
-          );
-          if (serverResult.success) {
-            // Store in Gateway stores
-            deps.storeServerInfoForSession(sessionId, serverResult.data);
+            // Check if it's a JSON-RPC response with serverInfo
+            if (
+              parsed.result &&
+              typeof parsed.result === "object" &&
+              parsed.result.serverInfo
+            ) {
+              const serverResult = mcpServerInfoSchema.safeParse(
+                parsed.result.serverInfo,
+              );
+              if (serverResult.success) {
+                // Store in Gateway stores
+                deps.storeServerInfoForSession(sessionId, serverResult.data);
 
-            // Also store in context for session transition
-            if (sessionId === SESSIONLESS_ID) {
-              c.set("tempServerInfo", serverResult.data);
+                // Also store in context for session transition
+                if (sessionId === SESSIONLESS_ID) {
+                  c.set("tempServerInfo", serverResult.data);
+                }
+
+                logger.debug(
+                  "[SSE] Extracted serverInfo from initialize response",
+                  {
+                    sessionId,
+                    serverInfo: serverResult.data,
+                  },
+                );
+              }
             }
-
-            logger.debug(
-              "[SSE] Extracted serverInfo from initialize response",
-              {
-                sessionId,
-                serverInfo: serverResult.data,
-              },
-            );
+          } catch (parseError) {
+            // Log JSON parse failures for debugging
+            logger.debug("[SSE] Failed to parse JSON from SSE event", {
+              sessionId,
+              dataStr: dataStr.substring(0, 200),
+              error: String(parseError),
+            });
           }
-        }
-      } catch {
-        // Not valid JSON, skip
-      }
 
-      // We only need the first event with serverInfo
-      break;
-    }
+          // We only need the first event with serverInfo
+          break;
+        }
+      })(),
+      timeoutPromise,
+    ]);
+  } catch (error) {
+    // Log timeout or other errors but don't throw - extraction failure shouldn't break the stream
+    logger.debug("[SSE] ServerInfo extraction failed", {
+      sessionId,
+      error: String(error),
+    });
   } finally {
+    // Clear timeout to prevent memory leaks
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
     // Cancel the reader to release resources
     reader.cancel().catch(() => {});
   }
@@ -615,17 +669,7 @@ export async function createProxyRoutes(options: {
           ).catch((error) => {
             // Log capture errors but don't let them crash the server
             // Note: ECONNRESET errors are common when the client or server closes the SSE stream
-            const errorCode = error?.code || "UNKNOWN";
-            const errorMsg = error?.message || String(error);
-            logger.error("[SSE Capture] error", {
-              server: server.name,
-              sessionId,
-              error: {
-                code: errorCode,
-                message: errorMsg,
-                stack: error?.stack,
-              },
-            });
+            logSSECaptureError(error, server.name, sessionId);
           });
 
           // Return streaming response to client
@@ -1187,17 +1231,7 @@ export async function createProxyRoutes(options: {
               httpContext,
               onProxyEvent,
             ).catch((error) => {
-              const errorCode = error?.code || "UNKNOWN";
-              const errorMsg = error?.message || String(error);
-              logger.error("[SSE Capture] error", {
-                server: server.name,
-                sessionId,
-                error: {
-                  code: errorCode,
-                  message: errorMsg,
-                  stack: error?.stack,
-                },
-              });
+              logSSECaptureError(error, server.name, sessionId);
             });
           } else {
             // Non-initialize requests: standard SSE capture
@@ -1211,17 +1245,7 @@ export async function createProxyRoutes(options: {
               httpContext,
               onProxyEvent,
             ).catch((error) => {
-              const errorCode = error?.code || "UNKNOWN";
-              const errorMsg = error?.message || String(error);
-              logger.error("[SSE Capture] error", {
-                server: server.name,
-                sessionId,
-                error: {
-                  code: errorCode,
-                  message: errorMsg,
-                  stack: error?.stack,
-                },
-              });
+              logSSECaptureError(error, server.name, sessionId);
             });
           }
 
