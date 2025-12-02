@@ -25,19 +25,21 @@ bun run --filter @fiberplane/mcp-gateway-web dev
 
 ```
 packages/
-├── types/          # @fiberplane/mcp-gateway-types (Zod schemas)
-├── core/           # @fiberplane/mcp-gateway-core (business logic)
-├── api/            # @fiberplane/mcp-gateway-api (REST API)
-├── server/         # @fiberplane/mcp-gateway-server (MCP protocol)
-├── web/            # @fiberplane/mcp-gateway-web (React UI)
-└── mcp-gateway/    # @fiberplane/mcp-gateway (main package)
+├── types/             # @fiberplane/mcp-gateway-types (Zod schemas)
+├── core/              # @fiberplane/mcp-gateway-core (business logic)
+├── api/               # @fiberplane/mcp-gateway-api (REST API)
+├── management-mcp/    # @fiberplane/mcp-gateway-management-mcp (MCP management API)
+├── server/            # @fiberplane/mcp-gateway-server (MCP protocol HTTP server)
+├── web/               # @fiberplane/mcp-gateway-web (React UI)
+└── mcp-gateway/       # @fiberplane/mcp-gateway (main CLI package)
 ```
 
 **Dependency flow:**
 ```
-types → core → api → mcp-gateway
-             → server ↗
-             → web ↗
+types → core → api ──────────┐
+             → management-mcp ┤→ mcp-gateway (CLI)
+             → server ────────┤
+             → web ───────────┘
 ```
 
 ## Common Commands

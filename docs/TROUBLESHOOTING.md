@@ -81,14 +81,47 @@ ls -la /path/to/command
 cat ~/.mcp-gateway/mcp.json | grep -A 10 "my-server"
 ```
 
-**Session isolation issues**
-- **Shared mode** (default): Sessions share state. One crash affects all.
-- **Isolated mode**: Use `x-session-id` header. Each session = separate process.
+**Session Modes (Stdio Servers)**
+
+Stdio servers support two session modes:
+
+**Shared Mode (Default)**
+- Single subprocess handles all sessions
+- Process started eagerly on gateway startup
+- Shared state across all clients
+- More efficient (lower memory usage)
+- Can be restarted via "Restart Process" button
+
+**When to use:** Most use cases, especially stateless servers
+
+**Restart on crash:** Manual restart required via UI or API
+
+**Isolated Mode**
+- Separate subprocess per session
+- Processes started lazily when first request arrives
+- Requires `x-session-id` header in client requests
+- Complete isolation between sessions
+- Higher memory usage (one process per active session)
+
+**When to use:** When client sessions must not interfere (e.g., testing, multi-tenant)
+
+**Restart on crash:** Cannot manually restart (process bound to session lifecycle)
+
+**Configuration:**
 ```json
 {
+  "name": "my-server",
+  "type": "stdio",
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-memory"],
   "sessionMode": "isolated"
 }
 ```
+
+**Troubleshooting Isolated Mode:**
+- Ensure client sends `x-session-id` header
+- Check active session count in server details page
+- Processes appear with "N sessions" instead of PID
 
 **Stderr logs missing**
 - Only last 100 lines kept in memory
@@ -97,6 +130,39 @@ cat ~/.mcp-gateway/mcp.json | grep -A 10 "my-server"
 ```bash
 curl http://localhost:3333/api/servers/my-server | grep stderrLogs
 ```
+
+**Process State Tracking**
+
+Stdio servers expose detailed process state:
+
+**Status Values:**
+- `running` - Process healthy and accepting requests
+- `crashed` - Process exited with error (check stderr logs)
+- `stopped` - Process terminated gracefully
+- `isolated` - Isolated mode (see session count instead)
+
+**Viewing Process State:**
+- Server details page shows current status
+- Stderr logs show last 100 lines (in-memory, not persisted)
+- Error details include exit code and timestamp
+
+**Common Issues:**
+
+**Process shows "crashed" immediately:**
+1. Check stderr logs in server details page
+2. Test command manually: `npx -y @modelcontextprotocol/server-memory`
+3. Verify command exists and has correct permissions
+4. Check for missing dependencies or environment variables
+
+**Process keeps restarting:**
+- Shared mode: Gateway doesn't auto-restart crashed processes
+- Use "Restart Process" button or API to restart manually
+- Consider switching to isolated mode for automatic recovery per session
+
+**Stderr logs missing:**
+- Only last 100 lines kept (circular buffer)
+- Not persisted to database
+- Cleared on process restart
 
 ## Proxy Issues
 

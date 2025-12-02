@@ -41,8 +41,58 @@ logs.db (~/.mcp-gateway/)
 - URL-based filter state (shareable links)
 - Client-side filtering for instant response
 - Real-time polling with TanStack Query
-- Cascading dropdown filters
+- Advanced filtering (search, operators, numeric ranges)
 - JSON log viewer with copy/export
+- Server management interface
+
+---
+
+## Pages
+
+The web UI uses TanStack Router for page-based navigation:
+
+### Home Page (`/`)
+
+Main logs view with:
+- Server tabs for quick filtering
+- Advanced filter bar (search, server, session, client, method, duration, tokens)
+- Real-time log table with polling
+- Log detail viewer with JSON syntax highlighting
+- Export functionality
+
+### Marketplace Page (`/marketplace`)
+
+Curated list of popular MCP servers:
+- Pre-configured server entries (Linear, Notion, GitHub, Figma, etc.)
+- Search functionality
+- Server cards show: icon, description, tool count, documentation link
+- "Add to Gateway" button pre-fills server configuration
+- Detection of already-added servers
+
+**Data source:** `packages/web/src/lib/marketplace-data.ts` (hardcoded list)
+
+### Servers Page (`/servers`)
+
+Server management overview:
+- List all configured servers
+- Server type badges (HTTP/stdio)
+- Status indicators
+- Quick actions (view details, edit, delete)
+- Add server button
+
+### Server Details Page (`/servers/:serverName`)
+
+Individual server management:
+- Gateway URL with copy button
+- Configuration details (type, URL/command, session mode for stdio)
+- **Health information** (HTTP servers):
+  - Last check time, response time, status history
+  - Manual health check button
+- **Process status** (stdio servers):
+  - Running/crashed/stopped state, PID
+  - Restart button (shared mode only)
+  - Error messages and stderr logs
+- Danger zone (delete server)
 
 ---
 
@@ -222,6 +272,37 @@ import { DropdownMenu } from '@radix-ui/react-dropdown-menu'
   </DropdownMenu.Content>
 </DropdownMenu.Root>
 ```
+
+### Advanced Filters
+
+The filter bar supports multiple filter types with powerful query capabilities:
+
+**String Filters (with operators):**
+- Server, session, client, method
+- Operator prefixes: `is:` (exact), `contains:` (partial)
+- Multi-select with OR logic
+- Example: `?server=is:figma&server=is:notion`
+
+**Numeric Filters:**
+- Duration range (milliseconds): `durationGte`, `durationLte`
+- Token range (total tokens): `tokensGt`, `tokensLt`
+- Supports exact match, greater than, less than
+
+**Full-Text Search:**
+- Searches across request/response JSON content
+- Multiple search terms use AND logic
+- Example: `?q=error&q=timeout` (finds logs with both terms)
+
+**Example filter state in URL:**
+```
+?method=contains:tools&server=is:figma-server&durationGte=1000&q=error
+```
+
+**Filter UI Components:**
+- `FilterBar` - Container with filter badges and add button
+- `AddFilterDropdown` - Dropdown for adding new filters
+- Filter badges with remove buttons
+- Server/session/client/method dropdowns with autocomplete
 
 ---
 
