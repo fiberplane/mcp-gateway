@@ -80,6 +80,7 @@
   --color-status-success: var(--success);
   --color-status-error: var(--destructive);
   --color-status-warning: var(--warning);
+  --color-status-info: #3b82f6; /* Blue for running/active states */
   --color-status-neutral: var(--muted-foreground);
 
   --color-accent-1: var(--bg-accent-1);

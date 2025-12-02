@@ -25,12 +25,12 @@ const statusConfig: Record<
   StatusVariant,
   { icon: LucideIcon; colorClass: string }
 > = {
-  healthy: { icon: CheckCircle2, colorClass: "text-green-500" },
-  unhealthy: { icon: AlertCircle, colorClass: "text-red-500" },
-  running: { icon: Activity, colorClass: "text-blue-500" },
-  crashed: { icon: AlertCircle, colorClass: "text-red-500" },
-  stopped: { icon: Square, colorClass: "text-gray-500" },
-  remote: { icon: Activity, colorClass: "text-blue-500" },
+  healthy: { icon: CheckCircle2, colorClass: "text-status-success" },
+  unhealthy: { icon: AlertCircle, colorClass: "text-status-error" },
+  running: { icon: Activity, colorClass: "text-status-info" },
+  crashed: { icon: AlertCircle, colorClass: "text-status-error" },
+  stopped: { icon: Square, colorClass: "text-status-neutral" },
+  remote: { icon: Activity, colorClass: "text-status-info" },
 };
 
 /**

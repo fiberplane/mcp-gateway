@@ -145,10 +145,11 @@ For online/offline/error status:
 
 | CSS Variable | Hex Value | Tailwind Class | Usage |
 |--------------|-----------|----------------|-------|
-| `--color-status-success` | `#22c55e` | `bg-status-success` `text-status-success` | Online (green) |
+| `--color-status-success` | `#22c55e` | `bg-status-success` `text-status-success` | Online/healthy (green) |
 | `--color-status-warning` | `#f59e0b` | `bg-status-warning` `text-status-warning` | Warning (amber) |
-| `--color-status-error` | `#ef4444` | `bg-status-error` `text-status-error` | Error (red) |
-| `--color-status-neutral` | `#9ca3af` | `bg-status-neutral` `text-status-neutral` | Offline (gray) |
+| `--color-status-error` | `#ef4444` | `bg-status-error` `text-status-error` | Error/crashed (red) |
+| `--color-status-info` | `#3b82f6` | `bg-status-info` `text-status-info` | Running/active (blue) |
+| `--color-status-neutral` | `#9ca3af` | `bg-status-neutral` `text-status-neutral` | Offline/stopped (gray) |
 
 ### Terminal/Console Colors
 
