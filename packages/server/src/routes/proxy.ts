@@ -251,6 +251,7 @@ function logSSECaptureError(
 // and stores it in the Gateway stores
 async function extractServerInfoFromSSE(
   stream: ReadableStream<Uint8Array>,
+  serverName: string,
   sessionId: string,
   deps: ProxyDependencies,
   c: Context<{ Variables: Variables }>,
@@ -264,7 +265,11 @@ async function extractServerInfoFromSSE(
   // Create a timeout promise that rejects after timeoutMs
   const timeoutPromise = new Promise<never>((_, reject) => {
     timeoutId = setTimeout(() => {
-      reject(new Error(`ServerInfo extraction timed out after ${timeoutMs}ms`));
+      reject(
+        new Error(
+          `ServerInfo extraction timed out after ${timeoutMs}ms for server '${serverName}' session '${sessionId}'`,
+        ),
+      );
     }, timeoutMs);
   });
 
@@ -1206,6 +1211,7 @@ export async function createProxyRoutes(options: {
             // Extract serverInfo from first SSE event (non-blocking but awaited)
             extractServerInfoFromSSE(
               streamForExtract,
+              server.name,
               sessionId,
               deps,
               c,

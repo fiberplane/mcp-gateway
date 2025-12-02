@@ -1,4 +1,5 @@
 import type { MarketplaceServer } from "@/lib/marketplace-data";
+import { cn } from "@/lib/utils";
 import AstroIcon from "./astro.svg?react";
 import Context7Icon from "./context7.svg?react";
 import FigmaIcon from "./figma.svg?react";
@@ -11,11 +12,21 @@ import PlaywrightIcon from "./playwright.svg?react";
 import PrismaIcon from "./prisma.svg?react";
 import ShadcnIcon from "./shadcn-ui.svg?react";
 
-export function McpServerIcon({ server }: { server: MarketplaceServer }) {
+interface McpServerIconProps {
+  server: MarketplaceServer;
+  className?: string;
+}
+
+export function McpServerIcon({ server, className }: McpServerIconProps) {
   const icon = server.icon ?? "mcp";
 
   return (
-    <div className="flex-shrink-0 w-12 h-12 rounded-md border border-border bg-card flex items-center justify-center text-2xl">
+    <div
+      className={cn(
+        "flex-shrink-0 w-12 h-12 rounded-md border border-border bg-card flex items-center justify-center text-2xl",
+        className,
+      )}
+    >
       <Icon icon={icon} />
     </div>
   );

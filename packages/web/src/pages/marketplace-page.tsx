@@ -147,9 +147,7 @@ function MarketplaceServerCard({
       {/* Icon + Name + Command Row */}
       <div className="flex items-start gap-3 min-w-0">
         {/* Large Icon */}
-        <div className="flex-shrink-0 w-12 h-12 rounded-md bg-muted flex items-center justify-center text-2xl">
-          <McpServerIcon server={server} />
-        </div>
+        <McpServerIcon server={server} />
 
         {/* Name + Command */}
         <div className="flex-1 min-w-0">
