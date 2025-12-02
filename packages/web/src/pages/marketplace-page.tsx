@@ -121,21 +121,26 @@ function MarketplaceServerCard({
   const { openAddServerModal } = useServerModal();
 
   const handleAdd = () => {
-    // Parse command string into command + args
-    const parsed = parseCommand(server.command);
-
     // Generate suggested name from server name (lowercase, hyphenated)
     const suggestedName = server.name.toLowerCase().replace(/\s+/g, "-");
 
-    // Open modal with pre-filled data
-    openAddServerModal({
-      name: suggestedName,
-      type: server.type,
-      ...(server.type === "stdio" && {
+    if (server.type === "http") {
+      // For HTTP servers, command field contains the URL
+      openAddServerModal({
+        name: suggestedName,
+        type: "http",
+        url: server.command,
+      });
+    } else {
+      // For stdio servers, parse command string into command + args
+      const parsed = parseCommand(server.command);
+      openAddServerModal({
+        name: suggestedName,
+        type: "stdio",
         command: parsed.command,
         args: parsed.args,
-      }),
-    });
+      });
+    }
   };
 
   return (
