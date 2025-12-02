@@ -1,7 +1,15 @@
 import type { McpServer } from "@fiberplane/mcp-gateway-types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
-import { AlertCircle, Edit, RefreshCw, Server, Trash2 } from "lucide-react";
+import {
+  AlertCircle,
+  Check,
+  Copy,
+  Edit,
+  RefreshCw,
+  Server,
+  Trash2,
+} from "lucide-react";
 import { PageLayout } from "../components/layout/page-layout";
 import { ServerStatusBadge } from "../components/server-status-badge";
 import { Badge } from "../components/ui/badge";
@@ -10,6 +18,7 @@ import { Button } from "../components/ui/button";
 import { useApi } from "../contexts/ApiContext";
 import { useServerModal } from "../contexts/ServerModalContext";
 import { useConfirm } from "../hooks/use-confirm";
+import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
 import { invalidateServerQueries, queryKeys } from "../lib/query-keys";
 
 export function ServerDetailsPage() {
@@ -128,6 +137,9 @@ export function ServerDetailsPage() {
             />
           )}
 
+          {/* Gateway URL - how to connect MCP clients */}
+          <GatewayUrlSection serverName={server.name} />
+
           {/* Configuration Section */}
           <ServerCommandSection
             server={server}
@@ -143,6 +155,49 @@ export function ServerDetailsPage() {
       </PageLayout>
       {ConfirmDialog}
     </>
+  );
+}
+
+interface GatewayUrlSectionProps {
+  serverName: string;
+}
+
+function GatewayUrlSection({ serverName }: GatewayUrlSectionProps) {
+  const { copy, copied } = useCopyToClipboard();
+  const gatewayUrl = `${window.location.origin}/s/${serverName}/mcp`;
+
+  return (
+    <div className="border rounded-lg p-6">
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-lg font-semibold">Gateway URL</h2>
+      </div>
+      <p className="text-sm text-muted-foreground mb-3">
+        Use this URL in your MCP client to route traffic through the gateway
+      </p>
+      <div className="flex items-center gap-2">
+        <code className="flex-1 text-sm font-mono bg-muted px-3 py-2 rounded break-all">
+          {gatewayUrl}
+        </code>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => copy(gatewayUrl)}
+          className="shrink-0"
+        >
+          {copied ? (
+            <>
+              <Check className="h-4 w-4 mr-1" />
+              Copied
+            </>
+          ) : (
+            <>
+              <Copy className="h-4 w-4 mr-1" />
+              Copy
+            </>
+          )}
+        </Button>
+      </div>
+    </div>
   );
 }
 
