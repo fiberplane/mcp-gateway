@@ -76,6 +76,12 @@
   --color-bg-warning: var(--bg-warning);
   --color-bg-success: var(--bg-success);
 
+  /* Status colors for dots and text */
+  --color-status-success: var(--success);
+  --color-status-error: var(--destructive);
+  --color-status-warning: var(--warning);
+  --color-status-neutral: var(--muted-foreground);
+
   --color-accent-1: var(--bg-accent-1);
   --color-accent-1-foreground: var(--accent-1-foreground);
   --color-accent-1-border: var(--accent-1-border);
