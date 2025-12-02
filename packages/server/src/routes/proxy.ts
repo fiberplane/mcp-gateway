@@ -1281,9 +1281,16 @@ export async function createProxyRoutes(options: {
 
         // Capture response (both for regular requests and notifications)
         // The upstream server returns a JSON response for all requests, including notifications
+        // For initialize responses, use the real session ID from response headers
+        // This ensures session metadata (client/server info) is persisted under the correct session ID
+        const responseSessionId =
+          (jsonRpcRequest.method === "initialize"
+            ? extractSessionIdFromResponse(targetResponse.headers)
+            : null) ?? sessionId;
+
         const responseRecord = deps.createResponseRecord(
           server.name,
-          sessionId,
+          responseSessionId,
           response,
           httpStatus,
           jsonRpcRequest.method,
