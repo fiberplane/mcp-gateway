@@ -97,6 +97,13 @@
   --color-accent-7: var(--accent-7);
   --color-accent-8: var(--accent-8);
   --color-accent-9: var(--accent-9);
+
+  /* Terminal/console display colors */
+  --color-terminal-bg: #1a1817; /* Dark background for code/terminal mockups */
+  --color-terminal-text: #e5e7eb; /* Light text for terminal output */
+
+  /* Shadow colors */
+  --color-shadow-subtle: rgba(0, 0, 0, 0.05); /* Subtle shadows for depth/grouping */
 }
 
 :root {
@@ -456,17 +463,17 @@
 @layer utilities {
   /* Subtle inner shadow utilities for grouped table rows */
   .shadow-inner-top {
-    box-shadow: inset 0px 4px 6px -2px rgba(0, 0, 0, 0.05);
+    box-shadow: inset 0px 4px 6px -2px var(--color-shadow-subtle);
   }
 
   .shadow-inner-bottom {
-    box-shadow: inset 0px -4px 6px -2px rgba(0, 0, 0, 0.05);
+    box-shadow: inset 0px -4px 6px -2px var(--color-shadow-subtle);
   }
 
   .shadow-inner-both {
     box-shadow:
-      inset 0px -4px 6px -2px rgba(0, 0, 0, 0.05),
-      inset 0px 4px 6px -2px rgba(0, 0, 0, 0.05);
+      inset 0px -4px 6px -2px var(--color-shadow-subtle),
+      inset 0px 4px 6px -2px var(--color-shadow-subtle);
   }
 
   /* Screen reader only - visually hidden but accessible to assistive technology */

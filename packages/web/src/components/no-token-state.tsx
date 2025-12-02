@@ -33,7 +33,7 @@ export function NoTokenState() {
             When you started the gateway, your terminal displayed a Web UI URL
             with an authentication token:
           </p>
-          <div className="bg-[#1a1817] text-[#e5e7eb] rounded-md p-4 font-mono text-xs leading-relaxed overflow-x-auto whitespace-pre-wrap">
+          <div className="bg-terminal-bg text-terminal-text rounded-md p-4 font-mono text-xs leading-relaxed overflow-x-auto whitespace-pre-wrap">
             <div>mcp-gateway v0.5.1</div>
             <div className="mt-2">
               MCP Gateway server started at http://localhost:3333

@@ -150,6 +150,21 @@ For online/offline/error status:
 | `--color-status-error` | `#ef4444` | `bg-status-error` `text-status-error` | Error (red) |
 | `--color-status-neutral` | `#9ca3af` | `bg-status-neutral` `text-status-neutral` | Offline (gray) |
 
+### Terminal/Console Colors
+
+For terminal output mockups and code examples:
+
+| CSS Variable | Hex Value | Tailwind Class | Usage |
+|--------------|-----------|----------------|-------|
+| `--color-terminal-bg` | `#1a1817` | `bg-terminal-bg` | Terminal background (dark) |
+| `--color-terminal-text` | `#e5e7eb` | `text-terminal-text` | Terminal text (light gray) |
+
+### Shadow Colors
+
+| CSS Variable | Value | Usage |
+|--------------|-------|-------|
+| `--color-shadow-subtle` | `rgba(0, 0, 0, 0.05)` | Subtle inner shadows for grouping |
+
 ### Code Examples
 
 ```tsx
