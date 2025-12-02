@@ -76,7 +76,7 @@ function ServerRow({ server }: ServerRowProps) {
     navigate({
       to: "/servers/$serverName",
       params: { serverName: server.name },
-      search: (prev) => ({ token: prev.token }),
+      search: (prev) => ({ ...prev }),
     });
   };
 

@@ -191,7 +191,7 @@ function MarketplaceServerCard({
           <Link
             to="/servers/$serverName"
             params={{ serverName: addedServer.name }}
-            search={(prev) => ({ token: prev.token })}
+            search={(prev) => ({ ...prev })}
             className={cn(
               buttonVariants({
                 variant: "ghost",

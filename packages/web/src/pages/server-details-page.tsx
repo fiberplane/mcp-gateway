@@ -31,7 +31,7 @@ export function ServerDetailsPage() {
     mutationFn: (name: string) => api.deleteServer(name),
     onSuccess: () => {
       invalidateServerQueries(queryClient);
-      navigate({ to: "/servers", search: (prev) => ({ token: prev.token }) });
+      navigate({ to: "/servers", search: (prev) => ({ ...prev }) });
     },
   });
 

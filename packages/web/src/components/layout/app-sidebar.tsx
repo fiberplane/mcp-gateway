@@ -77,10 +77,7 @@ export function AppSidebar() {
                 return (
                   <SidebarMenuItem key={item.to}>
                     <NavBarItem asChild isActive={isActive}>
-                      <Link
-                        to={item.to}
-                        search={(prev) => ({ token: prev.token })}
-                      >
+                      <Link to={item.to} search={(prev) => ({ ...prev })}>
                         <Icon className="w-4 h-4" />
                         <span>{item.title}</span>
                       </Link>

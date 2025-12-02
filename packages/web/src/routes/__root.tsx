@@ -14,9 +14,12 @@ import { createApiClient } from "../lib/api";
 import { createQueryClient } from "../lib/query-client";
 
 // Search params schema - token is preserved across all routes
-const searchSchema = z.object({
-  token: z.string().optional(),
-});
+// Use passthrough to allow other query params (server, search, client, method, session, etc.)
+const searchSchema = z
+  .object({
+    token: z.string().optional(),
+  })
+  .passthrough();
 
 /**
  * Inner component that provides API + QueryClient contexts

@@ -132,7 +132,7 @@ export function StdioProcessBanner({
                   <Link
                     to="/servers/$serverName"
                     params={{ serverName: server.name }}
-                    search={(prev) => ({ token: prev.token })}
+                    search={(prev) => ({ ...prev })}
                   >
                     View Server
                   </Link>
