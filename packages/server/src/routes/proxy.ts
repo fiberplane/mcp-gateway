@@ -222,6 +222,81 @@ async function handleSessionTransition(
   }
 }
 
+// Helper: Extract serverInfo from SSE initialize response
+// Reads the first SSE event containing JSON-RPC, extracts serverInfo,
+// and stores it in the Gateway stores
+async function extractServerInfoFromSSE(
+  stream: ReadableStream<Uint8Array>,
+  sessionId: string,
+  deps: ProxyDependencies,
+  c: Context<{ Variables: Variables }>,
+): Promise<void> {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  try {
+    // Read until we find a complete SSE event with JSON-RPC data
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      // Look for complete SSE events (double newline separated)
+      const eventEnd = buffer.indexOf("\n\n");
+      if (eventEnd === -1) continue;
+
+      const eventText = buffer.substring(0, eventEnd);
+
+      // Parse SSE event - look for data: line
+      const dataMatch = eventText.match(/^data:\s*(.+)$/m);
+      if (!dataMatch?.[1]) continue;
+
+      const dataStr = dataMatch[1];
+      try {
+        const parsed = JSON.parse(dataStr);
+
+        // Check if it's a JSON-RPC response with serverInfo
+        if (
+          parsed.result &&
+          typeof parsed.result === "object" &&
+          parsed.result.serverInfo
+        ) {
+          const serverResult = mcpServerInfoSchema.safeParse(
+            parsed.result.serverInfo,
+          );
+          if (serverResult.success) {
+            // Store in Gateway stores
+            deps.storeServerInfoForSession(sessionId, serverResult.data);
+
+            // Also store in context for session transition
+            if (sessionId === SESSIONLESS_ID) {
+              c.set("tempServerInfo", serverResult.data);
+            }
+
+            logger.debug(
+              "[SSE] Extracted serverInfo from initialize response",
+              {
+                sessionId,
+                serverInfo: serverResult.data,
+              },
+            );
+          }
+        }
+      } catch {
+        // Not valid JSON, skip
+      }
+
+      // We only need the first event with serverInfo
+      break;
+    }
+  } finally {
+    // Cancel the reader to release resources
+    reader.cancel().catch(() => {});
+  }
+}
+
 // Helper: Log request
 function logRequest(options: {
   server: McpServer;
@@ -1077,31 +1152,87 @@ export async function createProxyRoutes(options: {
           // Create two streams from the response body
           const [streamForClient, streamForCapture] = targetResponse.body.tee();
 
-          // Start background capture processing (non-blocking, with error isolation)
-          processSSECapture(
-            streamForCapture,
-            server,
-            sessionId,
-            jsonRpcRequest.method,
-            jsonRpcRequest.id,
-            deps,
-            httpContext,
-            onProxyEvent,
-          ).catch((error) => {
-            // Log capture errors but don't let them crash the server
-            // Note: ECONNRESET errors are common when the client or server closes the SSE stream
-            const errorCode = error?.code || "UNKNOWN";
-            const errorMsg = error?.message || String(error);
-            logger.error("[SSE Capture] error", {
-              server: server.name,
+          // For initialize requests, extract serverInfo from the first SSE event
+          // This runs synchronously before returning the stream to ensure metadata is available
+          if (jsonRpcRequest.method === "initialize") {
+            // Create a third stream for serverInfo extraction
+            const [streamForExtract, streamForActualCapture] =
+              streamForCapture.tee();
+
+            // Extract serverInfo from first SSE event (non-blocking but awaited)
+            extractServerInfoFromSSE(
+              streamForExtract,
               sessionId,
-              error: {
-                code: errorCode,
-                message: errorMsg,
-                stack: error?.stack,
-              },
+              deps,
+              c,
+            ).catch((extractError: unknown) => {
+              logger.error(
+                "[SSE] Failed to extract serverInfo from initialize",
+                {
+                  server: server.name,
+                  sessionId,
+                  error: String(extractError),
+                },
+              );
             });
-          });
+
+            // Start background capture processing with the actual capture stream
+            processSSECapture(
+              streamForActualCapture,
+              server,
+              sessionId,
+              jsonRpcRequest.method,
+              jsonRpcRequest.id,
+              deps,
+              httpContext,
+              onProxyEvent,
+            ).catch((error) => {
+              const errorCode = error?.code || "UNKNOWN";
+              const errorMsg = error?.message || String(error);
+              logger.error("[SSE Capture] error", {
+                server: server.name,
+                sessionId,
+                error: {
+                  code: errorCode,
+                  message: errorMsg,
+                  stack: error?.stack,
+                },
+              });
+            });
+          } else {
+            // Non-initialize requests: standard SSE capture
+            processSSECapture(
+              streamForCapture,
+              server,
+              sessionId,
+              jsonRpcRequest.method,
+              jsonRpcRequest.id,
+              deps,
+              httpContext,
+              onProxyEvent,
+            ).catch((error) => {
+              const errorCode = error?.code || "UNKNOWN";
+              const errorMsg = error?.message || String(error);
+              logger.error("[SSE Capture] error", {
+                server: server.name,
+                sessionId,
+                error: {
+                  code: errorCode,
+                  message: errorMsg,
+                  stack: error?.stack,
+                },
+              });
+            });
+          }
+
+          // Handle session transition for initialize requests
+          await handleSessionTransition(
+            c,
+            targetResponse,
+            sessionId,
+            jsonRpcRequest,
+            deps,
+          );
 
           // Return streaming response to client
           return new Response(streamForClient, {
