@@ -32,31 +32,9 @@ export const MARKETPLACE_SERVERS: MarketplaceServer[] = [
     category: "productivity",
   },
   {
-    name: "Linear (SSE)",
-    description:
-      "Manage Linear issues, projects, and teams directly through MCP (SSE transport)",
-    command: "https://mcp.linear.app/sse",
-    type: "http",
-    icon: "linear",
-    toolCount: 23,
-    docsUrl: "https://linear.app/docs/mcp",
-    category: "productivity",
-  },
-  {
     name: "Notion",
     description: "Access and manage Notion pages, databases, and content",
     command: "https://mcp.notion.com/mcp",
-    type: "http",
-    icon: "notion",
-    toolCount: 15,
-    docsUrl: "https://developers.notion.com/docs/mcp",
-    category: "productivity",
-  },
-  {
-    name: "Notion (SSE)",
-    description:
-      "Access and manage Notion pages, databases, and content (SSE transport)",
-    command: "https://mcp.notion.com/sse",
     type: "http",
     icon: "notion",
     toolCount: 15,
