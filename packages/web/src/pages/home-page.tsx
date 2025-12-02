@@ -252,7 +252,7 @@ function AppContent() {
     refetchInterval: !hasLogs ? POLLING_INTERVALS.SERVERS : false,
   });
 
-  // Note: Error detection now handled globally by QueryClient in createQueryClient()
+  // Note: Error detection is handled globally by QueryClient in createQueryClient()
 
   const handleLoadMore = useHandler(() => {
     fetchNextPage();

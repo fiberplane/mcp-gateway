@@ -177,7 +177,7 @@ function handleInitializeClientInfo(
 }
 
 // Helper: Notify that server activity has occurred
-// Note: Server metrics (lastActivity, exchangeCount) are now computed from
+// Note: Server metrics (lastActivity, exchangeCount) are computed from
 // captured logs in the database, not persisted to mcp.json. This allows metrics
 // to be accurate and survive gateway restarts. Metrics are calculated on-demand
 // by getServers() / getRegisteredServers() from the logs.
