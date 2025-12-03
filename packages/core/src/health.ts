@@ -17,8 +17,8 @@ export async function checkServerHealth(
     const responseTimeMs = Date.now() - startTime;
     const timestamp = Date.now();
 
-    // 2xx, 3xx, 4xx all mean server is responding
-    // Only 5xx or network errors mean "down"
+    // 2xx, 3xx, and 4xx (except 404) mean server is responding
+    // 404, 5xx, or network errors mean "offline"
     if (response.status < 500 && response.status !== 404) {
       return {
         status: "online",
