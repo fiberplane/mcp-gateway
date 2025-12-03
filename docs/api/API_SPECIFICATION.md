@@ -6,6 +6,25 @@ REST API for querying MCP traffic logs captured by the gateway. Built with Hono,
 
 **Base URL:** `http://localhost:3333/api` (when running locally)
 
+## Authentication
+
+All API endpoints require authentication via Bearer token.
+
+**Header Format:**
+```
+Authorization: Bearer <token>
+```
+
+**Token Source:**
+1. Set via `MCP_GATEWAY_TOKEN` environment variable (recommended)
+2. Auto-generated on first startup (shown in console output)
+
+**Example:**
+```bash
+curl http://localhost:3333/api/logs \
+  -H "Authorization: Bearer your-token-here"
+```
+
 ## Data Models
 
 ### CaptureRecord
@@ -38,7 +57,7 @@ interface LogEntry {
   timestamp: string;
   method: string;
   id: string | number | null;
-  direction: 'request' | 'response';
+  direction: 'request' | 'response' | 'sse-event';
   metadata: {
     serverName: string;
     sessionId: string;
@@ -48,8 +67,16 @@ interface LogEntry {
   };
   request?: JsonRpcRequest;    // For request direction
   response?: JsonRpcResponse;  // For response direction
+  sseEvent?: {                 // For sse-event direction
+    id?: string;
+    event?: string;
+    data: string;
+    retry?: number;
+  };
 }
 ```
+
+**Note:** For SSE responses, each server-sent event is returned as a separate log entry with `direction: "sse-event"` and the `sseEvent` field populated.
 
 ### Server Info
 
@@ -77,14 +104,73 @@ Supported filters for `/logs` endpoint:
 
 ```typescript
 interface LogQueryOptions {
-  serverName?: string;         // Filter by server name (exact match)
-  sessionId?: string;          // Filter by session ID (exact match)
-  method?: string;             // Filter by JSON-RPC method (partial match)
+  // Basic filters
+  serverName?: string;         // Filter by server name
+  sessionId?: string;          // Filter by session ID
+  method?: string;             // Filter by JSON-RPC method
+  client?: string;             // Filter by client name
   after?: string;              // ISO timestamp - logs after this time
   before?: string;             // ISO timestamp - logs before this time
   limit?: number;              // Max results to return (default: 100, max: 1000)
-  order?: 'asc' | 'desc';     // Sort order by timestamp (default: 'desc')
+  order?: 'asc' | 'desc';      // Sort order by timestamp (default: 'desc')
+  
+  // Full-text search
+  q?: string | string[];       // Search term(s) - multiple values use AND logic
+  
+  // Duration filters (milliseconds)
+  durationEq?: number | number[];   // Exact duration (array = OR logic)
+  durationGt?: number;              // Duration greater than
+  durationGte?: number;             // Duration greater than or equal
+  durationLt?: number;              // Duration less than
+  durationLte?: number;             // Duration less than or equal
+  
+  // Token filters (total count)
+  tokensEq?: number | number[];     // Exact token count (array = OR logic)
+  tokensGt?: number;                // Tokens greater than
+  tokensGte?: number;               // Tokens greater than or equal
+  tokensLt?: number;                // Tokens less than
+  tokensLte?: number;               // Tokens less than or equal
 }
+```
+
+### Advanced Query Parameters
+
+**String Filters with Operators:**
+
+String filters (`server`, `session`, `method`, `client`) support operator prefixes for precise matching:
+- `is:value` - Exact match
+- `contains:value` - Partial match (substring)
+- Plain value defaults to field-specific behavior
+
+Multiple values create OR logic:
+```bash
+# Either figma-server OR notion-server
+?server=is:figma-server&server=is:notion-server
+```
+
+**Full-Text Search:**
+
+The `q` parameter searches across request/response JSON content:
+```bash
+# Find logs containing "error"
+?q=error
+
+# Find logs with both "error" AND "timeout" (AND logic)
+?q=error&q=timeout
+```
+
+**Numeric Filters:**
+
+Duration and token filters support exact match, ranges, and arrays:
+```bash
+# Requests taking exactly 500ms
+?durationEq=500
+
+# Requests between 1-5 seconds
+?durationGte=1000&durationLte=5000
+
+# Requests with either 100 or 200 tokens
+?tokensEq=100&tokensEq=200
 ```
 
 ### Paginated Response
@@ -111,13 +197,19 @@ Retrieve logs with optional filtering and sorting.
 **Endpoint:** `GET /api/logs`
 
 **Query Parameters:**
-- `server` - Filter by server name (optional)
-- `session` - Filter by session ID (optional)
-- `method` - Filter by method name (optional)
+- `server` - Filter by server name (supports `is:` and `contains:` operators)
+- `session` - Filter by session ID (supports operators)
+- `method` - Filter by method name (supports operators)
+- `client` - Filter by client name (supports operators)
+- `q` - Full-text search term (multiple values use AND logic)
 - `after` - ISO timestamp filter (optional)
 - `before` - ISO timestamp filter (optional)
+- `durationEq`, `durationGt`, `durationGte`, `durationLt`, `durationLte` - Duration filters in milliseconds
+- `tokensEq`, `tokensGt`, `tokensGte`, `tokensLt`, `tokensLte` - Token count filters
 - `limit` - Results limit, max 1000 (optional, default: 100)
 - `order` - 'asc' or 'desc' (optional, default: 'desc')
+
+See "Advanced Query Parameters" section for detailed operator syntax and examples.
 
 **Response:** `200 OK`
 
@@ -191,6 +283,18 @@ GET /api/logs?after=2025-01-15T00:00:00Z&before=2025-01-15T23:59:59Z&order=asc
 
 # With custom limit
 GET /api/logs?limit=50
+
+# Operator-based filtering
+GET /api/logs?method=contains:tools&server=is:figma-server
+
+# Full-text search
+GET /api/logs?q=error&q=timeout
+
+# Duration range (1-5 seconds)
+GET /api/logs?durationGte=1000&durationLte=5000
+
+# High token usage
+GET /api/logs?tokensGt=1000
 ```
 
 ### 2. List Servers
@@ -240,6 +344,150 @@ Get list of sessions, optionally filtered by server.
 }
 ```
 
+### 4. List Clients
+
+Get all clients that have connected through the gateway.
+
+**Endpoint:** `GET /api/clients`
+
+**Response:** `200 OK`
+
+```json
+{
+  "clients": [
+    {
+      "name": "claude-desktop",
+      "version": "1.0.0",
+      "logCount": 145,
+      "sessionCount": 3
+    }
+  ]
+}
+```
+
+### 5. Get Server Configurations
+
+Retrieve full server configurations including commands, URLs, headers, and environment variables.
+
+**Endpoint:** `GET /api/servers/config`
+
+**Response:** `200 OK`
+
+```json
+{
+  "servers": [
+    {
+      "name": "figma-server",
+      "type": "http",
+      "url": "http://localhost:3001",
+      "headers": {},
+      "lastCheckTime": "2025-01-15T10:00:00.000Z",
+      "isHealthy": true,
+      "responseTimeMs": 45
+    },
+    {
+      "name": "memory-server",
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "env": {},
+      "sessionMode": "shared",
+      "processState": {
+        "status": "running",
+        "pid": 12345,
+        "lastError": null,
+        "stderrLogs": []
+      }
+    }
+  ]
+}
+```
+
+### 6. Add Server
+
+Add a new MCP server (HTTP or stdio).
+
+**Endpoint:** `POST /api/servers/config`
+
+**Request Body (HTTP Server):**
+```json
+{
+  "name": "my-http-server",
+  "type": "http",
+  "url": "http://localhost:3001",
+  "headers": {
+    "Authorization": "Bearer token123"
+  }
+}
+```
+
+**Request Body (Stdio Server):**
+```json
+{
+  "name": "my-stdio-server",
+  "type": "stdio",
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-memory"],
+  "env": {
+    "API_KEY": "secret"
+  },
+  "sessionMode": "shared"
+}
+```
+
+**Response:** `201 Created`
+
+### 7. Update Server
+
+Update existing server configuration.
+
+**Endpoint:** `PUT /api/servers/config/:name`
+
+**Request Body:** Same format as Add Server
+
+**Response:** `200 OK`
+
+### 8. Delete Server
+
+Remove a server configuration.
+
+**Endpoint:** `DELETE /api/servers/config/:name`
+
+**Response:** `204 No Content`
+
+### 9. Manual Health Check
+
+Trigger manual health check for HTTP servers.
+
+**Endpoint:** `POST /api/servers/:name/health-check`
+
+**Response:** `200 OK`
+
+```json
+{
+  "isHealthy": true,
+  "responseTimeMs": 45,
+  "checkedAt": "2025-01-15T10:00:00.000Z"
+}
+```
+
+### 10. Restart Stdio Server
+
+Restart a stdio server (shared mode only).
+
+**Endpoint:** `POST /api/servers/:name/restart`
+
+**Response:** `200 OK`
+
+```json
+{
+  "success": true,
+  "message": "Server restarted successfully"
+}
+```
+
+**Note:** Only works for stdio servers in shared mode. Isolated mode servers restart automatically per session.
+
 ## Error Responses
 
 All error responses follow this format:
@@ -277,12 +525,82 @@ const logsQuerySchema = z.object({
 
 Invalid parameters return `400 Bad Request` with validation errors.
 
+## Management via MCP Protocol
+
+The gateway exposes its own MCP server for programmatic management.
+
+**Endpoints:**
+- `/gateway` - Full path
+- `/g` - Shortened alias
+
+**Authentication:** Same Bearer token as REST API (configure in MCP client)
+
+**Available Tools:**
+1. `add_server` - Add HTTP or stdio server
+2. `remove_server` - Delete server by name
+3. `list_servers` - List all configured servers with health status
+4. `search_records` - Query captured logs (supports all filter options)
+
+**Usage Example (Claude Desktop):**
+```json
+{
+  "mcpServers": {
+    "mcp-gateway-manager": {
+      "url": "http://localhost:3333/g",
+      "headers": {
+        "Authorization": "Bearer your-token-here"
+      }
+    }
+  }
+}
+```
+
+Once configured, use natural language:
+- "Add a Figma MCP server at http://localhost:3001"
+- "Show me all servers and their health status"
+- "Search for errors in the last hour"
+
+**Package:** `@fiberplane/mcp-gateway-management-mcp`
+
+## OAuth/OIDC Proxy
+
+The gateway proxies OAuth 2.0/OIDC discovery endpoints for HTTP servers.
+
+**Proxied Endpoints:**
+- `/.well-known/oauth-protected-resource`
+- `/.well-known/oauth-authorization-server`
+- `/.well-known/openid-configuration`
+- `/register` (Dynamic Client Registration)
+
+**URL Rewriting:**
+
+The gateway rewrites URLs in discovery metadata to point through the gateway proxy:
+- `https://upstream-server.com/token` → `http://localhost:3333/s/server-name/token`
+
+**Behavior:**
+- Lightweight proxy (no logging or capture)
+- Only works for HTTP servers
+- Automatically available for all configured HTTP servers
+
+**Use Case:**
+Allows MCP clients to authenticate with OAuth-enabled MCP servers through the gateway while maintaining traffic capture for authenticated requests.
+
 ## Implementation Notes
 
 ### Storage Backend
 - Logs are stored in SQLite database
 - Queries use Drizzle ORM for type-safe data access
 - All queries are read-only through this API
+
+### Dependency Injection
+
+The API package (`@fiberplane/mcp-gateway-api`) uses dependency injection for data access:
+- Zero direct imports from `@fiberplane/mcp-gateway-core`
+- All queries passed via `QueryFunctions` interface
+- Decouples API layer from storage implementation
+- Enables testing with mock implementations
+
+**Benefit:** API can be embedded in other applications with custom storage backends
 
 ### Pagination
 - Uses cursor-based pagination with `hasMore` flag

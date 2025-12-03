@@ -135,6 +135,12 @@ types (no deps) → core (types) → api (core types only, DI) ─────�
 - **Management MCP is auth-agnostic** - wrapped with auth middleware at orchestration level
 - **Server focuses on proxy infrastructure** - proxy, OAuth, health checks only
 - **CLI orchestrates everything** - mounts server, API, management MCP, and web UI
+- **Dependency validation** - `depcheck` used to catch missing dependencies in all packages
+  - Bun's hoisting can mask missing dependencies in package.json
+  - `validate-deps` scripts catch these before they cause issues in different environments
+  - Run `bun run validate-deps` to check all packages
+  - Run `bun run --filter <package> validate-deps` to check specific package
+  - Enforced in CI before build step
 - During development, packages use `workspace:*` protocol
 - During publishing, `workspace:*` is replaced with actual version ranges
 - All packages are published to npm independently

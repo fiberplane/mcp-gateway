@@ -41,8 +41,58 @@ logs.db (~/.mcp-gateway/)
 - URL-based filter state (shareable links)
 - Client-side filtering for instant response
 - Real-time polling with TanStack Query
-- Cascading dropdown filters
+- Advanced filtering (search, operators, numeric ranges)
 - JSON log viewer with copy/export
+- Server management interface
+
+---
+
+## Pages
+
+The web UI uses TanStack Router for page-based navigation:
+
+### Home Page (`/`)
+
+Main logs view with:
+- Server tabs for quick filtering
+- Advanced filter bar (search, server, session, client, method, duration, tokens)
+- Real-time log table with polling
+- Log detail viewer with JSON syntax highlighting
+- Export functionality
+
+### Marketplace Page (`/marketplace`)
+
+Curated list of popular MCP servers:
+- Pre-configured server entries (Linear, Notion, GitHub, Figma, etc.)
+- Search functionality
+- Server cards show: icon, description, tool count, documentation link
+- "Add to Gateway" button pre-fills server configuration
+- Detection of already-added servers
+
+**Data source:** `packages/web/src/lib/marketplace-data.ts` (hardcoded list)
+
+### Servers Page (`/servers`)
+
+Server management overview:
+- List all configured servers
+- Server type badges (HTTP/stdio)
+- Status indicators
+- Quick actions (view details, edit, delete)
+- Add server button
+
+### Server Details Page (`/servers/:serverName`)
+
+Individual server management:
+- Gateway URL with copy button
+- Configuration details (type, URL/command, session mode for stdio)
+- **Health information** (HTTP servers):
+  - Last check time, response time, status history
+  - Manual health check button
+- **Process status** (stdio servers):
+  - Running/crashed/stopped state, PID
+  - Restart button (shared mode only)
+  - Error messages and stderr logs
+- Danger zone (delete server)
 
 ---
 
@@ -58,7 +108,7 @@ Tailwind v4 auto-generates utilities from `--color-*` variables. Use these class
 |--------------|------------------|-------|
 | `--color-primary` | `bg-primary` `text-primary` | Primary backgrounds/text |
 | `--color-primary-foreground` | `text-primary-foreground` | Text on primary bg |
-| `--color-background` | `bg-background` | Page background (#f5f5f5) |
+| `--color-background` | `bg-background` | Page background (#f5f6f7) |
 | `--color-card` | `bg-card` | Card backgrounds (#ffffff) |
 | `--color-muted` | `bg-muted` | Muted backgrounds (#f9fafb) |
 | `--color-muted-foreground` | `text-muted-foreground` | Muted text (#6b7280) |
@@ -95,10 +145,26 @@ For online/offline/error status:
 
 | CSS Variable | Hex Value | Tailwind Class | Usage |
 |--------------|-----------|----------------|-------|
-| `--color-status-success` | `#22c55e` | `bg-status-success` `text-status-success` | Online (green) |
+| `--color-status-success` | `#22c55e` | `bg-status-success` `text-status-success` | Online/healthy (green) |
 | `--color-status-warning` | `#f59e0b` | `bg-status-warning` `text-status-warning` | Warning (amber) |
-| `--color-status-error` | `#ef4444` | `bg-status-error` `text-status-error` | Error (red) |
-| `--color-status-neutral` | `#9ca3af` | `bg-status-neutral` `text-status-neutral` | Offline (gray) |
+| `--color-status-error` | `#ef4444` | `bg-status-error` `text-status-error` | Error/crashed (red) |
+| `--color-status-info` | `#3b82f6` | `bg-status-info` `text-status-info` | Running/active (blue) |
+| `--color-status-neutral` | `#9ca3af` | `bg-status-neutral` `text-status-neutral` | Offline/stopped (gray) |
+
+### Terminal/Console Colors
+
+For terminal output mockups and code examples:
+
+| CSS Variable | Hex Value | Tailwind Class | Usage |
+|--------------|-----------|----------------|-------|
+| `--color-terminal-bg` | `#1a1817` | `bg-terminal-bg` | Terminal background (dark) |
+| `--color-terminal-text` | `#e5e7eb` | `text-terminal-text` | Terminal text (light gray) |
+
+### Shadow Colors
+
+| CSS Variable | Value | Usage |
+|--------------|-------|-------|
+| `--color-shadow-subtle` | `rgba(0, 0, 0, 0.05)` | Subtle inner shadows for grouping |
 
 ### Code Examples
 
@@ -140,7 +206,7 @@ Location: `packages/web/src/index.css`
 
 @theme {
   /* Background */
-  --color-background: #f5f5f5;
+  --color-background: #f5f6f7;
   --color-card: #ffffff;
   --color-muted: #f9fafb;
   --color-primary: #272624;
@@ -222,6 +288,37 @@ import { DropdownMenu } from '@radix-ui/react-dropdown-menu'
   </DropdownMenu.Content>
 </DropdownMenu.Root>
 ```
+
+### Advanced Filters
+
+The filter bar supports multiple filter types with powerful query capabilities:
+
+**String Filters (with operators):**
+- Server, session, client, method
+- Operator prefixes: `is:` (exact), `contains:` (partial)
+- Multi-select with OR logic
+- Example: `?server=is:figma&server=is:notion`
+
+**Numeric Filters:**
+- Duration range (milliseconds): `durationGte`, `durationLte`
+- Token range (total tokens): `tokensGt`, `tokensLt`
+- Supports exact match, greater than, less than
+
+**Full-Text Search:**
+- Searches across request/response JSON content
+- Multiple search terms use AND logic
+- Example: `?q=error&q=timeout` (finds logs with both terms)
+
+**Example filter state in URL:**
+```
+?method=contains:tools&server=is:figma-server&durationGte=1000&q=error
+```
+
+**Filter UI Components:**
+- `FilterBar` - Container with filter badges and add button
+- `AddFilterDropdown` - Dropdown for adding new filters
+- Filter badges with remove buttons
+- Server/session/client/method dropdowns with autocomplete
 
 ---
 

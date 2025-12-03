@@ -101,6 +101,7 @@ export class StdioProcess {
   /**
    * Spawn the subprocess
    */
+  // biome-ignore lint/correctness/noUnusedPrivateClassMembers: Called in constructor
   private spawn(): void {
     const { config } = this.options;
 

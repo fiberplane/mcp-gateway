@@ -27,7 +27,7 @@ export function StreamingToggle({
             className={cn(
               "w-4 h-4",
               isStreaming
-                ? "text-green-500 animate-pulse"
+                ? "text-green-500 motion-safe:animate-pulse"
                 : "text-muted-foreground",
             )}
           />

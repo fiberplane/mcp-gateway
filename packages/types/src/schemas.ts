@@ -125,7 +125,7 @@ export const sessionHeaderSchema = z
     "x-real-ip": z.string().optional(),
     "cf-connecting-ip": z.string().optional(),
   })
-  .loose();
+  .passthrough();
 
 // Extract remote address using Zod-validated headers
 export function extractRemoteAddress(

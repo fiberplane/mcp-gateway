@@ -1,6 +1,8 @@
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
+import type { VariantProps } from "class-variance-authority";
 import { forwardRef } from "react";
 import { cn } from "../../lib/utils";
+import { buttonVariants } from "./button";
 
 const AlertDialog = AlertDialogPrimitive.Root;
 const AlertDialogTrigger = AlertDialogPrimitive.Trigger;
@@ -85,18 +87,12 @@ AlertDialogDescription.displayName =
 
 const AlertDialogAction = forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Action>,
-  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Action>
->(({ className, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Action> &
+    VariantProps<typeof buttonVariants>
+>(({ className, variant, size, ...props }, ref) => (
   <AlertDialogPrimitive.Action
     ref={ref}
-    className={cn(
-      "inline-flex items-center justify-center rounded-md px-4 py-2",
-      "text-sm font-medium transition-colors",
-      "bg-foreground text-background hover:bg-foreground/90",
-      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
-      "disabled:pointer-events-none disabled:opacity-50",
-      className,
-    )}
+    className={cn(buttonVariants({ variant, size }), className)}
     {...props}
   />
 ));
@@ -108,14 +104,7 @@ const AlertDialogCancel = forwardRef<
 >(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Cancel
     ref={ref}
-    className={cn(
-      "inline-flex items-center justify-center rounded-md px-4 py-2",
-      "text-sm font-medium transition-colors",
-      "border border-border bg-card hover:bg-muted",
-      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
-      "disabled:pointer-events-none disabled:opacity-50",
-      className,
-    )}
+    className={cn(buttonVariants({ variant: "outline" }), className)}
     {...props}
   />
 ));

@@ -2,13 +2,13 @@
  * Server Edit Modal Component
  *
  * Modal wrapper for ServerForm supporting add and edit modes
+ * Uses Radix Dialog for accessibility (focus trap, escape handling, focus restore)
  */
 
 import type { McpServerConfig } from "@fiberplane/mcp-gateway-types";
+import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
-import { useEffect, useId, useRef } from "react";
 import { useConfirm } from "../hooks/use-confirm";
-import { useFocusTrap } from "../hooks/use-focus-trap";
 import { ServerForm } from "./server-form";
 import { Button } from "./ui/button";
 
@@ -18,9 +18,9 @@ interface ServerEditModalProps {
    */
   mode: "add" | "edit";
   /**
-   * Initial server data (for edit mode)
+   * Initial server data (partial for add mode, full for edit mode)
    */
-  initialData?: McpServerConfig;
+  initialData?: Partial<McpServerConfig>;
   /**
    * Callback when form is submitted
    */
@@ -31,8 +31,11 @@ interface ServerEditModalProps {
   onClose: () => void;
   /**
    * Callback when delete is requested (edit mode only)
+   * Receives partial config but name is guaranteed in edit mode
    */
-  onDelete?: (config: McpServerConfig) => Promise<void>;
+  onDelete?: (
+    config: Partial<McpServerConfig> & { name: string },
+  ) => Promise<void>;
   /**
    * Whether form is currently submitting
    */
@@ -48,43 +51,14 @@ export function ServerEditModal({
   isSubmitting = false,
 }: ServerEditModalProps) {
   const { confirm, ConfirmDialog } = useConfirm();
-  // Store the element that had focus before modal opened
-  const previousFocusRef = useRef<HTMLElement | null>(null);
-  // Focus trap for modal content
-  const modalRef = useFocusTrap<HTMLDivElement>(true);
-  // Unique ID for heading (for aria-labelledby)
-  const headingId = useId();
-
-  // Capture focus on mount and restore on unmount
-  useEffect(() => {
-    previousFocusRef.current = document.activeElement as HTMLElement;
-
-    return () => {
-      // Restore focus when modal unmounts
-      if (previousFocusRef.current) {
-        previousFocusRef.current.focus();
-      }
-    };
-  }, []);
-
-  // Handle Escape key to close modal
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !isSubmitting) {
-        onClose();
-      }
-    };
-
-    document.addEventListener("keydown", handleEscape);
-    return () => document.removeEventListener("keydown", handleEscape);
-  }, [onClose, isSubmitting]);
 
   const handleDelete = async () => {
-    if (!initialData || !onDelete) return;
+    const name = initialData?.name;
+    if (!name || !onDelete) return;
 
     const confirmed = await confirm({
       title: "Delete Server",
-      description: `Are you sure you want to delete server "${initialData.name}"?\n\nNote: Associated logs will be preserved for historical analysis.\n\nThis action cannot be undone.`,
+      description: `Are you sure you want to delete server "${name}"?\n\nNote: Associated logs will be preserved for historical analysis.\n\nThis action cannot be undone.`,
       confirmText: "Delete Server",
       cancelText: "Cancel",
       variant: "destructive",
@@ -92,53 +66,51 @@ export function ServerEditModal({
 
     if (!confirmed) return;
 
-    await onDelete(initialData);
+    await onDelete({ ...initialData, name });
+  };
+
+  // Handle open change - only allow closing when not submitting
+  const handleOpenChange = (open: boolean) => {
+    if (!open && !isSubmitting) {
+      onClose();
+    }
   };
 
   return (
-    <>
-      {/* Modal overlay - click outside to close */}
-      {/* biome-ignore lint/a11y/noStaticElementInteractions: Modal overlay with click-outside-to-close is standard UX pattern */}
-      <div
-        className="fixed inset-0 bg-foreground/50 z-50 animate-fade-in flex items-center justify-center p-4"
-        onClick={(e) => {
-          if (e.target === e.currentTarget && !isSubmitting) {
-            onClose();
-          }
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Escape" && !isSubmitting) {
-            onClose();
-          }
-        }}
-      >
-        {/* Modal content */}
-        <div
-          ref={modalRef}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby={headingId}
-          className="bg-card rounded-lg border border-border max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-scale-in"
+    <Dialog.Root open={true} onOpenChange={handleOpenChange}>
+      <Dialog.Portal>
+        {/* Overlay */}
+        <Dialog.Overlay className="fixed inset-0 bg-foreground/50 z-50 animate-fade-in" />
+
+        {/* Content - centered using Radix-native positioning */}
+        <Dialog.Content
+          className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card rounded-lg border border-border max-w-2xl w-[calc(100%-2rem)] max-h-[90vh] overflow-y-auto z-50 animate-scale-in"
+          aria-busy={isSubmitting}
         >
+          {/* Visually hidden description for screen readers */}
+          <Dialog.Description className="sr-only">
+            {mode === "add"
+              ? "Form to add a new MCP server configuration"
+              : `Form to edit the ${initialData?.name} server configuration`}
+          </Dialog.Description>
+
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-border">
-            <h2
-              id={headingId}
-              className="text-xl font-semibold text-foreground"
-            >
+            <Dialog.Title className="text-xl font-semibold text-foreground">
               {mode === "add"
                 ? "Add Server"
                 : `Edit Server: ${initialData?.name}`}
-            </h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClose}
-              disabled={isSubmitting}
-              aria-label="Close modal"
-            >
-              <X className="w-5 h-5" />
-            </Button>
+            </Dialog.Title>
+            <Dialog.Close asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={isSubmitting}
+                aria-label="Close modal"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </Dialog.Close>
           </div>
 
           {/* Form */}
@@ -152,9 +124,9 @@ export function ServerEditModal({
               isSubmitting={isSubmitting}
             />
           </div>
-        </div>
-      </div>
+        </Dialog.Content>
+      </Dialog.Portal>
       {ConfirmDialog}
-    </>
+    </Dialog.Root>
   );
 }

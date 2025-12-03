@@ -18,6 +18,7 @@
     "format": "biome check --write .",
     "check-circular": "madge --circular --extensions ts,tsx --ts-config ./tsconfig.madge.json packages/*/src",
     "deps-graph": "madge --image deps.svg --extensions ts,tsx --ts-config ./tsconfig.madge.json packages/*/src",
+    "validate-deps": "bun run --filter @fiberplane/mcp-gateway-types validate-deps && bun run --filter @fiberplane/mcp-gateway-core validate-deps && bun run --filter @fiberplane/mcp-gateway-api validate-deps && bun run --filter @fiberplane/mcp-gateway-server validate-deps && bun run --filter @fiberplane/mcp-gateway-management-mcp validate-deps && bun run --filter @fiberplane/mcp-gateway-web validate-deps && bun run --filter @fiberplane/mcp-gateway validate-deps",
     "changeset": "changeset",
     "changeset:check": "changeset status",
     "release": "changeset publish",

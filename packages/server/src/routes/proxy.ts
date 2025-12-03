@@ -177,7 +177,7 @@ function handleInitializeClientInfo(
 }
 
 // Helper: Notify that server activity has occurred
-// Note: Server metrics (lastActivity, exchangeCount) are now computed from
+// Note: Server metrics (lastActivity, exchangeCount) are computed from
 // captured logs in the database, not persisted to mcp.json. This allows metrics
 // to be accurate and survive gateway restarts. Metrics are calculated on-demand
 // by getServers() / getRegisteredServers() from the logs.
@@ -219,6 +219,140 @@ async function handleSessionTransition(
     if (serverInfo) {
       deps.storeServerInfoForSession(responseSessionId, serverInfo);
     }
+  }
+}
+
+// Default timeout for serverInfo extraction (5 seconds)
+const SERVER_INFO_EXTRACTION_TIMEOUT_MS = 5000;
+
+// Helper: Log SSE capture errors with consistent formatting
+// Used to avoid duplicated error handling code across SSE capture call sites
+function logSSECaptureError(
+  error: unknown,
+  serverName: string,
+  sessionId: string,
+): void {
+  const errorCode = (error as { code?: string } | undefined)?.code || "UNKNOWN";
+  const errorMsg =
+    (error as { message?: string } | undefined)?.message || String(error);
+  logger.error("[SSE Capture] error", {
+    server: serverName,
+    sessionId,
+    error: {
+      code: errorCode,
+      message: errorMsg,
+      stack: (error as { stack?: string } | undefined)?.stack,
+    },
+  });
+}
+
+// Helper: Extract serverInfo from SSE initialize response
+// Reads the first SSE event containing JSON-RPC, extracts serverInfo,
+// and stores it in the Gateway stores
+async function extractServerInfoFromSSE(
+  stream: ReadableStream<Uint8Array>,
+  serverName: string,
+  sessionId: string,
+  deps: ProxyDependencies,
+  c: Context<{ Variables: Variables }>,
+  timeoutMs: number = SERVER_INFO_EXTRACTION_TIMEOUT_MS,
+): Promise<void> {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  // Create a timeout promise that rejects after timeoutMs
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(
+        new Error(
+          `ServerInfo extraction timed out after ${timeoutMs}ms for server '${serverName}' session '${sessionId}'`,
+        ),
+      );
+    }, timeoutMs);
+  });
+
+  try {
+    // Race the extraction against the timeout
+    await Promise.race([
+      (async () => {
+        // Read until we find a complete SSE event with JSON-RPC data
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          // Look for complete SSE events (double newline separated)
+          const eventEnd = buffer.indexOf("\n\n");
+          if (eventEnd === -1) continue;
+
+          const eventText = buffer.substring(0, eventEnd);
+
+          // Parse SSE event - look for data: line
+          const dataMatch = eventText.match(/^data:\s*(.+)$/m);
+          if (!dataMatch?.[1]) continue;
+
+          const dataStr = dataMatch[1];
+          try {
+            const parsed = JSON.parse(dataStr);
+
+            // Check if it's a JSON-RPC response with serverInfo
+            if (
+              parsed.result &&
+              typeof parsed.result === "object" &&
+              parsed.result.serverInfo
+            ) {
+              const serverResult = mcpServerInfoSchema.safeParse(
+                parsed.result.serverInfo,
+              );
+              if (serverResult.success) {
+                // Store in Gateway stores
+                deps.storeServerInfoForSession(sessionId, serverResult.data);
+
+                // Also store in context for session transition
+                if (sessionId === SESSIONLESS_ID) {
+                  c.set("tempServerInfo", serverResult.data);
+                }
+
+                logger.debug(
+                  "[SSE] Extracted serverInfo from initialize response",
+                  {
+                    sessionId,
+                    serverInfo: serverResult.data,
+                  },
+                );
+              }
+            }
+          } catch (parseError) {
+            // Log JSON parse failures for debugging
+            logger.debug("[SSE] Failed to parse JSON from SSE event", {
+              sessionId,
+              dataStr: dataStr.substring(0, 200),
+              error: String(parseError),
+            });
+          }
+
+          // We only need the first event with serverInfo
+          break;
+        }
+      })(),
+      timeoutPromise,
+    ]);
+  } catch (error) {
+    // Log timeout or other errors but don't throw - extraction failure shouldn't break the stream
+    logger.debug("[SSE] ServerInfo extraction failed", {
+      sessionId,
+      error: String(error),
+    });
+  } finally {
+    // Clear timeout to prevent memory leaks
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    // Cancel the reader to release resources
+    reader.cancel().catch(() => {});
   }
 }
 
@@ -540,17 +674,7 @@ export async function createProxyRoutes(options: {
           ).catch((error) => {
             // Log capture errors but don't let them crash the server
             // Note: ECONNRESET errors are common when the client or server closes the SSE stream
-            const errorCode = error?.code || "UNKNOWN";
-            const errorMsg = error?.message || String(error);
-            logger.error("[SSE Capture] error", {
-              server: server.name,
-              sessionId,
-              error: {
-                code: errorCode,
-                message: errorMsg,
-                stack: error?.stack,
-              },
-            });
+            logSSECaptureError(error, server.name, sessionId);
           });
 
           // Return streaming response to client
@@ -887,6 +1011,19 @@ export async function createProxyRoutes(options: {
             }
           }
 
+          // Get updated client and server info after initialize response
+          // For stateless requests, check context first (to avoid race conditions)
+          const updatedClientInfo =
+            effectiveSessionId === SESSIONLESS_ID
+              ? c.get("tempClientInfo") ||
+                (await deps.getClientInfoForSession(effectiveSessionId))
+              : await deps.getClientInfoForSession(effectiveSessionId);
+          const updatedServerInfo =
+            effectiveSessionId === SESSIONLESS_ID
+              ? c.get("tempServerInfo") ||
+                (await deps.getServerInfoForSession(effectiveSessionId))
+              : await deps.getServerInfoForSession(effectiveSessionId);
+
           // Compute methodDetail for response
           const apiResponseEntry: ApiResponseLogEntry = {
             timestamp: new Date().toISOString(),
@@ -911,8 +1048,8 @@ export async function createProxyRoutes(options: {
             httpStatus,
             jsonRpcRequest.method,
             httpContext,
-            clientInfo,
-            serverInfo,
+            updatedClientInfo,
+            updatedServerInfo,
             responseMethodDetail,
           );
           await deps.appendRecord(responseRecord);
@@ -1064,31 +1201,68 @@ export async function createProxyRoutes(options: {
           // Create two streams from the response body
           const [streamForClient, streamForCapture] = targetResponse.body.tee();
 
-          // Start background capture processing (non-blocking, with error isolation)
-          processSSECapture(
-            streamForCapture,
-            server,
-            sessionId,
-            jsonRpcRequest.method,
-            jsonRpcRequest.id,
-            deps,
-            httpContext,
-            onProxyEvent,
-          ).catch((error) => {
-            // Log capture errors but don't let them crash the server
-            // Note: ECONNRESET errors are common when the client or server closes the SSE stream
-            const errorCode = error?.code || "UNKNOWN";
-            const errorMsg = error?.message || String(error);
-            logger.error("[SSE Capture] error", {
-              server: server.name,
+          // For initialize requests, extract serverInfo from the first SSE event
+          // This runs synchronously before returning the stream to ensure metadata is available
+          if (jsonRpcRequest.method === "initialize") {
+            // Create a third stream for serverInfo extraction
+            const [streamForExtract, streamForActualCapture] =
+              streamForCapture.tee();
+
+            // Extract serverInfo from first SSE event (non-blocking but awaited)
+            extractServerInfoFromSSE(
+              streamForExtract,
+              server.name,
               sessionId,
-              error: {
-                code: errorCode,
-                message: errorMsg,
-                stack: error?.stack,
-              },
+              deps,
+              c,
+            ).catch((extractError: unknown) => {
+              logger.error(
+                "[SSE] Failed to extract serverInfo from initialize",
+                {
+                  server: server.name,
+                  sessionId,
+                  error: String(extractError),
+                },
+              );
             });
-          });
+
+            // Start background capture processing with the actual capture stream
+            processSSECapture(
+              streamForActualCapture,
+              server,
+              sessionId,
+              jsonRpcRequest.method,
+              jsonRpcRequest.id,
+              deps,
+              httpContext,
+              onProxyEvent,
+            ).catch((error) => {
+              logSSECaptureError(error, server.name, sessionId);
+            });
+          } else {
+            // Non-initialize requests: standard SSE capture
+            processSSECapture(
+              streamForCapture,
+              server,
+              sessionId,
+              jsonRpcRequest.method,
+              jsonRpcRequest.id,
+              deps,
+              httpContext,
+              onProxyEvent,
+            ).catch((error) => {
+              logSSECaptureError(error, server.name, sessionId);
+            });
+          }
+
+          // Handle session transition for initialize requests
+          await handleSessionTransition(
+            c,
+            targetResponse,
+            sessionId,
+            jsonRpcRequest,
+            deps,
+          );
 
           // Return streaming response to client
           return new Response(streamForClient, {
@@ -1281,9 +1455,16 @@ export async function createProxyRoutes(options: {
 
         // Capture response (both for regular requests and notifications)
         // The upstream server returns a JSON response for all requests, including notifications
+        // For initialize responses, use the real session ID from response headers
+        // This ensures session metadata (client/server info) is persisted under the correct session ID
+        const responseSessionId =
+          (jsonRpcRequest.method === "initialize"
+            ? extractSessionIdFromResponse(targetResponse.headers)
+            : null) ?? sessionId;
+
         const responseRecord = deps.createResponseRecord(
           server.name,
-          sessionId,
+          responseSessionId,
           response,
           httpStatus,
           jsonRpcRequest.method,

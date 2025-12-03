@@ -94,10 +94,8 @@ export function useConfirm() {
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={handleConfirm}
-            className={
-              state.variant === "destructive"
-                ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                : ""
+            variant={
+              state.variant === "destructive" ? "destructive" : "default"
             }
           >
             {state.confirmText || "Confirm"}

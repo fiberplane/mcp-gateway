@@ -740,7 +740,13 @@ MCP Gateway server started at http://localhost:${port}
     const registeredServers = await gateway.storage.getRegisteredServers();
     if (registeredServers.length === 0) {
       // biome-ignore lint/suspicious/noConsole: actually want to print to console
-      console.log(`\n  No servers configured yet - add servers via Web UI`);
+      console.log(`
+Getting Started:
+  1. Open the Web UI link above in your browser
+  2. Click "Add Server" to register your first MCP server
+  3. Point your MCP client to http://localhost:${port}/s/<server-name>/mcp
+  4. All traffic will be captured and visible in the Activity Log
+`);
     } else {
       // biome-ignore lint/suspicious/noConsole: actually want to print to console
       console.log(`\nConfigured MCP servers:`);
@@ -813,8 +819,11 @@ MCP Gateway server started at http://localhost:${port}
           `  ${name}  ${gateway}  →  ${upstream}  [${healthIcon} ${healthStatus}]`,
         );
       }
-      // biome-ignore lint/suspicious/noConsole: print a new line
-      console.log("");
+      // biome-ignore lint/suspicious/noConsole: actually want to print to console
+      console.log(`
+Point your MCP client to the gateway URLs above to capture traffic.
+Open the Web UI to view logs and manage servers.
+`);
     }
 
     logger.info("MCP Gateway server started", { port });

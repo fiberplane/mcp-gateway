@@ -52,7 +52,7 @@ export function EmptyStateNoServers() {
       </p>
 
       {/* Primary CTA */}
-      <Button size="lg" onClick={openAddServerModal}>
+      <Button size="lg" onClick={() => openAddServerModal()}>
         <Plus className="w-4 h-4 mr-2" />
         Add Your First Server
       </Button>
