@@ -105,6 +105,14 @@
 
   /* Shadow colors */
   --color-shadow-subtle: rgba(0, 0, 0, 0.05); /* Subtle shadows for depth/grouping */
+
+  /* Method badge colors (MCP protocol methods) */
+  --color-method-init: #dddbff; /* purple - initialization & lifecycle (initialize, ping) */
+  --color-method-resource: #ffe6e0; /* peach - resource methods (resources/*) */
+  --color-method-tool: #f7dd91; /* yellow - tool methods (tools/*) */
+  --color-method-prompt: #d1eaac; /* lime - prompt methods (prompts/*) */
+  --color-method-notification: #f8d2e8; /* pink - notification methods (notifications/*) */
+  --color-method-default: #e5e7eb; /* gray - unknown/other methods */
 }
 
 :root {
