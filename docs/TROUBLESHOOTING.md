@@ -6,12 +6,12 @@ Common issues and quick solutions.
 
 **Error: "Address already in use"**
 ```bash
-# Kill process on port 3333
+# use different port
+mcp-gateway --port 3334
+
+# or kill process on port 3333
 lsof -i :3333
 kill <PID>
-
-# Or use different port
-mcp-gateway --port 3334
 ```
 
 **Development mode (watch) shutdown issues**
