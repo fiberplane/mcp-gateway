@@ -1,7 +1,7 @@
 {
   "name": "@fiberplane/mcp-gateway",
   "type": "module",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "HTTP server for proxying and observing MCP traffic",
   "keywords": [
     "mcp",
