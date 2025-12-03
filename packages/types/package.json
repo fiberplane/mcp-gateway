@@ -16,7 +16,8 @@
   "sideEffects": false,
   "scripts": {
     "build": "bun run ../../scripts/build.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "validate-deps": "bun run ../../scripts/validate-package-deps.ts packages/types"
   },
   "exports": {
     ".": {

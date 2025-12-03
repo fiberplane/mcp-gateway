@@ -7,3 +7,4 @@
 # Run tests only from the test/ directory (sentinel test)
 # This prevents discovering tests in packages/
 root = "test"
+

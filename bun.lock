@@ -1,5 +1,6 @@
 {
   "lockfileVersion": 1,
+  "configVersion": 0,
   "workspaces": {
     "": {
       "name": "@fiberplane/mcp-gateway-workspace",
@@ -119,6 +120,7 @@
         "react": "^19.2.0",
         "react-dom": "^19.2.0",
         "tailwind-merge": "^3.3.1",
+        "zod": "^4.1.11",
       },
       "devDependencies": {
         "@tanstack/router-devtools": "^1.139.10",
