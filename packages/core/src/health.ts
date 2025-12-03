@@ -19,7 +19,7 @@ export async function checkServerHealth(
 
     // 2xx, 3xx, 4xx all mean server is responding
     // Only 5xx or network errors mean "down"
-    if (response.status < 500) {
+    if (response.status < 500 && response.status !== 404) {
       return {
         status: "online",
         responseTimeMs,
