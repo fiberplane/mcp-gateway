@@ -63,8 +63,9 @@ export const mockFilterBadge = () => {
  * Mock for FilterAutocomplete component
  * Used by: command-filter-input.test.tsx
  *
- * NOTE: This mock must match the real component's structure (including ARIA roles)
- * so that tests pass consistently regardless of execution order.
+ * NOTE: This mock must match the real component's behavior exactly:
+ * - Returns null when closed OR when no suggestions AND no error/preview content
+ * - Includes proper ARIA roles so tests pass consistently regardless of execution order
  */
 export const mockFilterAutocomplete = () => {
   mock.module("@/components/filter-autocomplete", () => ({
@@ -75,7 +76,13 @@ export const mockFilterAutocomplete = () => {
       errorContent,
       previewContent,
     }: FilterAutocompleteProps) => {
-      if (!open) return null;
+      // Match real component: return null if not open or if no content to show
+      if (
+        !open ||
+        (suggestions.length === 0 && !errorContent && !previewContent)
+      ) {
+        return null;
+      }
       return (
         <section
           data-testid="autocomplete-dropdown"
