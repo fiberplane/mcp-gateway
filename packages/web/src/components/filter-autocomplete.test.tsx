@@ -2,20 +2,13 @@
 
 /**
  * Tests for FilterAutocomplete component
- *
- * NOTE: command-filter-input.test.tsx mocks this module at the top level using
- * mock.module(). Bun's mocks are global, so we need to import the source file
- * directly rather than through the module system to get the real component.
  */
 
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import type { FilterSuggestion } from "@/lib/filter-parser";
-
-// Import the REAL component by reading the source directly
-// This bypasses Bun's mock.module() which intercepts @/components/filter-autocomplete
-import { FilterAutocomplete } from "./filter-autocomplete.tsx";
+import { FilterAutocomplete } from "./filter-autocomplete";
 
 describe("FilterAutocomplete", () => {
   const mockSuggestions: FilterSuggestion[] = [
