@@ -13,17 +13,17 @@ import "@testing-library/jest-dom";
 import { createFilter } from "@fiberplane/mcp-gateway-types";
 import {
   mockAddFilterDropdown,
-  mockFilterBadge,
   mockUseAvailableFilters,
 } from "@/test-utils/mocks";
 import { TestApiProvider } from "@/test-utils/test-providers";
 import { FilterBarUI } from "./filter-bar";
 
 // Set up mocks for child components
-// Note: CommandFilterInput is NOT mocked here - we use the real component
-// but mock its dependencies (useAvailableFilters hooks)
+// Note: We only mock API hooks and AddFilterDropdown (which has complex state)
+// FilterBadge and CommandFilterInput use the real components
+// NOTE: We intentionally don't mock FilterBadge to avoid polluting filter-badge.test.tsx
+// (Bun's mock.module is global and persists across test files)
 mockUseAvailableFilters();
-mockFilterBadge();
 mockAddFilterDropdown();
 
 // Helper to render with ApiProvider
@@ -223,11 +223,16 @@ describe("FilterBarUI", () => {
         />,
       );
 
-      // Check that both filters are rendered by finding their filter preview elements
-      const filterBadges = screen.getAllByTestId("filter-preview");
-      expect(filterBadges).toHaveLength(2);
-      expect(filterBadges[0]).toHaveAttribute("data-filter-badge", "tokens");
-      expect(filterBadges[1]).toHaveAttribute("data-filter-badge", "client");
+      // Check that both filters are rendered by finding their remove buttons
+      // Real FilterBadge renders aria-label like "Remove filter: Tokens greater than 150"
+      const removeButtons = screen.getAllByRole("button", {
+        name: /Remove filter/,
+      });
+      expect(removeButtons).toHaveLength(2);
+
+      // Verify both filter contents are rendered
+      expect(screen.getByText("Tokens")).toBeInTheDocument();
+      expect(screen.getByText("Client")).toBeInTheDocument();
     });
 
     test("removes filter when badge remove button clicked", () => {
@@ -255,7 +260,10 @@ describe("FilterBarUI", () => {
         />,
       );
 
-      const removeButton = screen.getByText("Remove");
+      // Real FilterBadge has aria-label on remove button
+      const removeButton = screen.getByRole("button", {
+        name: /Remove filter/,
+      });
       fireEvent.click(removeButton);
 
       expect(onRemoveFilter).toHaveBeenCalledWith(filter.id);
@@ -661,7 +669,10 @@ describe("FilterBarUI", () => {
         />,
       );
 
-      const removeButton = screen.getByText("Remove");
+      // Real FilterBadge has aria-label on remove button
+      const removeButton = screen.getByRole("button", {
+        name: /Remove filter/,
+      });
       fireEvent.click(removeButton);
 
       // Verify onRemoveFilter was called with correct ID

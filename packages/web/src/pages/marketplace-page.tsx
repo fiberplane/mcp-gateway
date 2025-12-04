@@ -153,7 +153,9 @@ function MarketplaceServerCard({
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-base mb-0.5">{server.name}</h3>
           <p className="text-xs text-muted-foreground font-mono truncate">
-            {server.command}
+            {server.type === "http"
+              ? server.command.replace(/^https?:\/\//, "")
+              : server.command}
           </p>
         </div>
       </div>
@@ -180,9 +182,7 @@ function MarketplaceServerCard({
             className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-secondary text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowUpRight className="h-3 w-3" />
-            <span className="text-foreground">
-              {getDomainFromUrl(server.docsUrl)}
-            </span>
+            <span className="text-foreground">Docs</span>
           </a>
         )}
       </div>
@@ -243,18 +243,4 @@ function parseCommand(cmdString: string): { command: string; args: string[] } {
   const args = parts.slice(1);
 
   return { command, args };
-}
-
-/**
- * Extract domain name from URL for display
- * Example: "https://linear.app/docs/mcp" -> "linear.app"
- */
-function getDomainFromUrl(url: string): string {
-  try {
-    const hostname = new URL(url).hostname;
-    // Remove www. prefix if present
-    return hostname.replace(/^www\./, "");
-  } catch {
-    return url;
-  }
 }

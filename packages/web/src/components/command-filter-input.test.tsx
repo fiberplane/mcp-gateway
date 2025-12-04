@@ -7,18 +7,14 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import {
-  mockFilterAutocomplete,
-  mockFilterBadge,
-  mockUseAvailableFilters,
-} from "@/test-utils/mocks";
+import { mockUseAvailableFilters } from "@/test-utils/mocks";
 import { TestApiProvider } from "@/test-utils/test-providers";
 import { CommandFilterInput } from "./command-filter-input";
 
-// Set up mocks
+// Set up mocks - only mock API hooks, let real components render
+// NOTE: We intentionally don't mock FilterAutocomplete or FilterBadge here
+// to avoid polluting other test files (Bun's mock.module is global)
 mockUseAvailableFilters();
-mockFilterAutocomplete();
-mockFilterBadge();
 
 // Helper to render with ApiProvider
 const renderWithProvider = (component: React.ReactElement) =>

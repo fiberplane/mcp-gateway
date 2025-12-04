@@ -131,6 +131,7 @@ export function FilterAutocomplete({
   return (
     <section
       ref={listRef}
+      data-testid="autocomplete-dropdown"
       className={cn(
         "absolute z-50 mt-1 w-full",
         "rounded-md border border-border bg-popover shadow-lg",

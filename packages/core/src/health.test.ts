@@ -362,7 +362,7 @@ describe("Health Check System", () => {
       await gateway.close();
     });
 
-    test("should handle server returning 404 as up", async () => {
+    test("should handle server returning 404 as down", async () => {
       // Create a server that returns 404
       const notFoundServer = Bun.serve({
         port: 0,
@@ -380,8 +380,8 @@ describe("Health Check System", () => {
 
       const results = await gateway.health.check();
 
-      // 404 means server is responding, so it's "up"
-      expect(results[0]?.health).toBe("up");
+      // 404 means MCP endpoint doesn't exist, treat as down
+      expect(results[0]?.health).toBe("down");
 
       notFoundServer.stop();
       await gateway.close();
