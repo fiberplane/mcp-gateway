@@ -153,7 +153,9 @@ function MarketplaceServerCard({
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-base mb-0.5">{server.name}</h3>
           <p className="text-xs text-muted-foreground font-mono truncate">
-            {server.command}
+            {server.type === "http"
+              ? server.command.replace(/^https?:\/\//, "")
+              : server.command}
           </p>
         </div>
       </div>
