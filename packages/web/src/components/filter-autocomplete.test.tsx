@@ -68,6 +68,7 @@ describe("FilterAutocomplete", () => {
         />,
       );
 
+      expect(screen.getByTestId("autocomplete-dropdown")).toBeInTheDocument();
       expect(screen.getByRole("listbox")).toBeInTheDocument();
     });
 
@@ -81,7 +82,9 @@ describe("FilterAutocomplete", () => {
         />,
       );
 
-      expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("autocomplete-dropdown"),
+      ).not.toBeInTheDocument();
     });
 
     test("does not render when open but no suggestions or content", () => {
@@ -94,7 +97,9 @@ describe("FilterAutocomplete", () => {
         />,
       );
 
-      expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("autocomplete-dropdown"),
+      ).not.toBeInTheDocument();
     });
 
     test("renders when open with error content but no suggestions", () => {
@@ -391,6 +396,12 @@ describe("FilterAutocomplete", () => {
         />,
       );
 
+      // Root section has aria-label for assistance
+      expect(screen.getByTestId("autocomplete-dropdown")).toHaveAttribute(
+        "aria-label",
+        "Filter assistance",
+      );
+      // Nested listbox has aria-label for suggestions
       expect(screen.getByRole("listbox")).toHaveAttribute(
         "aria-label",
         "Filter suggestions",
