@@ -4,11 +4,24 @@
  * Tests for FilterAutocomplete component
  */
 
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  mock,
+  test,
+} from "bun:test";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import type { FilterSuggestion } from "@/lib/filter-parser";
 import { FilterAutocomplete } from "./filter-autocomplete";
+
+// Clear mocks from other test files (command-filter-input.test.tsx mocks this component)
+beforeAll(() => {
+  mock.restore();
+});
 
 describe("FilterAutocomplete", () => {
   const mockSuggestions: FilterSuggestion[] = [
