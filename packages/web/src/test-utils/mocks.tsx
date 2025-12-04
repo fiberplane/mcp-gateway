@@ -18,9 +18,13 @@ type FilterBadgeProps = {
 };
 
 type FilterAutocompleteProps = {
-  suggestions: Array<{ text: string; id?: string }>;
+  suggestions: Array<{ text: string; id?: string; icon?: ReactNode }>;
   open: boolean;
-  onSelect: (suggestion: { text: string; id?: string }) => void;
+  onSelect: (suggestion: {
+    text: string;
+    id?: string;
+    icon?: ReactNode;
+  }) => void;
   errorContent?: ReactNode;
   previewContent?: ReactNode;
 };
@@ -66,6 +70,7 @@ export const mockFilterBadge = () => {
  * NOTE: This mock must match the real component's behavior exactly:
  * - Returns null when closed OR when no suggestions AND no error/preview content
  * - Includes proper ARIA roles so tests pass consistently regardless of execution order
+ * - Renders icons when provided
  */
 export const mockFilterAutocomplete = () => {
   mock.module("@/components/filter-autocomplete", () => ({
@@ -88,24 +93,47 @@ export const mockFilterAutocomplete = () => {
           data-testid="autocomplete-dropdown"
           aria-label="Filter assistance"
         >
+          {/* biome-ignore lint/a11y/useSemanticElements: Live region for screen readers, div is appropriate */}
+          <div role="status" aria-live="polite" className="sr-only">
+            {suggestions.length > 0
+              ? `${suggestions.length} suggestion${suggestions.length === 1 ? "" : "s"} available`
+              : errorContent
+                ? "Error in filter input"
+                : "No suggestions"}
+          </div>
           {errorContent}
           {previewContent}
           {suggestions.length > 0 && (
-            <div role="listbox" aria-label="Filter suggestions">
-              {suggestions.map((s, i) => (
-                <button
-                  key={s.id || `suggestion-${i}`}
-                  type="button"
-                  role="option"
-                  aria-selected={i === 0}
-                  id={`filter-suggestion-${i}`}
-                  onClick={() => onSelect(s)}
-                  data-testid={`suggestion-${i}`}
-                >
-                  {s.text}
-                </button>
-              ))}
-            </div>
+            <>
+              <div role="listbox" aria-label="Filter suggestions">
+                {suggestions.map((s, i) => (
+                  <button
+                    key={s.id || `suggestion-${i}`}
+                    type="button"
+                    role="option"
+                    aria-selected={i === 0}
+                    id={`filter-suggestion-${i}`}
+                    onClick={() => onSelect(s)}
+                    onMouseEnter={() => {}}
+                    data-testid={`suggestion-${i}`}
+                  >
+                    {s.icon && (
+                      <span className="size-4 shrink-0">{s.icon}</span>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm leading-tight truncate">
+                        {s.text}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              {/* Keyboard hints */}
+              <div className="sticky bottom-0 px-3 py-2 border-t border-border bg-muted/50 text-xs text-muted-foreground">
+                <kbd>Tab</kbd> to select • <kbd>Enter</kbd> to search •{" "}
+                <kbd>Esc</kbd> to close
+              </div>
+            </>
           )}
         </section>
       );
