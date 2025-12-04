@@ -2,26 +2,23 @@
 
 /**
  * Tests for FilterAutocomplete component
+ *
+ * IMPORTANT: This test must restore mocks BEFORE importing the component
+ * because command-filter-input.test.tsx mocks this module at the top level.
+ * We use dynamic import to ensure we get the real module after mock.restore().
  */
 
-import {
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  mock,
-  test,
-} from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import type { FilterSuggestion } from "@/lib/filter-parser";
-import { FilterAutocomplete } from "./filter-autocomplete";
 
-// Clear mocks from other test files (command-filter-input.test.tsx mocks this component)
-beforeAll(() => {
-  mock.restore();
-});
+// Restore mocks BEFORE importing the component
+mock.restore();
+
+// Now import the real component (must be after mock.restore)
+// Using require to ensure it happens after mock.restore at module level
+const { FilterAutocomplete } = require("./filter-autocomplete");
 
 describe("FilterAutocomplete", () => {
   const mockSuggestions: FilterSuggestion[] = [
