@@ -62,6 +62,9 @@ export const mockFilterBadge = () => {
 /**
  * Mock for FilterAutocomplete component
  * Used by: command-filter-input.test.tsx
+ *
+ * NOTE: This mock must match the real component's structure (including ARIA roles)
+ * so that tests pass consistently regardless of execution order.
  */
 export const mockFilterAutocomplete = () => {
   mock.module("@/components/filter-autocomplete", () => ({
@@ -74,20 +77,30 @@ export const mockFilterAutocomplete = () => {
     }: FilterAutocompleteProps) => {
       if (!open) return null;
       return (
-        <div data-testid="autocomplete-dropdown">
+        <section
+          data-testid="autocomplete-dropdown"
+          aria-label="Filter assistance"
+        >
           {errorContent}
           {previewContent}
-          {suggestions.map((s, i) => (
-            <button
-              key={s.id || `suggestion-${i}`}
-              type="button"
-              onClick={() => onSelect(s)}
-              data-testid={`suggestion-${i}`}
-            >
-              {s.text}
-            </button>
-          ))}
-        </div>
+          {suggestions.length > 0 && (
+            <div role="listbox" aria-label="Filter suggestions">
+              {suggestions.map((s, i) => (
+                <button
+                  key={s.id || `suggestion-${i}`}
+                  type="button"
+                  role="option"
+                  aria-selected={i === 0}
+                  id={`filter-suggestion-${i}`}
+                  onClick={() => onSelect(s)}
+                  data-testid={`suggestion-${i}`}
+                >
+                  {s.text}
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
       );
     },
   }));
