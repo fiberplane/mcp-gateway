@@ -1,5 +1,11 @@
 # @fiberplane/mcp-gateway
 
+## 0.7.1
+
+### Patch Changes
+
+- 8e0f12f: Treat HTTP 404 as offline in health checks - a 404 without a session ID indicates the MCP endpoint doesn't exist
+
 ## 0.7.0
 
 ### Minor Changes
