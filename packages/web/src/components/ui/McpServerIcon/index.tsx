@@ -1,5 +1,6 @@
 import type { MarketplaceServer } from "@/lib/marketplace-data";
 import { cn } from "@/lib/utils";
+import AsanaIcon from "./asana.svg?react";
 import AstroIcon from "./astro.svg?react";
 import Context7Icon from "./context7.svg?react";
 import FigmaIcon from "./figma.svg?react";
@@ -71,6 +72,10 @@ function Icon({ icon }: { icon: string }) {
 
   if (icon === "astro") {
     return <AstroIcon className="w-8 h-8" />;
+  }
+
+  if (icon === "asana") {
+    return <AsanaIcon className="w-8 h-8" />;
   }
 
   // if (icon === "mcp") {
