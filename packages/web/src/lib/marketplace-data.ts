@@ -114,4 +114,14 @@ export const MARKETPLACE_SERVERS: MarketplaceServer[] = [
     docsUrl: "https://mcp.docs.astro.build/",
     category: "development",
   },
+  {
+    name: "Asana",
+    description: "Asana is a project management tool for teams.",
+    command: "https://mcp.asana.com/sse",
+    type: "http",
+    icon: "asana",
+    toolCount: 44,
+    docsUrl: "https://developers.asana.com/docs/using-asanas-mcp-server",
+    category: "productivity",
+  },
 ];
